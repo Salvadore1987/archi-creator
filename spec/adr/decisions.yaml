@@ -1,34 +1,209 @@
 ---
-version: 0.1
-last_modified: 2026-09-22
+version: 1.0
+last_modified: 2026-09-28
 ---
 
 # ───────────────────────────────────────────────────────────────────
-# Индекс архитектурных решений (ADR).
-#
-# Этот файл — машиночитаемый индекс; детали каждого решения в
-# отдельном файле `NNNN-<slug>.md` в формате MADR.
-#
-# docs-generator агент может использовать этот индекс для генерации
-# обзорной страницы "Принятые архитектурные решения" в wiki.
+# Индекс архитектурных решений (ADR) — единственный регистр решений.
 #
 # Правила:
 #   - id последовательный и уникальный: ADR-0001, ADR-0002, ...
 #   - status: proposed | accepted | rejected | deprecated | superseded
+#   - kind:   architecture | format | product
 #   - supersedes / superseded_by — явные ссылки на id других решений
 #   - id не переиспользуется при удалении; удалённое = status: rejected
+#
+# Где лежит обоснование. У решения либо свой файл `NNNN-<slug>.md`
+# в формате MADR (поле adr_file), либо раздел docs/ с уже написанным
+# разбором (поле rationale_ref). Третьей копии текста не создаётся:
+# двенадцать продуктовых решений были обоснованы в docs/ ещё до того,
+# как появился этот индекс, и переписывать их в MADR значило бы
+# поддерживать два текста об одном.
+#
+# Изменение от 2026-09-28: раньше этот файл ограничивался архитектурой
+# реализации, а журнал продуктовых решений жил только в
+# docs/archi-creator.md §13. После разворота источника правды на spec/
+# регистр обязан быть один — иначе «где принято решение» отвечает docs,
+# и разворот неполон. Поэтому §13 проиндексирован здесь целиком,
+# а его текст остался на месте как обоснование.
 # ───────────────────────────────────────────────────────────────────
 
-decisions: []
+decisions:
 
-# Пусто намеренно: ADR заводятся отдельным осознанным шагом, а не
-# плейсхолдером при раскатке scaffold'а.
-#
-# Решения, которые уже приняты и ждут оформления (см. README#незакрытые-решения):
-#   1. Разделение реализации на Maven-модули вместо пакетов одного модуля.
-#   2. Двойная идентификация: внутренний UUIDv7 + внешний archi_id.
-#   3. Механизм публикации событий (direct сейчас, outbox с этапа 7a) — НЕ принято.
-#
-# Журнал уже закрытых продуктовых решений ведётся в
-# docs/archi-creator.md §13 «Открытые вопросы». Переносить его сюда целиком
-# не нужно: ADR — про архитектуру реализации, §13 — про продукт и формат.
+  - id: ADR-0001
+    title: Разделение реализации на Maven-модули вместо пакетов одного модуля
+    status: accepted
+    date: 2026-09-22
+    kind: architecture
+    adr_file: 0001-maven-multi-module.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    note: |
+      Требует перекройки корневого pom.xml — сейчас проект одномодульный.
+      Работа этапа 0, не сделана.
+
+  - id: ADR-0002
+    title: Двойная идентификация — внутренний UUIDv7 и внешний archi_id
+    status: accepted
+    date: 2026-09-22
+    kind: architecture
+    adr_file: 0002-dual-identity.md
+    affects: [modeling, interchange]
+    requirements: [FR-01, FR-02]
+    anchors: [INV-MDL-001, INV-IXC-001]
+
+  - id: ADR-0003
+    title: Механизм публикации доменных событий
+    status: proposed
+    date: 2026-09-28
+    kind: architecture
+    adr_file: 0003-event-publishing.md
+    affects: [modeling, interchange, advisor]
+    requirements: [FR-37, FR-46]
+    anchors: [INV-IXC-009]
+    note: |
+      Не принято. `direct` выбран как временное состояние; Git-выгрузка
+      этапа 7a требует transactional_outbox — окно потери события там
+      ломает правило очистки снимков версий.
+
+  - id: ADR-0004
+    title: Компоновка главного экрана — вариант A «Панели»
+    status: accepted
+    date: 2026-09-22
+    kind: product
+    rationale_ref: docs/frontend.md#65-компоновка-главного-экрана--решение-принято
+    journal_ref: docs/archi-creator.md#13-открытые-вопросы
+    requirements: [FR-30, FR-32, FR-33]
+    anchors: [UI-012, UI-014, UI-015]
+    rejected_alternatives:
+      - B «Холст» — дерево модели не на виду, критично для 242 приложений
+      - C «Два режима» — два интерфейса вместо одного; содержательная часть
+        перенесена вкладкой «Описание» в вариант A
+
+  - id: ADR-0005
+    title: Git — журнал и ревью, источник правды остаётся в PostgreSQL
+    status: accepted
+    date: 2026-09-22
+    kind: architecture
+    rationale_ref: docs/backend.md#113-направление-обмена
+    requirements: [FR-37, FR-38, FR-39]
+    anchors: [INV-IXC-009, INV-IXC-010, INV-IXC-012]
+    note: |
+      Обратное направление — импорт состояния по ссылке; слияние — по сущностям
+      через стабильные идентификаторы; текстовое слияние YAML запрещено.
+      Этапы 7a/7b/7c.
+
+  - id: ADR-0006
+    title: Формат Git-выгрузки — разложенный YAML, файл на сущность
+    status: accepted
+    date: 2026-09-22
+    kind: format
+    rationale_ref: docs/backend.md#112-формат-разложенный-yaml
+    requirements: [FR-37, FR-40]
+    anchors: [INV-IXC-011]
+    note: |
+      Принадлежность папке — поле, а не каталог; разреженный position;
+      детерминированный писатель. Изменения в модели данных, нужные уже
+      на этапе 1, перечислены в docs/database.md §11.6.
+
+  - id: ADR-0007
+    title: Серверный экспорт в SVG и PNG, PDF не делаем
+    status: accepted
+    date: 2026-09-22
+    kind: product
+    rationale_ref: docs/backend.md#610-экспорт-представлений
+    requirements: [FR-41, FR-42]
+    anchors: [UI-019]
+    consequences: |
+      Фигуры узлов рисуются инлайн-SVG, а не CSS: CSS-силуэт серверный писатель
+      воспроизвести не может. Геометрия выносится в общий shapes.json —
+      spec/ui/shapes-contract.yaml. PDF остаётся печатью из браузера.
+
+  - id: ADR-0008
+    title: Open Exchange Format — только экспорт, best-effort
+    status: accepted
+    date: 2026-09-22
+    kind: product
+    rationale_ref: docs/backend.md#35-экспорт-в-open-exchange-format
+    requirements: [FR-43, FR-44]
+    anchors: [INV-IXC-006]
+    note: |
+      Импорта нет: единственный принимаемый формат остаётся `.archimate`.
+      Обещание lossless относится только к нему. Этап 6a.
+
+  - id: ADR-0009
+    title: CSV-каталог — только экспорт
+    status: accepted
+    date: 2026-09-22
+    kind: product
+    rationale_ref: docs/backend.md#52-экспорт-каталога-в-csv
+    requirements: [FR-45]
+    anchors: [INV-IXC-008]
+    note: |
+      Импорта из CSV нет сознательно: таблица не источник правды, а приём
+      правок из Excel вернул бы задачу слияния, которую решает Git (§11.4).
+
+  - id: ADR-0010
+    title: Ретеншен версий — записи бессрочно, снимки по правилу
+    status: accepted
+    date: 2026-09-22
+    kind: architecture
+    rationale_ref: docs/database.md#44-хранение-и-очистка-версий
+    requirements: [FR-46, FR-47, FR-48]
+    anchors: [INV-MDL-010]
+    note: |
+      Последние 30 дней, все помеченные версии, последняя версия месяца;
+      остальное восстанавливается из Git. Очистка работает только там,
+      где Git настроен и доступен.
+
+  - id: ADR-0011
+    title: Тёмной темы не будет
+    status: accepted
+    date: 2026-09-22
+    kind: product
+    rationale_ref: docs/frontend.md#62-токены
+    requirements: [FR-19, FR-20]
+    anchors: [UI-009, UI-010]
+    note: |
+      Корпус графитовый, холст светлый, переключателя тем нет. Цвета слоёв
+      ArchiMate пастельные и рассчитаны на светлый фон; холст совпадает с тем,
+      что уходит в экспорт и в документы.
+
+  - id: ADR-0012
+    title: Строгость импорта настраивается, повреждённые данные отклоняются всегда
+    status: accepted
+    date: 2026-09-22
+    kind: product
+    rationale_ref: docs/backend.md#83-строгость-импорта
+    requirements: [FR-49, FR-50]
+    anchors: [INV-IXC-007]
+
+  - id: ADR-0013
+    title: Описание элемента — вкладка правой панели, а не отдельный режим
+    status: accepted
+    date: 2026-09-22
+    kind: product
+    rationale_ref: docs/frontend.md#67-вкладка-описание-правая-панель
+    requirements: [FR-32, FR-33]
+    anchors: [UI-014, UI-015]
+    supersedes_alternative: |
+      Идея отдельного режима просмотра из макета C. Перенесена вкладкой
+      в вариант A: два интерфейса вместо одного не делаем (ADR-0004).
+
+  - id: ADR-0014
+    title: Редактирование дерева на месте и многошаговая история
+    status: accepted
+    date: 2026-09-22
+    kind: product
+    rationale_ref: docs/frontend.md#68-редактирование-дерева
+    requirements: [FR-34, FR-35, FR-36]
+    anchors: [UI-016, UI-017, UI-018]
+
+  - id: ADR-0015
+    title: Лимиты расходов на ИИ — месячный бюджет, частота, граница контекста
+    status: accepted
+    date: 2026-09-22
+    kind: product
+    rationale_ref: docs/backend.md#75-лимиты-расходов
+    requirements: [FR-51, FR-52, FR-53]
+    anchors: [INV-ADV-005, INV-ADV-006, INV-ADV-007]

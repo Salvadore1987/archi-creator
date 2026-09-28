@@ -1,0 +1,83 @@
+---
+version: 1.0
+last_modified: 2026-09-28
+layer: ui
+requirements: [FR-19, FR-20, FR-21]
+anchors: [UI-009, UI-010, UI-011]
+---
+
+# ───────────────────────────────────────────────────────────────────
+# Токены визуального стиля — единственный источник (FR-20).
+#
+# Значения перенесены из docs/frontend.md §6.2 без изменений. Потребители:
+# канва (CSS custom properties) и серверный SvgWriter (§6.10) — второй читает
+# те же значения, иначе экспорт расходится с экраном, а это ловится
+# визуальными тестами (UI-019).
+#
+# Тема одна: графитовые панели, светлый холст. Переключателя нет — ADR-0011.
+# ───────────────────────────────────────────────────────────────────
+
+theme:
+  count: 1
+  canvas: light
+  chrome: graphite
+  switcher: false
+  rationale: |
+    Цвета слоёв ArchiMate пастельные и рассчитаны на светлый фон: на тёмном они
+    превращаются в грязь и требуют второй, несовместимой палитры. Светлый холст
+    совпадает с тем, что уходит в экспорт и в документы, тёмный корпус вокруг
+    снимает нагрузку на глаза.
+
+# Слой -> базовый тон заливки и цвет обводки.
+# Ключи соответствуют enum Layer из ../domain/modeling/aggregates.yaml.
+layers:
+  business:    { fill: "#FFF6D6", border: "#C9A227", css: "--layer-business" }
+  application: { fill: "#E3F2FD", border: "#4A90C2", css: "--layer-application" }
+  technology:  { fill: "#E6F7EC", border: "#3E9B62", css: "--layer-technology" }
+  motivation:  { fill: "#EDE7F6", border: "#7E57C2", css: "--layer-motivation" }
+  strategy:    { fill: "#FFE9D6", border: "#D27B3C", css: "--layer-strategy" }
+  other:       { fill: "#F2F2F2", border: "#9E9E9E", css: "--layer-other" }
+
+shape:
+  node_radius:        { value: "8px",  css: "--node-radius" }
+  node_radius_round:  { value: "16px", css: "--node-radius-round",
+                        applies_to: поведенческие элементы }
+  node_border_width:  { value: "1px",  css: "--node-border-width" }
+  node_padding:       { value: "10px 12px", css: "--node-padding" }
+  node_shadow:        { value: "0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10)",
+                        css: "--node-shadow" }
+  node_shadow_selected: { value: "0 0 0 2px var(--accent), 0 4px 12px rgba(16,24,40,.16)",
+                          css: "--node-shadow-selected" }
+
+typography:
+  node_font:            { value: '13px/1.3 "Inter", system-ui, sans-serif', css: "--node-font" }
+  node_font_weight:     { value: "500", css: "--node-font-weight" }
+  node_subtitle:        { value: '11px/1.2 "Inter", system-ui, sans-serif', css: "--node-subtitle" }
+  node_subtitle_color:  { value: "#667085", css: "--node-subtitle-color" }
+
+edges:
+  edge_color:          { value: "#667085", css: "--edge-color" }
+  edge_width:          { value: "1.5px",   css: "--edge-width" }
+  edge_width_selected: { value: "2.5px",   css: "--edge-width-selected" }
+
+# Что относится к семантике нотации и токенами НЕ управляется (UI-009).
+notation_fixed:
+  - силуэт контура по типу элемента ArchiMate
+  - позиция угловой иконки
+  - форма наконечника связи (ромб composition, пустой ромб aggregation,
+    треугольник realization, пунктир и прочее)
+  - направление стрелки
+
+# Приоритет стиля объекта (FR-21, UI-011).
+style_precedence:
+  order:
+    - собственный fillColor/font объекта из импортированного файла
+    - токен слоя из этого файла
+  on_export: |
+    Собственный стиль сохраняется при экспорте дословно: он часть данных модели,
+    а не оформления. См. INV-IXC-005 (lossless round-trip).
+  selection_must_not_change_fill: |
+    Выделение рисуется двойной обводкой акцентным цветом, а не заливкой, иначе
+    теряется цветовое кодирование слоя.
+
+docs_ref: docs/frontend.md#62-токены

@@ -1,6 +1,6 @@
 ---
-version: 0.1
-last_modified: 2026-09-22
+version: 0.2
+last_modified: 2026-09-28
 bounded_context: advisor
 ---
 
@@ -52,6 +52,8 @@ bounded_context: advisor
 израсходованы, а пользователь получил обрывок. Лимит, срабатывающий после
 траты, лимитом не является.
 
+
+**Требование:** FR-51, FR-52
 **Тест:** `AdvisorSessionStateMachineTest#rejectionHappensBeforeStreaming`
 
 ---
@@ -68,6 +70,8 @@ bounded_context: advisor
 обращения. При ревью большой модели это заметная доля месячного бюджета,
 потраченная на один повтор.
 
+
+**Требование:** FR-51, FR-52
 **Тест:** `AdvisorIdempotencyTest#replayDoesNotCallUpstreamTwice`
 
 ---
@@ -204,9 +208,11 @@ bounded_context: advisor
 | INV-ADV-008 | `FindingTest#everyFindingHasResolvableTarget` | `ReviewIT#findingsPointToExistingElements` |
 | INV-ADV-009 | — | `AdvisorSecurityIT#apiKeyNeverAppearsInResponseOrLog` |
 
-**Непокрытые инварианты:** ни один инвариант пока не связан ни с одним
-use case'ом — каталог `application/advisor/usecases/` пуст. Это ожидаемое
-состояние после раскатки scaffold'а и закрывается режимом `add-usecase`.
+**Покрытие use case'ами** (2026-09-28): все девять инвариантов покрыты.
+`INV-ADV-001`…`INV-ADV-003`, `INV-ADV-005`, `INV-ADV-006`, `INV-ADV-009` —
+[`UC-ADV-001`](../../application/advisor/usecases/review-model.md);
+`INV-ADV-004`, `INV-ADV-007`, `INV-ADV-008` — `UC-ADV-001`
+и [`UC-ADV-002`](../../application/advisor/usecases/suggest-and-plan.md).
 
 **Замечание по INV-ADV-004.** Единственный инвариант в спеке, который
 нельзя оставить только тестом поведения: он должен держаться формой типов

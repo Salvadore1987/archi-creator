@@ -26,7 +26,7 @@ SKIP_DIRS = {".git", ".idea", "target", "node_modules", ".mvn"}
 MD_LINK = re.compile(r"\]\(([^)\s]+)\)")
 BARE_PATH = re.compile(
     r"(?<![\w/#-])((?:\.\./)*(?:docs|spec|tools)/[A-Za-z0-9_./-]*"
-    r"\.(?:md|yaml|yml|json|archimate|html|xml|js|css))"
+    r"\.(?:md|yaml|yml|json|archimate|html|xml|js|css)(?:#[\w-]+)?)"
 )
 HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*#*$")
 FENCED = re.compile(r"^(```|~~~).*?^\1", re.MULTILINE | re.DOTALL)

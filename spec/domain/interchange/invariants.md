@@ -1,6 +1,6 @@
 ---
-version: 0.1
-last_modified: 2026-09-22
+version: 0.2
+last_modified: 2026-09-28
 bounded_context: interchange
 ---
 
@@ -52,6 +52,8 @@ bounded_context: interchange
 означает запись в модель мимо всех проверок. Повторное применение
 терминальной сессии дублирует модель.
 
+
+**Требование:** FR-01, FR-49, FR-50
 **Тест:** `ImportSessionStateMachineTest#applyIsAllowedOnlyFromValidated`
 
 ---
@@ -169,6 +171,8 @@ vendor lock-in; без него продукт не имеет смысла вн
 Для пакетной выгрузки всех представлений это ещё заметнее: картинки
 расходятся между собой.
 
+**Требование:** FR-41, FR-45 · **Смежное:** `INV-MDL-010`
+
 **Тест:** `ExportJobTest#exportPinsSourceVersion`
 
 ---
@@ -186,6 +190,8 @@ Force push, rebase и удаление веток запрещены. Физич
 Git здесь и появился, — воспроизводимый журнал изменений. От него же
 зависит правило очистки снимков версий (FR-47): снимок удаляют, полагаясь
 на то, что содержимое восстановимо из репозитория.
+
+**Требование:** FR-37
 
 **Тест:** `GitPublisherTest#pushIsAlwaysFastForward`
 
@@ -205,8 +211,59 @@ merge не является валидной моделью и может про
 объект, которого никто не создавал, — с полем из одной ветки и половиной
 списка из другой ([`docs/backend.md` §11.4](../../../docs/backend.md#114-слияние-по-сущностям-а-не-по-тексту)).
 
+**Требование:** FR-39
+
 **Тест:** `EntityMergeTest#disjointEditsMergeWithoutConflict`,
 `EntityMergeTest#sameFieldEditsProduceFieldLevelConflict`
+
+---
+
+## INV-IXC-011 — Разложенный YAML детерминирован и адресуется идентификаторами
+
+**Тип:** структурный
+
+**Формулировка:** Git-формат раскладывает модель по файлам: `model.yaml`,
+`folders.yaml`, файл на элемент, на связь и на представление. Имя файла —
+`<слаг>.<8 hex от id>.yaml`, слаг транслитерирован в латиницу. Принадлежность
+папке — поле `folder` внутри файла, а не каталог. Порядок — разреженное поле
+`position` с шагом 1000. Идентификаторы берутся из `.archimate` буквально.
+Писатель детерминирован: фиксированный порядок ключей, сортировка свойств, LF,
+без YAML-якорей и переносов по ширине. Повторный экспорт без изменений модели
+даёт побайтово тот же результат. Неподдержанные сущности переносятся полем
+`raw_xml` блочным скаляром.
+
+**Нарушение:** недетерминированный писатель превращает каждый коммит в шум,
+и журнал перестаёт отвечать на вопрос «что изменилось». Папка каталогом вместо
+поля означает, что переименование папки двигает 72 файла. Плотный `position`
+даёт diff на всю папку при вставке одного элемента. Потеря `raw_xml` ломает
+round-trip на цикле БД → Git → БД, хотя сам `.archimate` при этом цел.
+
+**Требование:** FR-37, FR-40 · **Проверяет:** `INV-IXC-004` на уровне писателя
+
+**Тест:** `GitYamlWriterTest#writingTwiceProducesIdenticalBytes`,
+`GitYamlWriterTest#folderIsFieldNotDirectory`
+
+---
+
+## INV-IXC-012 — Импорт по ссылке применяется одной транзакцией как новая версия
+
+**Тип:** жизненный цикл
+
+**Формулировка:** загрузка состояния из Git по ссылке (коммит, тег, ветка)
+сначала строит отчёт об изменениях, и только после подтверждения применяется
+одной транзакцией, создавая новую версию модели. Текущая версия не правится
+на месте, промежуточных состояний в базе не возникает. Отказ на любом шаге
+не оставляет следов, кроме записи о неудачной попытке.
+
+**Нарушение:** частично применённое состояние — модель, которой нет ни в базе,
+ни в репозитории: элементы нового коммита рядом со связями старого. Правка
+текущей версии на месте лишает возможности откатиться и ломает правило
+«версия неизменяема» (`INV-MDL-010`).
+
+**Требование:** FR-38
+
+**Тест:** `GitImportTest#applyIsAtomic`,
+`GitImportTest#appliedStateBecomesNewVersion`
 
 ---
 
@@ -226,10 +283,16 @@ merge не является валидной моделью и может про
 | INV-IXC-008 | `ExportJobTest#exportPinsSourceVersion` | `BatchViewExportIT#allImagesComeFromOneVersion` |
 | INV-IXC-009 | `GitPublisherTest#pushIsAlwaysFastForward` | `GitExportIT#historyIsAppendOnly` |
 | INV-IXC-010 | `EntityMergeTest#disjointEditsMergeWithoutConflict` | `MergeRequestIT#conflictIsResolvedPerField` |
+| INV-IXC-011 | `GitYamlWriterTest#writingTwiceProducesIdenticalBytes` | `GitExportIT#repeatedExportProducesNoDiff` |
+| INV-IXC-012 | `GitImportTest#applyIsAtomic` | `GitImportIT#reportPrecedesApply` |
 
-**Непокрытые инварианты:** ни один инвариант пока не связан ни с одним use
-case'ом — каталог `application/interchange/usecases/` пуст. Это ожидаемое
-состояние после раскатки scaffold'а и закрывается режимом `add-usecase`.
+**Покрытие use case'ами** (2026-09-28): `INV-IXC-001`…`INV-IXC-003`,
+`INV-IXC-007` — [`UC-IXC-001`](../../application/interchange/usecases/import-archimate-file.md);
+`INV-IXC-004`, `INV-IXC-005`, `INV-IXC-008` — [`UC-IXC-002`](../../application/interchange/usecases/export-archimate-file.md);
+`INV-IXC-008`, `INV-IXC-009`, `INV-IXC-011` — [`UC-IXC-003`](../../application/interchange/usecases/commit-version-to-git.md).
+Без use case'а остаются три: `INV-IXC-006` (отчёт о потерях, этап 6a),
+`INV-IXC-010` (слияние по сущностям, этап 7c) и `INV-IXC-012` (импорт
+по ссылке, этап 7b) — их сценарии пишутся на своих этапах. Отчёт даёт `tools/check-traceability.py`.
 
 **Приоритет:** `INV-IXC-001`, `INV-IXC-004`, `INV-IXC-005` покрываются
 первыми — этап 1 закрывается именно round-trip референсной модели

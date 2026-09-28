@@ -1,6 +1,6 @@
 ---
-version: 0.1
-last_modified: 2026-09-22
+version: 0.2
+last_modified: 2026-09-28
 bounded_context: modeling
 ---
 
@@ -34,6 +34,8 @@ bounded_context: modeling
 `archimateElement`, `source`, `target` разрешаются неоднозначно.
 На уровне хранения перехватывается `UNIQUE (model_id, archi_id)`.
 
+
+**Требование:** FR-01, FR-02
 **Тест:** `ArchitectureModelTest#archiIdIsUniqueWithinModel`
 
 ---
@@ -104,6 +106,8 @@ bounded_context: modeling
 всю папку вместо одной строки, и ревью становится нечитаемым
 ([`docs/database.md` §11.6](../../../docs/database.md#116-что-нужно-сделать-уже-на-этапе-1)).
 
+
+**Требование:** FR-02, FR-40
 **Тест:** `SortOrderTest#insertDoesNotRenumberSiblings`
 
 ---
@@ -221,11 +225,21 @@ round-trip ломается на структуре, а не на содержи
 | INV-MDL-009 | `FolderTreeTest#eightRootFoldersAlwaysExist` | `ModelImportIT#folderTreeSurvivesRoundTrip` |
 | INV-MDL-010 | `ModelVersionTest#versionNumbersAreMonotonic` | `SnapshotRetentionIT#purgeIsDisabledWithoutGitBinding` |
 
-**Непокрытые инварианты:** ни один инвариант пока не связан ни с одним
-use case'ом — каталог `application/modeling/usecases/` пуст. Это ожидаемое
-состояние после раскатки scaffold'а, но именно оно ломает проверку
-целостности «сиротские якоря» (`references/cross-references.md`, проверка 2).
-Закрывается режимом `add-usecase`.
+**Покрытие use case'ами** (2026-09-28): все десять инвариантов связаны
+хотя бы с одним сценарием.
+
+| Инвариант | Use case |
+|---|---|
+| INV-MDL-001 | [`UC-MDL-002`](../../application/modeling/usecases/create-element.md) |
+| INV-MDL-002 | [`UC-MDL-001`](../../application/modeling/usecases/create-model.md) |
+| INV-MDL-003 | `UC-MDL-001`, [`UC-MDL-004`](../../application/modeling/usecases/save-model-version.md) |
+| INV-MDL-004 | [`UC-MDL-003`](../../application/modeling/usecases/create-relationship.md), [`UC-MDL-006`](../../application/modeling/usecases/reorganize-model-tree.md) |
+| INV-MDL-005 | `UC-MDL-002`, `UC-MDL-006` |
+| INV-MDL-006 | `UC-MDL-002`, `UC-MDL-004`, [`UC-MDL-005`](../../application/modeling/usecases/acquire-model-lock.md) |
+| INV-MDL-007 | `UC-MDL-003` |
+| INV-MDL-008 | `UC-MDL-002`, `UC-MDL-003` |
+| INV-MDL-009 | `UC-MDL-001`, `UC-MDL-006` |
+| INV-MDL-010 | `UC-MDL-004` |
 
 **Тестов пока нет ни одного:** имена в таблице — контракт на то, как тест
 будет назван, а не ссылка на существующий код. Этап 1 начинается с
