@@ -1,0 +1,296 @@
+---
+version: 0.1
+last_modified: 2026-09-22
+bounded_context: interchange
+target_module: archi-interchange-domain
+---
+
+# ───────────────────────────────────────────────────────────────────
+# Агрегаты, сущности и value objects для BC Interchange.
+#
+# Границы агрегатов выбраны по единице отчётности: одна попытка внести
+# файл (ImportSession) и одна выгрузка (ExportJob) — то, о чём система
+# обязана отчитаться целиком, включая неуспех. ModelDocument агрегатом
+# не является: у него нет идентичности и жизненного цикла, это значение,
+# живущее внутри одного преобразования.
+# ───────────────────────────────────────────────────────────────────
+
+aggregates:
+
+  ImportSession:
+    type: aggregate_root
+    identity: ImportSessionId
+    description: |
+      Одна попытка внести файл в систему. Хранит отчёт целиком, в том числе
+      у отклонённых попыток: отказ без объяснения превращает строгий импорт
+      в чёрный ящик.
+    fields:
+      - { name: id,            type: ImportSessionId,  constraints: [not_null, immutable] }
+      - { name: workspaceId,   type: WorkspaceId,      constraints: [not_null, immutable] }
+      - { name: targetModelId, type: Optional<ModelId>, constraints: [optional], note: "null при импорте новой модели" }
+      - { name: sourceName,    type: String,           constraints: [not_null, max: 500] }
+      - { name: sourceHash,    type: ContentHash,      constraints: [not_null, immutable] }
+      - { name: sourceSize,    type: Long,             constraints: [not_null, positive] }
+      - { name: idempotencyKey, type: String,          constraints: [not_null, immutable, max: 64] }
+      - { name: strictMode,    type: Boolean,          constraints: [not_null, immutable] }
+      - { name: status,        type: ImportStatus,     constraints: [not_null], default: RECEIVED }
+      - { name: document,      type: Optional<ModelDocument>, constraints: [optional, not_null_when_status_in: [PARSED, VALIDATED, APPLIED]] }
+      - { name: findings,      type: List<ImportFinding>, constraints: [not_null] }
+      - { name: startedBy,     type: String,           constraints: [not_null, immutable] }
+      - { name: startedAt,     type: Timestamp,        constraints: [not_null, immutable] }
+      - { name: finishedAt,    type: Optional<Timestamp>, constraints: [optional, not_null_when_status_in: [APPLIED, REJECTED]] }
+
+    state_machine:
+      initial: RECEIVED
+      transitions:
+        - { from: RECEIVED,  to: PARSED,    via: parse }
+        - { from: RECEIVED,  to: REJECTED,  via: RejectImport }
+        - { from: PARSED,    to: VALIDATED, via: validate }
+        - { from: PARSED,    to: REJECTED,  via: RejectImport }
+        - { from: VALIDATED, to: APPLIED,   via: ApplyImport }
+        - { from: VALIDATED, to: REJECTED,  via: RejectImport }
+      terminal: [APPLIED, REJECTED]
+      note: |
+        Применить можно только VALIDATED: разбор без проверки не даёт права
+        писать в модель. Отказ доступен из любого нетерминального состояния —
+        повреждённый файл может выявиться и при разборе, и при проверке.
+
+    invariants_ref: invariants.md
+
+    domain_events_published:
+      - ImportApplied
+
+  ExportJob:
+    type: aggregate_root
+    identity: ExportJobId
+    description: |
+      Одна выгрузка модели или представления в конкретный формат.
+      Отчёт о потерях — часть результата, а не побочный эффект.
+    fields:
+      - { name: id,          type: ExportJobId,   constraints: [not_null, immutable] }
+      - { name: workspaceId, type: WorkspaceId,   constraints: [not_null, immutable] }
+      - { name: modelId,     type: ModelId,       constraints: [not_null, immutable] }
+      - { name: viewId,      type: Optional<ViewId>, constraints: [optional], note: "задан при выгрузке одного представления" }
+      - { name: format,      type: ExportFormat,  constraints: [not_null, immutable] }
+      - { name: options,     type: ExportOptions, constraints: [not_null, immutable] }
+      - { name: status,      type: ExportStatus,  constraints: [not_null], default: REQUESTED }
+      - { name: artifact,    type: Optional<Artifact>, constraints: [optional, not_null_when_status_in: [RENDERED, DELIVERED]] }
+      - { name: lossReport,  type: Optional<LossReport>, constraints: [optional, not_null_when_status_in: [RENDERED, DELIVERED]] }
+      - { name: sourceVersionNo, type: Long,      constraints: [not_null, immutable, positive] }
+      - { name: requestedBy, type: String,        constraints: [not_null, immutable] }
+      - { name: requestedAt, type: Timestamp,     constraints: [not_null, immutable] }
+
+    state_machine:
+      initial: REQUESTED
+      transitions:
+        - { from: REQUESTED, to: RENDERED,  via: render }
+        - { from: REQUESTED, to: FAILED,    via: fail }
+        - { from: RENDERED,  to: DELIVERED, via: deliver }
+        - { from: RENDERED,  to: FAILED,    via: fail }
+      terminal: [DELIVERED, FAILED]
+
+    invariants_ref: invariants.md
+
+    domain_events_published:
+      - ExportCompleted
+      - GitSnapshotCommitted
+
+  GitBinding:
+    type: aggregate_root
+    identity: WorkspaceId
+    description: |
+      Привязка рабочего пространства к репозиторию. Отдельный агрегат,
+      потому что от его состояния зависит правило за пределами этого BC:
+      очистка снимков версий разрешена только при доступном репозитории
+      (FR-47, INV-MDL-010).
+    fields:
+      - { name: workspaceId,  type: WorkspaceId,   constraints: [not_null, immutable] }
+      - { name: repoUrl,      type: String,        constraints: [not_null, max: 1000] }
+      - { name: branch,       type: String,        constraints: [not_null, max: 200], default: "main" }
+      - { name: tokenRef,     type: SecretRef,     constraints: [not_null] }
+      - { name: status,       type: GitBindingStatus, constraints: [not_null], default: CONFIGURED }
+      - { name: lastCommitSha, type: Optional<GitSha>, constraints: [optional] }
+      - { name: lastCheckedAt, type: Optional<Timestamp>, constraints: [optional] }
+    state_machine:
+      initial: CONFIGURED
+      transitions:
+        - { from: CONFIGURED,  to: UNREACHABLE, via: healthCheckFailed }
+        - { from: UNREACHABLE, to: CONFIGURED,  via: healthCheckPassed }
+        - { from: CONFIGURED,  to: DISABLED,    via: ConfigureGitBinding }
+        - { from: UNREACHABLE, to: DISABLED,    via: ConfigureGitBinding }
+      terminal: [DISABLED]
+    invariants_ref: invariants.md
+    domain_events_published: []
+
+# ───────────────────────────────────────────────────────────────────
+# Сущности внутри агрегатов
+# ───────────────────────────────────────────────────────────────────
+
+entities:
+
+  ImportFinding:
+    type: entity
+    parent: ImportSession
+    identity: FindingId
+    description: Замечание к импортируемому файлу с привязкой к месту.
+    fields:
+      - { name: id,        type: FindingId,  constraints: [not_null, immutable] }
+      - { name: severity,  type: Severity,   constraints: [not_null] }
+      - { name: code,      type: String,     constraints: [not_null], note: "например IXC_UNKNOWN_ELEMENT_TYPE" }
+      - { name: message,   type: String,     constraints: [not_null] }
+      - { name: archiId,   type: Optional<ArchiId>, constraints: [optional] }
+      - { name: xmlLine,   type: Optional<Int>, constraints: [optional] }
+
+  LossEntry:
+    type: entity
+    parent: ExportJob
+    identity: LossEntryId
+    description: |
+      Объект, часть данных которого не перенеслась в целевой формат.
+      Заполняется при выгрузке в OEF, CSV и изображения; для .archimate
+      список обязан оставаться пустым (INV-IXC-005).
+    fields:
+      - { name: id,        type: LossEntryId, constraints: [not_null, immutable] }
+      - { name: archiId,   type: ArchiId,     constraints: [not_null] }
+      - { name: objectKind, type: String,     constraints: [not_null], note: "element | relationship | view | node | edge | property" }
+      - { name: lostAspect, type: String,     constraints: [not_null], note: "что именно не перенеслось" }
+      - { name: reason,    type: String,      constraints: [not_null] }
+
+# ───────────────────────────────────────────────────────────────────
+# Value objects
+# ───────────────────────────────────────────────────────────────────
+
+value_objects:
+
+  ImportSessionId: { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+  ExportJobId:     { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+  FindingId:       { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+  LossEntryId:     { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+
+  ModelDocument:
+    kind: published_language
+    immutable: true
+    model_shape_ref: ../modeling/aggregates.yaml#ArchitectureModel
+    description: |
+      Полное содержимое модели в порядке исходного файла. Общий язык с BC
+      modeling: обе стороны читают и пишут одну и ту же форму, ни одна не
+      диктует её другой.
+    composite:
+      - { name: archiId,       type: ArchiId,                constraints: [not_null] }
+      - { name: name,          type: String,                 constraints: [not_null] }
+      - { name: archiVersion,  type: String,                 constraints: [not_null] }
+      - { name: documentation, type: Optional<String>,       constraints: [optional] }
+      - { name: folders,       type: List<DocumentNode>,     constraints: [not_null, min_size: 8] }
+      - { name: elements,      type: List<DocumentNode>,     constraints: [not_null] }
+      - { name: relationships, type: List<DocumentNode>,     constraints: [not_null] }
+      - { name: views,         type: List<DocumentNode>,     constraints: [not_null] }
+      - { name: orphanFragments, type: List<RawXmlFragment>, constraints: [not_null] }
+    note: |
+      Содержимое узлов не раскрывается здесь по полям: форма повторяет
+      modeling/aggregates.yaml, и дублировать её означало бы завести второй
+      источник правды, который разойдётся с первым.
+
+  DocumentNode:
+    composite:
+      - { name: archiId,   type: ArchiId,        constraints: [not_null] }
+      - { name: archiType, type: String,         constraints: [not_null] }
+      - { name: order,     type: DocumentOrder,  constraints: [not_null] }
+      - { name: attributes, type: Map<String,String>, constraints: [not_null] }
+      - { name: children,  type: List<DocumentNode>, constraints: [not_null] }
+      - { name: raw,       type: Optional<RawXmlFragment>, constraints: [optional] }
+    note: |
+      Однородный узел вместо типизированной иерархии: читатель обязан принять
+      и то, чего метамодель текущей фазы не знает (FR-03), а типизация этого
+      не позволяет.
+
+  RawXmlFragment:
+    composite:
+      - { name: xml,          type: String,        constraints: [not_null] }
+      - { name: parentArchiId, type: Optional<ArchiId>, constraints: [optional] }
+      - { name: order,        type: DocumentOrder, constraints: [not_null] }
+    note: |
+      Непрозрачный фрагмент с адресом: куда вернуть при записи и в каком
+      порядке. Без адреса фрагмент сохранить можно, а воспроизвести — нет.
+
+  DocumentOrder:
+    underlying: Int
+    constraints: [not_null, non_negative]
+    note: |
+      Позиция узла среди соседей в исходном файле. Читатель фиксирует,
+      писатель воспроизводит. Не путать с modeling#SortOrder: тот разрежен
+      шагом 1000 и живёт в БД, этот плотный и живёт одно преобразование.
+
+  ArchiId:
+    underlying: String
+    constraints: [pattern: "^id-[0-9a-f]{24}$"]
+    shared_with: modeling
+    serialization: { json: string }
+
+  ContentHash:
+    underlying: String
+    constraints: [pattern: "^[0-9a-f]{64}$"]
+    algorithm: sha-256
+    note: Отпечаток входного файла или выгруженного артефакта.
+
+  GitSha:
+    underlying: String
+    constraints: [pattern: "^[0-9a-f]{40}$"]
+
+  SecretRef:
+    underlying: String
+    note: |
+      Ссылка на секрет во внешнем хранилище, не сам токен. Значение секрета
+      в домене не появляется (docs/archi-creator.md §10.3).
+
+  Artifact:
+    composite:
+      - { name: bytes,     type: Bytes,  constraints: [not_null] }
+      - { name: mediaType, type: String, constraints: [not_null] }
+      - { name: fileName,  type: String, constraints: [not_null] }
+      - { name: hash,      type: ContentHash, constraints: [not_null] }
+
+  LossReport:
+    composite:
+      - { name: entries,   type: List<LossEntry>, constraints: [not_null] }
+      - { name: complete,  type: Boolean,         constraints: [not_null] }
+    note: |
+      Пустой список entries означает выгрузку без потерь и является
+      валидным отчётом. Отсутствие отчёта валидным не является (INV-IXC-006).
+
+  ExportOptions:
+    composite:
+      - { name: scale,      type: Optional<Decimal>, constraints: [optional, positive], note: "SVG/PNG" }
+      - { name: outline,    type: Optional<Boolean>, constraints: [optional] }
+      - { name: background, type: Optional<String>,  constraints: [optional] }
+      - { name: separator,  type: Optional<String>,  constraints: [optional], note: "CSV" }
+      - { name: folderFilter, type: Optional<String>, constraints: [optional], note: "CSV" }
+
+  WorkspaceId: { underlying: UUID, external_context: modeling, serialization: { json: string } }
+  ModelId:     { underlying: UUID, external_context: modeling, serialization: { json: string } }
+  ViewId:      { underlying: UUID, external_context: modeling, serialization: { json: string } }
+
+# ───────────────────────────────────────────────────────────────────
+# Перечисления
+# ───────────────────────────────────────────────────────────────────
+
+enums:
+
+  ImportStatus:
+    values: [RECEIVED, PARSED, VALIDATED, APPLIED, REJECTED]
+
+  ExportStatus:
+    values: [REQUESTED, RENDERED, DELIVERED, FAILED]
+
+  ExportFormat:
+    values: [ARCHIMATE, OPEN_EXCHANGE, CSV_CATALOG, SVG, PNG, GIT_YAML]
+    note: |
+      Формат определяет, обязателен ли отчёт о потерях: у ARCHIMATE и
+      GIT_YAML отчёт обязан быть пустым (round-trip), у остальных —
+      заполненным по факту.
+
+  GitBindingStatus:
+    values: [CONFIGURED, UNREACHABLE, DISABLED]
+
+  Severity:
+    values: [ERROR, WARNING, INFO]
+    note: Совпадает с уровнями отчёта валидации modeling — общий словарь для UI.

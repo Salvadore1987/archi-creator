@@ -1,0 +1,1673 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Вариант A — Панели · Archi Creator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  body{display:grid; grid-template-rows:auto 1fr auto; height:100vh; overflow:hidden}
+  .main{display:grid; grid-template-columns:300px 1fr 312px; min-height:0; background:var(--ink-900)}
+  .side{display:flex; flex-direction:column; min-height:0; background:var(--ink-800); overflow:hidden}
+  .side--l{border-right:1px solid var(--line)}
+  .side--r{border-left:1px solid var(--line)}
+  .split{height:1px; background:var(--line); flex:0 0 auto}
+
+  .center{display:flex; flex-direction:column; min-width:0; min-height:0; background:var(--ink-850)}
+  .tabbar{display:flex; align-items:flex-end; height:34px; flex:0 0 auto;
+          border-bottom:1px solid var(--paper); background:var(--ink-850)}
+  .stage{position:relative; flex:1; min-height:0; overflow:auto}
+  .stage .canvas{position:absolute; inset:0; min-width:860px; min-height:560px}
+
+  .zoomer{
+    position:absolute; right:14px; bottom:14px; z-index:12;
+    display:flex; align-items:center; gap:2px; padding:3px;
+    background:rgba(255,255,255,.92); border:1px solid var(--paper-line-2);
+    border-radius:9px; box-shadow:0 2px 10px rgba(16,24,40,.12);
+  }
+  .zoomer .btn{color:#5C6674; height:24px}
+  .zoomer .btn:hover{background:var(--paper-2); color:#1A1D22}
+  .zoomer .val{font-family:var(--f-mono); font-size:10px; color:#5C6674; padding:0 8px}
+
+  /* =====================================================================
+     ДЕРЕВО МОДЕЛИ
+     ================================================================== */
+  .tree-tools{display:flex; align-items:center; gap:6px; padding:8px 8px 0}
+  .tsearch{
+    flex:1; display:flex; align-items:center; gap:7px; height:28px; padding:0 9px;
+    background:var(--ink-850); border:1px solid var(--line); border-radius:7px; min-width:0;
+  }
+  .tsearch:focus-within{border-color:var(--signal); box-shadow:0 0 0 3px var(--signal-dim)}
+  .tsearch svg{width:13px; height:13px; color:var(--text-low); flex:0 0 auto}
+  .tsearch input{flex:1; min-width:0; background:none; border:0; color:var(--text-hi);
+                 font:inherit; font-size:12px}
+  .tsearch input:focus{outline:none}
+  .tsearch input::placeholder{color:var(--text-low)}
+  .tsearch .clr{
+    display:none; width:15px; height:15px; flex:0 0 auto; border-radius:4px;
+    align-items:center; justify-content:center; cursor:pointer;
+    font-size:12px; line-height:1; color:var(--text-low);
+  }
+  .tsearch.has-q .clr{display:flex}
+  .tsearch .clr:hover{background:var(--ink-700); color:var(--signal-2)}
+
+  .tmodes{display:flex; gap:2px; padding:8px 8px 0}
+  .tmodes .btn{height:22px; padding:0 9px; font-size:11px; border-radius:5px}
+
+  .tchips{display:flex; flex-wrap:wrap; gap:4px; padding:8px}
+  .tchip{
+    display:inline-flex; align-items:center; gap:5px; height:22px; padding:0 8px;
+    border-radius:6px; border:1px solid var(--line); background:var(--ink-850);
+    color:var(--text-mid); font-size:11px; cursor:default;
+  }
+  .tchip:hover{border-color:var(--ink-600); color:var(--text-hi)}
+  .tchip.is-on{background:var(--signal-dim); border-color:rgba(255,106,61,.4); color:var(--signal-2)}
+  .tchip b{font-family:var(--f-mono); font-size:9px; font-weight:400; color:var(--text-low)}
+  .tchip.is-on b{color:var(--signal-2)}
+  .tchip i{width:6px; height:6px; border-radius:50%; flex:0 0 auto}
+
+  #tree{flex:1; min-height:0; overflow:auto; padding:2px 6px 10px}
+
+  .tr{
+    display:flex; align-items:center; height:25px; border-radius:6px;
+    color:var(--text-mid); cursor:default; white-space:nowrap;
+  }
+  .tr:hover{background:var(--ink-750); color:var(--text-hi)}
+  .tr.is-sel{background:var(--signal-dim); color:var(--signal-2)}
+  .tr.is-sel .tr__cnt,.tr.is-sel .tr__v{color:var(--signal-2); opacity:.8}
+  /* Направляющие уровней вложенности */
+  .tr__ind{
+    flex:0 0 auto; align-self:stretch; width:calc(var(--d,0)*13px);
+    background-image:repeating-linear-gradient(to right, var(--line-soft) 0 1px, transparent 1px 13px);
+    background-position:7px 0;
+  }
+  .tr__chev{width:13px; height:13px; flex:0 0 auto; color:var(--text-low); margin-right:2px;
+            transition:transform .15s var(--ease)}
+  .tr.is-open > .tr__chev{transform:rotate(90deg)}
+  .tr__sp{width:15px; flex:0 0 auto}
+  .tr__ic{width:14px; height:14px; flex:0 0 auto; margin-right:7px}
+  .tr__n{overflow:hidden; text-overflow:ellipsis; font-size:12px}
+  .tr--folder .tr__n{font-weight:500; color:var(--text-mid)}
+  .tr--folder:hover .tr__n{color:var(--text-hi)}
+  .tr--root{height:28px; margin-top:7px}
+  .tr--root .tr__n{
+    font-family:var(--f-mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--text-low); font-weight:400;
+  }
+  .tr__b{margin-left:auto; display:flex; align-items:center; gap:6px; padding-left:10px; flex:0 0 auto}
+  .tr__cnt{font-family:var(--f-mono); font-size:9px; color:var(--text-low)}
+  .tr__v{font-family:var(--f-mono); font-size:9px; color:var(--text-low); opacity:.75}
+  .tr__dot{width:6px; height:6px; border-radius:50%; flex:0 0 auto}
+  .tr__dot--un{border:1px solid #5A6472}
+  .tr__dot--warn{background:var(--err)}
+  .tr mark{background:rgba(255,106,61,.3); color:var(--text-hi); border-radius:2px; padding:0 1px}
+
+  .tmore{
+    display:flex; align-items:center; height:24px; padding:0 8px; border-radius:6px;
+    font-size:11px; color:var(--text-low);
+    margin-left:calc(var(--d,0)*13px + 15px);
+  }
+  .tmore:hover{background:var(--ink-750); color:var(--signal-2)}
+  .tempty{padding:20px 12px; font-size:12px; color:var(--text-low); line-height:1.55}
+  .tempty b{display:block; color:var(--text-mid); font-weight:500; margin-bottom:4px}
+
+  .tfoot{
+    display:flex; align-items:center; gap:7px; height:26px; padding:0 10px;
+    border-top:1px solid var(--line-soft); flex:0 0 auto; white-space:nowrap; overflow:hidden;
+    font-family:var(--f-mono); font-size:9px; letter-spacing:.05em; color:var(--text-low);
+  }
+  .tfoot .spacer{flex:1}
+  #tfoot-txt{overflow:hidden; text-overflow:ellipsis; min-width:0}
+  #tfoot-shown{flex:0 0 auto; color:var(--signal-2)}
+
+  /* =====================================================================
+     ПРАВАЯ ПАНЕЛЬ: вкладки «Свойства» / «Описание»
+     ================================================================== */
+  .rtabs{display:flex; gap:2px; margin-left:-4px}
+  .rtabs .btn{
+    height:24px; padding:0 9px; border-radius:6px;
+    font-family:var(--f-ui); font-size:11.5px; letter-spacing:0; text-transform:none;
+  }
+  .rtabs .btn.is-on{background:var(--signal-dim); color:var(--signal-2)}
+  .rtop{flex:0 0 auto; max-height:var(--rtop,46%); min-height:0; display:flex; flex-direction:column}
+  body.rt-read{--rtop:66%}
+  body:not(.rt-read) #tab-read{display:none}
+  body.rt-read #tab-props{display:none}
+
+  .read{
+    padding:14px 14px 18px; overflow:auto; flex:1; min-height:0;
+    display:flex; flex-direction:column; gap:13px;
+  }
+  .read h2{
+    font-family:var(--f-display); font-size:18px; font-weight:700; letter-spacing:-.015em;
+    margin:0; color:var(--text-hi); line-height:1.2;
+  }
+  .read .meta{display:flex; flex-wrap:wrap; gap:5px; margin-top:8px}
+  .read p{margin:0; font-size:12.5px; line-height:1.62; color:var(--text-mid)}
+  .read h3{
+    font-family:var(--f-mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--text-low); margin:3px 0 0;
+  }
+  .read .muted-note{font-size:11.5px; color:var(--text-low); line-height:1.55}
+  .rel-list{display:flex; flex-direction:column; gap:4px}
+  .rel{
+    display:flex; align-items:center; gap:8px; padding:6px 9px; border-radius:7px;
+    background:var(--ink-850); border:1px solid var(--line-soft);
+    font-size:11.5px; color:var(--text-mid); cursor:default;
+  }
+  .rel:hover{border-color:var(--line); color:var(--text-hi)}
+  .rel__n{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .rel__dot{
+    width:14px; height:14px; border-radius:3px; flex:0 0 auto; display:grid; place-items:center;
+    background:var(--bg); border:1px solid var(--bd); color:var(--bd);
+  }
+  .rel__dot svg{width:10px; height:10px}
+  .rel .k{
+    font-family:var(--f-mono); font-size:9px; color:var(--text-low);
+    margin-left:auto; white-space:nowrap; padding-left:6px;
+  }
+  .rel--in .k{color:#7E93AB}
+  .read .more{font-size:11px; color:var(--text-low); padding:1px 2px}
+  .read .more:hover{color:var(--signal-2)}
+  .vlist{display:flex; flex-direction:column; gap:3px}
+  .vrow{
+    display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--text-mid);
+    padding:4px 8px; background:var(--ink-850); border:1px solid var(--line-soft); border-radius:6px;
+  }
+  .vrow svg{width:12px; height:12px; flex:0 0 auto; color:var(--text-low)}
+  .vrow.is-cur{border-color:rgba(255,106,61,.35); color:var(--signal-2)}
+  .vrow.is-cur svg{color:var(--signal-2)}
+
+  /* =====================================================================
+     РЕДАКТИРОВАНИЕ ДЕРЕВА
+     ================================================================== */
+  .tr.is-lead{box-shadow:inset 0 0 0 1px rgba(255,106,61,.5)}
+  .tr.is-drag{opacity:.4}
+  .tr--folder.is-drop{background:var(--signal-dim); box-shadow:inset 0 0 0 1px var(--signal)}
+  .tr__edit{
+    flex:1; min-width:0; height:19px; padding:0 5px; margin-right:6px;
+    font:inherit; font-size:12px; color:var(--text-hi);
+    background:var(--ink-900); border:1px solid var(--signal); border-radius:4px;
+  }
+  .tr__edit:focus{outline:none; box-shadow:0 0 0 3px var(--signal-dim)}
+  .tr__dirty{width:5px; height:5px; border-radius:50%; background:var(--signal); flex:0 0 auto}
+
+  /* Контекстное меню */
+  .ctx{
+    position:fixed; z-index:80; min-width:222px; padding:5px;
+    background:var(--ink-800); border:1px solid var(--line); border-radius:10px;
+    box-shadow:0 18px 44px rgba(0,0,0,.55);
+  }
+  .ctx__head{
+    padding:6px 9px 7px; font-family:var(--f-mono); font-size:9px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--text-low);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:210px;
+  }
+  .ctx__i{
+    display:flex; align-items:center; gap:9px; height:28px; padding:0 9px;
+    border-radius:6px; font-size:12px; color:var(--text-mid); white-space:nowrap;
+  }
+  .ctx__i:hover{background:var(--ink-750); color:var(--text-hi)}
+  .ctx__i svg{width:13px; height:13px; flex:0 0 auto; color:var(--text-low)}
+  .ctx__i .kbd{margin-left:auto}
+  .ctx__i--danger{color:#D98A87}
+  .ctx__i--danger:hover{background:rgba(217,83,79,.14); color:#F0A7A4}
+  .ctx__sep{height:1px; background:var(--line-soft); margin:4px 6px}
+
+  /* Всплывающие панели: выбор папки, подтверждение удаления */
+  .pop{
+    position:fixed; z-index:80; width:308px; padding:13px;
+    background:var(--ink-800); border:1px solid var(--line); border-radius:12px;
+    box-shadow:0 18px 44px rgba(0,0,0,.55); display:flex; flex-direction:column; gap:10px;
+  }
+  .pop h4{margin:0; font-size:13px; font-weight:600; color:var(--text-hi)}
+  .pop p{margin:0; font-size:11.5px; line-height:1.55; color:var(--text-mid)}
+  .pop .acts{display:flex; gap:6px; justify-content:flex-end}
+  .pop .list{
+    max-height:212px; overflow:auto; display:flex; flex-direction:column; gap:2px;
+    border:1px solid var(--line-soft); border-radius:8px; padding:4px;
+  }
+  .pop .fi{
+    display:flex; align-items:center; gap:8px; height:26px; padding:0 8px; border-radius:6px;
+    font-size:11.5px; color:var(--text-mid); white-space:nowrap;
+  }
+  .pop .fi:hover{background:var(--ink-750); color:var(--text-hi)}
+  .pop .fi svg{width:12px; height:12px; flex:0 0 auto; color:var(--text-low)}
+  .pop .fi span{overflow:hidden; text-overflow:ellipsis}
+  .pop .fi em{font-style:normal; color:var(--text-low)}
+  .pop .field__input{font-size:12px}
+
+  /* Тост с отменой */
+  .toast{
+    position:fixed; left:50%; bottom:54px; transform:translateX(-50%) translateY(12px);
+    z-index:90; display:flex; align-items:center; gap:12px; padding:8px 9px 8px 15px;
+    border-radius:999px; background:rgba(18,21,25,.95); border:1px solid var(--line);
+    backdrop-filter:blur(10px); font-size:12px; color:var(--text-mid);
+    opacity:0; pointer-events:none; transition:opacity .25s var(--ease), transform .25s var(--ease);
+  }
+  .toast.is-on{opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0)}
+  .toast .btn{height:24px; padding:0 10px; font-size:11.5px}
+
+  /* Групповое выделение в правой панели */
+  .bulk{padding:14px; display:flex; flex-direction:column; gap:11px; overflow:auto}
+  .bulk h4{margin:0; font-family:var(--f-display); font-size:17px; font-weight:700; color:var(--text-hi)}
+  .bulk .list{display:flex; flex-direction:column; gap:3px; max-height:200px; overflow:auto}
+  .bulk .li{
+    display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--text-mid);
+    padding:4px 8px; background:var(--ink-850); border:1px solid var(--line-soft);
+    border-radius:6px; white-space:nowrap;
+  }
+  .bulk .li span{overflow:hidden; text-overflow:ellipsis}
+  .bulk .li svg{width:12px; height:12px; flex:0 0 auto}
+
+  #st-dirty{color:var(--signal-2)}
+
+  /* ---------- Роль: ARCHITECT / VIEWER ---------- */
+  .roles{display:flex; gap:2px; padding:2px; border-radius:8px;
+         background:var(--ink-900); border:1px solid var(--line)}
+  .roles .btn{
+    height:22px; padding:0 9px; border-radius:5px;
+    font-family:var(--f-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase;
+  }
+  .roles .btn.is-on{background:var(--signal-dim); color:var(--signal-2)}
+
+  /* Недоступные отмена/повтор */
+  .btn.is-off{opacity:.32; pointer-events:none}
+
+  body.role-viewer .edit-only{display:none}
+  body:not(.role-viewer) .view-only{display:none}
+  /* Поля свойств в режиме чтения */
+  body.role-viewer .props .field__input{
+    background:var(--ink-900); color:var(--text-mid); border-color:var(--line-soft);
+  }
+  body.role-viewer .props .field__input:focus{box-shadow:none; border-color:var(--line-soft)}
+
+  .palette{grid-template-columns:1fr}
+  .layer-switch{display:flex; gap:3px; padding:8px 8px 0}
+  .layer-switch .btn{height:24px; padding:0 9px; font-size:11px; border-radius:6px}
+  .stamp{bottom:36px; left:312px; right:auto}
+</style>
+</head>
+<body class="grain">
+
+<!-- ================= Верхняя строка ================= -->
+<header class="topbar">
+  <div class="brand"><div class="brand__mark">ARCHI<em>/</em>CREATOR</div></div>
+  <div class="sep"></div>
+
+  <div class="doc-title">
+    <b>Hamkorbank — ИТ-ландшафт AS IS</b>
+    <span class="chip chip--lock edit-only"><svg style="width:11px;height:11px"><use href="#u-lock"/></svg>Редактирует: Сагит</span>
+    <span class="chip chip--ok view-only"><svg style="width:11px;height:11px"><use href="#u-eye"/></svg>только чтение</span>
+  </div>
+
+  <div class="sep edit-only"></div>
+
+  <div class="row edit-only">
+    <button class="btn btn--icon is-on" title="Выбор (V)"><svg><use href="#u-cursor"/></svg></button>
+    <button class="btn btn--icon" title="Панорама (H)"><svg><use href="#u-hand"/></svg></button>
+    <button class="btn btn--icon" title="Связь (C)"><svg><use href="#u-connect"/></svg></button>
+    <div class="sep"></div>
+    <button class="btn btn--icon" title="Авторазметка"><svg><use href="#u-layout"/></svg></button>
+    <button class="btn btn--icon" title="Сетка"><svg><use href="#u-grid"/></svg></button>
+    <div class="sep"></div>
+    <button class="btn btn--icon" id="undo-btn" title="Отменить"><svg><use href="#u-undo"/></svg></button>
+    <button class="btn btn--icon" id="redo-btn" title="Повторить"><svg><use href="#u-redo"/></svg></button>
+  </div>
+
+  <div class="grow"></div>
+
+  <button class="btn btn--ghost" id="focus-search"><svg><use href="#u-search"/></svg>Поиск<span class="kbd">⌘F</span></button>
+  <button class="btn btn--ghost">Экспорт .archimate</button>
+  <button class="btn btn--primary edit-only" id="save" style="display:none">Сохранить</button>
+  <div class="roles" id="roles" title="Роль пользователя (FR-28)">
+    <button class="btn is-on" data-role="architect">Architect</button>
+    <button class="btn" data-role="viewer">Viewer</button>
+  </div>
+  <div class="avatar">СО</div>
+</header>
+
+<!-- ================= Рабочая область ================= -->
+<div class="main">
+
+  <!-- ---------- Слева: дерево модели + палитра ---------- -->
+  <aside class="side side--l">
+    <div class="panel-head">
+      <svg style="width:13px;height:13px"><use href="#u-tree"/></svg>
+      Модель
+      <span class="spacer"></span>
+      <button class="btn btn--icon edit-only" style="height:22px;width:22px" id="new-folder"
+              title="Создать папку">+</button>
+      <button class="btn btn--icon" style="height:22px;width:22px" id="collapse-all"
+              title="Свернуть всё"><svg><use href="#u-chevron"/></svg></button>
+    </div>
+
+    <div class="tree-tools">
+      <label class="tsearch" id="tsearch">
+        <svg><use href="#u-search"/></svg>
+        <input id="q" placeholder="Поиск по модели" autocomplete="off">
+        <span class="clr" id="q-clear" title="Очистить (Esc)">✕</span>
+      </label>
+    </div>
+
+    <div class="tmodes" id="tmodes">
+      <button class="btn is-on" data-mode="folders">Папки</button>
+      <button class="btn" data-mode="types">Типы</button>
+      <button class="btn" data-mode="flat">Список</button>
+    </div>
+
+    <div class="tchips" id="tchips">
+      <span class="tchip is-on" data-f="all">Все <b id="c-all">—</b></span>
+      <span class="tchip" data-f="view">На представлении <b id="c-view">—</b></span>
+      <span class="tchip" data-f="unplaced"><i class="tr__dot tr__dot--un"></i>Не размещены <b id="c-un">—</b></span>
+      <span class="tchip" data-f="warn"><i class="tr__dot tr__dot--warn"></i>Замечания <b id="c-warn">—</b></span>
+    </div>
+
+    <div id="tree"></div>
+
+    <div class="tfoot">
+      <span id="tfoot-txt">—</span>
+      <span class="spacer"></span>
+      <span id="tfoot-shown"></span>
+    </div>
+
+    <div class="split edit-only"></div>
+
+    <div class="panel-head edit-only">Палитра <span class="spacer"></span>
+      <span class="mono" style="font-size:9px">перетащите на холст</span></div>
+    <div class="layer-switch edit-only" id="layer-switch">
+      <button class="btn is-on" data-l="app">Application</button>
+      <button class="btn" data-l="biz">Business</button>
+      <button class="btn" data-l="tech">Technology</button>
+    </div>
+    <div class="palette edit-only" id="palette" style="height:170px;overflow:auto"></div>
+  </aside>
+
+  <!-- ---------- Центр: вкладки + холст ---------- -->
+  <main class="center">
+    <div class="tabbar">
+      <div class="tabs">
+        <div class="tab is-on"><svg style="width:12px;height:12px"><use href="#u-grid"/></svg><span>01 Контекст AS IS</span></div>
+        <div class="tab"><span>02 Интеграции ИАБС и R-Style</span></div>
+        <div class="tab"><span>03 Контур ЭЦП — STYX / KMS</span></div>
+      </div>
+      <button class="btn btn--icon edit-only" style="margin:0 6px 3px 0">+</button>
+    </div>
+
+    <div class="stage">
+      <div id="scene" class="rise"></div>
+      <div class="zoomer">
+        <button class="btn btn--icon">−</button>
+        <span class="val">100%</span>
+        <button class="btn btn--icon">+</button>
+        <div class="sep" style="height:14px"></div>
+        <button class="btn btn--icon" title="Вписать"><svg><use href="#u-grid"/></svg></button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ---------- Справа: свойства + ИИ ---------- -->
+  <aside class="side side--r">
+    <div class="panel-head">
+      <div class="rtabs" id="rtabs">
+        <button class="btn is-on" data-rt="props">Свойства</button>
+        <button class="btn" data-rt="read">Описание</button>
+      </div>
+      <span class="spacer"></span>
+      <span class="chip lyr-app" id="p-layer"
+            style="color:var(--bd);border-color:var(--bd);background:transparent">Application</span>
+    </div>
+
+    <div class="rtop">
+    <div class="props" id="tab-props">
+      <div class="field">
+        <label class="field__label">Имя</label>
+        <input class="field__input" id="p-name" value="IABS">
+      </div>
+      <div class="field">
+        <label class="field__label">Тип</label>
+        <div class="field__input mono" id="p-type"
+             style="color:var(--text-mid);font-size:11.5px">archimate:ApplicationComponent</div>
+      </div>
+      <div class="field">
+        <label class="field__label">Папка</label>
+        <div class="field__input" id="p-path"
+             style="color:var(--text-mid);font-size:11.5px">Application / Мастер-системы</div>
+      </div>
+      <div class="field">
+        <label class="field__label">Свойства</label>
+        <div class="kvs">
+          <div class="kv"><b>source</b><span>Hamkorbank ALL.vsdx</span></div>
+          <div class="kv"><b>owner</b><span>Управление ИТ</span></div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field__label">Размещён в представлениях</label>
+        <div class="kvs"><div class="kv"><b id="p-views">—</b><span id="p-views-txt">01 Контекст AS IS, 05 IABS — состав…</span></div></div>
+      </div>
+      <div class="field">
+        <label class="field__label">Идентификатор</label>
+        <div class="mono" id="p-id" style="font-size:10.5px;color:var(--text-low)">—</div>
+      </div>
+    </div>
+
+    <!-- Вкладка «Описание»: читаемая карточка элемента (перенесена из варианта C) -->
+    <div class="read" id="tab-read"></div>
+
+    <!-- Групповое выделение: общая панель вместо карточки элемента -->
+    <div class="bulk" id="tab-bulk" style="display:none"></div>
+    </div>
+
+    <div class="split"></div>
+
+    <section class="ai grow">
+      <div class="panel-head">
+        <svg style="width:13px;height:13px;color:var(--signal)"><use href="#u-sparkle"/></svg>
+        Помощник
+        <span class="spacer"></span>
+        <span class="chip">ревью модели</span>
+      </div>
+
+      <div class="ai__body">
+        <div class="finding sev-err">
+          <div class="finding__head">
+            <svg><use href="#u-warn"/></svg>
+            <span class="finding__title">Недопустимая связь</span>
+            <span class="finding__code">RELATION_NOT_PERMITTED</span>
+          </div>
+          <div class="finding__body">Assignment от «CRM Creatio 7.13» к «Физическое лицо» не разрешена в ArchiMate 3.2.</div>
+          <div class="finding__fix">Свяжите через Application Service или замените на Serving.</div>
+          <div class="finding__act"><button class="btn btn--ghost" id="go-crm">Перейти к элементу</button></div>
+        </div>
+
+        <div class="finding sev-warn">
+          <div class="finding__head">
+            <svg><use href="#u-warn"/></svg>
+            <span class="finding__title">Вероятный дубликат</span>
+            <span class="finding__code">DUPLICATE_ELEMENT</span>
+          </div>
+          <div class="finding__body">«IABS», «IABS NG» и «IABS WEB» описывают одну систему на разных уровнях детализации.</div>
+          <div class="finding__fix">Оставьте «IABS» как Application Component, остальные — вложенными через composition.</div>
+          <div class="finding__act"><button class="btn btn--ghost" id="show-dupes">Показать в дереве</button></div>
+        </div>
+
+        <div class="finding sev-info">
+          <div class="finding__head">
+            <svg><use href="#u-warn"/></svg>
+            <span class="finding__title" id="orphan-title">Элементы вне представлений</span>
+            <span class="finding__code">ORPHAN_ELEMENT</span>
+          </div>
+          <div class="finding__body">Существуют в модели, но не размещены ни на одной диаграмме — обычно остатки импорта из Visio.</div>
+          <div class="finding__act"><button class="btn btn--ghost" id="show-unplaced">Показать в дереве</button></div>
+        </div>
+      </div>
+
+      <div class="ai__note">
+        <svg><use href="#u-eye"/></svg>
+        Помощник не изменяет модель. Все правки вносит архитектор.
+      </div>
+
+      <div class="ai__ask">
+        <input placeholder="Спросить о модели…">
+        <button class="btn btn--primary">↵</button>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<!-- ================= Статус ================= -->
+<footer class="status">
+  <span>01 Контекст AS IS</span>
+  <span>·</span>
+  <span><b>10</b> объектов</span>
+  <span><b>9</b> связей</span>
+  <span>·</span>
+  <span id="st-sel">выбрано: IABS</span>
+  <span id="st-dirty"></span>
+  <span class="spacer"></span>
+  <span class="chip chip--ok">валидация: 1 ошибка, 2 замечания</span>
+  <span class="edit-only">сохранено 14:32 · версия <b>12</b></span>
+  <span class="view-only">последнее изменение 14:32, Сагит · версия <b>12</b></span>
+</footer>
+
+<div class="toast" id="toast"><span id="toast-txt"></span>
+  <button class="btn btn--ghost" id="toast-undo">Отменить</button></div>
+
+<div class="stamp"><span class="dot"></span>Вариант A · Панели <a href="index.html">← все варианты</a></div>
+
+<script src="sprite.js"></script>
+<script src="scene.js"></script>
+<script src="tree-data.js"></script>
+<script>
+/* ===========================================================================
+   Дерево модели. Данные сгенерированы из docs/Hamkorbank_AS_IS_strict.archimate:
+   реальные папки, все элементы, связи, документация и свойства.
+   =========================================================================== */
+
+const WARN = new Set(['IABS NG', 'IABS WEB', 'CRM Creatio 7.13']);
+
+/* «Элемент модели → объект на открытом представлении». Разрешается в id при старте,
+   чтобы переименование элемента не рвало связь с холстом. */
+const ON_VIEW_NAMES = {
+  'Физическое лицо':'n-actor', 'Розничный бизнес':'n-fn',
+  'Интернет банкинг ФЛ':'n-ib', 'IABS':'n-iabs', 'CRM Creatio 7.13':'n-crm',
+  'Карт инфо сервис':'n-card', 'Oracle 19c':'n-ora',
+  'BANK ESB (WSO2 Enterprice Integrator)':'n-esb', 'Сервера виртуализации - x7':'n-vm'
+};
+const ON_VIEW = {};          // id элемента → id узла на холсте
+
+const FOLDER_ICON = {
+  strategy:'i-capability', business:'i-actor', application:'i-app-component',
+  technology:'i-node', motivation:'i-goal', implementation_migration:'i-process',
+  other:'i-location', relations:'u-connect', diagrams:'u-grid'
+};
+const REL_RU = {
+  Composition:'состоит из', Aggregation:'объединяет', Assignment:'назначен',
+  Realization:'реализует', Serving:'обслуживает', Access:'обращается к',
+  Influence:'влияет на', Triggering:'запускает', Flow:'поток в',
+  Specialization:'специализация', Association:'связан с'
+};
+const IMPACT = new Set(['Serving', 'Realization', 'Triggering', 'Flow', 'Access']);
+const CUR_VIEW = '01 Контекст AS IS (как нарисовано в Visio)';
+const LAYER_NAME = { biz:'Business', app:'Application', tech:'Technology',
+                     mot:'Motivation', str:'Strategy', oth:'Other' };
+
+/* ---------------------------------------------------------------------------
+   Индексация. Папкам выдаём стабильные ключи: индексные пути ломались бы
+   при создании, удалении и перемещении.
+   --------------------------------------------------------------------------- */
+const ALL = [];        // ссылки на настоящие объекты элементов, не копии
+const FOLDERS = [];
+const byId = new Map();
+let fseq = 0;
+
+(function index(nodes, parent) {
+  nodes.forEach(f => {
+    f._k = 'f' + (fseq++);
+    f._parent = parent;
+    f._path = (parent ? parent._path : []).concat(f.name);
+    FOLDERS.push(f);
+    f.elements.forEach(e => { e._f = f; ALL.push(e); byId.set(e.id, e); });
+    index(f.folders, f);
+  });
+})(MODEL_TREE, null);
+
+ALL.forEach(e => { if (ON_VIEW_NAMES[e.n]) ON_VIEW[e.id] = ON_VIEW_NAMES[e.n]; });
+
+const IS_VIEW = e => e.t === 'ArchimateDiagramModel';
+const pathOf  = e => e._f._path;
+const elements = () => ALL.filter(e => !IS_VIEW(e));
+
+/* Сцена на холсте иллюстративная: часть её объектов в исходном файле
+   не размещена ни на одном представлении. */
+ALL.forEach(e => { if (ON_VIEW[e.id] && e.v === 0) e.v = 1; });
+
+/* ---------------------------------------------------------------------------
+   Состояние
+   --------------------------------------------------------------------------- */
+const state = {
+  q:'', mode:'folders', filter:'all',
+  open:new Set(), more:new Set(),
+  sel:new Set(), lead:null,        // множественное выделение + «ведущий» элемент
+  editing:null                     // объект в режиме переименования
+};
+
+/* ---------------------------------------------------------------------------
+   Счётчики
+   --------------------------------------------------------------------------- */
+function refreshCounters() {
+  const els = elements();
+  const c = {
+    all: els.length,
+    view: els.filter(e => ON_VIEW[e.id]).length,
+    un: els.filter(e => e.v === 0).length,
+    warn: els.filter(e => WARN.has(e.n)).length
+  };
+  document.getElementById('c-all').textContent = c.all;
+  document.getElementById('c-view').textContent = c.view;
+  document.getElementById('c-un').textContent = c.un;
+  document.getElementById('c-warn').textContent = c.warn;
+  document.getElementById('tfoot-txt').textContent =
+    c.all + ' элементов · 368 связей · 12 представлений';
+  document.getElementById('orphan-title').textContent = c.un + ' элементов вне представлений';
+}
+
+/* ---------------------------------------------------------------------------
+   Фильтрация и отрисовка
+   --------------------------------------------------------------------------- */
+const esc = v => String(v).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+function matchQ(e) {
+  if (!state.q) return true;
+  return e.n.toLowerCase().includes(state.q) || e.ht.toLowerCase().includes(state.q);
+}
+function matchF(e) {
+  if (state.filter === 'view')     return !!ON_VIEW[e.id];
+  if (state.filter === 'unplaced') return e.v === 0 && !IS_VIEW(e);
+  if (state.filter === 'warn')     return WARN.has(e.n);
+  return true;
+}
+const keep = e => matchQ(e) && matchF(e);
+const filtering = () => !!state.q || state.filter !== 'all';
+
+function hl(name) {
+  if (!state.q) return esc(name);
+  const i = name.toLowerCase().indexOf(state.q);
+  if (i < 0) return esc(name);
+  return esc(name.slice(0, i)) + '<mark>' + esc(name.slice(i, i + state.q.length)) +
+         '</mark>' + esc(name.slice(i + state.q.length));
+}
+
+const editable = () => !document.body.classList.contains('role-viewer');
+
+function elRow(e, d) {
+  const cls = ['tr'];
+  if (state.sel.has(e.id)) cls.push('is-sel');
+  if (state.lead === e.id)  cls.push('is-lead');
+  const b = [];
+  if (e._dirty) b.push('<i class="tr__dirty" title="изменён, не сохранён"></i>');
+  if (WARN.has(e.n)) b.push('<i class="tr__dot tr__dot--warn" title="есть замечание помощника"></i>');
+  if (!IS_VIEW(e) && e.v === 0) b.push('<i class="tr__dot tr__dot--un" title="не размещён ни на одном представлении"></i>');
+  else if (e.v > 1) b.push('<span class="tr__v" title="размещён в ' + e.v + ' представлениях">×' + e.v + '</span>');
+
+  const name = state.editing === e
+    ? '<input class="tr__edit" value="' + esc(e.n) + '" data-edit="1">'
+    : '<span class="tr__n">' + hl(e.n) + '</span>';
+
+  return '<div class="' + cls.join(' ') + '" data-id="' + e.id + '"' +
+    (editable() && !state.editing ? ' draggable="true"' : '') +
+    ' title="' + esc(e.n) + ' · ' + e.ht + '">' +
+    '<span class="tr__ind" style="--d:' + d + '"></span><span class="tr__sp"></span>' +
+    '<svg class="tr__ic lyr-' + e.l + '" style="color:var(--bd)"><use href="#' + e.i + '"/></svg>' +
+    name + '<span class="tr__b">' + b.join('') + '</span></div>';
+}
+
+const CAP = 40;
+let shown = 0;
+
+function countKept(f) {
+  return f.elements.filter(keep).length + f.folders.reduce((n, g) => n + countKept(g), 0);
+}
+
+function folderRows(f, d, out) {
+  const deep = countKept(f);
+  if (filtering() && !deep && !f.rel) return;
+
+  const open = filtering() ? true : state.open.has(f._k);
+  const isRoot = d === 0;
+  const icon = FOLDER_ICON[f.ftype] || 'i-group';
+  const rel = f.rel ? '<span class="tr__cnt" title="связей в папке">' + f.rel + '</span>' : '';
+  const name = state.editing === f
+    ? '<input class="tr__edit" value="' + esc(f.name) + '" data-edit="1">'
+    : '<span class="tr__n">' + esc(f.name) + '</span>';
+
+  out.push('<div class="tr tr--folder' + (isRoot ? ' tr--root' : '') + (open ? ' is-open' : '') +
+    '" data-key="' + f._k + '"' + (editable() && !state.editing && !isRoot ? ' draggable="true"' : '') + '>' +
+    '<span class="tr__ind" style="--d:' + d + '"></span>' +
+    '<svg class="tr__chev"><use href="#u-chevron"/></svg>' +
+    '<svg class="tr__ic" style="color:var(--text-low)"><use href="#' + icon + '"/></svg>' +
+    name + '<span class="tr__b">' + rel +
+    '<span class="tr__cnt">' + (deep || '') + '</span></span></div>');
+
+  if (!open) return;
+  f.folders.forEach(g => folderRows(g, d + 1, out));
+
+  const kept = f.elements.filter(keep);
+  const cap = state.more.has(f._k) ? kept.length : CAP;
+  kept.slice(0, cap).forEach(e => { out.push(elRow(e, d + 1)); shown++; });
+  if (kept.length > cap) {
+    out.push('<div class="tmore" style="--d:' + (d + 1) + '" data-more="' + f._k + '">' +
+      'ещё ' + (kept.length - cap) + ' — показать</div>');
+  }
+}
+
+function render() {
+  const out = [];
+  shown = 0;
+
+  if (state.mode === 'folders') {
+    MODEL_TREE.forEach(f => folderRows(f, 0, out));
+
+  } else if (state.mode === 'types') {
+    const by = new Map();
+    elements().filter(keep).forEach(e => {
+      if (!by.has(e.t)) by.set(e.t, []);
+      by.get(e.t).push(e);
+    });
+    [...by.entries()].sort((a, b) => b[1].length - a[1].length).forEach(([t, list], i) => {
+      const key = 't' + i;
+      const open = filtering() ? true : state.open.has(key);
+      out.push('<div class="tr tr--folder tr--root' + (open ? ' is-open' : '') + '" data-key="' + key + '">' +
+        '<span class="tr__ind" style="--d:0"></span>' +
+        '<svg class="tr__chev"><use href="#u-chevron"/></svg>' +
+        '<svg class="tr__ic lyr-' + list[0].l + '" style="color:var(--bd)"><use href="#' + list[0].i + '"/></svg>' +
+        '<span class="tr__n">' + list[0].ht + '</span>' +
+        '<span class="tr__b"><span class="tr__cnt">' + list.length + '</span></span></div>');
+      if (!open) return;
+      const sorted = list.slice().sort((a, b) => a.n.localeCompare(b.n, 'ru'));
+      const cap = state.more.has(key) ? sorted.length : CAP;
+      sorted.slice(0, cap).forEach(e => { out.push(elRow(e, 1)); shown++; });
+      if (sorted.length > cap) {
+        out.push('<div class="tmore" style="--d:1" data-more="' + key + '">ещё ' +
+          (sorted.length - cap) + ' — показать</div>');
+      }
+    });
+
+  } else {
+    const list = elements().filter(keep).sort((a, b) => a.n.localeCompare(b.n, 'ru'));
+    const cap = state.more.has('flat') ? list.length : 120;
+    list.slice(0, cap).forEach(e => { out.push(elRow(e, 0)); shown++; });
+    if (list.length > cap) {
+      out.push('<div class="tmore" style="--d:0" data-more="flat">ещё ' +
+        (list.length - cap) + ' — показать</div>');
+    }
+  }
+
+  /* Пусто = не отрисовано ни одной строки. Свёрнутые ветви пустотой не считаются. */
+  if (!out.length) {
+    out.push('<div class="tempty"><b>Ничего не найдено</b>Измените запрос или снимите фильтр.</div>');
+  }
+  document.getElementById('tree').innerHTML = out.join('');
+  document.getElementById('tfoot-shown').textContent = filtering() ? 'показано ' + shown : '';
+
+  const inp = document.querySelector('#tree [data-edit]');
+  if (inp) { inp.focus(); inp.select(); }
+}
+
+/* ---------------------------------------------------------------------------
+   Правая панель: свойства, описание, групповое выделение
+   --------------------------------------------------------------------------- */
+let readAll = false;
+
+function relsOf(id) {
+  return (MODEL_RELS[id] || [])
+    .map(([k, d, other]) => ({ k, d, e: byId.get(other) }))
+    .filter(r => r.e);
+}
+
+function impactText(e, rels) {
+  const direct = rels.filter(r => r.d === 'o' && IMPACT.has(r.k));
+  const parts = [];
+  if (!direct.length) {
+    parts.push(rels.length
+      ? 'Исходящих зависимостей нет: отказ элемента не затрагивает другие элементы модели напрямую.'
+      : 'Элемент не участвует ни в одной связи. Кандидат на уточнение модели или на удаление.');
+  } else {
+    const second = new Set();
+    direct.forEach(r => relsOf(r.e.id)
+      .filter(x => x.d === 'o' && IMPACT.has(x.k))
+      .forEach(x => { if (x.e.id !== e.id) second.add(x.e.id); }));
+    direct.forEach(r => second.delete(r.e.id));
+    parts.push('При отказе напрямую затрагиваются ' + direct.length + ' — ' +
+      direct.slice(0, 3).map(r => '«' + esc(r.e.n) + '»').join(', ') +
+      (direct.length > 3 ? ' и ещё ' + (direct.length - 3) : '') + '.');
+    if (second.size) parts.push('Через них — ещё ' + second.size + ' элементов второго уровня.');
+  }
+  const children = rels.filter(r => r.d === 'o' && (r.k === 'Composition' || r.k === 'Aggregation'));
+  if (children.length) parts.push('Включает ' + children.length + ' вложенных элементов.');
+  return parts.join(' ');
+}
+
+function renderRead(e) {
+  const box = document.getElementById('tab-read');
+  box.scrollTop = 0;
+  if (!e) { box.innerHTML = '<p class="muted-note">Выберите элемент в дереве или на холсте.</p>'; return; }
+
+  const rels = relsOf(e.id);
+  const ordered = rels.filter(r => r.d === 'o').concat(rels.filter(r => r.d === 'i'));
+  const cap = readAll ? ordered.length : 7;
+
+  const relRow = r =>
+    '<div class="rel' + (r.d === 'i' ? ' rel--in' : '') + '" data-goto="' + r.e.id + '" ' +
+      'title="' + esc(r.e.n) + ' · ' + r.e.ht + '">' +
+      '<span class="rel__dot lyr-' + r.e.l + '"><svg><use href="#' + r.e.i + '"/></svg></span>' +
+      '<span class="rel__n">' + esc(r.e.n) + '</span>' +
+      '<span class="k">' + (r.d === 'o' ? REL_RU[r.k] + ' →' : '← ' + REL_RU[r.k]) + '</span></div>';
+
+  const doc = e.doc ? esc(e.doc)
+    : '<span class="muted-note">Документация в модели не заполнена. Тип — ' + e.ht +
+      ', папка «' + esc(pathOf(e).join(' / ')) + '».</span>';
+  const props = (e.pr || []).map(([k, v]) =>
+    '<div class="kv"><b>' + esc(k) + '</b><span>' + esc(v) + '</span></div>').join('');
+  const views = (e.vn || []).map(v =>
+    '<div class="vrow' + (v === CUR_VIEW ? ' is-cur' : '') + '">' +
+    '<svg><use href="#u-grid"/></svg>' + esc(v.replace(' (как нарисовано в Visio)', '')) + '</div>').join('');
+
+  box.innerHTML =
+    '<div><h2>' + esc(e.n) + '</h2><div class="meta">' +
+      '<span class="chip lyr-' + e.l + '" style="color:var(--bd);border-color:var(--bd);background:transparent">' +
+        e.ht + '</span>' +
+      (WARN.has(e.n) ? '<span class="chip chip--warn">есть замечание</span>' : '') +
+      (e.v ? '<span class="chip">в ' + e.v + ' представлениях</span>'
+           : '<span class="chip">не размещён</span>') +
+    '</div></div>' +
+    '<p>' + doc + '</p>' +
+    '<h3>Участвует в связях' + (rels.length ? ' · ' + rels.length : '') + '</h3>' +
+    (rels.length
+      ? '<div class="rel-list">' + ordered.slice(0, cap).map(relRow).join('') + '</div>' +
+        (ordered.length > cap
+          ? '<div class="more" id="rel-more">показать все ' + ordered.length + '</div>' : '')
+      : '<p class="muted-note">Связей нет.</p>') +
+    '<h3>Анализ влияния</h3><p>' + impactText(e, rels) + '</p>' +
+    (props ? '<h3>Свойства</h3><div class="kvs">' + props + '</div>' : '') +
+    (views ? '<h3>Размещён в представлениях</h3><div class="vlist">' + views +
+             (e.v > (e.vn || []).length
+               ? '<div class="more">и ещё ' + (e.v - e.vn.length) + '</div>' : '') + '</div>' : '') +
+    '<div class="row" style="margin-top:2px">' +
+      '<button class="btn btn--ghost"><svg><use href="#u-sparkle"/></svg>Собрать документацию</button>' +
+    '</div>' +
+    '<p class="muted-note">Текст собирает помощник по модели; в саму модель он ничего не пишет.</p>';
+}
+
+function renderBulk() {
+  const ids = [...state.sel];
+  const box = document.getElementById('tab-bulk');
+  const list = ids.slice(0, 40).map(id => {
+    const e = byId.get(id); if (!e) return '';
+    return '<div class="li"><svg class="lyr-' + e.l + '" style="color:var(--bd)"><use href="#' + e.i + '"/></svg>' +
+      '<span>' + esc(e.n) + '</span></div>';
+  }).join('');
+  const layers = new Set(ids.map(id => byId.get(id) && byId.get(id).l).filter(Boolean));
+  const folders = new Set(ids.map(id => byId.get(id) && byId.get(id)._f.name).filter(Boolean));
+
+  box.innerHTML =
+    '<h4>Выбрано ' + ids.length + ' элементов</h4>' +
+    '<p>Слоёв: ' + layers.size + ' · папок: ' + folders.size + '. ' +
+      'Групповые операции применяются ко всем выбранным.</p>' +
+    '<div class="list">' + list +
+      (ids.length > 40 ? '<div class="li"><span>и ещё ' + (ids.length - 40) + '</span></div>' : '') +
+    '</div>' +
+    (editable()
+      ? '<div class="row" style="gap:6px;flex-wrap:wrap">' +
+          '<button class="btn btn--ghost" id="bulk-move">Переместить в папку…</button>' +
+          '<button class="btn btn--ghost" id="bulk-del" style="color:#D98A87">Удалить</button>' +
+        '</div>'
+      : '<p class="muted-note">Режим чтения: групповые операции недоступны.</p>');
+}
+
+function syncRightPanel() {
+  const multi = state.sel.size > 1;
+  document.getElementById('tab-bulk').style.display = multi ? 'flex' : 'none';
+  document.getElementById('tab-props').style.display =
+    multi ? 'none' : (document.body.classList.contains('rt-read') ? 'none' : '');
+  document.getElementById('tab-read').style.display =
+    multi ? 'none' : (document.body.classList.contains('rt-read') ? '' : 'none');
+  if (multi) renderBulk();
+}
+
+function clearProps() {
+  document.getElementById('p-name').value = '';
+  document.getElementById('p-type').textContent = '—';
+  document.getElementById('p-path').textContent = '—';
+  document.getElementById('p-id').textContent = '—';
+  document.getElementById('p-views').textContent = '—';
+  document.getElementById('p-views-txt').textContent = 'элемент не выбран';
+  const lay = document.getElementById('p-layer');
+  lay.className = 'chip'; lay.textContent = '—';
+}
+
+function fillProps(e) {
+  document.getElementById('p-name').value = e.n;
+  document.getElementById('p-type').textContent = 'archimate:' + e.t;
+  document.getElementById('p-path').textContent = pathOf(e).join(' / ');
+  document.getElementById('p-id').textContent = e.id;
+  document.getElementById('p-views').textContent = e.v ? e.v + ' шт.' : 'нигде';
+  document.getElementById('p-views-txt').textContent =
+    e.v ? (e.vn || [CUR_VIEW])[0].replace(' (как нарисовано в Visio)', '') + '…'
+        : 'элемент не размещён ни на одной диаграмме';
+  const lay = document.getElementById('p-layer');
+  lay.className = 'chip lyr-' + e.l;
+  lay.textContent = LAYER_NAME[e.l];
+}
+
+/* ---------------------------------------------------------------------------
+   Выделение
+   --------------------------------------------------------------------------- */
+function revealInTree(e) {
+  if (state.mode !== 'folders') return;
+  for (let f = e._f; f; f = f._parent) state.open.add(f._k);
+}
+
+function select(id, opts) {
+  opts = opts || {};
+  const e = byId.get(id);
+  if (!e) return;
+
+  if (opts.toggle) {
+    state.sel.has(id) ? state.sel.delete(id) : state.sel.add(id);
+    state.lead = id;
+  } else if (opts.range && state.lead) {
+    const rows = [...document.querySelectorAll('#tree .tr[data-id]')].map(r => r.dataset.id);
+    const a = rows.indexOf(state.lead), b = rows.indexOf(id);
+    if (a >= 0 && b >= 0) {
+      rows.slice(Math.min(a, b), Math.max(a, b) + 1).forEach(x => state.sel.add(x));
+    } else { state.sel.add(id); }
+    state.lead = id;
+  } else {
+    state.sel = new Set([id]);
+    state.lead = id;
+  }
+
+  revealInTree(e);
+  render();
+  let row = document.querySelector('#tree .tr.is-lead');
+  if (!row && state.mode === 'folders') { state.more.add(e._f._k); render();
+    row = document.querySelector('#tree .tr.is-lead'); }
+  if (row && !opts.noScroll) row.scrollIntoView({ block:'nearest' });
+
+  if (state.sel.size === 1) {
+    readAll = false;
+    fillProps(e);
+    renderRead(e);
+    const node = ON_VIEW[e.id] || null;
+    drawScene({ selected:node, highlight: node ? [3] : [] });
+    setLayer(e.l);
+    document.getElementById('st-sel').textContent = 'выбрано: ' + e.n;
+  } else {
+    document.getElementById('st-sel').textContent = 'выбрано: ' + state.sel.size + ' элементов';
+  }
+  syncRightPanel();
+}
+
+/* ---------------------------------------------------------------------------
+   Изменения: переименование, перемещение, создание папки, удаление
+   --------------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------------
+   История изменений: многошаговая отмена и повтор.
+   Каждая операция кладётся в стек парой apply/revert, поэтому отменять и
+   возвращать можно на любую глубину, а не на один шаг.
+   --------------------------------------------------------------------------- */
+const history = { stack: [], idx: -1, saved: -1 };
+
+/* Холст перерисовывается из scene.js, поэтому правки модели накладываем поверх:
+   переименование меняет подпись узла, удаление убирает узел с представления. */
+const NODE_NAME = {};
+const NODE_GONE = new Set();
+let sceneOpts = { selected:'n-iabs', highlight:[3] };
+
+function drawScene(opts) {
+  if (opts) sceneOpts = opts;
+  renderScene(document.getElementById('scene'), sceneOpts);
+  Object.keys(NODE_NAME).forEach(nid => {
+    const n = document.querySelector('#' + nid + ' .an__name');
+    if (n) n.textContent = NODE_NAME[nid];
+  });
+  NODE_GONE.forEach(nid => {
+    const n = document.getElementById(nid);
+    if (n) n.style.display = 'none';
+  });
+}
+
+function repath(f) {
+  f._path = (f._parent ? f._parent._path : []).concat(f.name);
+  f.folders.forEach(repath);
+}
+
+/* Пометка «изменён, не сохранён» считается от точки сохранения,
+   а не выставляется вручную в каждой операции — иначе отмена оставляет мусор. */
+function recomputeDirty() {
+  ALL.forEach(e => delete e._dirty);
+  const from = Math.min(history.saved, history.idx);
+  const to   = Math.max(history.saved, history.idx);
+  for (let i = from + 1; i <= to; i++) {
+    (history.stack[i].touch || []).forEach(e => { e._dirty = 1; });
+  }
+}
+
+function syncHistoryUI() {
+  const canU = history.idx >= 0;
+  const canR = history.idx < history.stack.length - 1;
+  const ub = document.getElementById('undo-btn');
+  const rb = document.getElementById('redo-btn');
+  ub.classList.toggle('is-off', !canU);
+  rb.classList.toggle('is-off', !canR);
+  ub.title = canU ? 'Отменить: ' + history.stack[history.idx].label + ' (⌘Z)' : 'Отменять нечего';
+  rb.title = canR ? 'Повторить: ' + history.stack[history.idx + 1].label + ' (⇧⌘Z)' : 'Повторять нечего';
+
+  const n = Math.abs(history.idx - history.saved);
+  const st = document.getElementById('st-dirty');
+  st.textContent = n ? '· несохранённых изменений: ' + n + ' · история' : '';
+  st.style.cursor = n ? 'pointer' : '';
+  document.getElementById('save').style.display = n ? '' : 'none';
+}
+
+/* Сводит состояние после любого изменения истории */
+function afterChange() {
+  state.sel = new Set([...state.sel].filter(id => byId.has(id)));
+  if (state.lead && !byId.has(state.lead)) state.lead = [...state.sel][0] || null;
+
+  refreshCounters();
+  render();
+  drawScene();
+
+  const st = document.getElementById('st-sel');
+  if (state.sel.size === 1 && byId.has(state.lead)) {
+    const e = byId.get(state.lead);
+    fillProps(e); renderRead(e);
+    st.textContent = 'выбрано: ' + e.n;
+  } else if (!state.sel.size) {
+    clearProps(); renderRead(null);
+    st.textContent = 'ничего не выбрано';
+  } else {
+    st.textContent = 'выбрано: ' + state.sel.size + ' элементов';
+  }
+  syncRightPanel();
+  syncHistoryUI();
+}
+
+function commit(label, apply, revert, touch) {
+  apply();
+  history.stack.length = history.idx + 1;          // ветку «вперёд» обрезаем
+  history.stack.push({ label, apply, revert, touch: touch || [] });
+  history.idx++;
+  recomputeDirty();
+  afterChange();
+  toast(label, 'undo');
+}
+
+function doUndo() {
+  if (history.idx < 0) return;
+  const step = history.stack[history.idx];
+  step.revert(); history.idx--;
+  recomputeDirty(); afterChange();
+  toast('Отменено: ' + step.label, 'redo');
+}
+function doRedo() {
+  if (history.idx >= history.stack.length - 1) return;
+  const step = history.stack[++history.idx];
+  step.apply();
+  recomputeDirty(); afterChange();
+  toast('Возвращено: ' + step.label, 'undo');
+}
+function jumpTo(i) {
+  while (history.idx > i) { history.stack[history.idx].revert(); history.idx--; }
+  while (history.idx < i) { history.stack[++history.idx].apply(); }
+  recomputeDirty(); afterChange();
+}
+
+/* --- сообщение с действием --- */
+function toast(text, mode) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-txt').textContent = text;
+  const b = document.getElementById('toast-undo');
+  b.style.display = mode ? '' : 'none';
+  b.textContent = mode === 'redo' ? 'Вернуть' : 'Отменить';
+  b.dataset.mode = mode || '';
+  t.classList.add('is-on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('is-on'), 6000);
+}
+document.getElementById('toast-undo').onclick = function () {
+  document.getElementById('toast').classList.remove('is-on');
+  this.dataset.mode === 'redo' ? doRedo() : doUndo();
+};
+
+/* --- панель истории --- */
+function openHistory(x, y) {
+  closeMenus();
+  const pop = document.createElement('div');
+  pop.className = 'pop';
+  const rows = history.stack.map((h, i) =>
+    '<div class="fi" data-i="' + i + '">' +
+      '<svg><use href="#' + (i <= history.idx ? 'u-pencil' : 'u-redo') + '"/></svg>' +
+      '<span style="' + (i > history.idx ? 'opacity:.5' : '') + '">' + esc(h.label) + '</span>' +
+      (i === history.idx ? '<em style="margin-left:auto;color:var(--signal-2)">сейчас</em>' : '') +
+      (i === history.saved ? '<em style="margin-left:auto">сохранено</em>' : '') +
+    '</div>').reverse().join('');
+  pop.innerHTML =
+    '<h4>История изменений</h4>' +
+    '<p>' + history.stack.length + ' операций. Клик по строке возвращает модель в это состояние.</p>' +
+    '<div class="list">' + rows +
+      '<div class="fi" data-i="-1"><svg><use href="#u-undo"/></svg>' +
+      '<span>Исходное состояние</span>' +
+      (history.idx === -1 ? '<em style="margin-left:auto;color:var(--signal-2)">сейчас</em>' : '') +
+      '</div></div>' +
+    '<div class="acts"><button class="btn btn--ghost" data-close="1">Закрыть</button></div>';
+  place(pop, x, y);
+  pop.addEventListener('click', ev => {
+    if (ev.target.closest('[data-close]')) return closeMenus();
+    const r = ev.target.closest('[data-i]');
+    if (r) { jumpTo(parseInt(r.dataset.i, 10)); closeMenus(); }
+  });
+}
+
+/* ---------------------------------------------------------------------------
+   Операции над деревом
+   --------------------------------------------------------------------------- */
+function startRename(obj) {
+  if (!editable()) return;
+  closeMenus();
+  state.editing = obj;
+  render();
+}
+function commitRename(value) {
+  const obj = state.editing;
+  state.editing = null;
+  if (!obj) return render();
+  renameTo(obj, value.trim());
+  if (!history.stack.length || history.stack[history.idx].touch[0] !== obj) render();
+}
+function renameTo(obj, name) {
+  const isFolder = FOLDERS.includes(obj);
+  const old = isFolder ? obj.name : obj.n;
+  if (!name || name === old) { render(); return; }
+  const set = v => {
+    if (isFolder) { obj.name = v; repath(obj); }
+    else { obj.n = v; if (ON_VIEW[obj.id]) NODE_NAME[ON_VIEW[obj.id]] = v; }
+  };
+  commit('Переименование: «' + old + '» → «' + name + '»',
+         () => set(name), () => set(old), isFolder ? [] : [obj]);
+}
+
+function moveTo(ids, target) {
+  if (!editable() || !target) return;
+  const items = ids.map(id => byId.get(id))
+    .filter(e => e && e._f !== target)
+    .map(e => ({ e, f: e._f, i: e._f.elements.indexOf(e) }));
+  if (!items.length) return;
+
+  const apply = () => {
+    items.forEach(({ e }) => {
+      const a = e._f.elements, j = a.indexOf(e); if (j >= 0) a.splice(j, 1);
+      e._f = target; target.elements.push(e);
+    });
+    for (let f = target; f; f = f._parent) state.open.add(f._k);
+  };
+  const revert = () => {
+    items.slice().reverse().forEach(({ e, f, i }) => {
+      const a = e._f.elements, j = a.indexOf(e); if (j >= 0) a.splice(j, 1);
+      e._f = f; f.elements.splice(i, 0, e);
+    });
+  };
+  commit('Перемещено ' + items.length + ' → «' + target.name + '»',
+         apply, revert, items.map(x => x.e));
+}
+
+function newFolder(parent) {
+  if (!editable()) return;
+  const f = { name:'Новая папка', folders:[], elements:[], _parent:parent || null, _k:'f' + (fseq++) };
+  f._path = (parent ? parent._path : []).concat(f.name);
+  const arr = parent ? parent.folders : MODEL_TREE;
+  const at = arr.length;
+  commit('Создана папка',
+    () => { arr.splice(at, 0, f); if (!FOLDERS.includes(f)) FOLDERS.push(f);
+            for (let p = parent; p; p = p._parent) state.open.add(p._k); },
+    () => { const j = arr.indexOf(f); if (j >= 0) arr.splice(j, 1);
+            const k = FOLDERS.indexOf(f); if (k >= 0) FOLDERS.splice(k, 1);
+            if (state.editing === f) state.editing = null; },
+    []);
+  startRename(f);
+}
+
+function deleteElements(ids) {
+  if (!editable()) return;
+  const items = ids.map(id => byId.get(id)).filter(Boolean)
+    .map(e => ({ e, f: e._f, i: e._f.elements.indexOf(e) }));
+  if (!items.length) return;
+  commit('Удалено ' + items.length,
+    () => items.forEach(({ e }) => {
+      const a = e._f.elements, j = a.indexOf(e); if (j >= 0) a.splice(j, 1);
+      const k = ALL.indexOf(e); if (k >= 0) ALL.splice(k, 1);
+      byId.delete(e.id); state.sel.delete(e.id);
+      if (ON_VIEW[e.id]) NODE_GONE.add(ON_VIEW[e.id]);
+    }),
+    () => items.forEach(({ e, f, i }) => {
+      f.elements.splice(i, 0, e); e._f = f;
+      ALL.push(e); byId.set(e.id, e);
+      if (ON_VIEW[e.id]) NODE_GONE.delete(ON_VIEW[e.id]);
+    }),
+    items.map(x => x.e));
+}
+
+function deleteFolder(f) {
+  if (!editable()) return;
+  if (!f._parent && f.ftype) {
+    toast('Системную папку «' + f.name + '» удалить нельзя: она часть формата .archimate');
+    return;
+  }
+  const arr = f._parent ? f._parent.folders : MODEL_TREE;
+  const at = arr.indexOf(f);
+  const inner = [], subs = [];
+  (function grab(g) { subs.push(g); g.elements.forEach(e => inner.push(e)); g.folders.forEach(grab); })(f);
+
+  commit('Удалена папка «' + f.name + '»' + (inner.length ? ' и ' + inner.length + ' элементов' : ''),
+    () => {
+      const j = arr.indexOf(f); if (j >= 0) arr.splice(j, 1);
+      inner.forEach(e => {
+        const k = ALL.indexOf(e); if (k >= 0) ALL.splice(k, 1);
+        byId.delete(e.id); state.sel.delete(e.id);
+        if (ON_VIEW[e.id]) NODE_GONE.add(ON_VIEW[e.id]);
+      });
+      subs.forEach(g => { const k = FOLDERS.indexOf(g); if (k >= 0) FOLDERS.splice(k, 1); });
+    },
+    () => {
+      arr.splice(at, 0, f);
+      inner.forEach(e => { ALL.push(e); byId.set(e.id, e);
+                           if (ON_VIEW[e.id]) NODE_GONE.delete(ON_VIEW[e.id]); });
+      subs.forEach(g => { if (!FOLDERS.includes(g)) FOLDERS.push(g); });
+    },
+    inner);
+}
+
+function countAll(f) {
+  return f.elements.length + f.folders.reduce((n, g) => n + countAll(g), 0);
+}
+
+/* ---------------------------------------------------------------------------
+   Всплывающие панели
+   --------------------------------------------------------------------------- */
+function closeMenus() {
+  document.querySelectorAll('.ctx,.pop').forEach(n => n.remove());
+}
+function place(node, x, y) {
+  document.body.appendChild(node);
+  const r = node.getBoundingClientRect();
+  node.style.left = Math.min(x, innerWidth - r.width - 10) + 'px';
+  node.style.top  = Math.min(y, innerHeight - r.height - 10) + 'px';
+}
+
+function openMovePicker(ids, x, y) {
+  closeMenus();
+  const pop = document.createElement('div');
+  pop.className = 'pop';
+  pop.innerHTML =
+    '<h4>Переместить ' + ids.length + ' ' + (ids.length === 1 ? 'элемент' : 'элементов') + '</h4>' +
+    '<input class="field__input" id="mv-q" placeholder="Папка…" autocomplete="off">' +
+    '<div class="list" id="mv-list"></div>' +
+    '<div class="acts"><button class="btn btn--ghost" data-close="1">Отмена</button></div>';
+  place(pop, x, y);
+
+  const list = pop.querySelector('#mv-list');
+  const draw = q => {
+    q = q.trim().toLowerCase();
+    const items = FOLDERS
+      .filter(f => f.ftype !== 'relations' && f.ftype !== 'diagrams')
+      .filter(f => !q || f._path.join(' / ').toLowerCase().includes(q))
+      .slice(0, 80);
+    list.innerHTML = items.map(f =>
+      '<div class="fi" data-k="' + f._k + '"><svg><use href="#i-group"/></svg>' +
+      '<span>' + esc(f._path.slice(0, -1).join(' / ')) +
+      (f._path.length > 1 ? ' / ' : '') + '<em style="color:var(--text-hi)">' + esc(f.name) + '</em></span>' +
+      '<b>' + countAll(f) + '</b></div>').join('') ||
+      '<div class="fi"><span class="muted">Ничего не найдено</span></div>';
+  };
+  draw('');
+  pop.querySelector('#mv-q').addEventListener('input', e => draw(e.target.value));
+  pop.querySelector('#mv-q').focus();
+  pop.addEventListener('click', ev => {
+    if (ev.target.closest('[data-close]')) return closeMenus();
+    const fi = ev.target.closest('[data-k]');
+    if (fi) { moveTo(ids, FOLDERS.find(f => f._k === fi.dataset.k)); closeMenus(); }
+  });
+}
+
+function confirmDelete(ids, x, y) {
+  closeMenus();
+  const rels = ids.reduce((n, id) => n + (MODEL_RELS[id] || []).length, 0);
+  const onView = ids.filter(id => ON_VIEW[id]).length;
+  const pop = document.createElement('div');
+  pop.className = 'pop';
+  pop.innerHTML =
+    '<h4>Удалить ' + ids.length + ' ' + (ids.length === 1 ? 'элемент' : 'элементов') + '?</h4>' +
+    '<p>' + (rels
+      ? 'Затронуто связей: <b style="color:#D98A87">' + rels + '</b>. Они будут удалены вместе с элементами.'
+      : 'Связей у выбранного нет.') +
+      (onView ? ' Из них размещено на открытом представлении: ' + onView + '.' : '') +
+    '</p>' +
+    '<p class="muted-note">Действие можно отменить: ⌘Z или панель истории.</p>' +
+    '<div class="acts"><button class="btn btn--ghost" data-close="1">Отмена</button>' +
+    '<button class="btn btn--primary" data-ok="1" style="background:#C6504C;color:#fff">Удалить</button></div>';
+  place(pop, x, y);
+  pop.addEventListener('click', ev => {
+    if (ev.target.closest('[data-ok]')) { deleteElements(ids); closeMenus(); }
+    else if (ev.target.closest('[data-close]')) closeMenus();
+  });
+}
+
+/* --- контекстное меню --- */
+function openCtx(x, y, ctx) {
+  closeMenus();
+  const m = document.createElement('div');
+  m.className = 'ctx';
+  const ic = id => '<svg><use href="#' + id + '"/></svg>';
+  let html = '';
+
+  if (ctx.folder) {
+    const f = ctx.folder;
+    html =
+      '<div class="ctx__head">' + esc(f.name) + '</div>' +
+      '<div class="ctx__i" data-a="rename-folder">' + ic('u-pencil') + 'Переименовать<span class="kbd">F2</span></div>' +
+      '<div class="ctx__i" data-a="new-sub">' + ic('i-group') + 'Создать вложенную папку</div>' +
+      '<div class="ctx__sep"></div>' +
+      '<div class="ctx__i" data-a="expand">' + ic('u-chevron') + 'Раскрыть всё внутри</div>' +
+      '<div class="ctx__i" data-a="select-all">' + ic('u-cursor') + 'Выделить все элементы</div>' +
+      '<div class="ctx__sep"></div>' +
+      '<div class="ctx__i ctx__i--danger" data-a="del-folder">' + ic('u-warn') + 'Удалить папку</div>';
+  } else if (!editable()) {
+    /* Режим чтения: навигация и копирование, ничего изменяющего */
+    html =
+      '<div class="ctx__head">' + esc(ctx.el.n) + '</div>' +
+      '<div class="ctx__i' + (ON_VIEW[ctx.el.id] ? '' : ' is-off') + '" data-a="goto-view">' +
+        ic('u-grid') + 'Показать на представлении</div>' +
+      '<div class="ctx__i" data-a="usage">' + ic('u-connect') + 'Где используется (' +
+        (MODEL_RELS[ctx.el.id] || []).length + ')</div>' +
+      '<div class="ctx__i" data-a="copy">' + ic('u-tree') + 'Копировать имя</div>';
+  } else {
+    const n = state.sel.size;
+    html =
+      '<div class="ctx__head">' + (n > 1 ? n + ' элементов' : esc(ctx.el.n)) + '</div>' +
+      (n === 1 ? '<div class="ctx__i" data-a="rename">' + ic('u-pencil') + 'Переименовать<span class="kbd">F2</span></div>' : '') +
+      '<div class="ctx__i" data-a="move">' + ic('i-group') + 'Переместить в папку…</div>' +
+      '<div class="ctx__sep"></div>' +
+      (n === 1 ? '<div class="ctx__i' + (ON_VIEW[ctx.el.id] ? '' : ' is-off') + '" data-a="goto-view">' +
+        ic('u-grid') + 'Показать на представлении</div>' +
+        '<div class="ctx__i" data-a="usage">' + ic('u-connect') + 'Где используется (' +
+        (MODEL_RELS[ctx.el.id] || []).length + ')</div>' : '') +
+      '<div class="ctx__sep"></div>' +
+      '<div class="ctx__i ctx__i--danger" data-a="del">' + ic('u-warn') + 'Удалить<span class="kbd">⌫</span></div>';
+  }
+  m.innerHTML = html;
+  place(m, x, y);
+
+  m.addEventListener('click', ev => {
+    const it = ev.target.closest('[data-a]'); if (!it) return;
+    const a = it.dataset.a;
+    const ids = [...state.sel];
+    closeMenus();
+    if (a === 'rename')        startRename(ctx.el);
+    else if (a === 'rename-folder') startRename(ctx.folder);
+    else if (a === 'new-sub')  newFolder(ctx.folder);
+    else if (a === 'move')     openMovePicker(ids, x, y);
+    else if (a === 'del')      confirmDelete(ids, x, y);
+    else if (a === 'del-folder') deleteFolder(ctx.folder);
+    else if (a === 'expand')   { (function op(f){ state.open.add(f._k); f.folders.forEach(op); })(ctx.folder); render(); }
+    else if (a === 'select-all') {
+      const acc = [];
+      (function grab(f){ f.elements.forEach(e => acc.push(e.id)); f.folders.forEach(grab); })(ctx.folder);
+      state.sel = new Set(acc); state.lead = acc[0] || null;
+      render(); syncRightPanel();
+      document.getElementById('st-sel').textContent = 'выбрано: ' + acc.length + ' элементов';
+    }
+    else if (a === 'goto-view' && ON_VIEW[ctx.el.id]) select(ctx.el.id);
+    else if (a === 'usage')    { setRightTab('read'); readAll = true; renderRead(ctx.el); }
+    else if (a === 'copy')     { navigator.clipboard && navigator.clipboard.writeText(ctx.el.n);
+                                 toast('Имя скопировано: ' + ctx.el.n); }
+  });
+}
+
+document.addEventListener('mousedown', ev => {
+  if (!ev.target.closest('.ctx,.pop')) closeMenus();
+});
+
+/* ---------------------------------------------------------------------------
+   События дерева
+   --------------------------------------------------------------------------- */
+const treeEl = document.getElementById('tree');
+
+treeEl.addEventListener('click', ev => {
+  if (ev.target.closest('[data-edit]')) return;
+
+  const more = ev.target.closest('[data-more]');
+  if (more) { state.more.add(more.dataset.more); render(); return; }
+
+  const folder = ev.target.closest('.tr--folder');
+  if (folder) {
+    const k = folder.dataset.key;
+    state.open.has(k) ? state.open.delete(k) : state.open.add(k);
+    render();
+    return;
+  }
+  const row = ev.target.closest('.tr[data-id]');
+  /* noScroll: строка уже перед глазами, а прокрутка сдвинула бы её из-под курсора
+     и ломала бы двойной клик по имени. */
+  if (row) select(row.dataset.id,
+    { toggle: ev.metaKey || ev.ctrlKey, range: ev.shiftKey, noScroll: true });
+});
+
+treeEl.addEventListener('dblclick', ev => {
+  if (!editable()) return;
+  const row = ev.target.closest('.tr');
+  if (!row) return;
+  if (row.dataset.id) startRename(byId.get(row.dataset.id));
+  else if (row.dataset.key) {
+    const f = FOLDERS.find(x => x._k === row.dataset.key);
+    if (f) startRename(f);
+  }
+});
+
+treeEl.addEventListener('contextmenu', ev => {
+  const row = ev.target.closest('.tr');
+  if (!row) return;
+  ev.preventDefault();
+  if (row.dataset.id) {
+    if (!state.sel.has(row.dataset.id)) select(row.dataset.id, { noScroll:true });
+    openCtx(ev.clientX, ev.clientY, { el: byId.get(row.dataset.id) });
+  } else if (row.dataset.key && editable()) {
+    const f = FOLDERS.find(x => x._k === row.dataset.key);
+    if (f) openCtx(ev.clientX, ev.clientY, { folder: f });
+  }
+});
+
+/* Правка имени прямо в строке */
+treeEl.addEventListener('keydown', ev => {
+  if (!ev.target.matches('[data-edit]')) return;
+  if (ev.key === 'Enter') { ev.preventDefault(); commitRename(ev.target.value); }
+  if (ev.key === 'Escape') { ev.preventDefault(); state.editing = null; render(); }
+});
+treeEl.addEventListener('focusout', ev => {
+  if (ev.target.matches('[data-edit]') && state.editing) commitRename(ev.target.value);
+});
+
+/* Перетаскивание элементов в папку */
+let dragIds = null;
+treeEl.addEventListener('dragstart', ev => {
+  const row = ev.target.closest('.tr[data-id]');
+  if (!row || !editable()) { ev.preventDefault(); return; }
+  if (!state.sel.has(row.dataset.id)) select(row.dataset.id, { noScroll:true });
+  dragIds = [...state.sel];
+  row.classList.add('is-drag');
+  ev.dataTransfer.effectAllowed = 'move';
+  ev.dataTransfer.setData('text/plain', dragIds.join(','));
+});
+treeEl.addEventListener('dragover', ev => {
+  const f = ev.target.closest('.tr--folder');
+  if (!f || !dragIds) return;
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = 'move';
+  treeEl.querySelectorAll('.is-drop').forEach(n => n.classList.remove('is-drop'));
+  f.classList.add('is-drop');
+});
+treeEl.addEventListener('dragleave', ev => {
+  const f = ev.target.closest('.tr--folder');
+  if (f) f.classList.remove('is-drop');
+});
+treeEl.addEventListener('drop', ev => {
+  const row = ev.target.closest('.tr--folder');
+  if (!row || !dragIds) return;
+  ev.preventDefault();
+  moveTo(dragIds, FOLDERS.find(f => f._k === row.dataset.key));
+  dragIds = null;
+});
+treeEl.addEventListener('dragend', () => {
+  dragIds = null;
+  treeEl.querySelectorAll('.is-drag,.is-drop').forEach(n => n.classList.remove('is-drag', 'is-drop'));
+});
+
+/* ---------------------------------------------------------------------------
+   Правая панель: переходы и вкладки
+   --------------------------------------------------------------------------- */
+document.getElementById('tab-read').addEventListener('click', ev => {
+  if (ev.target.closest('#rel-more')) { readAll = true; renderRead(byId.get(state.lead)); return; }
+  const go = ev.target.closest('[data-goto]');
+  if (go) { setFilter('all'); setQuery(''); select(go.dataset.goto); }
+});
+document.getElementById('tab-bulk').addEventListener('click', ev => {
+  const r = ev.target.getBoundingClientRect();
+  if (ev.target.closest('#bulk-move')) openMovePicker([...state.sel], r.left, r.bottom + 6);
+  if (ev.target.closest('#bulk-del'))  confirmDelete([...state.sel], r.left, r.bottom + 6);
+});
+
+function setRightTab(t) {
+  [...document.getElementById('rtabs').children]
+    .forEach(x => x.classList.toggle('is-on', x.dataset.rt === t));
+  document.body.classList.toggle('rt-read', t === 'read');
+  syncRightPanel();
+}
+document.getElementById('rtabs').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-rt]'); if (b) setRightTab(b.dataset.rt);
+});
+
+/* ---------------------------------------------------------------------------
+   Роль (FR-28, FR-33)
+   --------------------------------------------------------------------------- */
+function setRole(role) {
+  const viewer = role === 'viewer';
+  document.body.classList.toggle('role-viewer', viewer);
+  [...document.getElementById('roles').children]
+    .forEach(b => b.classList.toggle('is-on', b.dataset.role === role));
+  document.querySelectorAll('#tab-props .field__input').forEach(el => {
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.readOnly = viewer;
+  });
+  if (viewer) { state.editing = null; closeMenus(); }
+  setRightTab(viewer ? 'read' : 'props');
+  render();
+}
+document.getElementById('roles').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-role]'); if (b) setRole(b.dataset.role);
+});
+
+/* ---------------------------------------------------------------------------
+   Поиск, режимы, фильтры
+   --------------------------------------------------------------------------- */
+const q = document.getElementById('q');
+const tsearch = document.getElementById('tsearch');
+function setQuery(text) {
+  q.value = text;
+  state.q = text.trim().toLowerCase();
+  tsearch.classList.toggle('has-q', !!state.q);
+  state.more.clear();
+  render();
+}
+q.addEventListener('input', () => setQuery(q.value));
+document.getElementById('q-clear').onclick = () => { setQuery(''); q.focus(); };
+document.getElementById('focus-search').onclick = () => q.focus();
+
+document.getElementById('tmodes').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-mode]'); if (!b) return;
+  state.mode = b.dataset.mode;
+  state.more.clear();
+  [...ev.currentTarget.children].forEach(x => x.classList.toggle('is-on', x === b));
+  render();
+});
+function setFilter(f) {
+  state.filter = f;
+  state.more.clear();
+  [...document.getElementById('tchips').children]
+    .forEach(x => x.classList.toggle('is-on', x.dataset.f === f));
+  render();
+}
+document.getElementById('tchips').addEventListener('click', ev => {
+  const c = ev.target.closest('[data-f]'); if (c) setFilter(c.dataset.f);
+});
+document.getElementById('collapse-all').onclick = () => { state.open.clear(); render(); };
+document.getElementById('new-folder').onclick = () => {
+  const lead = state.lead && byId.get(state.lead);
+  newFolder(lead ? lead._f : MODEL_TREE.find(f => f.ftype === 'application'));
+};
+document.getElementById('save').onclick = () => {
+  history.saved = history.idx;          // точка сохранения в истории
+  recomputeDirty(); afterChange();
+  toast('Сохранено · версия 13');
+};
+
+document.getElementById('undo-btn').onclick = doUndo;
+document.getElementById('redo-btn').onclick = doRedo;
+document.getElementById('st-dirty').onclick = ev => {
+  if (history.stack.length) openHistory(ev.clientX - 150, ev.clientY - 300);
+};
+
+/* Горячие клавиши */
+document.addEventListener('keydown', ev => {
+  const mod = ev.metaKey || ev.ctrlKey;
+  if (mod && ev.key.toLowerCase() === 'z') {
+    ev.preventDefault();
+    if (!editable()) return;
+    ev.shiftKey ? doRedo() : doUndo();
+    return;
+  }
+  if (mod && ev.key.toLowerCase() === 'y') { ev.preventDefault(); if (editable()) doRedo(); return; }
+  if (mod && ev.key.toLowerCase() === 'f') {
+    ev.preventDefault(); q.focus(); q.select(); return;
+  }
+  const inField = /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
+  if (ev.key === 'Escape') {
+    closeMenus();
+    if (document.activeElement === q) { setQuery(''); q.blur(); }
+    else if (state.sel.size > 1) { const l = state.lead; state.sel = new Set(l ? [l] : []);
+                                   render(); syncRightPanel(); }
+    return;
+  }
+  if (inField) return;
+  if (ev.key === 'F2' && state.lead) { ev.preventDefault(); startRename(byId.get(state.lead)); }
+  if ((ev.key === 'Delete' || ev.key === 'Backspace') && state.sel.size && editable()) {
+    ev.preventDefault();
+    const r = document.querySelector('#tree .tr.is-lead');
+    const b = r ? r.getBoundingClientRect() : { right:300, top:200 };
+    confirmDelete([...state.sel], b.right + 8, b.top);
+  }
+});
+
+/* ---------------------------------------------------------------------------
+   Находки помощника управляют деревом
+   --------------------------------------------------------------------------- */
+document.getElementById('show-dupes').onclick = () => { setFilter('all'); setQuery('IABS'); };
+document.getElementById('show-unplaced').onclick = () => { setQuery(''); setFilter('unplaced'); };
+document.getElementById('go-crm').onclick = () => {
+  const e = elements().find(x => x.n === 'CRM Creatio 7.13');
+  if (e) { setFilter('all'); setQuery(''); select(e.id); }
+};
+
+/* ---------------------------------------------------------------------------
+   Палитра
+   --------------------------------------------------------------------------- */
+const PALETTE = {
+  app:[['i-app-component','Application Component'],['i-app-service','Application Service'],
+       ['i-function','Application Function'],['i-process','Application Process'],
+       ['i-data-object','Data Object']],
+  biz:[['i-actor','Business Actor'],['i-process','Business Process'],
+       ['i-function','Business Function'],['i-app-service','Business Service'],
+       ['i-data-object','Business Object']],
+  tech:[['i-node','Node'],['i-device','Device'],['i-sys-software','System Software'],
+        ['i-artifact','Artifact'],['i-network','Communication Network']]
+};
+function setLayer(l) {
+  if (!PALETTE[l]) l = 'app';
+  document.getElementById('palette').innerHTML =
+    PALETTE[l].map(([i, n]) =>
+      '<div class="pal"><span class="pal__dot lyr-' + l + '"><svg><use href="#' + i + '"/></svg></span>' + n + '</div>'
+    ).join('') +
+    '<div class="pal"><span class="pal__dot lyr-oth"><svg><use href="#i-group"/></svg></span>Group</div>' +
+    '<div class="pal"><span class="pal__dot lyr-oth"><svg><use href="#i-junction"/></svg></span>Junction</div>';
+  [...document.getElementById('layer-switch').children]
+    .forEach(b => b.classList.toggle('is-on', b.dataset.l === l));
+}
+document.getElementById('layer-switch').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-l]'); if (b) setLayer(b.dataset.l);
+});
+
+/* ---------------------------------------------------------------------------
+   Старт
+   --------------------------------------------------------------------------- */
+refreshCounters();
+drawScene({ selected:'n-iabs', highlight:[3] });
+setLayer('app');
+setRole('architect');
+const iabs = elements().find(e => e.n === 'IABS');
+if (iabs) select(iabs.id); else { render(); renderRead(null); }
+syncHistoryUI();
+</script>
+</body>
+</html>

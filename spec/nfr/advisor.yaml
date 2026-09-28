@@ -1,0 +1,240 @@
+---
+version: 0.1
+last_modified: 2026-09-22
+bounded_context: advisor
+target_module: archi-bootstrap
+---
+
+# ───────────────────────────────────────────────────────────────────
+# Нефункциональные требования BC Advisor.
+#
+# Значения — из docs/archi-creator.md §2.2 (NFR-04, NFR-06) и §7.5.
+# Ключи в latency и authorization — имена use case'ов из
+# ubiquitous-language.md; якоря UC-ADV-NNN проставляются режимом add-usecase.
+# ───────────────────────────────────────────────────────────────────
+
+availability:
+  slo: 99.0
+  error_budget: 432m            # ~7.2 часа в месяц
+  measurement_window: 30d
+  note: |
+    Ниже, чем у modeling, сознательно: помощник зависит от внешнего API,
+    чью доступность мы не контролируем, и его недоступность не мешает
+    моделировать. Обещать здесь те же 99.5 % означало бы отвечать за
+    чужой uptime.
+
+latency:
+  # Для потоковых функций ключевой показатель — время до первых токенов
+  # (NFR-04), а не полное время ответа: пользователь видит поток.
+  ReviewModel:
+    first_token_p95: 3s         # NFR-04
+    p50: 12s
+    p95: 45s
+    p99: 90s
+    timeout: 180s
+    conditions: модель до 2 000 элементов; полный обход связей в контексте
+  ExplainElement:
+    first_token_p95: 2s
+    p50: 4s
+    p95: 12s
+    p99: 20s
+    timeout: 60s
+    conditions: контекст — один элемент и его окружение
+  PlanModel:
+    first_token_p95: 3s         # NFR-04
+    p50: 8s
+    p95: 25s
+    p99: 45s
+    timeout: 120s
+  GenerateDocumentation:
+    first_token_p95: 3s         # NFR-04
+    p50: 15s
+    p95: 60s
+    p99: 120s
+    timeout: 300s
+    conditions: документация по модели целиком; по одному представлению — вдвое быстрее
+
+throughput:
+  baseline_rps: 0.05
+  peak_rps: 1
+  ramp_up_minutes: 1
+  note: |
+    Помощник вызывают осознанно, а не в цикле: единицы обращений в час на
+    рабочее пространство. Ограничение задаёт не нагрузка, а бюджет.
+
+rate_limits:
+  # FR-53: ограничение частоты и размера контекста от скачков расхода.
+  per_user:
+    requests_per_minute: 5
+    concurrent_sessions: 1
+  per_workspace:
+    requests_per_minute: 20
+    concurrent_sessions: 5
+  context:
+    max_tokens: 120000
+    on_overflow: truncate_and_flag   # INV-ADV-007
+  note: |
+    Один пользователь — одна сессия за раз: параллельные обращения одного
+    архитектора не дают ему ничего, кроме удвоенного счёта.
+
+budget:
+  # FR-51…FR-53. Значения по умолчанию для нового рабочего пространства.
+  default_monthly_token_limit: 5000000
+  warning_threshold_percent: 80        # FR-51 — предупреждение
+  stop_threshold_percent: 100          # FR-52 — остановка
+  period: calendar_month
+  reset: by_period_change              # не командой, INV-ADV-006
+  visibility:
+    admin_breakdown: [month, user, function]   # FR-53
+
+upstream_calls:
+
+  anthropic_api:
+    endpoint_owner: external
+    model: claude-sonnet-5
+    timeout: 180s
+    streaming: true
+    retries:
+      count: 2
+      backoff: exponential
+      initial_interval: 2s
+      retry_on: [429, 500, 502, 503, 504, connection_error]
+      never_retry_after_first_token: true
+    circuit_breaker:
+      failure_rate_threshold: 50
+      slow_call_threshold: 60s
+      sliding_window_size: 10
+      wait_duration_in_open_state: 60s
+    fallback: fail_fast
+    note: |
+      Повтор после первого полученного токена запрещён: пользователь уже
+      увидел часть ответа, а повтор потратит токены заново (INV-ADV-003,
+      INV-ADV-006). Fallback — честный отказ: подставлять вместо ответа
+      помощника что-либо своё хуже, чем не ответить.
+
+  modeling_read_port:
+    timeout: 10s
+    retries:
+      count: 1
+      backoff: exponential
+      initial_interval: 200ms
+    circuit_breaker:
+      failure_rate_threshold: 50
+      slow_call_threshold: 5s
+      sliding_window_size: 20
+      wait_duration_in_open_state: 30s
+    fallback: fail_fast
+    note: |
+      Единственный порт в modeling — на чтение. Порта записи нет
+      (INV-ADV-004), и его отсутствие проверяется arch-тестом.
+
+storage:
+  database: relational / PostgreSQL 16
+  connection_pool:
+    max_size: 6
+    min_idle: 1
+    connection_timeout: 3s
+    leak_detection_threshold: 30s
+  query_timeout: 10s
+  retention:
+    sessions: 1y
+    audit_entries: 3y
+    note: |
+      Аудит живёт дольше сессий: он про расход и доступ, а не про
+      содержание. Содержимое запросов и ответов не хранится вовсе.
+
+messaging:
+  in_process:
+    publication: after_commit
+    delivery_guarantee: at_least_once
+    note: См. domain/advisor/events.yaml#publishing — direct здесь достаточен и после этапа 7a.
+
+security:
+  authentication: jwt_bearer
+  authorization:
+    ReviewModel:           [ARCHITECT, ADMIN]
+    ExplainElement:        [VIEWER, ARCHITECT, ADMIN]
+    PlanModel:             [ARCHITECT, ADMIN]
+    GenerateDocumentation: [VIEWER, ARCHITECT, ADMIN]
+    SetTokenBudget:        [ADMIN]
+    ToggleAdvisor:         [ADMIN]
+  secrets:
+    - name: ANTHROPIC_API_KEY
+      storage: переменная окружения на сервере (docs/archi-creator.md §10.3)
+      never_in_browser: true         # NFR-06
+      never_logged: true
+  pii_fields: []
+  prompt_privacy:
+    log_prompt_content: false
+    log_response_content: false
+    store_prompt_content: false
+    note: |
+      Содержимое ModelContext — архитектурный ландшафт банка. Логи хранятся
+      дольше и доступны шире, чем сама модель, поэтому промпт в них не
+      попадает ни на каком уровне (INV-ADV-009).
+  audit:
+    enabled: true
+    events: [ReviewModel, ExplainElement, PlanModel, GenerateDocumentation, SetTokenBudget, ToggleAdvisor]
+    retention: 3y
+    note: Аудит пишется на каждое обращение, включая отклонённые (FR-27, INV-ADV-001).
+
+observability:
+
+  metrics:
+    - { name: advisor_usecase_requests_total,   type: counter,   labels: [usecase, outcome] }
+    - { name: advisor_usecase_duration_seconds, type: histogram, labels: [usecase], buckets: [1, 5, 15, 30, 60, 120, 300] }
+    - { name: advisor_usecase_errors_total,     type: counter,   labels: [usecase, error_code] }
+    - { name: advisor_first_token_seconds,      type: histogram, labels: [function], buckets: [0.5, 1, 2, 3, 5, 10] }
+    - { name: advisor_sessions_total,           type: counter,   labels: [function, outcome, rejection_reason] }
+    - { name: advisor_tokens_consumed,          type: counter,   labels: [workspace, function, kind] }
+    - { name: advisor_budget_utilization_ratio, type: gauge,     labels: [workspace, period] }
+    - { name: advisor_context_truncated_total,  type: counter,   labels: [function] }
+
+  alerts:
+    - name: SlowFirstTokenP95
+      expr: |
+        histogram_quantile(0.95,
+          sum by (le) (rate(advisor_first_token_seconds_bucket[10m]))
+        ) > 3
+      for: 10m
+      severity: ticket
+      note: Нарушение NFR-04.
+
+    - name: BudgetNearlyExhausted
+      expr: advisor_budget_utilization_ratio > 0.8
+      for: 0m
+      severity: ticket
+      note: |
+        Дублирует событие TokenBudgetThresholdReached в канале мониторинга:
+        администратор может читать почту реже, чем дашборд.
+
+    - name: HighRejectionRate
+      expr: |
+        sum(rate(advisor_sessions_total{outcome="REJECTED"}[30m]))
+          / sum(rate(advisor_sessions_total[30m])) > 0.2
+      for: 30m
+      severity: ticket
+      note: |
+        Каждый пятый запрос отклоняется — почти наверняка исчерпан бюджет
+        или сработало ограничение частоты. Пользователю это видно как
+        «помощник не работает».
+
+    - name: UpstreamCircuitOpen
+      expr: resilience_circuitbreaker_state{name="anthropic_api",state="open"} == 1
+      for: 5m
+      severity: ticket
+
+  tracing:
+    sampler: parent_based_traceidratio
+    ratio: 1.0
+    note: |
+      Полная трассировка: обращений мало, каждое дорогое, и разбор
+      «почему ответ шёл минуту и сколько это стоило» без трассы не делается.
+      Содержимое промпта в спаны не попадает — только размеры и тайминги.
+    propagator: w3c_tracecontext
+
+  logging:
+    level: INFO
+    format: json
+    pii_masking: true
+    correlation_id: from_traceparent

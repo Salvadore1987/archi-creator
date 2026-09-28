@@ -1,0 +1,169 @@
+openapi: 3.1.0
+
+info:
+  title: Advisor API
+  version: 0.1.0
+  description: |
+    API ИИ-помощника: ревью модели, контекстная подсказка, план модели,
+    генерация документации. Все четыре функции отдают ответ потоком
+    (`text/event-stream`), первые токены — за 3 с (NFR-04).
+
+    Эта спека генерируется из `spec/application/advisor/usecases/` через
+    use case → endpoint mapping. Не редактируется вручную.
+
+    **Состояние: скелет.** Секция `paths` пуста намеренно: каталог use
+    case'ов пока пуст, а endpoint без ссылки на `UC-ADV-NNN` нарушает
+    проверку целостности «контракт без use case». Endpoint'ы появляются
+    здесь при вызове режима add-usecase.
+
+    **Граница, видимая в контракте:** ни одна операция не изменяет модель
+    и не возвращает команду изменения (FR-22, INV-ADV-004). `ModelPlan`
+    ниже описывает предлагаемые элементы по имени и типу — применить его
+    автоматически нечем, и это сделано намеренно.
+
+servers:
+  - url: /api/v1
+    description: Относительный путь; приложение и фронтенд отдаются одним артефактом.
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: advisor
+    description: ИИ-помощник. Только чтение модели, только текстовый результат.
+
+paths: {}
+
+# ───────────────────────────────────────────────────────────────────
+# Планируемые операции (docs/spec/backend.md §7).
+#
+#   POST /ai/review     ревью модели                   → SSE, Finding[]
+#   POST /ai/explain    подсказка по элементу          → SSE, текст
+#   POST /ai/plan       план модели по описанию        → SSE, ModelPlan
+#   POST /ai/document   документация по модели или View → SSE, Markdown
+#
+# Операции изменения модели в этом списке отсутствуют и появиться не могут:
+# см. INV-ADV-004.
+# ───────────────────────────────────────────────────────────────────
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string, maxLength: 64 }
+      description: |
+        Повтор с тем же ключом возвращает результат существующей сессии и
+        не тратит токены заново. См. INV-ADV-003.
+
+  schemas:
+
+    Problem:
+      type: object
+      description: RFC 7807 Problem Details + поле `code` (docs/spec/backend.md §8.1).
+      required: [type, title, status]
+      properties:
+        type:     { type: string, format: uri }
+        title:    { type: string }
+        status:   { type: integer }
+        detail:   { type: string }
+        instance: { type: string }
+        code:
+          type: string
+          description: Код нарушенного инварианта (`INV-ADV-001` … `INV-ADV-009`).
+          examples: ["INV-ADV-005", "INV-ADV-007"]
+
+    ElementRef:
+      type: object
+      description: |
+        Ссылка на объект модели — единственный способ, которым помощник на
+        неё указывает (INV-ADV-008).
+      required: [archiId, name]
+      properties:
+        archiId: { type: string, pattern: '^id-[0-9a-f]{24}$' }
+        name:    { type: string }
+
+    Finding:
+      type: object
+      description: Находка ревью (FR-23). Формат общий с отчётом валидации modeling.
+      required: [severity, code, message, targetKind, target]
+      properties:
+        severity:   { type: string, enum: [ERROR, WARNING, INFO] }
+        code:       { type: string, examples: ["ORPHAN_ELEMENT", "RELATION_NOT_PERMITTED"] }
+        message:    { type: string }
+        targetKind: { type: string, enum: [ELEMENT, RELATIONSHIP, VIEW, MODEL] }
+        target:     { $ref: '#/components/schemas/ElementRef' }
+        suggestion: { type: string, description: Описание исправления. }
+
+    ModelPlan:
+      type: object
+      description: |
+        Результат `/ai/plan`. **Изменений в модель не вносит** (FR-25).
+        Элементы описаны именем и типом, идентификаторов создаваемых
+        объектов здесь нет — применить план автоматически нечем.
+      required: [elements, relationships]
+      properties:
+        elements:
+          type: array
+          items:
+            type: object
+            required: [archiType, name]
+            properties:
+              archiType:   { type: string, examples: ["archimate:ApplicationService"] }
+              name:        { type: string }
+              existingRef: { $ref: '#/components/schemas/ElementRef' }
+        relationships:
+          type: array
+          items:
+            type: object
+            required: [archiType, sourceName, targetName]
+            properties:
+              archiType:  { type: string, examples: ["archimate:RealizationRelationship"] }
+              sourceName: { type: string }
+              targetName: { type: string }
+        notes: { type: string }
+
+    SessionMeta:
+      type: object
+      description: |
+        Служебное событие потока: завершение сессии и её стоимость.
+        Приходит последним кадром SSE.
+      required: [sessionId, outcome, promptTokens, completionTokens, contextTruncated]
+      properties:
+        sessionId:        { type: string, format: uuid }
+        outcome:          { type: string, enum: [COMPLETED, FAILED, REJECTED] }
+        rejectionReason:  { type: string, enum: [ADVISOR_DISABLED, BUDGET_EXHAUSTED, RATE_LIMITED, CONTEXT_TOO_LARGE, MODEL_DELETED] }
+        promptTokens:     { type: integer, format: int64, minimum: 0 }
+        completionTokens: { type: integer, format: int64, minimum: 0 }
+        contextTruncated:
+          type: boolean
+          description: |
+            Контекст был усечён по лимиту размера — ответ построен не по
+            всей модели (INV-ADV-007).
+
+  responses:
+
+    Forbidden403:
+      description: |
+        Помощник выключен администратором рабочего пространства или бюджет
+        токенов исчерпан (INV-ADV-005). Поле `code` различает причины.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+    TooManyRequests429:
+      description: Превышено ограничение частоты обращений (FR-53, INV-ADV-007).
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }

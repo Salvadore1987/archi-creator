@@ -1,0 +1,148 @@
+openapi: 3.1.0
+
+info:
+  title: Interchange API
+  version: 0.1.0
+  description: |
+    Синхронный REST API для BC Interchange: импорт и экспорт модели,
+    выгрузка представлений, обмен с Git.
+
+    Эта спека генерируется из `spec/application/interchange/usecases/`
+    через use case → endpoint mapping. Не редактируется вручную.
+
+    **Состояние: скелет.** Секция `paths` пуста намеренно: каталог use
+    case'ов пока пуст, а endpoint без ссылки на `UC-IXC-NNN` нарушает
+    проверку целостности «контракт без use case». Endpoint'ы появляются
+    здесь при вызове режима add-usecase.
+
+    Перечень операций зафиксирован в `docs/spec/backend.md` §5.
+
+servers:
+  - url: /api/v1
+    description: Относительный путь; приложение и фронтенд отдаются одним артефактом.
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: interchange
+    description: Импорт, экспорт, рендер представлений, обмен с Git.
+
+paths: {}
+
+# ───────────────────────────────────────────────────────────────────
+# Планируемые операции (docs/spec/backend.md §5, §5.2, §6.10).
+#
+#   POST /models/import                 импорт .archimate (multipart)
+#   GET  /models/{id}/export            ?fmt=archimate|oef|csv[&folder=&sep=]
+#   GET  /views/{id}/export             ?fmt=svg|png&scale=&outline=&background=
+#   GET  /models/{id}/views/export      пакетная выгрузка всех представлений (zip)
+#
+# Этапы 7a–7c добавят:
+#   POST /models/{id}/git/push          выгрузить состояние коммитом
+#   POST /models/{id}/git/pull          импортировать состояние по ссылке
+#   POST /models/{id}/git/merge         слияние предложения по сущностям
+#   PUT  /workspaces/{id}/git-binding   настроить привязку к репозиторию
+#
+# Импорта из OEF и CSV в этом списке нет и не будет: единственный
+# принимаемый формат — .archimate (FR-01, docs/spec/backend.md §3.5).
+# ───────────────────────────────────────────────────────────────────
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string, maxLength: 64 }
+      description: |
+        Ключ дедупликации импорта. Тот же ключ возвращает существующую
+        сессию; тот же ключ с другим содержимым файла — `409`.
+        См. INV-IXC-003.
+
+  schemas:
+
+    Problem:
+      type: object
+      description: RFC 7807 Problem Details + поле `code` (docs/spec/backend.md §8.1).
+      required: [type, title, status]
+      properties:
+        type:     { type: string, format: uri }
+        title:    { type: string }
+        status:   { type: integer }
+        detail:   { type: string }
+        instance: { type: string }
+        code:
+          type: string
+          description: Код нарушенного инварианта (`INV-IXC-001` … `INV-IXC-010`).
+          examples: ["INV-IXC-007", "INV-IXC-003"]
+
+    ImportReport:
+      type: object
+      description: |
+        Отчёт импорта. Отдаётся и при успехе, и при отказе: отказ без
+        объяснения превращает строгий режим в чёрный ящик (INV-IXC-007).
+      required: [sessionId, status, strictMode, findings]
+      properties:
+        sessionId: { type: string, format: uuid }
+        modelId:   { type: string, format: uuid }
+        status:    { type: string, enum: [RECEIVED, PARSED, VALIDATED, APPLIED, REJECTED] }
+        strictMode: { type: boolean }
+        opaqueObjectCount:
+          type: integer
+          minimum: 0
+          description: Сколько объектов сохранено как непрозрачные (FR-03).
+        findings:
+          type: array
+          items: { $ref: '#/components/schemas/ImportFinding' }
+
+    ImportFinding:
+      type: object
+      required: [severity, code, message]
+      properties:
+        severity: { type: string, enum: [ERROR, WARNING, INFO] }
+        code:     { type: string, examples: ["IXC_UNKNOWN_ELEMENT_TYPE"] }
+        message:  { type: string }
+        archiId:  { type: string, pattern: '^id-[0-9a-f]{24}$' }
+        xmlLine:  { type: integer, minimum: 1 }
+
+    LossReport:
+      type: object
+      description: |
+        Отчёт о потерях выгрузки. Отдаётся вместе с артефактом всегда;
+        пустой `entries` — валидный отчёт, отсутствие отчёта — нет
+        (INV-IXC-006).
+      required: [format, sourceVersionNo, entries]
+      properties:
+        format:          { type: string, enum: [ARCHIMATE, OPEN_EXCHANGE, CSV_CATALOG, SVG, PNG, GIT_YAML] }
+        sourceVersionNo: { type: integer, format: int64 }
+        entries:
+          type: array
+          items: { $ref: '#/components/schemas/LossEntry' }
+
+    LossEntry:
+      type: object
+      required: [archiId, objectKind, lostAspect, reason]
+      properties:
+        archiId:    { type: string, pattern: '^id-[0-9a-f]{24}$' }
+        objectKind: { type: string, enum: [element, relationship, view, node, edge, property] }
+        lostAspect: { type: string }
+        reason:     { type: string }
+
+  responses:
+
+    UnprocessableEntity422:
+      description: |
+        Файл принят, но применить нельзя: повреждённые данные либо находки
+        уровня ERROR в строгом режиме (INV-IXC-007). Тело — `ImportReport`
+        с причиной.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }

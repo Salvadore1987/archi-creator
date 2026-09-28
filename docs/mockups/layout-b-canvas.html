@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Вариант B — Холст · Archi Creator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  body{height:100vh; overflow:hidden; background:var(--paper)}
+  #scene{position:fixed; inset:0}
+  #scene .canvas__scene{inset:auto; left:352px; top:100px}
+
+  /* ---- Общий стиль плавающих панелей: тёмное стекло над бумагой ---- */
+  .float{
+    position:fixed; z-index:20;
+    background:rgba(18,21,25,.92);
+    border:1px solid rgba(255,255,255,.07);
+    border-radius:12px;
+    box-shadow:0 12px 34px rgba(16,24,40,.28), 0 2px 6px rgba(16,24,40,.16);
+    backdrop-filter:blur(14px) saturate(140%);
+    -webkit-backdrop-filter:blur(14px) saturate(140%);
+  }
+
+  /* ---- Командная строка сверху по центру ---- */
+  .cmd{
+    top:16px; left:50%; transform:translateX(-50%);
+    display:flex; align-items:center; gap:10px; height:46px; padding:0 8px 0 14px;
+    max-width:min(880px, calc(100vw - 32px));
+  }
+  .cmd .brand__mark{font-size:13.5px}
+  .cmd .doc{display:flex; align-items:center; gap:8px; min-width:0}
+  .cmd .doc b{font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .cmd__search{
+    display:flex; align-items:center; gap:8px; height:30px; padding:0 10px;
+    border-radius:8px; background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.07); color:var(--text-low); min-width:190px;
+  }
+  .cmd__search:hover{border-color:rgba(255,106,61,.4); color:var(--text-mid)}
+  .cmd__search svg{width:14px; height:14px}
+
+  /* ---- Док инструментов слева ---- */
+  .dock{
+    left:16px; top:50%; transform:translateY(-50%);
+    display:flex; flex-direction:column; gap:3px; padding:6px; width:44px;
+  }
+  .dock .btn{width:32px; height:32px; padding:0; justify-content:center; border-radius:8px}
+  .dock .sep{width:20px; height:1px; margin:4px auto; background:rgba(255,255,255,.08)}
+
+  /* ---- Выпадающая палитра из дока ---- */
+  .flyout{
+    left:72px; top:50%; transform:translateY(-50%);
+    width:252px; padding:8px; display:flex; flex-direction:column; gap:2px;
+  }
+  .flyout__head{
+    display:flex; align-items:center; gap:7px; padding:4px 8px 8px;
+    font-family:var(--f-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--text-low);
+  }
+  .flyout__head .spacer{flex:1}
+  .flyout::before{
+    content:""; position:absolute; left:-6px; top:50%; margin-top:-6px;
+    width:12px; height:12px; background:inherit; border-left:1px solid rgba(255,255,255,.07);
+    border-bottom:1px solid rgba(255,255,255,.07); transform:rotate(45deg);
+    backdrop-filter:inherit;
+  }
+
+  /* ---- Инспектор справа: свойства и помощник в одной карточке ---- */
+  .inspector{
+    right:16px; top:78px; bottom:16px; width:316px;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .inspector .panel-head{border-bottom-color:rgba(255,255,255,.07)}
+  .inspector .props{padding:12px}
+  .inspector .finding{background:rgba(255,255,255,.035); border-color:rgba(255,255,255,.07)}
+  .inspector .ai__note{border-top-color:rgba(255,255,255,.07)}
+
+  .itabs{display:flex; gap:2px; padding:6px 6px 0}
+  .itabs .btn{flex:1; height:28px; justify-content:center; border-radius:7px; font-size:12px}
+  .itabs .btn.is-on{background:rgba(255,106,61,.16); color:var(--signal-2)}
+  .itabs .badge{
+    font-family:var(--f-mono); font-size:9px; padding:0 5px; border-radius:4px;
+    background:rgba(217,83,79,.18); color:#E99A97;
+  }
+  body:not(.tab-ai) .ip-ai{display:none}
+  body.tab-ai .ip-props{display:none}
+
+  /* ---- Масштаб и мини-карта слева снизу ---- */
+  .viewport-ctl{
+    left:16px; bottom:16px; display:flex; align-items:center; gap:2px; padding:5px;
+  }
+  .viewport-ctl .btn{height:28px}
+  .viewport-ctl .val{font-family:var(--f-mono); font-size:10px; color:var(--text-mid); padding:0 8px}
+
+  .minimap{
+    left:16px; bottom:62px; width:184px; height:118px; padding:7px; overflow:hidden;
+  }
+  .minimap__paper{
+    position:absolute; inset:7px; background:rgba(255,255,255,.055); border-radius:6px;
+  }
+  .minimap__n{position:absolute; border-radius:2px; background:var(--bd); opacity:.75}
+  .minimap__vp{
+    position:absolute; border:1.5px solid var(--signal); border-radius:3px;
+    background:rgba(255,106,61,.10);
+  }
+
+  /* ---- Строка контекста у курсора ---- */
+  .hint{
+    position:fixed; z-index:25; left:50%; bottom:74px; transform:translateX(-50%);
+    display:flex; align-items:center; gap:10px; padding:7px 13px; border-radius:999px;
+    background:rgba(18,21,25,.9); border:1px solid rgba(255,255,255,.07);
+    backdrop-filter:blur(10px);
+    font-size:11.5px; color:var(--text-mid);
+  }
+  .hint .kbd{background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.08)}
+
+  .stamp{background:rgba(18,21,25,.9); left:164px; right:auto}
+</style>
+</head>
+<body>
+
+<div id="scene"></div>
+
+<!-- ================= Командная строка ================= -->
+<div class="float cmd rise">
+  <div class="brand"><div class="brand__mark">ARCHI<em>/</em>CREATOR</div></div>
+  <div class="sep" style="background:rgba(255,255,255,.08)"></div>
+  <div class="doc">
+    <b>Hamkorbank — ИТ-ландшафт AS IS</b>
+    <span class="chip">01 Контекст AS IS</span>
+  </div>
+  <div class="grow"></div>
+  <div class="cmd__search"><svg><use href="#u-search"/></svg>Поиск по модели<span class="kbd" style="margin-left:auto">⌘K</span></div>
+  <span class="chip chip--lock"><svg style="width:11px;height:11px"><use href="#u-lock"/></svg>Сагит</span>
+  <div class="avatar">СО</div>
+</div>
+
+<!-- ================= Док инструментов ================= -->
+<div class="float dock rise" style="animation-delay:.06s">
+  <button class="btn is-on" title="Выбор (V)"><svg><use href="#u-cursor"/></svg></button>
+  <button class="btn" title="Панорама (H)"><svg><use href="#u-hand"/></svg></button>
+  <button class="btn" title="Связь (C)"><svg><use href="#u-connect"/></svg></button>
+  <div class="sep"></div>
+  <button class="btn is-on" title="Палитра (P)"><svg><use href="#i-app-component"/></svg></button>
+  <button class="btn" title="Дерево модели (T)"><svg><use href="#u-tree"/></svg></button>
+  <div class="sep"></div>
+  <button class="btn" title="Авторазметка"><svg><use href="#u-layout"/></svg></button>
+  <button class="btn" title="Отменить"><svg><use href="#u-undo"/></svg></button>
+  <button class="btn" title="Повторить"><svg><use href="#u-redo"/></svg></button>
+</div>
+
+<!-- ================= Палитра (выпадает из дока) ================= -->
+<div class="float flyout rise" style="animation-delay:.1s">
+  <div class="flyout__head">
+    Палитра · Application
+    <span class="spacer"></span>
+    <span style="text-transform:none;letter-spacing:0">⇥ слой</span>
+  </div>
+  <div class="pal"><span class="pal__dot lyr-app"><svg><use href="#i-app-component"/></svg></span>Application Component</div>
+  <div class="pal"><span class="pal__dot lyr-app"><svg><use href="#i-app-service"/></svg></span>Application Service</div>
+  <div class="pal"><span class="pal__dot lyr-app"><svg><use href="#i-function"/></svg></span>Application Function</div>
+  <div class="pal"><span class="pal__dot lyr-app"><svg><use href="#i-process"/></svg></span>Application Process</div>
+  <div class="pal"><span class="pal__dot lyr-app"><svg><use href="#i-data-object"/></svg></span>Data Object</div>
+  <div class="flyout__head" style="padding-top:10px">Часто используемые</div>
+  <div class="pal"><span class="pal__dot lyr-tech"><svg><use href="#i-sys-software"/></svg></span>System Software</div>
+  <div class="pal"><span class="pal__dot lyr-biz"><svg><use href="#i-process"/></svg></span>Business Process</div>
+  <div class="pal"><span class="pal__dot lyr-oth"><svg><use href="#i-group"/></svg></span>Group</div>
+</div>
+
+<!-- ================= Мини-карта и масштаб ================= -->
+<div class="float minimap rise" style="animation-delay:.14s">
+  <div class="minimap__paper"></div>
+  <div id="mm"></div>
+</div>
+
+<div class="float viewport-ctl rise" style="animation-delay:.16s">
+  <button class="btn btn--icon">−</button>
+  <span class="val">100%</span>
+  <button class="btn btn--icon">+</button>
+  <div class="sep" style="height:14px;background:rgba(255,255,255,.08)"></div>
+  <button class="btn btn--icon" title="Вписать"><svg><use href="#u-grid"/></svg></button>
+</div>
+
+<!-- ================= Инспектор: свойства / помощник ================= -->
+<div class="float inspector rise" style="animation-delay:.2s">
+  <div class="itabs">
+    <button class="btn is-on" data-tab="props">Свойства</button>
+    <button class="btn" data-tab="ai">
+      <svg style="color:var(--signal)"><use href="#u-sparkle"/></svg>Помощник
+      <span class="badge">3</span>
+    </button>
+  </div>
+
+  <!-- Свойства -->
+  <div class="ip-props col grow" style="min-height:0">
+    <div class="panel-head">
+      IABS
+      <span class="spacer"></span>
+      <span class="chip lyr-app" style="color:var(--bd);border-color:var(--bd);background:transparent">Application</span>
+    </div>
+    <div class="props grow">
+      <div class="field">
+        <label class="field__label">Имя</label>
+        <input class="field__input" value="IABS">
+      </div>
+      <div class="field">
+        <label class="field__label">Тип</label>
+        <div class="field__input mono" style="color:var(--text-mid);font-size:11.5px">archimate:ApplicationComponent</div>
+      </div>
+      <div class="field">
+        <label class="field__label">Документация</label>
+        <textarea class="field__input field__input--ta">Автоматизированная банковская система. Ядро учёта, источник данных для Digital Bank и витрин.</textarea>
+      </div>
+      <div class="field">
+        <label class="field__label">Свойства</label>
+        <div class="kvs">
+          <div class="kv"><b>source</b><span>Hamkorbank ALL.vsdx</span></div>
+          <div class="kv"><b>owner</b><span>Управление ИТ</span></div>
+          <div class="kv"><b>criticality</b><span>high</span></div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field__label">Представления</label>
+        <div class="kvs">
+          <div class="kv"><b>7 шт.</b><span>01 Контекст AS IS, 02 Интеграции…</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Помощник -->
+  <div class="ip-ai ai grow" style="min-height:0">
+    <div class="panel-head">
+      <svg style="width:13px;height:13px;color:var(--signal)"><use href="#u-sparkle"/></svg>
+      Ревью модели
+      <span class="spacer"></span>
+      <span class="chip">3 находки</span>
+    </div>
+    <div class="ai__body">
+      <div class="finding sev-err">
+        <div class="finding__head">
+          <svg><use href="#u-warn"/></svg>
+          <span class="finding__title">Недопустимая связь</span>
+        </div>
+        <div class="finding__body">Assignment от «CRM Creatio 7.13» к «Физическое лицо» не разрешена в ArchiMate 3.2.</div>
+        <div class="finding__fix">Замените на Serving или свяжите через Application Service.</div>
+        <div class="finding__act"><button class="btn btn--ghost">Перейти к связи</button></div>
+      </div>
+      <div class="finding sev-warn">
+        <div class="finding__head">
+          <svg><use href="#u-warn"/></svg>
+          <span class="finding__title">Вероятный дубликат</span>
+        </div>
+        <div class="finding__body">«IABS», «IABS NG», «IABS WEB» — одна система на разных уровнях детализации.</div>
+        <div class="finding__act"><button class="btn btn--ghost">Показать все три</button></div>
+      </div>
+      <div class="finding sev-info">
+        <div class="finding__head">
+          <svg><use href="#u-warn"/></svg>
+          <span class="finding__title">Процесс без поддержки приложением</span>
+        </div>
+        <div class="finding__body">12 процессов внутри «Розничный бизнес» не связаны ни с одним приложением.</div>
+      </div>
+    </div>
+    <div class="ai__note"><svg><use href="#u-eye"/></svg>Помощник не изменяет модель.</div>
+    <div class="ai__ask">
+      <input placeholder="Спросить о модели…">
+      <button class="btn btn--primary">↵</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Подсказка по контексту ================= -->
+<div class="hint rise" style="animation-delay:.26s">
+  Тяните от границы элемента, чтобы создать связь
+  <span class="kbd">C</span>
+  <span class="muted">·</span>
+  <span class="muted">недопустимые типы не предлагаются</span>
+</div>
+
+<div class="stamp"><span class="dot"></span>Вариант B · Холст <a href="index.html">← все варианты</a></div>
+
+<script src="sprite.js"></script>
+<script src="scene.js"></script>
+<script>
+  renderScene(document.getElementById('scene'), {
+    selected:'n-iabs', connMenu:true, highlight:[3,6]
+  });
+
+  /* Мини-карта строится из той же сцены */
+  const mm = document.getElementById('mm');
+  const K = 0.175;
+  /* Вкладки инспектора */
+  document.querySelectorAll('.itabs .btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.itabs .btn').forEach(x => x.classList.toggle('is-on', x === b));
+      document.body.classList.toggle('tab-ai', b.dataset.tab === 'ai');
+    });
+  });
+
+  mm.innerHTML = SCENE_NODES.map(n =>
+    `<div class="minimap__n lyr-${n.layer}" style="
+       left:${10 + n.x * K}px; top:${10 + n.y * K * .92}px;
+       width:${n.w * K}px; height:${Math.max(3, n.h * K * .9)}px"></div>`
+  ).join('') + `<div class="minimap__vp" style="left:9px;top:9px;width:132px;height:86px"></div>`;
+</script>
+</body>
+</html>

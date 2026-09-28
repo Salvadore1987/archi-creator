@@ -1,0 +1,117 @@
+---
+version: 0.1
+last_modified: 2026-09-22
+---
+
+# ───────────────────────────────────────────────────────────────────
+# Каталог bounded contexts и карта их взаимосвязей (DDD Context Map).
+#
+# relationship допустимые значения:
+#   - customer-supplier       (один зависит от другого, upstream диктует)
+#   - partnership             (симметричная координация)
+#   - conformist              (downstream принимает модель upstream как есть)
+#   - anti-corruption-layer   (явный ACL для защиты модели)
+#   - published-language      (контракт, общий для нескольких BC)
+#   - shared-kernel           (разделяемая часть модели)
+#   - open-host-service       (upstream публикует стандартизованный API)
+#
+# integration допустимые значения:
+#   - sync-api                (синхронный запрос-ответ)
+#   - async-events            (асинхронные события через брокер)
+#   - batch                   (пакетная интеграция)
+#
+# Брокера в стеке нет: async-events здесь означает in-process публикацию
+# после коммита транзакции (см. README#публикация-событий).
+# ───────────────────────────────────────────────────────────────────
+
+bounded_contexts:
+
+  modeling:
+    code: MDL
+    description: Архитектурная модель как таковая — папки, элементы, связи, представления, блокировки, версии, валидация по метамодели ArchiMate 3.2.
+    spec_root: domain/modeling/
+    target_module: archi-modeling-domain
+    upstream:
+      - context: interchange
+        relationship: partnership
+        integration: sync-api
+        anti_corruption_layer: false
+        note: |
+          При импорте interchange отдаёт ModelDocument — published language,
+          общий для обоих BC. ACL не нужен: язык согласован, а не навязан
+          одной стороной.
+    downstream:
+      - context: interchange
+        relationship: partnership
+        integration: sync-api
+        note: При экспорте modeling отдаёт ModelDocument, interchange его сериализует.
+      - context: advisor
+        relationship: published-language
+        integration: sync-api
+        anti_corruption_layer: true
+        note: |
+          advisor читает модель только на чтение и строит собственное
+          представление (ModelContext). Обратного потока нет: помощник
+          не изменяет модель (FR-22).
+
+  interchange:
+    code: IXC
+    description: Преобразования на границе системы — кодек .archimate, выгрузка в OEF и CSV, рендер представлений в SVG/PNG, обмен с Git. Держатель lossless round-trip.
+    spec_root: domain/interchange/
+    target_module: archi-interchange-domain
+    upstream:
+      - context: modeling
+        relationship: partnership
+        integration: sync-api
+        anti_corruption_layer: false
+    downstream:
+      - context: modeling
+        relationship: partnership
+        integration: sync-api
+
+  advisor:
+    code: ADV
+    description: ИИ-помощник — ревью модели, контекстная подсказка, план модели по описанию, генерация документации. Плюс аудит обращений и бюджет токенов рабочего пространства.
+    spec_root: domain/advisor/
+    target_module: archi-advisor-domain
+    upstream:
+      - context: modeling
+        relationship: published-language
+        integration: sync-api
+        anti_corruption_layer: true
+        note: |
+          ACL обязателен: доменная модель ArchiMate не должна протекать
+          в промпты как есть. ModelContext — усечённое и обезличенное
+          представление, собранное под конкретную функцию помощника.
+    downstream: []
+    # downstream пуст: никто не потребляет события advisor'а как upstream-контракт.
+    # События бюджета (TokenBudgetThresholdReached, TokenBudgetExhausted)
+    # потребляет админский UI того же приложения, отдельным BC он не является.
+
+# ───────────────────────────────────────────────────────────────────
+# Текстовое представление context map
+# ───────────────────────────────────────────────────────────────────
+#
+#            ModelDocument (published language)
+#        ┌──────────────── partnership ────────────────┐
+#        │                                             │
+#   ┌────▼──────────┐                         ┌────────▼───────┐
+#   │  interchange  │                         │    modeling    │
+#   │     (IXC)     │                         │     (MDL)      │
+#   │               │                         │                │
+#   │ .archimate    │   ModelDocument         │ Model, Element │
+#   │ OEF, CSV      │ ◄─────────────────────► │ Relationship   │
+#   │ SVG/PNG, Git  │      экспорт/импорт     │ View, Lock     │
+#   └───────────────┘                         └────────┬───────┘
+#                                                      │
+#                                        ModelContext  │ published-language
+#                                          (read-only) │ + ACL
+#                                                      │
+#                                             ┌────────▼───────┐
+#                                             │    advisor     │
+#                                             │     (ADV)      │
+#                                             │ Session, Budget│
+#                                             └────────────────┘
+#
+# Обратной стрелки от advisor к modeling нет — и это не упущение схемы,
+# а FR-22: помощник не изменяет модель.

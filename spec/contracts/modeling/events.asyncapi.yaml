@@ -1,0 +1,132 @@
+asyncapi: 3.0.0
+
+info:
+  title: Modeling Domain Events
+  version: 0.1.0
+  description: |
+    Доменные события BC Modeling. Генерируется из
+    `spec/domain/modeling/events.yaml` — не редактируется вручную.
+
+    **Транспорт:** брокера в стеке нет (`docs/archi-creator.md` §3.2),
+    публикация in-process после коммита транзакции
+    (`domain/modeling/events.yaml#publishing`, pattern `direct`).
+    Этот файл фиксирует контракт полезной нагрузки, а не доставку:
+    появление брокера изменит `servers` и `bindings`, схемы сообщений
+    останутся прежними. ADR на выбор механизма публикации пока не заведён.
+
+defaultContentType: application/json
+
+servers:
+  inProcess:
+    host: 'localhost'
+    protocol: in-process
+    description: |
+      Публикация внутри JVM после коммита транзакции. Адрес формален:
+      события не покидают процесс.
+
+channels:
+
+  modelingEvents:
+    address: modeling.events.v1
+    messages:
+      modelVersionCommitted: { $ref: '#/components/messages/ModelVersionCommitted' }
+      modelLockReleased:     { $ref: '#/components/messages/ModelLockReleased' }
+      modelDeleted:          { $ref: '#/components/messages/ModelDeleted' }
+    description: |
+      Все события BC Modeling. Ключ партиционирования — `modelId`: события
+      одной модели обрабатываются в порядке возникновения.
+
+operations:
+
+  publishModelVersionCommitted:
+    action: send
+    channel: { $ref: '#/channels/modelingEvents' }
+    summary: Публикация ModelVersionCommitted
+    messages:
+      - $ref: '#/channels/modelingEvents/messages/modelVersionCommitted'
+
+  publishModelLockReleased:
+    action: send
+    channel: { $ref: '#/channels/modelingEvents' }
+    summary: Публикация ModelLockReleased
+    messages:
+      - $ref: '#/channels/modelingEvents/messages/modelLockReleased'
+
+  publishModelDeleted:
+    action: send
+    channel: { $ref: '#/channels/modelingEvents' }
+    summary: Публикация ModelDeleted
+    messages:
+      - $ref: '#/channels/modelingEvents/messages/modelDeleted'
+
+components:
+
+  messages:
+
+    ModelVersionCommitted:
+      name: ModelVersionCommitted
+      title: Сохранение создало новую версию модели
+      contentType: application/json
+      payload: { $ref: '#/components/schemas/ModelVersionCommittedPayload' }
+      headers: { $ref: '#/components/schemas/EventHeaders' }
+
+    ModelLockReleased:
+      name: ModelLockReleased
+      title: Блокировка модели снята
+      contentType: application/json
+      payload: { $ref: '#/components/schemas/ModelLockReleasedPayload' }
+      headers: { $ref: '#/components/schemas/EventHeaders' }
+
+    ModelDeleted:
+      name: ModelDeleted
+      title: Модель помечена удалённой
+      contentType: application/json
+      payload: { $ref: '#/components/schemas/ModelDeletedPayload' }
+      headers: { $ref: '#/components/schemas/EventHeaders' }
+
+  schemas:
+
+    EventHeaders:
+      type: object
+      required: [eventId, eventType, eventVersion, occurredAt, source]
+      properties:
+        eventId:      { type: string, format: uuid }
+        eventType:    { type: string }
+        eventVersion: { type: string }
+        occurredAt:   { type: string, format: date-time }
+        source:       { type: string, const: modeling }
+        traceId:      { type: string, description: W3C trace context }
+
+    ModelVersionCommittedPayload:
+      type: object
+      required: [modelId, workspaceId, versionNo, author, elementCount, relationshipCount, occurredAt]
+      properties:
+        modelId:           { type: string, format: uuid }
+        workspaceId:       { type: string, format: uuid }
+        versionNo:         { type: integer, format: int64, minimum: 1 }
+        author:            { type: string, description: subject из JWT }
+        comment:           { type: string }
+        elementCount:      { type: integer, minimum: 0 }
+        relationshipCount: { type: integer, minimum: 0 }
+        occurredAt:        { type: string, format: date-time }
+
+    ModelLockReleasedPayload:
+      type: object
+      required: [modelId, previousOwner, releasedBy, reason, occurredAt]
+      properties:
+        modelId:       { type: string, format: uuid }
+        previousOwner: { type: string }
+        releasedBy:    { type: string }
+        reason:
+          type: string
+          enum: [RELEASED_BY_OWNER, FORCED_BY_ADMIN, EXPIRED]
+        occurredAt:    { type: string, format: date-time }
+
+    ModelDeletedPayload:
+      type: object
+      required: [modelId, workspaceId, deletedBy, occurredAt]
+      properties:
+        modelId:     { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        deletedBy:   { type: string }
+        occurredAt:  { type: string, format: date-time }

@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Макеты · Archi Creator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  body{overflow:auto; background:var(--ink-900)}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 28px 100px}
+
+  /* ---------- Шапка ---------- */
+  .hero{
+    position:relative; padding:74px 0 46px; border-bottom:1px solid var(--line);
+    overflow:hidden;
+  }
+  .hero::before{
+    content:""; position:absolute; right:-160px; top:-190px; width:620px; height:620px;
+    background:radial-gradient(circle at center, rgba(255,106,61,.16), transparent 62%);
+    pointer-events:none;
+  }
+  .hero::after{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background-image:
+      linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:linear-gradient(180deg,#000,transparent 78%);
+    mask-image:linear-gradient(180deg,#000,transparent 78%);
+  }
+  .hero > *{position:relative}
+  .eyebrow{
+    font-family:var(--f-mono); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--signal); display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::after{content:""; height:1px; flex:1; max-width:180px;
+    background:linear-gradient(90deg,rgba(255,106,61,.5),transparent)}
+  h1{
+    font-family:var(--f-display); font-weight:800; letter-spacing:-.035em; line-height:.94;
+    font-size:clamp(42px,7.4vw,92px); margin:20px 0 0; color:var(--text-hi);
+    max-width:16ch;
+  }
+  h1 em{font-style:normal; color:var(--signal)}
+  .lead{
+    margin:24px 0 0; max-width:64ch; font-size:15px; line-height:1.62; color:var(--text-mid);
+  }
+  .hero-meta{display:flex; flex-wrap:wrap; gap:8px; margin-top:26px}
+
+  /* ---------- Секции ---------- */
+  section{padding:66px 0 0}
+  .sec-head{display:flex; align-items:baseline; gap:16px; margin-bottom:8px; flex-wrap:wrap}
+  .sec-n{
+    font-family:var(--f-mono); font-size:10px; letter-spacing:.18em; color:var(--signal);
+    padding-top:6px;
+  }
+  h2{
+    font-family:var(--f-display); font-weight:700; letter-spacing:-.025em;
+    font-size:clamp(26px,3.4vw,38px); margin:0; color:var(--text-hi);
+  }
+  .sec-lead{margin:12px 0 30px; max-width:72ch; font-size:13.5px; line-height:1.64; color:var(--text-mid)}
+
+  /* ---------- Карточки вариантов ---------- */
+  .variants{display:grid; grid-template-columns:repeat(auto-fit,minmax(310px,1fr)); gap:18px}
+  .vcard{
+    display:flex; flex-direction:column;
+    background:var(--ink-800); border:1px solid var(--line); border-radius:14px;
+    overflow:hidden; text-decoration:none; color:inherit;
+    transition:transform var(--dur) var(--ease), border-color var(--dur) var(--ease),
+               box-shadow var(--dur) var(--ease);
+  }
+  .vcard:hover{transform:translateY(-3px); border-color:rgba(255,106,61,.45);
+    box-shadow:0 18px 40px rgba(0,0,0,.34)}
+  .vcard__vis{
+    height:172px; position:relative; background:var(--ink-900);
+    border-bottom:1px solid var(--line); padding:12px; overflow:hidden;
+  }
+  .vcard__body{padding:16px 17px 18px; display:flex; flex-direction:column; gap:9px; flex:1}
+  .vcard__t{display:flex; align-items:center; gap:9px}
+  .vcard__t b{font-family:var(--f-display); font-size:18px; font-weight:700; letter-spacing:-.02em}
+  .vcard--pick{border-color:rgba(255,106,61,.55)}
+  .vcard--pick .vcard__vis{box-shadow:inset 0 0 0 1px rgba(255,106,61,.25)}
+  .vcard__pick{
+    position:absolute; top:10px; right:10px; z-index:2;
+    display:flex; align-items:center; gap:6px; padding:4px 9px; border-radius:999px;
+    background:var(--signal); color:#1A0C06;
+    font-family:var(--f-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase;
+  }
+  .vcard__t .tag{
+    font-family:var(--f-mono); font-size:9px; letter-spacing:.14em; color:var(--signal);
+    border:1px solid rgba(255,106,61,.35); border-radius:4px; padding:2px 6px;
+  }
+  .vcard p{margin:0; font-size:12.5px; line-height:1.6; color:var(--text-mid)}
+  .plus,.minus{display:flex; gap:8px; font-size:12px; line-height:1.55}
+  .plus{color:#8FBFA1} .minus{color:#B9938F}
+  .plus::before{content:"+"; font-family:var(--f-mono); opacity:.7}
+  .minus::before{content:"−"; font-family:var(--f-mono); opacity:.7}
+  .vcard__go{
+    margin-top:auto; padding-top:12px; display:flex; align-items:center; gap:7px;
+    font-family:var(--f-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--signal);
+  }
+  .vcard:hover .vcard__go svg{transform:translateX(3px)}
+  .vcard__go svg{width:13px; height:13px; transition:transform var(--dur) var(--ease)}
+
+  /* --- миниатюры компоновок --- */
+  .wf{position:absolute; inset:12px; display:flex; flex-direction:column; gap:5px}
+  .wf i{display:block; background:var(--ink-700); border-radius:3px}
+  .wf .bar{height:13px; display:flex; gap:4px; align-items:center; padding:0 5px;
+    background:var(--ink-750); border-radius:3px}
+  .wf .bar i{height:5px; background:var(--ink-600)}
+  .wf .body{flex:1; display:flex; gap:5px; min-height:0}
+  .wf .canvas-mini{
+    flex:1; border-radius:4px; position:relative; overflow:hidden;
+    background:var(--paper);
+    background-image:linear-gradient(var(--paper-line) 1px,transparent 1px),
+                     linear-gradient(90deg,var(--paper-line) 1px,transparent 1px);
+    background-size:11px 11px;
+  }
+  .wf .canvas-mini b{position:absolute; border-radius:2px; display:block}
+  .wf .col-l,.wf .col-r{display:flex; flex-direction:column; gap:5px}
+  .wf .pane{background:var(--ink-750); border-radius:4px; flex:1}
+  .wf .pane--accent{border:1px solid rgba(255,106,61,.45)}
+  .wf .pill{
+    position:absolute; background:rgba(18,21,25,.94); border:1px solid rgba(255,255,255,.1);
+    border-radius:5px;
+  }
+  .mini-n{--h:7px}
+
+  /* ---------- Галерея фигур ---------- */
+  .gal-ctl{display:flex; align-items:center; gap:10px; margin-bottom:22px; flex-wrap:wrap}
+  .gal{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(184px,1fr)); gap:14px;
+    background:var(--paper); border:1px solid var(--paper-line-2); border-radius:14px;
+    padding:22px;
+    background-image:
+      linear-gradient(var(--paper-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--paper-line) 1px, transparent 1px);
+    background-size:20px 20px;
+  }
+  .gal .cell{display:flex; flex-direction:column; gap:7px}
+  .gal .an{position:relative; left:auto; top:auto; width:100%; height:62px}
+  .gal .cap{
+    font-family:var(--f-mono); font-size:8.5px; letter-spacing:.08em; text-transform:uppercase;
+    color:#8C8778; padding-left:2px;
+  }
+
+  /* ---------- Нотация связей ---------- */
+  .rels{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px;
+    background:var(--paper); border:1px solid var(--paper-line-2); border-radius:14px; padding:20px;
+  }
+  .rels .r{display:flex; align-items:center; gap:11px}
+  .rels .r svg{width:78px; height:14px; flex:0 0 auto}
+  .rels .r span{font-size:12px; color:#3C424C}
+  .rels .r em{font-family:var(--f-mono); font-size:9px; color:#8C8778; font-style:normal; margin-left:auto}
+
+  /* ---------- Токены ---------- */
+  .tok{display:grid; grid-template-columns:repeat(auto-fill,minmax(178px,1fr)); gap:12px}
+  .swatch{
+    border:1px solid var(--line); border-radius:11px; overflow:hidden; background:var(--ink-800);
+  }
+  .swatch__c{height:56px; background:var(--bg); border-bottom:1px solid var(--bd)}
+  .swatch__m{padding:9px 11px; display:flex; flex-direction:column; gap:2px}
+  .swatch__m b{font-size:12px; font-weight:600}
+  .swatch__m span{font-family:var(--f-mono); font-size:9.5px; color:var(--text-low)}
+
+  .specs{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; margin-top:16px}
+  .spec{
+    border:1px solid var(--line-soft); border-radius:9px; background:var(--ink-850); padding:10px 12px;
+    display:flex; flex-direction:column; gap:3px;
+  }
+  .spec b{font-family:var(--f-mono); font-size:10px; color:var(--signal); letter-spacing:.04em}
+  .spec span{font-size:11.5px; color:var(--text-mid); line-height:1.5}
+
+  /* ---------- Подвал ---------- */
+  .foot{
+    margin-top:76px; padding-top:26px; border-top:1px solid var(--line);
+    display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap;
+    font-family:var(--f-mono); font-size:10px; letter-spacing:.06em; color:var(--text-low);
+  }
+  .foot a{color:var(--text-mid); text-decoration:none}
+  .foot a:hover{color:var(--signal)}
+
+  @media (max-width:640px){ .wrap{padding:0 18px 70px} }
+</style>
+</head>
+<body class="grain">
+<div class="wrap">
+
+  <!-- ================= Шапка ================= -->
+  <header class="hero">
+    <div class="eyebrow">Archi Creator · макеты интерфейса · 22.09.2026</div>
+    <h1>Три компоновки<br>одного <em>редактора</em></h1>
+    <p class="lead">
+      <b style="color:var(--signal)">Выбран вариант A «Панели».</b>
+      Визуальный язык во всех трёх вариантах одинаковый — силуэты и иконки ArchiMate
+      в современном оформлении. Различается только компоновка главного экрана
+      (спецификация, §6.5). Содержимое холста общее — фрагмент вашей модели
+      <span class="mono">Hamkorbank AS IS</span>; в варианте&nbsp;A дерево модели
+      работает на её реальных 402 элементах.
+    </p>
+    <div class="hero-meta">
+      <span class="chip">10 объектов · 9 связей</span>
+      <span class="chip">Bricolage Grotesque · Archivo · IBM Plex Mono</span>
+      <span class="chip">тёмный корпус · бумажный холст</span>
+      <span class="chip chip--warn">статические макеты, не приложение</span>
+    </div>
+  </header>
+
+  <!-- ================= 01 Варианты ================= -->
+  <section>
+    <div class="sec-head"><span class="sec-n">01</span><h2>Варианты компоновки</h2></div>
+    <p class="sec-lead">
+      Решение принято: <b>вариант A «Панели»</b>. Он доработан — дерево модели построено
+      на реальных данных вашего файла. Варианты B и C оставлены как снимки рассмотренных
+      альтернатив.
+    </p>
+
+    <div class="variants">
+
+      <!-- A -->
+      <a class="vcard vcard--pick rise-y" href="layout-a-panels.html">
+        <div class="vcard__vis">
+          <span class="vcard__pick">выбран</span>
+          <div class="wf">
+            <div class="bar"><i style="width:26px"></i><i style="width:46px"></i><i style="width:14px"></i>
+              <i style="width:14px"></i><i style="width:14px"></i></div>
+            <div class="body">
+              <div class="col-l" style="width:30%">
+                <div class="pane" style="flex:1.7"></div>
+                <div class="pane" style="flex:1"></div>
+              </div>
+              <div class="canvas-mini" id="wf-a"></div>
+              <div class="col-r" style="width:26%">
+                <div class="pane" style="flex:1"></div>
+                <div class="pane pane--accent" style="flex:1.1"></div>
+              </div>
+            </div>
+            <i style="height:7px"></i>
+          </div>
+        </div>
+        <div class="vcard__body">
+          <div class="vcard__t"><b>Панели</b><span class="tag">A</span></div>
+          <p>Четыре панели как в Archi, но чище: дерево модели и палитра слева, вкладки
+             представлений и холст в центре, свойства и помощник справа.</p>
+          <div class="plus">Пересадка с Archi без переучивания</div>
+          <div class="plus">Всё на виду: дерево, палитра, свойства, находки</div>
+          <div class="plus">Дерево работает на реальных 402 элементах модели:
+            поиск, группировка, фильтры, связь с холстом</div>
+          <div class="minus">Холсту остаётся меньше половины экрана</div>
+          <div class="vcard__go">Открыть вариант <svg><use href="#u-chevron"/></svg></div>
+        </div>
+      </a>
+
+      <!-- B -->
+      <a class="vcard rise-y" href="layout-b-canvas.html" style="animation-delay:.07s">
+        <div class="vcard__vis">
+          <div class="wf">
+            <div class="canvas-mini" id="wf-b" style="flex:1">
+              <div class="pill" style="left:22%;right:22%;top:6px;height:11px"></div>
+              <div class="pill" style="left:6px;top:36%;width:11px;height:44px"></div>
+              <div class="pill" style="right:6px;bottom:6px;width:46px;height:40px"></div>
+              <div class="pill" style="left:6px;bottom:6px;width:34px;height:13px"></div>
+            </div>
+          </div>
+        </div>
+        <div class="vcard__body">
+          <div class="vcard__t"><b>Холст</b><span class="tag">B</span></div>
+          <p>Холст во весь экран, панели — плавающие: док инструментов слева, палитра
+             выпадает из дока, свойства и помощник — карточки снизу, поиск на ⌘K.</p>
+          <div class="plus">Максимум места под диаграмму</div>
+          <div class="plus">Современнее на вид, меньше визуального шума</div>
+          <div class="minus">Дерево модели не на виду — нужно вызывать</div>
+          <div class="vcard__go">Открыть вариант <svg><use href="#u-chevron"/></svg></div>
+        </div>
+      </a>
+
+      <!-- C -->
+      <a class="vcard rise-y" href="layout-c-modes.html" style="animation-delay:.14s">
+        <div class="vcard__vis">
+          <div class="wf">
+            <div class="bar">
+              <i style="width:26px"></i>
+              <i style="width:34px;background:var(--signal);opacity:.85"></i>
+              <i style="width:34px"></i>
+            </div>
+            <div class="body">
+              <div class="col-l" style="width:24%"><div class="pane"></div></div>
+              <div class="canvas-mini" id="wf-c"></div>
+              <div class="col-r" style="width:32%"><div class="pane pane--accent"></div></div>
+            </div>
+            <i style="height:7px"></i>
+          </div>
+        </div>
+        <div class="vcard__body">
+          <div class="vcard__t"><b>Два режима</b><span class="tag">C</span></div>
+          <p>Просмотр — оглавление, холст и читаемое описание элемента с анализом влияния.
+             Редактирование — полный набор панелей и захват блокировки. Переключатель работает.</p>
+          <div class="plus">Подходит, если большинство только смотрит</div>
+          <div class="plus">Режим просмотра честно отражает роль VIEWER</div>
+          <div class="minus">Два интерфейса вместо одного — больше работы</div>
+          <div class="vcard__go">Открыть вариант <svg><use href="#u-chevron"/></svg></div>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ================= 02 Визуальный язык ================= -->
+  <section>
+    <div class="sec-head"><span class="sec-n">02</span><h2>Фигуры: было и стало</h2></div>
+    <p class="sec-lead">
+      Главное требование — «красивее, но узнаваемо». Силуэт, позиция угловой иконки и цветовое
+      кодирование слоя взяты из ArchiMate без изменений; новыми стали скругления, обводка,
+      тень, типографика и качество иконок. Переключите тумблер: контур каждой фигуры
+      остаётся тем же.
+    </p>
+
+    <div class="gal-ctl">
+      <button class="btn btn--primary" id="t-modern">Новый стиль</button>
+      <button class="btn btn--ghost" id="t-classic">Классический Archi</button>
+      <span class="muted" style="font-size:12px">Тип элемента подписан под фигурой</span>
+    </div>
+
+    <div class="gal" id="gal"></div>
+  </section>
+
+  <!-- ================= 03 Связи ================= -->
+  <section>
+    <div class="sec-head"><span class="sec-n">03</span><h2>Нотация связей</h2></div>
+    <p class="sec-lead">
+      Наконечники и штриховка — часть семантики ArchiMate, поэтому не меняются.
+      Улучшены маршрутизация, скругление углов и читаемость подписи.
+    </p>
+    <div class="rels" id="rels"></div>
+  </section>
+
+  <!-- ================= 04 Токены ================= -->
+  <section>
+    <div class="sec-head"><span class="sec-n">04</span><h2>Токены</h2></div>
+    <p class="sec-lead">
+      Единый источник правды для канвы и экспорта (спецификация, §6.2). Собственный цвет
+      объекта из импортированного файла перекрывает токен слоя и сохраняется при экспорте.
+    </p>
+
+    <div class="tok">
+      <div class="swatch lyr-biz"><div class="swatch__c"></div>
+        <div class="swatch__m"><b>Business</b><span>#FFF6D6 / #C9A227</span></div></div>
+      <div class="swatch lyr-app"><div class="swatch__c"></div>
+        <div class="swatch__m"><b>Application</b><span>#E3F2FD / #4A90C2</span></div></div>
+      <div class="swatch lyr-tech"><div class="swatch__c"></div>
+        <div class="swatch__m"><b>Technology</b><span>#E6F7EC / #3E9B62</span></div></div>
+      <div class="swatch lyr-mot"><div class="swatch__c"></div>
+        <div class="swatch__m"><b>Motivation</b><span>#EDE7F6 / #7E57C2</span></div></div>
+      <div class="swatch lyr-str"><div class="swatch__c"></div>
+        <div class="swatch__m"><b>Strategy</b><span>#FFE9D6 / #D27B3C</span></div></div>
+      <div class="swatch lyr-oth"><div class="swatch__c"></div>
+        <div class="swatch__m"><b>Other</b><span>#F2F2F2 / #9E9E9E</span></div></div>
+    </div>
+
+    <div class="specs">
+      <div class="spec"><b>--node-radius</b><span>8px — структурные элементы</span></div>
+      <div class="spec"><b>--node-radius-round</b><span>16px — поведенческие; сервисы — «стадион»</span></div>
+      <div class="spec"><b>--node-shadow</b><span>0 1px 2px / 0 1px 3px rgba(16,24,40,.06/.10)</span></div>
+      <div class="spec"><b>--edge-width</b><span>1.5px, ортогональная маршрутизация</span></div>
+      <div class="spec"><b>шрифт узла</b><span>Archivo 12.5px / 600, тип — IBM Plex Mono 9px</span></div>
+      <div class="spec"><b>выделение</b><span>двойная обводка сигналом, заливка слоя не меняется</span></div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Archi Creator · макеты к спецификации <a href="../archi-creator.md">docs/archi-creator.md</a></span>
+    <span>Файлы: <a href="layout-a-panels.html">A</a> · <a href="layout-b-canvas.html">B</a> ·
+      <a href="layout-c-modes.html">C</a> · shared.css · scene.js · sprite.js</span>
+  </footer>
+</div>
+
+<script src="sprite.js"></script>
+<script>
+/* ---------- Галерея фигур ---------- */
+const SHAPES = [
+  {l:'biz', i:'i-actor',        n:'Физическое лицо',        t:'Business Actor'},
+  {l:'biz', i:'i-process',      n:'Выпуск карты',           t:'Business Process',     s:'behavior'},
+  {l:'biz', i:'i-function',     n:'Розничный бизнес',       t:'Business Function',    s:'behavior'},
+  {l:'biz', i:'i-app-service',  n:'Обслуживание ФЛ',        t:'Business Service',     s:'service'},
+  {l:'app', i:'i-app-component',n:'IABS',                   t:'Application Component'},
+  {l:'app', i:'i-app-service',  n:'Сервис интернет-банкинга',t:'Application Service',  s:'service'},
+  {l:'app', i:'i-function',     n:'Расчёт лимитов',         t:'Application Function',  s:'behavior'},
+  {l:'app', i:'i-data-object',  n:'Карточный счёт',         t:'Data Object'},
+  {l:'tech',i:'i-node',         n:'Кластер приложений',     t:'Node'},
+  {l:'tech',i:'i-device',       n:'Сервера виртуализации ×7',t:'Device'},
+  {l:'tech',i:'i-sys-software', n:'Oracle 19c',             t:'System Software'},
+  {l:'tech',i:'i-artifact',     n:'iabs-core.ear',          t:'Artifact'},
+  {l:'str', i:'i-capability',   n:'e-KYC',                  t:'Capability',            s:'behavior'},
+  {l:'oth', i:'i-location',     n:'ГО, Ташкент',            t:'Location'},
+  {l:'mot', i:'i-goal',         n:'Снизить time-to-market', t:'Goal',                  s:'behavior'},
+  {l:'oth', i:'i-group',        n:'Каналы',                 t:'Group'}
+];
+
+const gal = document.getElementById('gal');
+gal.innerHTML = SHAPES.map(s => {
+  const cls = ['an', 'an--' + s.l];
+  if (s.s === 'behavior') cls.push('an--behavior');
+  if (s.s === 'service')  cls.push('an--service');
+  if (s.t === 'Group')    cls.push('an--group');
+  return `<div class="cell">
+    <div class="${cls.join(' ')}">
+      <svg class="an__icon"><use href="#${s.i}"/></svg>
+      <div class="an__name">${s.n}</div>
+      <div class="an__type">${s.t}</div>
+    </div>
+    <div class="cap">${s.t}</div>
+  </div>`;
+}).join('');
+
+const bM = document.getElementById('t-modern'), bC = document.getElementById('t-classic');
+function setStyle(classic) {
+  gal.querySelectorAll('.an').forEach(n => n.classList.toggle('an--classic', classic));
+  bM.className = classic ? 'btn btn--ghost' : 'btn btn--primary';
+  bC.className = classic ? 'btn btn--primary' : 'btn btn--ghost';
+}
+bM.onclick = () => setStyle(false);
+bC.onclick = () => setStyle(true);
+
+/* ---------- Нотация связей ---------- */
+const RELS = [
+  ['Composition',    'e',         'url(#m-diamond-fill)', ''],
+  ['Aggregation',    'e',         'url(#m-diamond-open)', ''],
+  ['Assignment',     'e',         'url(#m-ball)',         'url(#m-solid)'],
+  ['Realization',    'e e--dash', '',                     'url(#m-hollow)'],
+  ['Serving',        'e',         '',                     'url(#m-open)'],
+  ['Access',         'e e--dot',  '',                     'url(#m-open)'],
+  ['Influence',      'e e--dash', '',                     'url(#m-open)'],
+  ['Triggering',     'e',         '',                     'url(#m-solid)'],
+  ['Flow',           'e e--dash', '',                     'url(#m-solid)'],
+  ['Specialization', 'e',         '',                     'url(#m-hollow)'],
+  ['Association',    'e',         '',                     '']
+];
+document.getElementById('rels').innerHTML = RELS.map(([n, c, ms, me]) => `
+  <div class="r">
+    <svg viewBox="0 0 78 14">
+      <path class="${c}" d="M4 7 H74"
+        ${ms ? `marker-start="${ms}"` : ''} ${me ? `marker-end="${me}"` : ''}/>
+    </svg>
+    <span>${n}</span>
+  </div>`).join('');
+
+/* ---------- Миниатюры холста в карточках ---------- */
+const MINI = [
+  [6,8,26,7,'biz'], [40,8,30,7,'biz'],
+  [40,26,30,6,'app'],
+  [6,44,28,8,'app'], [40,44,28,8,'app'], [72,44,24,8,'app'],
+  [6,66,28,7,'tech'], [40,66,28,7,'tech'], [72,66,24,7,'tech']
+];
+const COLORS = {
+  biz:'var(--layer-business-border)', app:'var(--layer-application-border)',
+  tech:'var(--layer-technology-border)'
+};
+['wf-a','wf-b','wf-c'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.insertAdjacentHTML('beforeend', MINI.map(([x,y,w,h,l]) =>
+    `<b style="left:${x}%;top:${y}%;width:${w}%;height:${h}px;
+       background:${COLORS[l]};opacity:.55"></b>`).join(''));
+});
+</script>
+</body>
+</html>

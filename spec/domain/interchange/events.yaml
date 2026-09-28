@@ -1,0 +1,118 @@
+---
+version: 0.1
+last_modified: 2026-09-22
+bounded_context: interchange
+target_module: archi-interchange-domain
+publication_target: contracts/interchange/events.asyncapi.yaml
+---
+
+# ───────────────────────────────────────────────────────────────────
+# Каталог доменных событий BC Interchange.
+#
+# Брокера в стеке нет: публикация in-process после коммита транзакции.
+# AsyncAPI по ссылке в publication_target фиксирует контракт полезной
+# нагрузки, а не транспорт.
+#
+# triggers: имена use case'ов. Каталог application/interchange/usecases/
+# пока пуст — имена соответствуют командам из ubiquitous-language.md и
+# получат якоря UC-IXC-NNN при вызове режима add-usecase.
+# ───────────────────────────────────────────────────────────────────
+
+events:
+
+  ImportApplied:
+    description: |
+      Разобранный и проверенный документ принят: модель создана или
+      обновлена новой версией. Отклонённый импорт события не порождает —
+      его результат виден в отчёте сессии.
+    triggers:
+      - ApplyImport
+      - PullModelFromGit
+    payload:
+      - { name: importSessionId, type: ImportSessionId, required: true }
+      - { name: workspaceId,     type: WorkspaceId,     required: true }
+      - { name: modelId,         type: ModelId,         required: true }
+      - { name: versionNo,       type: Long,            required: true }
+      - { name: sourceName,      type: String,          required: true }
+      - { name: sourceHash,      type: ContentHash,     required: true }
+      - { name: strictMode,      type: Boolean,         required: true }
+      - { name: findingCounts,   type: Map<Severity,Int>, required: true }
+      - { name: opaqueObjectCount, type: Int,           required: true, note: "сколько объектов сохранено как непрозрачные (FR-03)" }
+      - { name: occurredAt,      type: Timestamp,       required: true }
+    consumers:
+      - { context: modeling, action: Обновить каталог моделей и зафиксировать версию }
+      - { context: advisor,  action: Признать кэшированный ModelContext устаревшим }
+    routing:
+      channel: interchange.events.v1
+      partition_key: modelId
+    schema_compatibility: BACKWARD
+
+  ExportCompleted:
+    description: |
+      Выгрузка завершена: артефакт построен и отдан, отчёт о потерях
+      сформирован. Публикуется и при пустом отчёте — отсутствие потерь
+      тоже факт, который стоит видеть в метриках.
+    triggers:
+      - ExportArchimate
+      - ExportOpenExchange
+      - ExportCatalogCsv
+      - ExportViewImage
+      - ExportAllViewImages
+    payload:
+      - { name: exportJobId,     type: ExportJobId, required: true }
+      - { name: workspaceId,     type: WorkspaceId, required: true }
+      - { name: modelId,         type: ModelId,     required: true }
+      - { name: viewId,          type: Optional<ViewId>, required: false }
+      - { name: format,          type: ExportFormat, required: true }
+      - { name: sourceVersionNo, type: Long,        required: true }
+      - { name: artifactHash,    type: ContentHash, required: true }
+      - { name: artifactSize,    type: Long,        required: true }
+      - { name: lossEntryCount,  type: Int,         required: true }
+      - { name: occurredAt,      type: Timestamp,   required: true }
+    consumers:
+      - { context: interchange, action: Записать метрику потерь и пополнить журнал выгрузок (в пределах того же BC) }
+    routing:
+      channel: interchange.events.v1
+      partition_key: modelId
+    schema_compatibility: BACKWARD
+
+  GitSnapshotCommitted:
+    description: |
+      Состояние модели зафиксировано коммитом в репозитории рабочего
+      пространства. Несёт `gitSha`, который записывается в версию модели:
+      от наличия этой связи зависит право очистить снимок версии (FR-47).
+    triggers:
+      - PushModelToGit
+    payload:
+      - { name: workspaceId, type: WorkspaceId, required: true }
+      - { name: modelId,     type: ModelId,     required: true }
+      - { name: versionNo,   type: Long,        required: true }
+      - { name: gitSha,      type: GitSha,      required: true }
+      - { name: branch,      type: String,      required: true }
+      - { name: changedFileCount, type: Int,    required: true }
+      - { name: occurredAt,  type: Timestamp,   required: true }
+    consumers:
+      - { context: modeling, action: Записать gitSha в ModelVersion и разрешить очистку снимка по правилу ретеншена }
+    routing:
+      channel: interchange.events.v1
+      partition_key: modelId
+    schema_compatibility: BACKWARD
+
+# ───────────────────────────────────────────────────────────────────
+# Контракт публикации
+# ───────────────────────────────────────────────────────────────────
+
+publishing:
+  pattern: direct
+  serialization: json
+  schema_registry: not_applicable
+  delivery_guarantee: at_least_once
+  ordering_guarantee: per_partition_key
+  note: |
+    `direct` — временное состояние. Для GitSnapshotCommitted оно
+    недопустимо уже к этапу 7a: потерянное событие означает коммит в
+    репозитории, о котором версия не знает. Дальше по цепочке это
+    разрешает очистить снимок, полагаясь на связь, которой нет, —
+    то есть уничтожить единственную копию содержимого.
+    К этапу 7a паттерн должен смениться на `transactional_outbox`.
+    Решение не принято, ADR не заведён — см. README#незакрытые-решения.

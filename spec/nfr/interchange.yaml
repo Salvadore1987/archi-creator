@@ -1,0 +1,220 @@
+---
+version: 0.1
+last_modified: 2026-09-22
+bounded_context: interchange
+target_module: archi-bootstrap
+---
+
+# ───────────────────────────────────────────────────────────────────
+# Нефункциональные требования BC Interchange.
+#
+# Значения взяты из docs/archi-creator.md §2.2 (NFR-02, NFR-05) и §6.10.
+# Ключи в latency и authorization — имена use case'ов из
+# ubiquitous-language.md; якоря UC-IXC-NNN проставляются режимом add-usecase.
+# ───────────────────────────────────────────────────────────────────
+
+availability:
+  slo: 99.5
+  error_budget: 216m
+  measurement_window: 30d
+  note: |
+    Совпадает с modeling: BC живут в одном процессе, отдельной
+    доступности у границы форматов нет.
+
+latency:
+  ImportArchimateFile:
+    p50: 800ms
+    p95: 3s                     # NFR-02: файл на 5 000 строк XML
+    p99: 6s
+    timeout: 120s
+    conditions: файл до 5 000 строк; для референсной модели (~400 элементов) ориентир p95 — 3 с
+  ExportArchimate:
+    p50: 500ms
+    p95: 2s
+    p99: 4s
+    timeout: 60s
+  ExportOpenExchange:
+    p50: 700ms
+    p95: 3s
+    p99: 6s
+    timeout: 60s
+    conditions: включает валидацию результата по XSD
+  ExportCatalogCsv:
+    p50: 300ms
+    p95: 1500ms
+    p99: 3s
+    timeout: 30s
+  ExportViewImage:
+    p50: 400ms
+    p95: 2s
+    p99: 4s
+    timeout: 60s
+    conditions: представление до 500 объектов; PNG включает растеризацию
+  ExportAllViewImages:
+    p50: 4s
+    p95: 20s
+    p99: 40s
+    timeout: 300s
+    conditions: 12 представлений референсной модели; операция фоновая, не интерактивная
+  PushModelToGit:
+    p50: 1s
+    p95: 5s
+    p99: 10s
+    timeout: 120s
+  PullModelFromGit:
+    p50: 1500ms
+    p95: 6s
+    p99: 12s
+    timeout: 120s
+
+throughput:
+  baseline_rps: 0.2
+  peak_rps: 3
+  ramp_up_minutes: 1
+  note: |
+    Импорт и экспорт — редкие операции: десятки в день на всё рабочее
+    пространство. Ограничение здесь не пропускная способность, а
+    одновременность тяжёлых заданий, см. concurrency.
+
+concurrency:
+  max_parallel_export_jobs: 4
+  max_parallel_imports_per_workspace: 1
+  note: |
+    Импорт в одно рабочее пространство последователен: параллельные сессии
+    на одну модель конкурировали бы за блокировку и создавали версии в
+    непредсказуемом порядке. Растеризация PNG ограничена явно — она упирается
+    в CPU и способна вытеснить интерактивные запросы (NFR-03).
+
+upstream_calls:
+
+  git_remote:
+    timeout: 30s
+    retries:
+      count: 3
+      backoff: exponential
+      initial_interval: 1s
+    circuit_breaker:
+      failure_rate_threshold: 50
+      slow_call_threshold: 20s
+      sliding_window_size: 10
+      wait_duration_in_open_state: 60s
+    fallback: queue_for_retry
+    note: |
+      Недоступный репозиторий не должен ломать сохранение модели: база —
+      источник правды, выгрузка догоняет. При переходе GitBinding в
+      UNREACHABLE очистка снимков версий приостанавливается (FR-47).
+
+storage:
+  database: relational / PostgreSQL 16
+  connection_pool:
+    max_size: 8
+    min_idle: 2
+    connection_timeout: 3s
+    leak_detection_threshold: 60s
+  query_timeout: 120s
+  note: |
+    Отдельный пул от интерактивного: длинная транзакция импорта не должна
+    занимать соединения, нужные канве. Таймаут запроса высокий намеренно —
+    применение документа пишет тысячи строк одной транзакцией.
+
+  blob_storage:
+    snapshots: bytea в PostgreSQL, gzip (docs/spec/database.md §4.2)
+    artifacts: не хранятся — выгрузка отдаётся потоком и не кэшируется
+
+messaging:
+  in_process:
+    publication: after_commit
+    delivery_guarantee: at_least_once
+    note: См. domain/interchange/events.yaml#publishing. Для GitSnapshotCommitted требуется outbox к этапу 7a.
+
+security:
+  authentication: jwt_bearer
+  authorization:
+    ImportArchimateFile:  [ARCHITECT, ADMIN]
+    ExportArchimate:      [VIEWER, ARCHITECT, ADMIN]
+    ExportOpenExchange:   [VIEWER, ARCHITECT, ADMIN]
+    ExportCatalogCsv:     [VIEWER, ARCHITECT, ADMIN]
+    ExportViewImage:      [VIEWER, ARCHITECT, ADMIN]
+    ExportAllViewImages:  [VIEWER, ARCHITECT, ADMIN]
+    PushModelToGit:       [ARCHITECT, ADMIN]
+    PullModelFromGit:     [ARCHITECT, ADMIN]
+    MergeModelBranch:     [ARCHITECT, ADMIN]
+    ConfigureGitBinding:  [ADMIN]
+  note: |
+    Экспорт доступен роли VIEWER намеренно (FR-28): читатель должен уметь
+    забрать ландшафт в документ, не получая прав на правку.
+  pii_fields: []
+  secrets:
+    - name: git_token
+      storage: переменная окружения / внешнее хранилище, в домене только SecretRef
+      never_logged: true
+  upload_limits:
+    max_file_size: 50MB
+    accepted_media_types: [application/xml, text/xml, application/octet-stream]
+    accepted_extensions: [.archimate]
+    xxe_protection: true
+    note: |
+      Внешние сущности и DTD в разборе XML отключены безусловно: файл
+      приходит извне, а StAX по умолчанию их допускает.
+  audit:
+    enabled: true
+    events: [ImportArchimateFile, PushModelToGit, PullModelFromGit, MergeModelBranch, ConfigureGitBinding]
+    retention: 1y
+
+observability:
+
+  metrics:
+    - { name: interchange_usecase_requests_total,   type: counter,   labels: [usecase, outcome] }
+    - { name: interchange_usecase_duration_seconds, type: histogram, labels: [usecase], buckets: [0.1, 0.5, 1, 3, 10, 30, 60] }
+    - { name: interchange_usecase_errors_total,     type: counter,   labels: [usecase, error_code] }
+    - { name: interchange_import_sessions_total,    type: counter,   labels: [outcome, strict_mode] }
+    - { name: interchange_import_findings_total,    type: counter,   labels: [severity, code] }
+    - { name: interchange_opaque_objects,           type: gauge,     labels: [model_id] }
+    - { name: interchange_export_loss_entries_total, type: counter,  labels: [format, object_kind] }
+    - { name: interchange_git_push_duration_seconds, type: histogram, labels: [outcome] }
+
+  alerts:
+    - name: RoundTripLossDetected
+      expr: |
+        sum(rate(interchange_export_loss_entries_total{format=~"ARCHIMATE|GIT_YAML"}[5m])) > 0
+      for: 0m
+      severity: page
+      note: |
+        Потеря при выгрузке в формат, который обязан быть lossless, —
+        нарушение INV-IXC-005 в проде. Срабатывает немедленно, без
+        окна ожидания: это тот случай, когда лучше разбудить человека.
+
+    - name: SlowImportP95
+      expr: |
+        histogram_quantile(0.95,
+          sum by (le) (rate(interchange_usecase_duration_seconds_bucket{usecase="ImportArchimateFile"}[15m]))
+        ) > 3
+      for: 15m
+      severity: ticket
+      note: Нарушение NFR-02.
+
+    - name: GitBindingUnreachable
+      expr: |
+        sum(rate(interchange_usecase_errors_total{usecase="PushModelToGit"}[15m])) > 0.05
+      for: 15m
+      severity: ticket
+      note: |
+        Пока репозиторий недоступен, очистка снимков версий обязана быть
+        остановлена (FR-47). Алерт — сигнал проверить, что она остановлена.
+
+  tracing:
+    sampler: parent_based_traceidratio
+    ratio: 0.5
+    note: |
+      Доля выше, чем у modeling: операций мало, каждая тяжёлая, и разбор
+      «почему импорт шёл восемь секунд» без трассы не делается.
+    propagator: w3c_tracecontext
+
+  logging:
+    level: INFO
+    format: json
+    pii_masking: true
+    correlation_id: from_traceparent
+    note: |
+      Содержимое импортируемого файла в логи не попадает ни на каком
+      уровне: это модель заказчика целиком.

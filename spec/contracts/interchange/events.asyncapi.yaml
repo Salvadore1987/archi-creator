@@ -1,0 +1,147 @@
+asyncapi: 3.0.0
+
+info:
+  title: Interchange Domain Events
+  version: 0.1.0
+  description: |
+    Доменные события BC Interchange. Генерируется из
+    `spec/domain/interchange/events.yaml` — не редактируется вручную.
+
+    **Транспорт:** брокера в стеке нет (`docs/archi-creator.md` §3.2),
+    публикация in-process после коммита транзакции
+    (`domain/interchange/events.yaml#publishing`, pattern `direct`).
+    Для `GitSnapshotCommitted` этого недостаточно начиная с этапа 7a —
+    см. примечание в `events.yaml#publishing`.
+
+defaultContentType: application/json
+
+servers:
+  inProcess:
+    host: 'localhost'
+    protocol: in-process
+    description: Публикация внутри JVM после коммита транзакции.
+
+channels:
+
+  interchangeEvents:
+    address: interchange.events.v1
+    messages:
+      importApplied:        { $ref: '#/components/messages/ImportApplied' }
+      exportCompleted:      { $ref: '#/components/messages/ExportCompleted' }
+      gitSnapshotCommitted: { $ref: '#/components/messages/GitSnapshotCommitted' }
+    description: |
+      Все события BC Interchange. Ключ партиционирования — `modelId`.
+
+operations:
+
+  publishImportApplied:
+    action: send
+    channel: { $ref: '#/channels/interchangeEvents' }
+    summary: Публикация ImportApplied
+    messages:
+      - $ref: '#/channels/interchangeEvents/messages/importApplied'
+
+  publishExportCompleted:
+    action: send
+    channel: { $ref: '#/channels/interchangeEvents' }
+    summary: Публикация ExportCompleted
+    messages:
+      - $ref: '#/channels/interchangeEvents/messages/exportCompleted'
+
+  publishGitSnapshotCommitted:
+    action: send
+    channel: { $ref: '#/channels/interchangeEvents' }
+    summary: Публикация GitSnapshotCommitted
+    messages:
+      - $ref: '#/channels/interchangeEvents/messages/gitSnapshotCommitted'
+
+components:
+
+  messages:
+
+    ImportApplied:
+      name: ImportApplied
+      title: Импорт применён к модели
+      contentType: application/json
+      payload: { $ref: '#/components/schemas/ImportAppliedPayload' }
+      headers: { $ref: '#/components/schemas/EventHeaders' }
+
+    ExportCompleted:
+      name: ExportCompleted
+      title: Выгрузка завершена
+      contentType: application/json
+      payload: { $ref: '#/components/schemas/ExportCompletedPayload' }
+      headers: { $ref: '#/components/schemas/EventHeaders' }
+
+    GitSnapshotCommitted:
+      name: GitSnapshotCommitted
+      title: Состояние модели зафиксировано коммитом
+      contentType: application/json
+      payload: { $ref: '#/components/schemas/GitSnapshotCommittedPayload' }
+      headers: { $ref: '#/components/schemas/EventHeaders' }
+
+  schemas:
+
+    EventHeaders:
+      type: object
+      required: [eventId, eventType, eventVersion, occurredAt, source]
+      properties:
+        eventId:      { type: string, format: uuid }
+        eventType:    { type: string }
+        eventVersion: { type: string }
+        occurredAt:   { type: string, format: date-time }
+        source:       { type: string, const: interchange }
+        traceId:      { type: string, description: W3C trace context }
+
+    ImportAppliedPayload:
+      type: object
+      required: [importSessionId, workspaceId, modelId, versionNo, sourceName, sourceHash, strictMode, findingCounts, opaqueObjectCount, occurredAt]
+      properties:
+        importSessionId: { type: string, format: uuid }
+        workspaceId:     { type: string, format: uuid }
+        modelId:         { type: string, format: uuid }
+        versionNo:       { type: integer, format: int64, minimum: 1 }
+        sourceName:      { type: string }
+        sourceHash:      { type: string, pattern: '^[0-9a-f]{64}$' }
+        strictMode:      { type: boolean }
+        findingCounts:
+          type: object
+          description: Количество находок по уровням серьёзности.
+          properties:
+            ERROR:   { type: integer, minimum: 0 }
+            WARNING: { type: integer, minimum: 0 }
+            INFO:    { type: integer, minimum: 0 }
+        opaqueObjectCount: { type: integer, minimum: 0 }
+        occurredAt:      { type: string, format: date-time }
+
+    ExportCompletedPayload:
+      type: object
+      required: [exportJobId, workspaceId, modelId, format, sourceVersionNo, artifactHash, artifactSize, lossEntryCount, occurredAt]
+      properties:
+        exportJobId:     { type: string, format: uuid }
+        workspaceId:     { type: string, format: uuid }
+        modelId:         { type: string, format: uuid }
+        viewId:          { type: string, format: uuid }
+        format:          { type: string, enum: [ARCHIMATE, OPEN_EXCHANGE, CSV_CATALOG, SVG, PNG, GIT_YAML] }
+        sourceVersionNo: { type: integer, format: int64, minimum: 1 }
+        artifactHash:    { type: string, pattern: '^[0-9a-f]{64}$' }
+        artifactSize:    { type: integer, format: int64, minimum: 0 }
+        lossEntryCount:
+          type: integer
+          minimum: 0
+          description: |
+            Для форматов ARCHIMATE и GIT_YAML обязан быть 0 — иначе нарушен
+            INV-IXC-005.
+        occurredAt:      { type: string, format: date-time }
+
+    GitSnapshotCommittedPayload:
+      type: object
+      required: [workspaceId, modelId, versionNo, gitSha, branch, changedFileCount, occurredAt]
+      properties:
+        workspaceId:      { type: string, format: uuid }
+        modelId:          { type: string, format: uuid }
+        versionNo:        { type: integer, format: int64, minimum: 1 }
+        gitSha:           { type: string, pattern: '^[0-9a-f]{40}$' }
+        branch:           { type: string }
+        changedFileCount: { type: integer, minimum: 0 }
+        occurredAt:       { type: string, format: date-time }

@@ -1,0 +1,368 @@
+---
+version: 0.1
+last_modified: 2026-09-22
+bounded_context: modeling
+target_module: archi-modeling-domain
+---
+
+# ───────────────────────────────────────────────────────────────────
+# Агрегаты, сущности и value objects для BC Modeling.
+#
+# Типы полей указываются в языко-агностичной нотации:
+#   - String, Int, Long, Decimal, Boolean, Timestamp, Date, UUID
+#   - List<T>, Set<T>, Map<K,V>
+#   - Optional<T> для опциональных полей
+#   - имена VO/Entity/enum из этого файла
+#
+# Границы агрегатов выбраны по способу загрузки (docs/spec/database.md §4.3):
+# дерево модели читается целиком одним запросом, представление — по требованию.
+# Поэтому ArchitectureModel и View — разные агрегаты, а элементы и связи —
+# сущности внутри модели, а не самостоятельные корни.
+# ───────────────────────────────────────────────────────────────────
+
+aggregates:
+
+  Workspace:
+    type: aggregate_root
+    identity: WorkspaceId
+    description: |
+      Рабочее пространство — арендатор системы и граница видимости моделей.
+      Политики, специфичные для других BC (бюджет токенов, строгость импорта,
+      привязка к Git), здесь НЕ живут: их владеют advisor и interchange,
+      ключом выступает тот же WorkspaceId.
+    fields:
+      - { name: id,         type: WorkspaceId, constraints: [not_null, immutable] }
+      - { name: name,       type: String,      constraints: [not_null, min: 1, max: 200] }
+      - { name: createdAt,  type: Timestamp,   constraints: [not_null, immutable] }
+      - { name: version,    type: Long,        constraints: [optimistic_lock] }
+    invariants_ref: invariants.md
+    domain_events_published: []
+
+  ArchitectureModel:
+    type: aggregate_root
+    identity: ModelId
+    description: |
+      Архитектурная модель целиком. Граница согласованности: уникальность
+      archi_id, ссылочная целостность связей и целостность дерева папок
+      проверяются в пределах одного экземпляра.
+    fields:
+      - { name: id,            type: ModelId,             constraints: [not_null, immutable] }
+      - { name: workspaceId,   type: WorkspaceId,         constraints: [not_null, immutable] }
+      - { name: archiId,       type: ArchiId,             constraints: [not_null, immutable] }
+      - { name: name,          type: String,              constraints: [not_null, min: 1, max: 500] }
+      - { name: documentation, type: Optional<String>,    constraints: [optional] }
+      - { name: archiVersion,  type: String,              constraints: [not_null, pattern: "^\\d+\\.\\d+\\.\\d+$"], default: "5.0.0" }
+      - { name: status,        type: ModelStatus,         constraints: [not_null], default: ACTIVE }
+      - { name: folders,       type: List<ModelFolder>,   constraints: [not_null, min_size: 8] }
+      - { name: elements,      type: List<Element>,       constraints: [not_null] }
+      - { name: relationships, type: List<Relationship>,  constraints: [not_null] }
+      - { name: properties,    type: List<PropertyEntry>, constraints: [not_null] }
+      - { name: createdBy,     type: EditorIdentity,      constraints: [not_null, immutable] }
+      - { name: createdAt,     type: Timestamp,           constraints: [not_null, immutable] }
+      - { name: updatedAt,     type: Timestamp,           constraints: [not_null] }
+      - { name: version,       type: Long,                constraints: [optimistic_lock] }
+
+    state_machine:
+      initial: ACTIVE
+      transitions:
+        - { from: ACTIVE,  to: DELETED, via: DeleteModel }
+        - { from: DELETED, to: ACTIVE,  via: RestoreModel }
+        - { from: DELETED, to: PURGED,  via: PurgeModel }
+      terminal: [PURGED]
+      note: |
+        Прямого перехода ACTIVE → PURGED нет намеренно: уничтожение возможно
+        только для уже удалённой модели, что делает операцию двухшаговой.
+
+    invariants_ref: invariants.md
+
+    domain_events_published:
+      - ModelVersionCommitted
+      - ModelDeleted
+
+  View:
+    type: aggregate_root
+    identity: ViewId
+    description: |
+      Представление (диаграмма). Отдельный агрегат: открывается и сохраняется
+      независимо от модели, при этом ссылается на её элементы по ElementId.
+    fields:
+      - { name: id,         type: ViewId,              constraints: [not_null, immutable] }
+      - { name: modelId,    type: ModelId,             constraints: [not_null, immutable] }
+      - { name: folderId,   type: FolderId,            constraints: [not_null] }
+      - { name: archiId,    type: ArchiId,             constraints: [not_null, immutable] }
+      - { name: name,       type: String,              constraints: [not_null, min: 1, max: 500] }
+      - { name: documentation, type: Optional<String>, constraints: [optional] }
+      - { name: viewpoint,  type: Optional<String>,    constraints: [optional] }
+      - { name: nodes,      type: List<ViewNode>,      constraints: [not_null] }
+      - { name: edges,      type: List<ViewEdge>,      constraints: [not_null] }
+      - { name: sortOrder,  type: SortOrder,           constraints: [not_null] }
+      - { name: rawXml,     type: Optional<RawXml>,    constraints: [optional] }
+      - { name: version,    type: Long,                constraints: [optimistic_lock] }
+    invariants_ref: invariants.md
+    domain_events_published: []
+
+  ModelLock:
+    type: aggregate_root
+    identity: ModelId
+    description: |
+      Право единолично редактировать модель. Отдельный агрегат, потому что
+      захватывается и снимается без изменения самой модели, в том числе
+      администратором принудительно (FR-05).
+    fields:
+      - { name: modelId,    type: ModelId,        constraints: [not_null, immutable] }
+      - { name: owner,      type: EditorIdentity, constraints: [not_null] }
+      - { name: acquiredAt, type: Timestamp,      constraints: [not_null] }
+      - { name: expiresAt,  type: Timestamp,      constraints: [not_null] }
+    state_machine:
+      initial: HELD
+      transitions:
+        - { from: HELD, to: RELEASED, via: ReleaseLock }
+        - { from: HELD, to: EXPIRED,  via: expiry }
+      terminal: [RELEASED, EXPIRED]
+      note: |
+        EXPIRED наступает по времени, а не по команде: просроченная блокировка
+        не даёт прав на запись, даже если запись о ней ещё существует.
+    invariants_ref: invariants.md
+    domain_events_published:
+      - ModelLockReleased
+
+  ModelVersion:
+    type: aggregate_root
+    identity: VersionId
+    description: |
+      Запись истории. Неизменяема после создания, кроме поля label и очистки
+      снимка фоновой задачей (docs/spec/database.md §4.4).
+    fields:
+      - { name: id,         type: VersionId,        constraints: [not_null, immutable] }
+      - { name: modelId,    type: ModelId,          constraints: [not_null, immutable] }
+      - { name: versionNo,  type: Long,             constraints: [not_null, immutable, positive] }
+      - { name: author,     type: EditorIdentity,   constraints: [not_null, immutable] }
+      - { name: comment,    type: Optional<String>, constraints: [optional, max: 1000] }
+      - { name: label,      type: Optional<String>, constraints: [optional, max: 100] }
+      - { name: createdAt,  type: Timestamp,        constraints: [not_null, immutable] }
+      - { name: snapshot,   type: Optional<Bytes>,  constraints: [optional] }
+      - { name: gitSha,     type: Optional<String>, constraints: [optional, pattern: "^[0-9a-f]{40}$"] }
+    state_machine:
+      initial: WITH_SNAPSHOT
+      transitions:
+        - { from: WITH_SNAPSHOT, to: SNAPSHOT_PURGED, via: PurgeSnapshot }
+      terminal: [SNAPSHOT_PURGED]
+      note: |
+        Очистка снимка разрешена только там, где настроен и доступен Git
+        (FR-47): иначе снимок — единственная копия содержимого.
+    invariants_ref: invariants.md
+    domain_events_published: []
+
+# ───────────────────────────────────────────────────────────────────
+# Сущности внутри агрегатов
+# ───────────────────────────────────────────────────────────────────
+
+entities:
+
+  ModelFolder:
+    type: entity
+    parent: ArchitectureModel
+    identity: FolderId
+    description: Узел дерева организации модели. Корневых папок восемь, вложенность произвольная.
+    fields:
+      - { name: id,         type: FolderId,           constraints: [not_null, immutable] }
+      - { name: parentId,   type: Optional<FolderId>, constraints: [optional] }
+      - { name: archiId,    type: ArchiId,            constraints: [not_null, immutable] }
+      - { name: name,       type: String,             constraints: [not_null, min: 1, max: 500] }
+      - { name: folderType, type: Optional<FolderType>, constraints: [optional], note: "задан только у корневых папок" }
+      - { name: sortOrder,  type: SortOrder,          constraints: [not_null] }
+      - { name: rawXml,     type: Optional<RawXml>,   constraints: [optional] }
+
+  Element:
+    type: entity
+    parent: ArchitectureModel
+    identity: ElementId
+    description: Объект ArchiMate. Существует независимо от размещения на представлениях.
+    fields:
+      - { name: id,            type: ElementId,           constraints: [not_null, immutable] }
+      - { name: folderId,      type: FolderId,            constraints: [not_null] }
+      - { name: archiId,       type: ArchiId,             constraints: [not_null, immutable] }
+      - { name: archiType,     type: ArchiType,           constraints: [not_null, immutable] }
+      - { name: layer,         type: Layer,               constraints: [not_null, computed: "derived from archiType"] }
+      - { name: name,          type: String,              constraints: [not_null, max: 500] }
+      - { name: documentation, type: Optional<String>,    constraints: [optional] }
+      - { name: properties,    type: List<PropertyEntry>, constraints: [not_null] }
+      - { name: sortOrder,     type: SortOrder,           constraints: [not_null] }
+      - { name: supported,     type: Boolean,             constraints: [not_null], default: true }
+      - { name: rawXml,        type: Optional<RawXml>,    constraints: [optional, not_null_when: "supported = false"] }
+
+  Relationship:
+    type: entity
+    parent: ArchitectureModel
+    identity: RelationshipId
+    description: Направленная связь между двумя элементами одной модели.
+    fields:
+      - { name: id,            type: RelationshipId,      constraints: [not_null, immutable] }
+      - { name: folderId,      type: FolderId,            constraints: [not_null] }
+      - { name: archiId,       type: ArchiId,             constraints: [not_null, immutable] }
+      - { name: archiType,     type: ArchiType,           constraints: [not_null] }
+      - { name: sourceId,      type: ElementId,           constraints: [not_null] }
+      - { name: targetId,      type: ElementId,           constraints: [not_null] }
+      - { name: name,          type: Optional<String>,    constraints: [optional, max: 500] }
+      - { name: documentation, type: Optional<String>,    constraints: [optional] }
+      - { name: accessType,    type: Optional<AccessType>, constraints: [optional], note: "только для Access" }
+      - { name: directed,      type: Optional<Boolean>,   constraints: [optional], note: "только для Association" }
+      - { name: properties,    type: List<PropertyEntry>, constraints: [not_null] }
+      - { name: sortOrder,     type: SortOrder,           constraints: [not_null] }
+      - { name: supported,     type: Boolean,             constraints: [not_null], default: true }
+      - { name: rawXml,        type: Optional<RawXml>,    constraints: [optional, not_null_when: "supported = false"] }
+
+  ViewNode:
+    type: entity
+    parent: View
+    identity: ViewNodeId
+    description: Размещение объекта на представлении с геометрией относительно родителя.
+    fields:
+      - { name: id,        type: ViewNodeId,           constraints: [not_null, immutable] }
+      - { name: parentId,  type: Optional<ViewNodeId>, constraints: [optional], note: "вложенность в Group или в другой узел" }
+      - { name: archiId,   type: ArchiId,              constraints: [not_null, immutable] }
+      - { name: kind,      type: ViewNodeKind,         constraints: [not_null] }
+      - { name: elementId, type: Optional<ElementId>,  constraints: [optional, not_null_when: "kind = DIAGRAM_OBJECT"] }
+      - { name: bounds,    type: Bounds,               constraints: [not_null] }
+      - { name: style,     type: Optional<StyleOverride>, constraints: [optional] }
+      - { name: sortOrder, type: SortOrder,            constraints: [not_null] }
+      - { name: rawXml,    type: Optional<RawXml>,     constraints: [optional] }
+
+  ViewEdge:
+    type: entity
+    parent: View
+    identity: ViewEdgeId
+    description: Отрисовка связи на представлении.
+    fields:
+      - { name: id,             type: ViewEdgeId,     constraints: [not_null, immutable] }
+      - { name: archiId,        type: ArchiId,        constraints: [not_null, immutable] }
+      - { name: relationshipId, type: Optional<RelationshipId>, constraints: [optional], note: "null у соединений, не отражающих связь модели" }
+      - { name: sourceNodeId,   type: ViewNodeId,     constraints: [not_null] }
+      - { name: targetNodeId,   type: ViewNodeId,     constraints: [not_null] }
+      - { name: bendpoints,     type: List<Bendpoint>, constraints: [not_null] }
+      - { name: style,          type: Optional<StyleOverride>, constraints: [optional] }
+      - { name: sortOrder,      type: SortOrder,      constraints: [not_null] }
+      - { name: rawXml,         type: Optional<RawXml>, constraints: [optional] }
+
+# ───────────────────────────────────────────────────────────────────
+# Value objects
+# ───────────────────────────────────────────────────────────────────
+
+value_objects:
+
+  WorkspaceId:    { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+  ModelId:        { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+  FolderId:       { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+  ElementId:      { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+  RelationshipId: { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+  ViewId:         { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+  ViewNodeId:     { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+  ViewEdgeId:     { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+  VersionId:      { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+
+  ArchiId:
+    underlying: String
+    constraints: [pattern: "^id-[0-9a-f]{24}$"]
+    generation: preserved_on_import_generated_in_same_format_for_new
+    uniqueness: per_model
+    serialization: { json: string }
+    note: |
+      Второй идентификатор каждого объекта, внешний. Уникален только внутри
+      модели, поэтому не может быть первичным ключом. См. README#соглашения.
+
+  ArchiType:
+    underlying: String
+    constraints: [pattern: "^archimate:[A-Za-z]+$"]
+    serialization: { json: string }
+    note: |
+      Намеренно не enum: типы вне текущей фазы метамодели должны сохраняться
+      и отдаваться при экспорте (FR-03). Каталог поддержанных типов живёт
+      в метамодели и проверяется отдельно от хранения.
+
+  SortOrder:
+    underlying: Long
+    constraints: [not_null, positive]
+    step: 1000
+    uniqueness: per_parent
+    note: |
+      Разреженная нумерация: вставка между соседями берёт середину зазора и
+      не трогает остальных. Перебалансировка ветви — только когда зазор
+      исчерпан. Без этого каждая вставка давала бы diff на всю папку при
+      выгрузке в Git (docs/spec/database.md §11.6).
+
+  Bounds:
+    composite:
+      - { name: x,      type: Int, constraints: [not_null] }
+      - { name: y,      type: Int, constraints: [not_null] }
+      - { name: width,  type: Int, constraints: [not_null, positive] }
+      - { name: height, type: Int, constraints: [not_null, positive] }
+    origin: parent_relative
+    note: Отсчёт от родительского узла, а не от холста. У корневых узлов родитель — само представление.
+
+  Bendpoint:
+    composite:
+      - { name: x, type: Int, constraints: [not_null] }
+      - { name: y, type: Int, constraints: [not_null] }
+
+  PropertyEntry:
+    composite:
+      - { name: key,       type: String,    constraints: [not_null, max: 200] }
+      - { name: value,     type: String,    constraints: [not_null] }
+      - { name: sortOrder, type: SortOrder, constraints: [not_null] }
+
+  StyleOverride:
+    composite:
+      - { name: fillColor,     type: Optional<String>, constraints: [optional, pattern: "^#[0-9a-fA-F]{6}$"] }
+      - { name: font,          type: Optional<String>, constraints: [optional] }
+      - { name: fontColor,     type: Optional<String>, constraints: [optional, pattern: "^#[0-9a-fA-F]{6}$"] }
+      - { name: lineColor,     type: Optional<String>, constraints: [optional, pattern: "^#[0-9a-fA-F]{6}$"] }
+      - { name: textAlignment, type: Optional<Int>,    constraints: [optional] }
+    note: Приоритет над токеном слоя (FR-21). Пустое переопределение и его отсутствие — одно и то же.
+
+  RawXml:
+    underlying: String
+    serialization: { json: string }
+    note: |
+      Непрозрачное значение. modeling его хранит и отдаёт, но не разбирает:
+      разбор — язык BC interchange.
+
+  EditorIdentity:
+    composite:
+      - { name: subject, type: String,      constraints: [not_null] }
+      - { name: roles,   type: Set<Role>,   constraints: [not_null, min_size: 1] }
+    note: Приходит из JWT Keycloak. Персональные данные в домене не хранятся.
+
+# ───────────────────────────────────────────────────────────────────
+# Перечисления
+# ───────────────────────────────────────────────────────────────────
+
+enums:
+
+  ModelStatus:
+    values: [ACTIVE, DELETED, PURGED]
+
+  LockStatus:
+    values: [HELD, RELEASED, EXPIRED]
+
+  FolderType:
+    values: [STRATEGY, BUSINESS, APPLICATION, TECHNOLOGY, MOTIVATION, OTHER, RELATIONS, DIAGRAMS]
+    note: Восемь корневых папок Archi. У вложенных пользовательских папок тип не задан.
+
+  Layer:
+    values: [BUSINESS, APPLICATION, TECHNOLOGY, MOTIVATION, STRATEGY, PHYSICAL, IMPLEMENTATION, OTHER]
+    note: Выводится из archiType. OTHER — для типов, которые метамодель текущей фазы не знает.
+
+  ViewNodeKind:
+    values: [DIAGRAM_OBJECT, GROUP, NOTE, JUNCTION]
+
+  AccessType:
+    values: [WRITE, READ, ACCESS, READ_WRITE]
+    note: Соответствует числовым значениям атрибута accessType в файле Archi.
+
+  Role:
+    values: [VIEWER, ARCHITECT, ADMIN]
+    note: FR-28. Роли приходят из Keycloak, ACL модели накладывается поверх них.
+
+  LockReleaseReason:
+    values: [RELEASED_BY_OWNER, FORCED_BY_ADMIN, EXPIRED]
+    note: Причина снятия блокировки, попадает в событие ModelLockReleased.

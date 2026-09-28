@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Вариант C — Два режима · Archi Creator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  body{display:grid; grid-template-rows:auto 1fr auto; height:100vh; overflow:hidden}
+  .main{display:grid; min-height:0; background:var(--ink-900);
+        grid-template-columns:var(--col-l) 1fr var(--col-r);
+        transition:grid-template-columns .28s var(--ease)}
+  body.mode-view{--col-l:226px; --col-r:352px}
+  body.mode-edit{--col-l:268px; --col-r:312px}
+
+  .side{display:flex; flex-direction:column; min-height:0; background:var(--ink-800); overflow:hidden}
+  .side--l{border-right:1px solid var(--line)}
+  .side--r{border-left:1px solid var(--line)}
+  .split{height:1px; background:var(--line); flex:0 0 auto}
+
+  .center{display:flex; flex-direction:column; min-width:0; min-height:0; background:var(--ink-850)}
+  .tabbar{display:flex; align-items:flex-end; height:34px; flex:0 0 auto;
+          border-bottom:1px solid var(--paper); background:var(--ink-850)}
+  .stage{position:relative; flex:1; min-height:0; overflow:auto}
+  .stage .canvas{position:absolute; inset:0; min-width:860px; min-height:560px}
+
+  /* ---- Переключатель режима ---- */
+  .modes{
+    display:flex; gap:2px; padding:3px; border-radius:9px;
+    background:var(--ink-900); border:1px solid var(--line);
+  }
+  .modes .btn{height:26px; padding:0 12px; border-radius:6px; font-size:12px}
+  .modes .btn.is-on{background:var(--signal); color:#1A0C06; font-weight:600}
+  .modes .btn.is-on:hover{background:var(--signal-2)}
+
+  /* ---- Видимость по режиму ---- */
+  body.mode-view .edit-only{display:none}
+  body.mode-edit .view-only{display:none}
+
+  /* ---- Режим просмотра: холст спокойнее ---- */
+  body.mode-view .canvas{
+    background-image:
+      linear-gradient(var(--paper-line-2) 1px, transparent 1px),
+      linear-gradient(90deg, var(--paper-line-2) 1px, transparent 1px);
+    background-size:100px 100px, 100px 100px;
+  }
+  body.mode-view .an{cursor:pointer}
+  body.mode-view .an__port{display:none}
+
+  /* ---- Читающая панель ---- */
+  .read{padding:16px 16px 20px; overflow:auto; display:flex; flex-direction:column; gap:14px}
+  .read h2{
+    font-family:var(--f-display); font-size:19px; font-weight:700; letter-spacing:-.015em;
+    margin:0; color:var(--text-hi);
+  }
+  .read .meta{display:flex; flex-wrap:wrap; gap:5px}
+  .read p{margin:0; font-size:12.5px; line-height:1.62; color:var(--text-mid)}
+  .read h3{
+    font-family:var(--f-mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--text-low); margin:4px 0 0;
+  }
+  .rel-list{display:flex; flex-direction:column; gap:4px}
+  .rel{
+    display:flex; align-items:center; gap:8px; padding:6px 9px; border-radius:7px;
+    background:var(--ink-850); border:1px solid var(--line-soft); font-size:11.5px; color:var(--text-mid);
+  }
+  .rel:hover{border-color:var(--line); color:var(--text-hi)}
+  .rel .k{font-family:var(--f-mono); font-size:9px; letter-spacing:.05em; color:var(--text-low);
+          margin-left:auto; white-space:nowrap}
+  .rel__dot{width:14px;height:14px;border-radius:3px;flex:0 0 auto;display:grid;place-items:center;
+            background:var(--bg); border:1px solid var(--bd); color:var(--bd)}
+  .rel__dot svg{width:10px;height:10px}
+
+  /* ---- Оглавление в режиме просмотра ---- */
+  .toc{padding:8px 8px 14px; overflow:auto}
+  .toc__g{font-family:var(--f-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase;
+          color:var(--text-low); padding:12px 8px 4px}
+  .toc__i{display:flex; align-items:center; gap:8px; height:28px; padding:0 8px; border-radius:6px;
+          color:var(--text-mid); font-size:12px; white-space:nowrap; overflow:hidden}
+  .toc__i:hover{background:var(--ink-750); color:var(--text-hi)}
+  .toc__i.is-on{background:var(--signal-dim); color:var(--signal-2)}
+  .toc__i svg{width:13px;height:13px;flex:0 0 auto}
+  .toc__i span{overflow:hidden; text-overflow:ellipsis}
+
+  .palette{grid-template-columns:1fr}
+
+  /* ---- Тост ---- */
+  .toast{
+    position:fixed; left:50%; bottom:52px; transform:translateX(-50%) translateY(14px);
+    display:flex; align-items:center; gap:9px; padding:9px 15px; border-radius:999px;
+    background:rgba(18,21,25,.94); border:1px solid var(--line); backdrop-filter:blur(10px);
+    font-size:12px; color:var(--text-mid);
+    opacity:0; pointer-events:none; transition:all .3s var(--ease); z-index:60;
+  }
+  .toast.is-on{opacity:1; transform:translateX(-50%) translateY(0)}
+  .toast svg{width:14px;height:14px;color:var(--signal)}
+  .stamp{bottom:36px; left:280px; right:auto}
+</style>
+</head>
+<body class="mode-view grain">
+
+<!-- ================= Верхняя строка ================= -->
+<header class="topbar">
+  <div class="brand"><div class="brand__mark">ARCHI<em>/</em>CREATOR</div></div>
+  <div class="sep"></div>
+
+  <div class="doc-title">
+    <b>Hamkorbank — ИТ-ландшафт AS IS</b>
+    <span class="chip chip--ok view-only">модель свободна</span>
+    <span class="chip chip--lock edit-only"><svg style="width:11px;height:11px"><use href="#u-lock"/></svg>Редактирует: Сагит</span>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="modes">
+    <button class="btn is-on" data-mode="view"><svg><use href="#u-eye"/></svg>Просмотр</button>
+    <button class="btn" data-mode="edit"><svg><use href="#u-pencil"/></svg>Редактирование</button>
+  </div>
+
+  <div class="sep edit-only"></div>
+  <div class="row edit-only">
+    <button class="btn btn--icon is-on" title="Выбор (V)"><svg><use href="#u-cursor"/></svg></button>
+    <button class="btn btn--icon" title="Панорама (H)"><svg><use href="#u-hand"/></svg></button>
+    <button class="btn btn--icon" title="Связь (C)"><svg><use href="#u-connect"/></svg></button>
+    <div class="sep"></div>
+    <button class="btn btn--icon" title="Авторазметка"><svg><use href="#u-layout"/></svg></button>
+    <button class="btn btn--icon" title="Отменить"><svg><use href="#u-undo"/></svg></button>
+    <button class="btn btn--icon" title="Повторить"><svg><use href="#u-redo"/></svg></button>
+  </div>
+
+  <div class="grow"></div>
+
+  <button class="btn btn--ghost"><svg><use href="#u-search"/></svg>Поиск<span class="kbd">⌘K</span></button>
+  <button class="btn btn--ghost view-only">Экспорт</button>
+  <button class="btn btn--primary edit-only">Сохранить</button>
+  <div class="avatar">СО</div>
+</header>
+
+<!-- ================= Рабочая область ================= -->
+<div class="main">
+
+  <!-- ---------- Слева ---------- -->
+  <aside class="side side--l">
+
+    <!-- Просмотр: оглавление -->
+    <div class="view-only col grow">
+      <div class="panel-head">Содержание</div>
+      <div class="toc grow">
+        <div class="toc__g">Представления</div>
+        <div class="toc__i is-on"><svg><use href="#u-grid"/></svg><span>01 Контекст AS IS</span></div>
+        <div class="toc__i"><svg><use href="#u-grid"/></svg><span>02 Интеграции ИАБС и R-Style</span></div>
+        <div class="toc__i"><svg><use href="#u-grid"/></svg><span>03 Контур ЭЦП — STYX / KMS</span></div>
+        <div class="toc__i"><svg><use href="#u-grid"/></svg><span>04 Карточный контур</span></div>
+        <div class="toc__i muted"><svg><use href="#u-chevron"/></svg><span>Ещё 8</span></div>
+
+        <div class="toc__g">Каталоги</div>
+        <div class="toc__i"><svg class="lyr-app" style="color:var(--bd)"><use href="#i-app-component"/></svg><span>Приложения · 242</span></div>
+        <div class="toc__i"><svg class="lyr-tech" style="color:var(--bd)"><use href="#i-sys-software"/></svg><span>Технологии · 45</span></div>
+        <div class="toc__i"><svg class="lyr-biz" style="color:var(--bd)"><use href="#i-process"/></svg><span>Процессы · 40</span></div>
+        <div class="toc__i"><svg class="lyr-str" style="color:var(--bd)"><use href="#i-capability"/></svg><span>Capability map · 69</span></div>
+
+        <div class="toc__g">Документы</div>
+        <div class="toc__i"><svg><use href="#u-tree"/></svg><span>Описание ландшафта</span></div>
+        <div class="toc__i"><svg><use href="#u-warn"/></svg><span>Отчёт валидации</span></div>
+      </div>
+    </div>
+
+    <!-- Редактирование: дерево модели + палитра -->
+    <div class="edit-only col grow">
+      <div class="panel-head">
+        <svg style="width:13px;height:13px"><use href="#u-tree"/></svg>Модель
+      </div>
+      <div class="tree grow">
+        <div class="tree__folder">Business</div>
+        <div class="tree__row tree__row--l2"><svg class="lyr-biz" style="color:var(--bd)"><use href="#i-actor"/></svg><span>Физическое лицо</span></div>
+        <div class="tree__row tree__row--l2"><svg class="lyr-biz" style="color:var(--bd)"><use href="#i-function"/></svg><span>Розничный бизнес</span></div>
+        <div class="tree__folder">Application</div>
+        <div class="tree__row tree__row--l2 is-sel"><svg class="lyr-app" style="color:var(--bd)"><use href="#i-app-component"/></svg><span>IABS</span></div>
+        <div class="tree__row tree__row--l2"><svg class="lyr-app" style="color:var(--bd)"><use href="#i-app-component"/></svg><span>Интернет банкинг ФЛ</span></div>
+        <div class="tree__row tree__row--l2"><svg class="lyr-app" style="color:var(--bd)"><use href="#i-app-component"/></svg><span>CRM Creatio 7.13</span></div>
+        <div class="tree__row tree__row--l2"><svg class="lyr-app" style="color:var(--bd)"><use href="#i-app-component"/></svg><span>Карт инфо сервис</span></div>
+        <div class="tree__row tree__row--l2 muted"><svg style="width:13px;height:13px"><use href="#u-chevron"/></svg><span>Ещё компоненты</span><span class="count">238</span></div>
+        <div class="tree__folder">Technology</div>
+        <div class="tree__row tree__row--l2"><svg class="lyr-tech" style="color:var(--bd)"><use href="#i-sys-software"/></svg><span>Oracle 19c</span></div>
+        <div class="tree__row tree__row--l2"><svg class="lyr-tech" style="color:var(--bd)"><use href="#i-sys-software"/></svg><span>BANK ESB (WSO2 EI)</span></div>
+        <div class="tree__row tree__row--l2"><svg class="lyr-tech" style="color:var(--bd)"><use href="#i-device"/></svg><span>Сервера виртуализации ×7</span></div>
+      </div>
+      <div class="split"></div>
+      <div class="panel-head">Палитра · Application</div>
+      <div class="palette" style="max-height:188px;overflow:auto">
+        <div class="pal"><span class="pal__dot lyr-app"><svg><use href="#i-app-component"/></svg></span>Application Component</div>
+        <div class="pal"><span class="pal__dot lyr-app"><svg><use href="#i-app-service"/></svg></span>Application Service</div>
+        <div class="pal"><span class="pal__dot lyr-app"><svg><use href="#i-function"/></svg></span>Application Function</div>
+        <div class="pal"><span class="pal__dot lyr-app"><svg><use href="#i-data-object"/></svg></span>Data Object</div>
+        <div class="pal"><span class="pal__dot lyr-oth"><svg><use href="#i-group"/></svg></span>Group</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ---------- Центр ---------- -->
+  <main class="center">
+    <div class="tabbar">
+      <div class="tabs">
+        <div class="tab is-on"><svg style="width:12px;height:12px"><use href="#u-grid"/></svg><span>01 Контекст AS IS</span></div>
+        <div class="tab edit-only"><span>02 Интеграции ИАБС и R-Style</span></div>
+      </div>
+      <button class="btn btn--icon edit-only" style="margin:0 6px 3px 0">+</button>
+    </div>
+    <div class="stage"><div id="scene"></div></div>
+  </main>
+
+  <!-- ---------- Справа ---------- -->
+  <aside class="side side--r">
+
+    <!-- Просмотр: читаемое описание элемента -->
+    <div class="view-only col grow" style="min-height:0">
+      <div class="panel-head">Описание элемента</div>
+      <div class="read grow">
+        <div>
+          <h2>IABS</h2>
+          <div class="meta" style="margin-top:7px">
+            <span class="chip lyr-app" style="color:var(--bd);border-color:var(--bd);background:transparent">Application Component</span>
+            <span class="chip">critical</span>
+            <span class="chip">Управление ИТ</span>
+          </div>
+        </div>
+
+        <p>Автоматизированная банковская система. Ядро учёта и источник данных для
+        Digital Bank, витрин и карточного контура. Присутствует в 7 представлениях модели.</p>
+
+        <h3>Участвует в связях</h3>
+        <div class="rel-list">
+          <div class="rel"><span class="rel__dot lyr-app"><svg><use href="#i-app-component"/></svg></span>
+            Интернет банкинг ФЛ<span class="k">serving →</span></div>
+          <div class="rel"><span class="rel__dot lyr-app"><svg><use href="#i-app-component"/></svg></span>
+            CRM Creatio 7.13<span class="k">← flow</span></div>
+          <div class="rel"><span class="rel__dot lyr-app"><svg><use href="#i-app-component"/></svg></span>
+            Карт инфо сервис<span class="k">← flow</span></div>
+          <div class="rel"><span class="rel__dot lyr-tech"><svg><use href="#i-sys-software"/></svg></span>
+            BANK ESB (WSO2 EI)<span class="k">← serving</span></div>
+        </div>
+
+        <h3>Анализ влияния</h3>
+        <p>При отказе затрагиваются 3 приложения и, через «Сервис интернет-банкинга»,
+        бизнес-функция «Розничный бизнес». Прямых резервов в модели не зафиксировано.</p>
+
+        <h3>Свойства</h3>
+        <div class="kvs">
+          <div class="kv"><b>source</b><span>Hamkorbank ALL.vsdx</span></div>
+          <div class="kv"><b>owner</b><span>Управление ИТ</span></div>
+          <div class="kv"><b>criticality</b><span>high</span></div>
+        </div>
+
+        <div class="row" style="margin-top:4px">
+          <button class="btn btn--ghost"><svg><use href="#u-sparkle"/></svg>Собрать документацию</button>
+        </div>
+      </div>
+      <div class="ai__note"><svg><use href="#u-eye"/></svg>
+        Режим просмотра: модель доступна только для чтения.</div>
+    </div>
+
+    <!-- Редактирование: свойства + помощник -->
+    <div class="edit-only col grow" style="min-height:0">
+      <div class="panel-head">Свойства<span class="spacer"></span>
+        <span class="chip lyr-app" style="color:var(--bd);border-color:var(--bd);background:transparent">Application</span>
+      </div>
+      <div class="props" style="flex:0 0 auto;max-height:46%">
+        <div class="field">
+          <label class="field__label">Имя</label>
+          <input class="field__input" value="IABS">
+        </div>
+        <div class="field">
+          <label class="field__label">Тип</label>
+          <div class="field__input mono" style="color:var(--text-mid);font-size:11.5px">archimate:ApplicationComponent</div>
+        </div>
+        <div class="field">
+          <label class="field__label">Документация</label>
+          <textarea class="field__input field__input--ta">Автоматизированная банковская система. Ядро учёта, источник данных для Digital Bank и витрин.</textarea>
+        </div>
+        <div class="field">
+          <label class="field__label">Свойства</label>
+          <div class="kvs">
+            <div class="kv"><b>source</b><span>Hamkorbank ALL.vsdx</span></div>
+            <div class="kv"><b>owner</b><span>Управление ИТ</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="split"></div>
+      <section class="ai grow">
+        <div class="panel-head">
+          <svg style="width:13px;height:13px;color:var(--signal)"><use href="#u-sparkle"/></svg>Помощник
+          <span class="spacer"></span><span class="chip">подсказка</span>
+        </div>
+        <div class="ai__body">
+          <div class="finding sev-info">
+            <div class="finding__head"><svg><use href="#u-warn"/></svg>
+              <span class="finding__title">Application Component</span></div>
+            <div class="finding__body">Инкапсулирует функциональность и данные; реализует один или несколько
+              Application Service, которые уже потребляет бизнес.</div>
+            <div class="finding__fix">Допустимо отсюда: realization → Application Service, serving →
+              Application Component, assignment ← Node, flow ↔ Application Component.</div>
+          </div>
+          <div class="plan">
+            <div class="plan__row"><span class="plan__n">01</span>
+              <span class="plan__dot lyr-app"><svg><use href="#i-app-service"/></svg></span>
+              Добавьте Application Service «Сервис выпуска карт»</div>
+            <div class="plan__row"><span class="plan__n">02</span>
+              <span class="plan__dot lyr-app"><svg><use href="#i-app-component"/></svg></span>
+              Свяжите realization: IABS → этот сервис</div>
+            <div class="plan__row"><span class="plan__n">03</span>
+              <span class="plan__dot lyr-biz"><svg><use href="#i-process"/></svg></span>
+              Serving к процессу «Выпуск карты»</div>
+          </div>
+        </div>
+        <div class="ai__note"><svg><use href="#u-eye"/></svg>Помощник не изменяет модель.</div>
+      </section>
+    </div>
+  </aside>
+</div>
+
+<!-- ================= Статус ================= -->
+<footer class="status">
+  <span>01 Контекст AS IS</span><span>·</span>
+  <span><b>10</b> объектов</span><span><b>9</b> связей</span>
+  <span class="spacer"></span>
+  <span class="view-only">режим просмотра · последнее изменение 14:32, Сагит</span>
+  <span class="edit-only">блокировка ваша · автосохранение включено · версия <b>12</b></span>
+</footer>
+
+<div class="toast" id="toast"><svg><use href="#u-lock"/></svg><span></span></div>
+<div class="stamp"><span class="dot"></span>Вариант C · Два режима <a href="index.html">← все варианты</a></div>
+
+<script src="sprite.js"></script>
+<script src="scene.js"></script>
+<script>
+  const sceneEl = document.getElementById('scene');
+  const toast = document.getElementById('toast');
+
+  function draw(mode) {
+    renderScene(sceneEl, {
+      selected: 'n-iabs',
+      hideTypes: mode === 'view',
+      highlight: mode === 'view' ? [3,4,5,6] : [3]
+    });
+  }
+
+  function say(text) {
+    toast.querySelector('span').textContent = text;
+    toast.classList.add('is-on');
+    clearTimeout(say._t);
+    say._t = setTimeout(() => toast.classList.remove('is-on'), 2600);
+  }
+
+  document.querySelectorAll('.modes .btn').forEach(b => {
+    b.addEventListener('click', () => {
+      const mode = b.dataset.mode;
+      document.querySelectorAll('.modes .btn').forEach(x => x.classList.toggle('is-on', x === b));
+      document.body.classList.toggle('mode-edit', mode === 'edit');
+      document.body.classList.toggle('mode-view', mode === 'view');
+      draw(mode);
+      say(mode === 'edit'
+        ? 'Блокировка захвачена — модель редактируете вы'
+        : 'Блокировка освобождена — модель доступна другим');
+    });
+  });
+
+  draw('view');
+</script>
+</body>
+</html>

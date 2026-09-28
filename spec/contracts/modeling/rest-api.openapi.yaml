@@ -1,0 +1,127 @@
+openapi: 3.1.0
+
+info:
+  title: Modeling API
+  version: 0.1.0
+  description: |
+    Синхронный REST API для BC Modeling.
+
+    Эта спека генерируется из `spec/application/modeling/usecases/`
+    через use case → endpoint mapping. Не редактируется вручную.
+
+    **Состояние: скелет.** Секция `paths` пуста намеренно: каталог use
+    case'ов пока пуст, а endpoint без ссылки на `UC-MDL-NNN` нарушает
+    проверку целостности «контракт без use case»
+    (`references/cross-references.md`, проверка 4). Endpoint'ы появляются
+    здесь при вызове режима add-usecase — по одному на каждый
+    экспонированный use case.
+
+    Перечень операций, которые предстоит описать, зафиксирован в
+    прозаической спецификации: `docs/spec/backend.md` §5.
+
+servers:
+  - url: /api/v1
+    description: Относительный путь; приложение и фронтенд отдаются одним артефактом.
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: modeling
+    description: Модели, элементы, связи, представления, блокировки, версии.
+
+paths: {}
+
+# ───────────────────────────────────────────────────────────────────
+# Планируемые операции (docs/spec/backend.md §5).
+# Перенос в paths — отдельным шагом на каждый use case, вместе с якорем.
+#
+#   GET    /models                              список моделей
+#   POST   /models                              создать пустую модель
+#   GET    /models/{id}                         дерево модели
+#   PATCH  /models/{id}                         переименование, документация
+#   DELETE /models/{id}                         soft delete
+#   POST   /models/{id}/lock                    захватить блокировку
+#   DELETE /models/{id}/lock                    освободить (ADMIN — принудительно)
+#   GET    /models/{id}/versions                история версий
+#   POST   /models/{id}/versions/{no}/restore   откат к версии
+#   PUT    /models/{id}/versions/{no}/label     пометить версию как релиз
+#   GET    /models/{id}/validate                отчёт валидации метамодели
+#   POST   /models/{id}/elements                создать элемент
+#   PATCH  /elements/{id}                       изменить элемент
+#   DELETE /elements/{id}                       удалить элемент
+#   POST   /models/{id}/relationships           создать связь
+#   DELETE /relationships/{id}                  удалить связь
+#   GET    /views/{id}                          payload представления
+#   PUT    /views/{id}/layout                   сохранить геометрию
+#   POST   /views/{id}/nodes                    разместить элемент
+#   DELETE /view-nodes/{id}                     убрать из представления
+#   POST   /views/{id}/auto-layout              авторазметка
+#   GET    /metamodel/elements                  каталог типов для палитры
+#   GET    /metamodel/relations                 допустимые связи для пары типов
+#
+# Импорт и экспорт (POST /models/import, GET /models/{id}/export,
+# GET /views/{id}/export) принадлежат BC interchange и описаны в
+# contracts/interchange/rest-api.openapi.yaml.
+# ───────────────────────────────────────────────────────────────────
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT, выданный Keycloak. Роли VIEWER / ARCHITECT / ADMIN — в claim'ах токена (FR-28).
+
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string, maxLength: 64 }
+      description: |
+        Уникальный ключ для дедупликации повторов. Тот же ключ с тем же телом
+        возвращает результат первого выполнения; тот же ключ с другим телом —
+        `409`. См. INV-MDL-003.
+
+  schemas:
+
+    Problem:
+      type: object
+      description: |
+        RFC 7807 Problem Details + поле `code` для бизнес-правил.
+        Формат ответа об ошибке описан в `docs/spec/backend.md` §8.1.
+      required: [type, title, status]
+      properties:
+        type:     { type: string, format: uri }
+        title:    { type: string }
+        status:   { type: integer }
+        detail:   { type: string }
+        instance: { type: string }
+        code:
+          type: string
+          description: |
+            Код нарушенного инварианта (`INV-MDL-001` … `INV-MDL-010`,
+            см. `domain/modeling/invariants.md`) или иной бизнес-ошибки.
+          examples: ["INV-MDL-004", "INV-MDL-006"]
+
+  responses:
+
+    Conflict409:
+      description: |
+        Конкурентное сохранение без блокировки (INV-MDL-006), повтор с тем же
+        Idempotency-Key и другим телом (INV-MDL-003) либо удаление элемента,
+        у которого остались связи (INV-MDL-004).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+    UnprocessableEntity422:
+      description: |
+        Нарушение бизнес-правила — например, связь, недопустимая по матрице
+        ArchiMate 3.2 (INV-MDL-007). Поле `code` содержит идентификатор
+        инварианта.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }

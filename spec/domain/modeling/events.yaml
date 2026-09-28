@@ -1,0 +1,108 @@
+---
+version: 0.1
+last_modified: 2026-09-22
+bounded_context: modeling
+target_module: archi-modeling-domain
+publication_target: contracts/modeling/events.asyncapi.yaml
+---
+
+# ───────────────────────────────────────────────────────────────────
+# Каталог доменных событий BC Modeling.
+#
+# Брокера в стеке нет (docs/archi-creator.md §3.2), поэтому публикация —
+# in-process после коммита транзакции. AsyncAPI по ссылке в
+# publication_target фиксирует контракт полезной нагрузки, а не транспорт.
+#
+# triggers: имена use case'ов. Каталог application/modeling/usecases/ пока
+# пуст — имена ниже соответствуют командам из ubiquitous-language.md и
+# получат якоря UC-MDL-NNN при вызове режима add-usecase.
+# ───────────────────────────────────────────────────────────────────
+
+events:
+
+  ModelVersionCommitted:
+    description: |
+      Сохранение модели прошло успешно и создало новую версию. Единственная
+      точка, после которой изменения считаются зафиксированными: канва,
+      Git-выгрузка и кэш контекста помощника ориентируются на неё, а не на
+      отдельные команды редактирования.
+    triggers:
+      - SaveModel
+      - RestoreVersion
+    payload:
+      - { name: modelId,     type: ModelId,          required: true }
+      - { name: workspaceId, type: WorkspaceId,      required: true }
+      - { name: versionNo,   type: Long,             required: true }
+      - { name: author,      type: String,           required: true, note: "subject из JWT, без персональных данных" }
+      - { name: comment,     type: Optional<String>, required: false }
+      - { name: elementCount,      type: Int,        required: true }
+      - { name: relationshipCount, type: Int,        required: true }
+      - { name: occurredAt,  type: Timestamp,        required: true }
+    consumers:
+      - { context: interchange, action: Выгрузить состояние модели в Git и записать git_sha в версию (этап 7a) }
+      - { context: advisor,     action: Признать кэшированный ModelContext устаревшим }
+    routing:
+      channel: modeling.events.v1
+      partition_key: modelId
+    retention: not_applicable
+    schema_compatibility: BACKWARD
+
+  ModelLockReleased:
+    description: |
+      Блокировка снята — владельцем, администратором принудительно или по
+      истечении срока. Модель доступна для захвата другим архитектором.
+    triggers:
+      - ReleaseLock
+    payload:
+      - { name: modelId,      type: ModelId,      required: true }
+      - { name: previousOwner, type: String,      required: true }
+      - { name: releasedBy,   type: String,       required: true, note: "совпадает с previousOwner при добровольном снятии" }
+      - { name: reason,       type: LockReleaseReason, required: true }
+      - { name: occurredAt,   type: Timestamp,    required: true }
+    consumers:
+      - { context: modeling, action: Уведомить ожидающих редакторов через SSE (в пределах того же BC) }
+    routing:
+      channel: modeling.events.v1
+      partition_key: modelId
+    schema_compatibility: BACKWARD
+
+  ModelDeleted:
+    description: |
+      Модель помечена удалённой (soft delete). История версий не затрагивается,
+      коммиты в Git не переписываются.
+    triggers:
+      - DeleteModel
+    payload:
+      - { name: modelId,     type: ModelId,     required: true }
+      - { name: workspaceId, type: WorkspaceId, required: true }
+      - { name: deletedBy,   type: String,      required: true }
+      - { name: occurredAt,  type: Timestamp,   required: true }
+    consumers:
+      - { context: advisor,     action: Отбросить кэш контекста и запретить новые сессии по модели }
+      - { context: interchange, action: Прекратить автоматическую выгрузку модели в Git }
+    routing:
+      channel: modeling.events.v1
+      partition_key: modelId
+    schema_compatibility: BACKWARD
+
+# ───────────────────────────────────────────────────────────────────
+# Контракт публикации
+# ───────────────────────────────────────────────────────────────────
+
+publishing:
+  pattern: direct
+  serialization: json
+  schema_registry: not_applicable
+  delivery_guarantee: at_least_once
+  ordering_guarantee: per_partition_key
+  note: |
+    `direct` — публикация в процессе после коммита транзакции. У неё есть
+    окно потери: падение процесса между коммитом и доставкой теряет событие.
+    Для текущих потребителей (инвалидация кэша, уведомление UI) это
+    допустимо — состояние восстанавливается следующим чтением.
+
+    Для Git-выгрузки этапа 7a это НЕ допустимо: потерянное
+    ModelVersionCommitted означает версию в БД без коммита в репозитории,
+    а на этом расхождении строится правило очистки снимков (FR-47).
+    К этапу 7a паттерн должен смениться на `transactional_outbox`.
+    Решение не принято, ADR не заведён — см. README#незакрытые-решения.

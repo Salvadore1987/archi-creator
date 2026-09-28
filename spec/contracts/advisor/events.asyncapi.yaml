@@ -1,0 +1,137 @@
+asyncapi: 3.0.0
+
+info:
+  title: Advisor Domain Events
+  version: 0.1.0
+  description: |
+    Доменные события BC Advisor. Генерируется из
+    `spec/domain/advisor/events.yaml` — не редактируется вручную.
+
+    **Транспорт:** брокера в стеке нет (`docs/archi-creator.md` §3.2),
+    публикация in-process после коммита транзакции
+    (`domain/advisor/events.yaml#publishing`, pattern `direct`).
+
+    **Чего в этих событиях нет:** содержимого ответа помощника — ни текста,
+    ни находок, ни плана. Ответ уходит запросившему его пользователю
+    потоком SSE и в событиях не появляется.
+
+defaultContentType: application/json
+
+servers:
+  inProcess:
+    host: 'localhost'
+    protocol: in-process
+    description: Публикация внутри JVM после коммита транзакции.
+
+channels:
+
+  advisorEvents:
+    address: advisor.events.v1
+    messages:
+      advisorSessionCompleted:     { $ref: '#/components/messages/AdvisorSessionCompleted' }
+      tokenBudgetThresholdReached: { $ref: '#/components/messages/TokenBudgetThresholdReached' }
+      tokenBudgetExhausted:        { $ref: '#/components/messages/TokenBudgetExhausted' }
+    description: |
+      Все события BC Advisor. Ключ партиционирования — `workspaceId`:
+      бюджет ведётся по рабочему пространству, и порядок учёта расхода
+      важен именно в его пределах.
+
+operations:
+
+  publishAdvisorSessionCompleted:
+    action: send
+    channel: { $ref: '#/channels/advisorEvents' }
+    summary: Публикация AdvisorSessionCompleted
+    messages:
+      - $ref: '#/channels/advisorEvents/messages/advisorSessionCompleted'
+
+  publishTokenBudgetThresholdReached:
+    action: send
+    channel: { $ref: '#/channels/advisorEvents' }
+    summary: Публикация TokenBudgetThresholdReached
+    messages:
+      - $ref: '#/channels/advisorEvents/messages/tokenBudgetThresholdReached'
+
+  publishTokenBudgetExhausted:
+    action: send
+    channel: { $ref: '#/channels/advisorEvents' }
+    summary: Публикация TokenBudgetExhausted
+    messages:
+      - $ref: '#/channels/advisorEvents/messages/tokenBudgetExhausted'
+
+components:
+
+  messages:
+
+    AdvisorSessionCompleted:
+      name: AdvisorSessionCompleted
+      title: Сессия помощника завершена
+      contentType: application/json
+      payload: { $ref: '#/components/schemas/AdvisorSessionCompletedPayload' }
+      headers: { $ref: '#/components/schemas/EventHeaders' }
+
+    TokenBudgetThresholdReached:
+      name: TokenBudgetThresholdReached
+      title: Расход достиг порога предупреждения
+      contentType: application/json
+      payload: { $ref: '#/components/schemas/TokenBudgetThresholdReachedPayload' }
+      headers: { $ref: '#/components/schemas/EventHeaders' }
+
+    TokenBudgetExhausted:
+      name: TokenBudgetExhausted
+      title: Месячный лимит токенов исчерпан
+      contentType: application/json
+      payload: { $ref: '#/components/schemas/TokenBudgetExhaustedPayload' }
+      headers: { $ref: '#/components/schemas/EventHeaders' }
+
+  schemas:
+
+    EventHeaders:
+      type: object
+      required: [eventId, eventType, eventVersion, occurredAt, source]
+      properties:
+        eventId:      { type: string, format: uuid }
+        eventType:    { type: string }
+        eventVersion: { type: string }
+        occurredAt:   { type: string, format: date-time }
+        source:       { type: string, const: advisor }
+        traceId:      { type: string, description: W3C trace context }
+
+    AdvisorSessionCompletedPayload:
+      type: object
+      required: [sessionId, workspaceId, modelId, function, outcome, promptTokens, completionTokens, contextTruncated, findingCount, durationMs, actor, occurredAt]
+      properties:
+        sessionId:        { type: string, format: uuid }
+        workspaceId:      { type: string, format: uuid }
+        modelId:          { type: string, format: uuid }
+        function:         { type: string, enum: [REVIEW, EXPLAIN, PLAN, DOCUMENT] }
+        outcome:          { type: string, enum: [COMPLETED, FAILED, REJECTED] }
+        rejectionReason:  { type: string, enum: [ADVISOR_DISABLED, BUDGET_EXHAUSTED, RATE_LIMITED, CONTEXT_TOO_LARGE, MODEL_DELETED] }
+        promptTokens:     { type: integer, format: int64, minimum: 0 }
+        completionTokens: { type: integer, format: int64, minimum: 0 }
+        contextTruncated: { type: boolean }
+        findingCount:     { type: integer, minimum: 0, description: 0 для функций кроме REVIEW. }
+        durationMs:       { type: integer, format: int64, minimum: 0 }
+        actor:            { type: string, description: subject из JWT, без персональных данных }
+        occurredAt:       { type: string, format: date-time }
+
+    TokenBudgetThresholdReachedPayload:
+      type: object
+      required: [workspaceId, period, limitTokens, consumedTokens, thresholdPercent, occurredAt]
+      properties:
+        workspaceId:      { type: string, format: uuid }
+        period:           { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' }
+        limitTokens:      { type: integer, format: int64, minimum: 1 }
+        consumedTokens:   { type: integer, format: int64, minimum: 0 }
+        thresholdPercent: { type: integer, minimum: 1, maximum: 99 }
+        occurredAt:       { type: string, format: date-time }
+
+    TokenBudgetExhaustedPayload:
+      type: object
+      required: [workspaceId, period, limitTokens, consumedTokens, occurredAt]
+      properties:
+        workspaceId:    { type: string, format: uuid }
+        period:         { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' }
+        limitTokens:    { type: integer, format: int64, minimum: 1 }
+        consumedTokens: { type: integer, format: int64, minimum: 0 }
+        occurredAt:     { type: string, format: date-time }

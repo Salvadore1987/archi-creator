@@ -1,0 +1,117 @@
+---
+version: 0.1
+last_modified: 2026-09-22
+bounded_context: advisor
+target_module: archi-advisor-domain
+publication_target: contracts/advisor/events.asyncapi.yaml
+---
+
+# ───────────────────────────────────────────────────────────────────
+# Каталог доменных событий BC Advisor.
+#
+# Брокера в стеке нет: публикация in-process после коммита транзакции.
+#
+# Событий, сообщающих о содержании ответа помощника, здесь нет намеренно:
+# ответ принадлежит пользователю, который его запросил, и уходит ему
+# потоком (SSE). В событие попадает факт обращения и его стоимость.
+#
+# triggers: имена use case'ов. Каталог application/advisor/usecases/ пока
+# пуст — имена соответствуют командам из ubiquitous-language.md и получат
+# якоря UC-ADV-NNN при вызове режима add-usecase.
+# ───────────────────────────────────────────────────────────────────
+
+events:
+
+  AdvisorSessionCompleted:
+    description: |
+      Сессия дошла до терминального состояния, расход учтён. Публикуется
+      для всех исходов, включая REJECTED и FAILED: аудит и метрики должны
+      видеть отказы (FR-27, INV-ADV-001).
+    triggers:
+      - ReviewModel
+      - ExplainElement
+      - PlanModel
+      - GenerateDocumentation
+    payload:
+      - { name: sessionId,        type: AdvisorSessionId, required: true }
+      - { name: workspaceId,      type: WorkspaceId,      required: true }
+      - { name: modelId,          type: ModelId,          required: true }
+      - { name: function,         type: AdvisorFunction,  required: true }
+      - { name: outcome,          type: SessionStatus,    required: true }
+      - { name: rejectionReason,  type: Optional<RejectionReason>, required: false }
+      - { name: promptTokens,     type: Long,             required: true }
+      - { name: completionTokens, type: Long,             required: true }
+      - { name: contextTruncated, type: Boolean,          required: true }
+      - { name: findingCount,     type: Int,              required: true, note: "0 для функций кроме REVIEW" }
+      - { name: durationMs,       type: Long,             required: true }
+      - { name: actor,            type: String,           required: true, note: "subject из JWT" }
+      - { name: occurredAt,       type: Timestamp,        required: true }
+    consumers:
+      - { context: advisor, action: Пополнить TokenBudget периода и пересчитать его состояние (в пределах того же BC) }
+    routing:
+      channel: advisor.events.v1
+      partition_key: workspaceId
+    schema_compatibility: BACKWARD
+    note: |
+      Содержимое ответа в payload не входит: ни текст, ни находки, ни план.
+      Событие — про факт и стоимость обращения, а не про его результат.
+
+  TokenBudgetThresholdReached:
+    description: |
+      Расход достиг порога предупреждения (по умолчанию 80 % месячного
+      лимита). Работа продолжается — событие только уведомляет (FR-51).
+    triggers:
+      - RecordTokenUsage
+    payload:
+      - { name: workspaceId,     type: WorkspaceId, required: true }
+      - { name: period,          type: BudgetPeriod, required: true }
+      - { name: limitTokens,     type: Long,        required: true }
+      - { name: consumedTokens,  type: Long,        required: true }
+      - { name: thresholdPercent, type: Int,        required: true }
+      - { name: occurredAt,      type: Timestamp,   required: true }
+    consumers:
+      - { context: advisor, action: Уведомить администратора рабочего пространства }
+    routing:
+      channel: advisor.events.v1
+      partition_key: workspaceId
+    schema_compatibility: BACKWARD
+    note: |
+      Публикуется один раз за период при пересечении порога, а не на
+      каждое последующее обращение: иначе уведомление превращается в шум
+      и его перестают читать.
+
+  TokenBudgetExhausted:
+    description: |
+      Месячный лимит исчерпан. Новые обращения отклоняются с причиной
+      BUDGET_EXHAUSTED до смены периода или повышения лимита
+      администратором (FR-52).
+    triggers:
+      - RecordTokenUsage
+    payload:
+      - { name: workspaceId,    type: WorkspaceId, required: true }
+      - { name: period,         type: BudgetPeriod, required: true }
+      - { name: limitTokens,    type: Long,        required: true }
+      - { name: consumedTokens, type: Long,        required: true }
+      - { name: occurredAt,     type: Timestamp,   required: true }
+    consumers:
+      - { context: advisor, action: Уведомить администратора и перевести бюджет в состояние EXHAUSTED }
+    routing:
+      channel: advisor.events.v1
+      partition_key: workspaceId
+    schema_compatibility: BACKWARD
+
+# ───────────────────────────────────────────────────────────────────
+# Контракт публикации
+# ───────────────────────────────────────────────────────────────────
+
+publishing:
+  pattern: direct
+  serialization: json
+  schema_registry: not_applicable
+  delivery_guarantee: at_least_once
+  ordering_guarantee: per_partition_key
+  note: |
+    `direct` здесь приемлем и после этапа 7a: потребители событий бюджета
+    живут в том же процессе, а сам расход учитывается не событием, а
+    транзакцией сессии (INV-ADV-006). Потеря уведомления откладывает
+    предупреждение до следующего обращения, но не теряет деньги.

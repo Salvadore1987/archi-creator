@@ -1,0 +1,270 @@
+---
+version: 0.1
+last_modified: 2026-09-22
+bounded_context: advisor
+target_module: archi-advisor-domain
+---
+
+# ───────────────────────────────────────────────────────────────────
+# Агрегаты, сущности и value objects для BC Advisor.
+#
+# Два агрегата и разные причины их существования: AdvisorSession — единица
+# обращения и аудита, TokenBudget — единица учёта и ограничения. Их нельзя
+# слить в один: бюджет переживает сессии и меняется от каждой из них.
+#
+# Собственной копии доменной модели ArchiMate здесь нет намеренно —
+# см. ubiquitous-language.md, раздел про анти-коррупционный слой.
+# ───────────────────────────────────────────────────────────────────
+
+aggregates:
+
+  AdvisorSession:
+    type: aggregate_root
+    identity: AdvisorSessionId
+    description: |
+      Одно обращение к помощнику. Создаётся до всех проверок и сохраняется
+      даже при отказе: аудит пишется на каждое обращение (FR-27), иначе
+      администратор не увидит попыток, отклонённых по лимиту.
+    fields:
+      - { name: id,          type: AdvisorSessionId, constraints: [not_null, immutable] }
+      - { name: workspaceId, type: WorkspaceId,      constraints: [not_null, immutable] }
+      - { name: modelId,     type: ModelId,          constraints: [not_null, immutable] }
+      - { name: viewId,      type: Optional<ViewId>, constraints: [optional], note: "для DOCUMENT по одному представлению" }
+      - { name: elementRef,  type: Optional<ElementRef>, constraints: [optional, not_null_when: "function = EXPLAIN"] }
+      - { name: function,    type: AdvisorFunction,  constraints: [not_null, immutable] }
+      - { name: prompt,      type: Optional<String>, constraints: [optional, max: 4000, not_null_when: "function = PLAN"] }
+      - { name: idempotencyKey, type: String,        constraints: [not_null, immutable, max: 64] }
+      - { name: status,      type: SessionStatus,    constraints: [not_null], default: REQUESTED }
+      - { name: contextSize, type: Optional<Int>,    constraints: [optional, non_negative], note: "размер ModelContext в токенах" }
+      - { name: usage,       type: TokenUsage,       constraints: [not_null] }
+      - { name: findings,    type: List<Finding>,    constraints: [not_null], note: "непуст только у функции REVIEW" }
+      - { name: plan,        type: Optional<ModelPlan>,    constraints: [optional, not_null_when: "function = PLAN and status = COMPLETED"] }
+      - { name: answer,      type: Optional<AdvisorAnswer>, constraints: [optional] }
+      - { name: rejectionReason, type: Optional<RejectionReason>, constraints: [optional, not_null_when_status: REJECTED] }
+      - { name: requestedBy, type: String,           constraints: [not_null, immutable] }
+      - { name: requestedAt, type: Timestamp,        constraints: [not_null, immutable] }
+      - { name: firstTokenAt, type: Optional<Timestamp>, constraints: [optional], note: "для контроля NFR-04" }
+      - { name: finishedAt,  type: Optional<Timestamp>, constraints: [optional, not_null_when_status_in: [COMPLETED, FAILED, REJECTED]] }
+
+    state_machine:
+      initial: REQUESTED
+      transitions:
+        - { from: REQUESTED, to: REJECTED,  via: reject }
+        - { from: REQUESTED, to: STREAMING, via: startStreaming }
+        - { from: REQUESTED, to: FAILED,    via: fail }
+        - { from: STREAMING, to: COMPLETED, via: complete }
+        - { from: STREAMING, to: FAILED,    via: fail }
+      terminal: [COMPLETED, FAILED, REJECTED]
+      note: |
+        REJECTED достижим только из REQUESTED: отказ по лимиту или
+        выключенному помощнику принимается до обращения к внешнему API,
+        то есть до расхода токенов.
+
+    invariants_ref: invariants.md
+
+    domain_events_published:
+      - AdvisorSessionCompleted
+
+  TokenBudget:
+    type: aggregate_root
+    identity: TokenBudgetId
+    description: |
+      Месячный лимит токенов рабочего пространства и накопленный расход.
+      Ключ — пара (workspaceId, period): период календарный, расход
+      обнуляется сменой периода, а не командой.
+    fields:
+      - { name: id,          type: TokenBudgetId, constraints: [not_null, immutable] }
+      - { name: workspaceId, type: WorkspaceId,   constraints: [not_null, immutable] }
+      - { name: period,      type: BudgetPeriod,  constraints: [not_null, immutable] }
+      - { name: limitTokens, type: Long,          constraints: [not_null, positive] }
+      - { name: consumedTokens, type: Long,       constraints: [not_null, non_negative], default: 0 }
+      - { name: warningThresholdPercent, type: Int, constraints: [not_null, min: 1, max: 99], default: 80 }
+      - { name: status,      type: BudgetStatus,  constraints: [not_null], default: OK }
+      - { name: advisorEnabled, type: Boolean,    constraints: [not_null], default: true }
+      - { name: version,     type: Long,          constraints: [optimistic_lock] }
+
+    state_machine:
+      initial: OK
+      transitions:
+        - { from: OK,        to: WARNING,   via: consumptionCrossedThreshold }
+        - { from: WARNING,   to: EXHAUSTED, via: consumptionReachedLimit }
+        - { from: OK,        to: EXHAUSTED, via: consumptionReachedLimit }
+        - { from: EXHAUSTED, to: WARNING,   via: SetTokenBudget }
+        - { from: EXHAUSTED, to: OK,        via: SetTokenBudget }
+        - { from: WARNING,   to: OK,        via: SetTokenBudget }
+      terminal: []
+      note: |
+        Терминальных состояний нет: бюджет живёт весь период. Возврат из
+        EXHAUSTED возможен только повышением лимита администратором —
+        расход не уменьшается никогда. Смена периода создаёт новый
+        экземпляр, а не сбрасывает этот.
+
+    invariants_ref: invariants.md
+
+    domain_events_published:
+      - TokenBudgetThresholdReached
+      - TokenBudgetExhausted
+
+# ───────────────────────────────────────────────────────────────────
+# Сущности внутри агрегатов
+# ───────────────────────────────────────────────────────────────────
+
+entities:
+
+  Finding:
+    type: entity
+    parent: AdvisorSession
+    identity: FindingId
+    description: |
+      Одно замечание ревью. Обязана ссылаться на объект модели: находка
+      без «перейти к элементу» не проверяема архитектором и бесполезна
+      (FR-23).
+    fields:
+      - { name: id,         type: FindingId,   constraints: [not_null, immutable] }
+      - { name: severity,   type: Severity,    constraints: [not_null] }
+      - { name: code,       type: String,      constraints: [not_null], note: "например ORPHAN_ELEMENT, RELATION_NOT_PERMITTED" }
+      - { name: message,    type: String,      constraints: [not_null, max: 2000] }
+      - { name: targetKind, type: TargetKind,  constraints: [not_null] }
+      - { name: target,     type: ElementRef,  constraints: [not_null] }
+      - { name: suggestion, type: Optional<String>, constraints: [optional, max: 2000] }
+
+  AuditEntry:
+    type: entity
+    parent: AdvisorSession
+    identity: AuditEntryId
+    description: |
+      Запись аудита обращения. Создаётся ровно одна на сессию, включая
+      отклонённые и неуспешные.
+    fields:
+      - { name: id,         type: AuditEntryId, constraints: [not_null, immutable] }
+      - { name: actor,      type: String,       constraints: [not_null, immutable], note: "subject из JWT" }
+      - { name: function,   type: AdvisorFunction, constraints: [not_null, immutable] }
+      - { name: usage,      type: TokenUsage,   constraints: [not_null] }
+      - { name: outcome,    type: SessionStatus, constraints: [not_null] }
+      - { name: createdAt,  type: Timestamp,    constraints: [not_null, immutable] }
+
+# ───────────────────────────────────────────────────────────────────
+# Value objects
+# ───────────────────────────────────────────────────────────────────
+
+value_objects:
+
+  AdvisorSessionId: { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+  TokenBudgetId:    { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+  FindingId:        { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+  AuditEntryId:     { underlying: UUID, generation: uuidv7_application_side, serialization: { json: string } }
+
+  ModelContext:
+    kind: anti_corruption_layer
+    immutable: true
+    source_ref: ../modeling/aggregates.yaml#ArchitectureModel
+    description: |
+      Усечённое представление модели под конкретную функцию. Собирается
+      портом на входе в сессию и не переживает её. Состав зависит от
+      функции: REVIEW получает связи и имена всей модели, EXPLAIN — один
+      элемент и его окружение.
+    composite:
+      - { name: function,      type: AdvisorFunction, constraints: [not_null] }
+      - { name: elements,      type: List<ContextElement>, constraints: [not_null] }
+      - { name: relationships, type: List<ContextRelation>, constraints: [not_null] }
+      - { name: tokenEstimate, type: Int,   constraints: [not_null, non_negative] }
+      - { name: truncated,     type: Boolean, constraints: [not_null] }
+    note: |
+      Поле truncated обязательно: контекст, усечённый по лимиту размера
+      (FR-53), меняет смысл ответа — ревью по половине модели не ревью
+      модели, и ответ обязан это оговорить.
+
+  ContextElement:
+    composite:
+      - { name: archiId,       type: String,           constraints: [not_null] }
+      - { name: archiType,     type: String,           constraints: [not_null] }
+      - { name: name,          type: String,           constraints: [not_null] }
+      - { name: documentation, type: Optional<String>, constraints: [optional] }
+
+  ContextRelation:
+    composite:
+      - { name: archiId,   type: String, constraints: [not_null] }
+      - { name: archiType, type: String, constraints: [not_null] }
+      - { name: sourceArchiId, type: String, constraints: [not_null] }
+      - { name: targetArchiId, type: String, constraints: [not_null] }
+
+  ElementRef:
+    composite:
+      - { name: archiId, type: String, constraints: [not_null, pattern: "^id-[0-9a-f]{24}$"] }
+      - { name: name,    type: String, constraints: [not_null] }
+    note: |
+      Единственный способ, которым помощник указывает на модель.
+      Идентификатор — чтобы фронтенд открыл элемент, имя — чтобы текст
+      ответа читался.
+
+  ModelPlan:
+    immutable: true
+    composite:
+      - { name: elements,      type: List<PlannedElement>,  constraints: [not_null] }
+      - { name: relationships, type: List<PlannedRelation>, constraints: [not_null] }
+      - { name: notes,         type: Optional<String>,      constraints: [optional] }
+    note: |
+      Описание предлагаемой структуры, НЕ команда. Палитра фронтенда
+      фильтруется по предложенным типам, чтобы архитектор собрал схему
+      быстрее, — но собирает её он (FR-22, FR-25).
+
+  PlannedElement:
+    composite:
+      - { name: archiType, type: String, constraints: [not_null] }
+      - { name: name,      type: String, constraints: [not_null] }
+      - { name: existingRef, type: Optional<ElementRef>, constraints: [optional], note: "если такой элемент в модели уже есть" }
+
+  PlannedRelation:
+    composite:
+      - { name: archiType,  type: String, constraints: [not_null] }
+      - { name: sourceName, type: String, constraints: [not_null] }
+      - { name: targetName, type: String, constraints: [not_null] }
+
+  AdvisorAnswer:
+    composite:
+      - { name: markdown,   type: String,           constraints: [not_null] }
+      - { name: references, type: List<ElementRef>, constraints: [not_null] }
+    note: Результат EXPLAIN и DOCUMENT. Ссылки вынесены отдельно, чтобы UI мог сделать их кликабельными.
+
+  TokenUsage:
+    composite:
+      - { name: promptTokens,     type: Long, constraints: [not_null, non_negative] }
+      - { name: completionTokens, type: Long, constraints: [not_null, non_negative] }
+    operations:
+      - total() -> Long
+      - plus(TokenUsage other) -> TokenUsage
+
+  BudgetPeriod:
+    underlying: String
+    constraints: [pattern: "^\\d{4}-(0[1-9]|1[0-2])$"]
+    note: Календарный месяц, например 2026-09. Единица учёта и сброса лимита.
+
+  WorkspaceId: { underlying: UUID, external_context: modeling, serialization: { json: string } }
+  ModelId:     { underlying: UUID, external_context: modeling, serialization: { json: string } }
+  ViewId:      { underlying: UUID, external_context: modeling, serialization: { json: string } }
+
+# ───────────────────────────────────────────────────────────────────
+# Перечисления
+# ───────────────────────────────────────────────────────────────────
+
+enums:
+
+  AdvisorFunction:
+    values: [REVIEW, EXPLAIN, PLAN, DOCUMENT]
+    note: Четыре функции из FR-23…FR-26. Пятой без изменения спеки не появляется.
+
+  SessionStatus:
+    values: [REQUESTED, STREAMING, COMPLETED, FAILED, REJECTED]
+
+  BudgetStatus:
+    values: [OK, WARNING, EXHAUSTED]
+
+  RejectionReason:
+    values: [ADVISOR_DISABLED, BUDGET_EXHAUSTED, RATE_LIMITED, CONTEXT_TOO_LARGE, MODEL_DELETED]
+
+  TargetKind:
+    values: [ELEMENT, RELATIONSHIP, VIEW, MODEL]
+
+  Severity:
+    values: [ERROR, WARNING, INFO]
+    note: Тот же словарь, что у отчёта валидации modeling и отчёта импорта interchange — UI показывает их одинаково.

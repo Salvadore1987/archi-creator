@@ -1,0 +1,206 @@
+---
+version: 0.1
+last_modified: 2026-09-22
+bounded_context: modeling
+target_module: archi-bootstrap
+---
+
+# ───────────────────────────────────────────────────────────────────
+# Нефункциональные требования BC Modeling.
+#
+# Значения взяты из docs/archi-creator.md §2.2 (NFR-01…NFR-08) и не
+# придуманы заново: спека здесь даёт им исполнимую форму, а не новые числа.
+#
+# Ключи в секциях latency и authorization — имена use case'ов из
+# ubiquitous-language.md. Каталог application/modeling/usecases/ пока пуст;
+# якоря UC-MDL-NNN проставляются режимом add-usecase.
+# ───────────────────────────────────────────────────────────────────
+
+availability:
+  slo: 99.5                     # % за календарный месяц
+  error_budget: 216m            # ~3.6 часа в месяц
+  measurement_window: 30d
+  note: |
+    Внутренний инструмент архитектурной практики: недоступность не
+    останавливает бизнес-операции банка. 99.5 % выбраны сознательно ниже
+    планки клиентских систем — платить за девятки здесь нечем.
+
+latency:
+  OpenModel:
+    p50: 250ms
+    p95: 1s                     # NFR-01: открытие модели при прогретом кэше
+    p99: 2s
+    timeout: 10s
+    conditions: модель до 2 000 элементов, кэш прогрет
+  OpenView:
+    p50: 150ms
+    p95: 1s                     # NFR-01
+    p99: 2s
+    timeout: 10s
+    conditions: до 500 объектов на представлении
+  CreateElement:
+    p50: 60ms
+    p95: 300ms                  # NFR-03
+    p99: 500ms
+    timeout: 5s
+  CreateRelationship:
+    p50: 80ms
+    p95: 300ms                  # NFR-03, включая проверку матрицы связей
+    p99: 500ms
+    timeout: 5s
+  SaveViewLayout:
+    p50: 80ms
+    p95: 300ms                  # NFR-03
+    p99: 600ms
+    timeout: 5s
+  SaveModel:
+    p50: 400ms
+    p95: 1500ms
+    p99: 3s
+    timeout: 30s
+    conditions: включает создание версии и сжатие снимка
+  ValidateModel:
+    p50: 500ms
+    p95: 2s
+    p99: 4s
+    timeout: 30s
+    conditions: полный обход модели, без ИИ
+  AutoLayoutView:
+    p50: 300ms
+    p95: 2s
+    p99: 5s
+    timeout: 30s
+
+throughput:
+  baseline_rps: 5
+  peak_rps: 30
+  ramp_up_minutes: 2
+  note: |
+    Масштаб — архитектурная практика банка, а не публичный сервис:
+    десятки одновременных пользователей, не тысячи. Пиковая нагрузка
+    приходится на сессии моделирования и обзоры ландшафта.
+
+upstream_calls:
+  # У modeling нет синхронных вызовов в другие BC: он источник данных,
+  # а не потребитель. Обращения к Keycloak — проверка подписи токена по
+  # кэшированному JWKS, а не вызов на запрос.
+  keycloak_jwks:
+    timeout: 3s
+    retries:
+      count: 2
+      backoff: exponential
+      initial_interval: 200ms
+    circuit_breaker:
+      failure_rate_threshold: 50
+      slow_call_threshold: 2s
+      sliding_window_size: 20
+      wait_duration_in_open_state: 30s
+    fallback: cached            # кэшированный JWKS остаётся валидным до ротации ключей
+
+storage:
+  database: relational / PostgreSQL 16
+  connection_pool:
+    max_size: 20
+    min_idle: 5
+    connection_timeout: 3s
+    leak_detection_threshold: 30s
+  query_timeout: 15s
+  note: |
+    Дерево модели читается одним запросом (docs/spec/database.md §4.3),
+    поэтому пул небольшой, а таймаут запроса выше типового: один запрос
+    может тянуть тысячи строк.
+
+messaging:
+  # Брокера нет — секция описывает in-process публикацию.
+  in_process:
+    publication: after_commit
+    delivery_guarantee: at_least_once
+    note: |
+      См. domain/modeling/events.yaml#publishing. Смена на
+      transactional_outbox требуется к этапу 7a.
+
+security:
+  authentication: jwt_bearer    # Keycloak 26, OIDC (FR-28)
+  authorization:
+    OpenModel:          [VIEWER, ARCHITECT, ADMIN]
+    OpenView:           [VIEWER, ARCHITECT, ADMIN]
+    ValidateModel:      [VIEWER, ARCHITECT, ADMIN]
+    CreateModel:        [ARCHITECT, ADMIN]
+    RenameModel:        [ARCHITECT, ADMIN]
+    AcquireLock:        [ARCHITECT, ADMIN]
+    CreateElement:      [ARCHITECT, ADMIN]
+    UpdateElement:      [ARCHITECT, ADMIN]
+    DeleteElement:      [ARCHITECT, ADMIN]
+    CreateRelationship: [ARCHITECT, ADMIN]
+    DeleteRelationship: [ARCHITECT, ADMIN]
+    SaveViewLayout:     [ARCHITECT, ADMIN]
+    SaveModel:          [ARCHITECT, ADMIN]
+    RestoreVersion:     [ARCHITECT, ADMIN]
+    LabelVersion:       [ARCHITECT, ADMIN]
+    DeleteModel:        [ARCHITECT, ADMIN]
+    RestoreModel:       [ADMIN]
+    PurgeModel:         [ADMIN]
+    ReleaseLock:        [ARCHITECT, ADMIN]   # чужую блокировку снимает только ADMIN — INV-MDL-006
+  acl:
+    level: model
+    note: |
+      ACL на уровне модели накладывается поверх ролей (FR-29): роль даёт
+      право на класс операций, ACL — на конкретную модель.
+  pii_fields: []
+  # Персональные данные в домене не хранятся: автор версии и владелец
+  # блокировки — subject из токена, а не имя и почта.
+  audit:
+    enabled: true
+    events: [DeleteModel, PurgeModel, RestoreModel, ReleaseLock, RestoreVersion]
+    retention: 1y
+    note: |
+      Аудит здесь — административные и разрушительные операции. Аудит
+      обращений к ИИ ведёт BC advisor отдельно (FR-27).
+
+observability:
+
+  metrics:
+    - { name: modeling_usecase_requests_total,   type: counter,   labels: [usecase, outcome] }
+    - { name: modeling_usecase_duration_seconds, type: histogram, labels: [usecase], buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5] }
+    - { name: modeling_usecase_errors_total,     type: counter,   labels: [usecase, error_code] }
+    - { name: modeling_model_elements,           type: gauge,     labels: [model_id] }
+    - { name: modeling_lock_wait_seconds,        type: histogram, labels: [model_id] }
+    - { name: modeling_validation_findings_total, type: gauge,    labels: [model_id, severity] }
+
+  alerts:
+    - name: HighErrorRateSaveModel
+      expr: |
+        sum(rate(modeling_usecase_errors_total{usecase="SaveModel"}[5m]))
+          / sum(rate(modeling_usecase_requests_total{usecase="SaveModel"}[5m])) > 0.01
+      for: 5m
+      severity: page
+      note: Ошибка сохранения — прямая угроза потери работы архитектора.
+
+    - name: SlowOpenModelP95
+      expr: |
+        histogram_quantile(0.95,
+          sum by (le) (rate(modeling_usecase_duration_seconds_bucket{usecase="OpenModel"}[5m]))
+        ) > 1
+      for: 10m
+      severity: ticket
+      note: Нарушение NFR-01.
+
+    - name: ConcurrentSaveConflicts
+      expr: |
+        sum(rate(modeling_usecase_errors_total{error_code="INV-MDL-006"}[15m])) > 0.05
+      for: 15m
+      severity: ticket
+      note: |
+        Частые 409 означают, что блокировка не удерживается или UI её не
+        показывает: пользователи наступают друг другу на правки.
+
+  tracing:
+    sampler: parent_based_traceidratio
+    ratio: 0.1
+    propagator: w3c_tracecontext
+
+  logging:
+    level: INFO
+    format: json                # профиль prod, docs/archi-creator.md §10.3
+    pii_masking: true
+    correlation_id: from_traceparent
