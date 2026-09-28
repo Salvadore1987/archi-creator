@@ -14,7 +14,7 @@ target_module: archi-modeling-domain
 #   - Optional<T> для опциональных полей
 #   - имена VO/Entity/enum из этого файла
 #
-# Границы агрегатов выбраны по способу загрузки (docs/spec/database.md §4.3):
+# Границы агрегатов выбраны по способу загрузки (docs/database.md §4.3):
 # дерево модели читается целиком одним запросом, представление — по требованию.
 # Поэтому ArchitectureModel и View — разные агрегаты, а элементы и связи —
 # сущности внутри модели, а не самостоятельные корни.
@@ -131,7 +131,7 @@ aggregates:
     identity: VersionId
     description: |
       Запись истории. Неизменяема после создания, кроме поля label и очистки
-      снимка фоновой задачей (docs/spec/database.md §4.4).
+      снимка фоновой задачей (docs/database.md §4.4).
     fields:
       - { name: id,         type: VersionId,        constraints: [not_null, immutable] }
       - { name: modelId,    type: ModelId,          constraints: [not_null, immutable] }
@@ -288,7 +288,7 @@ value_objects:
       Разреженная нумерация: вставка между соседями берёт середину зазора и
       не трогает остальных. Перебалансировка ветви — только когда зазор
       исчерпан. Без этого каждая вставка давала бы diff на всю папку при
-      выгрузке в Git (docs/spec/database.md §11.6).
+      выгрузке в Git (docs/database.md §11.6).
 
   Bounds:
     composite:

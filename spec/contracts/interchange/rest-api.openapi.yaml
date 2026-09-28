@@ -15,7 +15,7 @@ info:
     проверку целостности «контракт без use case». Endpoint'ы появляются
     здесь при вызове режима add-usecase.
 
-    Перечень операций зафиксирован в `docs/spec/backend.md` §5.
+    Перечень операций зафиксирован в `docs/backend.md` §5.
 
 servers:
   - url: /api/v1
@@ -31,7 +31,7 @@ tags:
 paths: {}
 
 # ───────────────────────────────────────────────────────────────────
-# Планируемые операции (docs/spec/backend.md §5, §5.2, §6.10).
+# Планируемые операции (docs/backend.md §5, §5.2, §6.10).
 #
 #   POST /models/import                 импорт .archimate (multipart)
 #   GET  /models/{id}/export            ?fmt=archimate|oef|csv[&folder=&sep=]
@@ -45,7 +45,7 @@ paths: {}
 #   PUT  /workspaces/{id}/git-binding   настроить привязку к репозиторию
 #
 # Импорта из OEF и CSV в этом списке нет и не будет: единственный
-# принимаемый формат — .archimate (FR-01, docs/spec/backend.md §3.5).
+# принимаемый формат — .archimate (FR-01, docs/backend.md §3.5).
 # ───────────────────────────────────────────────────────────────────
 
 components:
@@ -71,7 +71,7 @@ components:
 
     Problem:
       type: object
-      description: RFC 7807 Problem Details + поле `code` (docs/spec/backend.md §8.1).
+      description: RFC 7807 Problem Details + поле `code` (docs/backend.md §8.1).
       required: [type, title, status]
       properties:
         type:     { type: string, format: uri }

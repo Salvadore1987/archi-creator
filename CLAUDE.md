@@ -22,6 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 mvn clean package                  # сейчас: только компиляция заготовки
 open docs/mockups/index.html       # макеты интерфейса, статика без сборки
+tools/check-links.py               # ссылки между файлами спеки: файлы и якоря
 ```
 
 Требуется JDK 25 (`maven.compiler.source/target=25`) и Maven 3.9+. Обёртки `mvnw` нет —
@@ -40,9 +41,20 @@ open docs/mockups/index.html       # макеты интерфейса, стат
 | Файл | Разделы |
 |------|---------|
 | [`docs/archi-creator.md`](docs/archi-creator.md) | §1 обзор, §2 требования FR/NFR, §3.1–3.2 схема и стек, §10 развёртывание, §12 этапы, §13 открытые вопросы |
-| [`docs/spec/backend.md`](docs/spec/backend.md) | §3.3–3.5, §5 API, §6.10 экспорт картинок, §7 ИИ, §8 ошибки, §9.1–9.3 тесты, §11 Git |
-| [`docs/spec/frontend.md`](docs/spec/frontend.md) | §6.1–6.9 визуальный язык и экран, §9.4 E2E |
-| [`docs/spec/database.md`](docs/spec/database.md) | §4 модель данных, §11.6 поля под Git |
+| [`docs/backend.md`](docs/backend.md) | §3.3–3.5, §5 API, §6.10 экспорт картинок, §7 ИИ, §8 ошибки, §9.1–9.3 тесты, §11 Git |
+| [`docs/frontend.md`](docs/frontend.md) | §6.1–6.9 визуальный язык и экран, §9.4 E2E |
+| [`docs/database.md`](docs/database.md) | §4 модель данных, §11.6 поля под Git |
+
+Пятый каталог — [`spec/`](spec/) в корне — это **другая** спецификация: spec-anchored,
+якорные единицы (`INV-MDL-001`, `UC-*`, `ADR-*`), контракты OpenAPI/AsyncAPI, NFR по
+bounded context'ам (`modeling`, `interchange`, `advisor`). Сегодня она производна от
+`docs/` и объясняет свои решения ссылками туда (`spec/README.md`, «Отношение к `docs/`»).
+Разворот этой зависимости — отдельная задача, шаги перечислены в
+[`docs/plans/razdelenie-specifikacii.md`](docs/plans/razdelenie-specifikacii.md),
+раздел «Раскладка изменилась». До разворота при расхождении прав `docs/`.
+
+Каталога `docs/spec/` больше нет: три файла подняты в `docs/`, чтобы в проекте был
+один каталог с именем `spec`.
 
 Правила при правке спецификации:
 
@@ -52,7 +64,7 @@ open docs/mockups/index.html       # макеты интерфейса, стат
   ссылки на них.
 - §13 «Открытые вопросы» — журнал решений: вопрос не удаляется, а зачёркивается с датой
   и ссылкой на раздел, где решение описано.
-- Главный файл держит у себя указатели вида «→ `spec/backend.md` §3.4 — …» вместо уехавшего
+- Главный файл держит у себя указатели вида «→ `backend.md` §3.4 — …» вместо уехавшего
   текста. Переносишь раздел — оставь указатель.
 
 ## Архитектура

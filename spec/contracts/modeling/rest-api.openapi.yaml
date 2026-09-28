@@ -17,7 +17,7 @@ info:
     экспонированный use case.
 
     Перечень операций, которые предстоит описать, зафиксирован в
-    прозаической спецификации: `docs/spec/backend.md` §5.
+    прозаической спецификации: `docs/backend.md` §5.
 
 servers:
   - url: /api/v1
@@ -33,7 +33,7 @@ tags:
 paths: {}
 
 # ───────────────────────────────────────────────────────────────────
-# Планируемые операции (docs/spec/backend.md §5).
+# Планируемые операции (docs/backend.md §5).
 # Перенос в paths — отдельным шагом на каждый use case, вместе с якорем.
 #
 #   GET    /models                              список моделей
@@ -91,7 +91,7 @@ components:
       type: object
       description: |
         RFC 7807 Problem Details + поле `code` для бизнес-правил.
-        Формат ответа об ошибке описан в `docs/spec/backend.md` §8.1.
+        Формат ответа об ошибке описан в `docs/backend.md` §8.1.
       required: [type, title, status]
       properties:
         type:     { type: string, format: uri }

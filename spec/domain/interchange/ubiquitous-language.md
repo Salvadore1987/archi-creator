@@ -102,7 +102,7 @@ bounded_context: interchange
   архитектуры.
 - **Фигуры, токены, иконки** — язык фронтенда. `ExportViewImage` рисует по
   общему `shapes.json`, но геометрию фигуры определяет не этот BC
-  ([`docs/spec/frontend.md` §6.10](../../../docs/spec/frontend.md#610-экспорт-представлений)).
+  ([`docs/frontend.md` §6.10](../../../docs/frontend.md#610-экспорт-представлений)).
 - **`Branch`, `Commit`, `MergeRequest`** — термины Git. Они появляются в
   языке только внутри `GitBinding` и команд обмена; модель о них не знает.
 

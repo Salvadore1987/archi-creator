@@ -81,4 +81,4 @@ bounded_context: advisor
 - API: `contracts/advisor/rest-api.openapi.yaml`
 - События (контракт): `contracts/advisor/events.asyncapi.yaml`
 - NFR: `nfr/advisor.yaml`
-- Прозаическая спецификация: [`docs/spec/backend.md` §7](../../docs/spec/backend.md#7-ии-помощник)
+- Прозаическая спецификация: [`docs/backend.md` §7](../../docs/backend.md#7-ии-помощник)

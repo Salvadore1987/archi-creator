@@ -35,7 +35,7 @@ tags:
 paths: {}
 
 # ───────────────────────────────────────────────────────────────────
-# Планируемые операции (docs/spec/backend.md §7).
+# Планируемые операции (docs/backend.md §7).
 #
 #   POST /ai/review     ревью модели                   → SSE, Finding[]
 #   POST /ai/explain    подсказка по элементу          → SSE, текст
@@ -68,7 +68,7 @@ components:
 
     Problem:
       type: object
-      description: RFC 7807 Problem Details + поле `code` (docs/spec/backend.md §8.1).
+      description: RFC 7807 Problem Details + поле `code` (docs/backend.md §8.1).
       required: [type, title, status]
       properties:
         type:     { type: string, format: uri }

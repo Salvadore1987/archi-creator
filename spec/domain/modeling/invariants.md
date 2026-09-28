@@ -102,7 +102,7 @@ bounded_context: modeling
 **Нарушение:** плотная нумерация заставляет вставку перенумеровывать всех
 соседей — round-trip формально сохраняется, но выгрузка в Git даёт diff на
 всю папку вместо одной строки, и ревью становится нечитаемым
-([`docs/spec/database.md` §11.6](../../../docs/spec/database.md#116-что-нужно-сделать-уже-на-этапе-1)).
+([`docs/database.md` §11.6](../../../docs/database.md#116-что-нужно-сделать-уже-на-этапе-1)).
 
 **Тест:** `SortOrderTest#insertDoesNotRenumberSiblings`
 

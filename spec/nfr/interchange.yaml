@@ -118,7 +118,7 @@ storage:
     применение документа пишет тысячи строк одной транзакцией.
 
   blob_storage:
-    snapshots: bytea в PostgreSQL, gzip (docs/spec/database.md §4.2)
+    snapshots: bytea в PostgreSQL, gzip (docs/database.md §4.2)
     artifacts: не хранятся — выгрузка отдаётся потоком и не кэшируется
 
 messaging:

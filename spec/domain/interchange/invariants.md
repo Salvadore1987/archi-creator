@@ -110,7 +110,7 @@ vendor lock-in; без него продукт не имеет смысла вн
 
 **Тест:** `RoundTripGoldenFileTest#hamkorbankAsIsSurvivesRoundTrip`
 (эталон — `docs/Hamkorbank_AS_IS_strict.archimate`,
-[`docs/spec/backend.md` §9.1](../../../docs/spec/backend.md#91-golden-file-тесты-round-trip--критический-контур))
+[`docs/backend.md` §9.1](../../../docs/backend.md#91-golden-file-тесты-round-trip--критический-контур))
 
 ---
 
@@ -127,7 +127,7 @@ vendor lock-in; без него продукт не имеет смысла вн
 **Нарушение:** выгрузка без отчёта превращается в тихую потерю данных.
 Получатель — аудит, регулятор, подрядчик — не узнает, что часть модели до
 него не доехала, а обнаружит это через квартал в чужом инструменте
-([`docs/spec/backend.md` §3.5](../../../docs/spec/backend.md#35-экспорт-в-open-exchange-format)).
+([`docs/backend.md` §3.5](../../../docs/backend.md#35-экспорт-в-open-exchange-format)).
 
 **Тест:** `ExportJobTest#renderedJobAlwaysHasLossReport`,
 `OefWriterTest#rawFragmentsAreListedAsLosses`
@@ -148,7 +148,7 @@ vendor lock-in; без него продукт не имеет смысла вн
 **Нарушение:** приём повреждённого файла в мягком режиме создаёт модель,
 которую нельзя выгрузить обратно, — round-trip ломается на данных, которые
 вообще не следовало принимать (FR-49, FR-50,
-[`docs/spec/backend.md` §8.3](../../../docs/spec/backend.md#83-строгость-импорта)).
+[`docs/backend.md` §8.3](../../../docs/backend.md#83-строгость-импорта)).
 
 **Тест:** `StrictImportTest#errorRejectsOnlyInStrictMode`,
 `StrictImportTest#corruptedFileIsRejectedInBothModes`
@@ -203,7 +203,7 @@ merge не является валидной моделью и может про
 
 **Нарушение:** построчное слияние двух правок одного элемента даёт
 объект, которого никто не создавал, — с полем из одной ветки и половиной
-списка из другой ([`docs/spec/backend.md` §11.4](../../../docs/spec/backend.md#114-слияние-по-сущностям-а-не-по-тексту)).
+списка из другой ([`docs/backend.md` §11.4](../../../docs/backend.md#114-слияние-по-сущностям-а-не-по-тексту)).
 
 **Тест:** `EntityMergeTest#disjointEditsMergeWithoutConflict`,
 `EntityMergeTest#sameFieldEditsProduceFieldLevelConflict`

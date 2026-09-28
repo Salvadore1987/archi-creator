@@ -16,7 +16,7 @@ bounded_context: modeling
 Ценность BC — в том, что модель перестаёт быть файлом на чьём-то ноутбуке.
 Она становится общим состоянием с историей, блокировками и правилами
 целостности, а файл `.archimate` — лишь одной из её проекций
-([`docs/spec/database.md` §4.3](../../docs/spec/database.md#43-стратегия-хранения)).
+([`docs/database.md` §4.3](../../docs/database.md#43-стратегия-хранения)).
 
 ## In scope
 
@@ -43,7 +43,7 @@ bounded_context: modeling
 - ИИ-ревью, подсказки, генерация документации — отдельный BC `advisor`.
   `modeling` даёт данные, но не рассуждает о них.
 - Рендер канвы, drag-and-drop, визуальные токены — фронтенд
-  ([`docs/spec/frontend.md` §6](../../docs/spec/frontend.md#6-визуальный-язык)).
+  ([`docs/frontend.md` §6](../../docs/frontend.md#6-визуальный-язык)).
   `modeling` владеет геометрией (координаты, размеры, изломы), но не
   оформлением.
 - Управление пользователями и группами — Keycloak. `modeling` принимает
@@ -78,5 +78,5 @@ bounded_context: modeling
 - API: `contracts/modeling/rest-api.openapi.yaml`
 - События (контракт): `contracts/modeling/events.asyncapi.yaml`
 - NFR: `nfr/modeling.yaml`
-- Прозаическая спецификация: [`docs/spec/database.md` §4](../../docs/spec/database.md#4-модель-данных),
-  [`docs/spec/backend.md` §5](../../docs/spec/backend.md#5-rest-api)
+- Прозаическая спецификация: [`docs/database.md` §4](../../docs/database.md#4-модель-данных),
+  [`docs/backend.md` §5](../../docs/backend.md#5-rest-api)

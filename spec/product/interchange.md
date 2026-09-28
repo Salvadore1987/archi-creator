@@ -45,14 +45,14 @@ lossless round-trip (INV-IXC-005, NFR-05), и весь остальной BC с�
 - Хранение. Результат разбора отдаётся как `ModelDocument`; что с ним
   произойдёт дальше, решает `modeling`.
 - **Импорт из OEF и из CSV.** Единственный принимаемый формат — `.archimate`
-  ([`docs/spec/backend.md` §3.5](../../docs/spec/backend.md#35-экспорт-в-open-exchange-format),
-  [§5.2](../../docs/spec/backend.md#52-экспорт-каталога-в-csv)). Это решение,
+  ([`docs/backend.md` §3.5](../../docs/backend.md#35-экспорт-в-open-exchange-format),
+  [§5.2](../../docs/backend.md#52-экспорт-каталога-в-csv)). Это решение,
   а не пробел: приём второго диалекта требует разбора чужих вольностей и
   собственного набора golden-file тестов, а сценария «нам присылают модели
   не в Archi» нет.
 - **PDF.** Остаётся печать из браузера (§13.4).
 - Git как источник правды. Репозиторий — журнал и ревью; база остаётся
-  источником правды ([`docs/spec/backend.md` §11.1](../../docs/spec/backend.md#111-роль-git-журнал-и-ревью-а-не-распределённое-редактирование)).
+  источником правды ([`docs/backend.md` §11.1](../../docs/backend.md#111-роль-git-журнал-и-ревью-а-не-распределённое-редактирование)).
 
 ## Метрики успеха
 
@@ -84,5 +84,5 @@ lossless round-trip (INV-IXC-005, NFR-05), и весь остальной BC с�
 - События (контракт): `contracts/interchange/events.asyncapi.yaml`
 - NFR: `nfr/interchange.yaml`
 - Форма `ModelDocument` повторяет `domain/modeling/aggregates.yaml#ArchitectureModel`
-- Прозаическая спецификация: [`docs/spec/backend.md` §3.4](../../docs/spec/backend.md#34-кодек-archimate--ключевые-решения),
-  [§11](../../docs/spec/backend.md#11-git-интеграция-и-формат-хранения)
+- Прозаическая спецификация: [`docs/backend.md` §3.4](../../docs/backend.md#34-кодек-archimate--ключевые-решения),
+  [§11](../../docs/backend.md#11-git-интеграция-и-формат-хранения)
