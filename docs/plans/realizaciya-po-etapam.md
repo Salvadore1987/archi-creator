@@ -109,7 +109,7 @@
       Golden-file, интеграционные и Playwright не заведены пустыми: зелёная
       галочка над ненаписанным тестом хуже отсутствующей. Приходят на этапах
       1, 2 и 4 соответственно — места названы комментариями в `ci.yml`
-- [ ] Gate спеки в CI: `check-links.py`, `check-traceability.py`,
+- [x] Gate спеки в CI: `check-links.py`, `check-traceability.py`,
       `render-requirements-index.py --check` — каждый возвращает ненулевой код
       при первом нарушении
 - [x] Правило conventional commits и проверка сообщения:

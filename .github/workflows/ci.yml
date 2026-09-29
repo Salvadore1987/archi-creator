@@ -30,6 +30,32 @@ env:
 
 jobs:
 
+  # Гейт целостности спеки. Идёт отдельной работой и не ждёт сборку:
+  # обрыв ссылки или требование без якоря видно за секунды, и узнавать
+  # об этом после пятиминутной сборки незачем.
+  spec:
+    name: Целостность спеки
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Каждый скрипт возвращает ненулевой код при первом нарушении.
+      # Зависимостей у них нет — ставить нечего.
+      - name: Ссылки между файлами
+        run: tools/check-links.py
+
+      - name: Требования ↔ якоря спеки
+        run: tools/check-traceability.py
+
+      # §2 docs/archi-creator.md — производная таблица. Флаг --check ловит
+      # правку руками: она была бы затёрта следующей генерацией.
+      - name: §2 совпадает с реестром требований
+        run: tools/render-requirements-index.py --check
+
   build:
     name: Сборка и тесты
     runs-on: ubuntu-latest
