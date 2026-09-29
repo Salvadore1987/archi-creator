@@ -34,6 +34,15 @@
         <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.6.0</maven-surefire-plugin.version>
         <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
+        <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
+
+        <!--
+            Node и npm ставит сборка, а не разработчик: иначе версия
+            зависит от машины, а фронтенд собирается по-разному в CI
+            и локально. v24 — действующий LTS.
+        -->
+        <node.version>v24.21.0</node.version>
+        <npm.version>11.19.0</npm.version>
     </properties>
 
     <dependencyManagement>
@@ -142,6 +151,11 @@
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
                     <version>${spring-boot.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>com.github.eirslett</groupId>
+                    <artifactId>frontend-maven-plugin</artifactId>
+                    <version>${frontend-maven-plugin.version}</version>
                 </plugin>
 
                 <!--

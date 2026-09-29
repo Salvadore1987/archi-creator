@@ -43,3 +43,9 @@ build/
 # который остаётся на машине. Образец — .env.example.
 .env
 .env.local
+
+### Фронтенд ###
+# Node ставит сборка (frontend-maven-plugin), каталог лежит вне target/,
+# чтобы `mvn clean` не выбрасывал его каждый раз.
+.node/
+node_modules/

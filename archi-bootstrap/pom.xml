@@ -144,4 +144,67 @@
         </plugins>
     </build>
 
+    <profiles>
+        <!--
+            Сборка фронтенда (ADR-0016): npm ci && npm run build, результат —
+            target/classes/static, откуда его запекает в jar Spring Boot (§10.2).
+
+            Профиль включён по умолчанию и выключается `-P '!frontend'`: правка,
+            не задевающая интерфейс, не должна требовать Node. Выключать его
+            в CI нельзя — иначе jar уедет без статики и это выяснится в бою.
+        -->
+        <profile>
+            <id>frontend</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.eirslett</groupId>
+                        <artifactId>frontend-maven-plugin</artifactId>
+                        <configuration>
+                            <workingDirectory>src/main/frontend</workingDirectory>
+                            <!-- Вне target/: иначе `mvn clean` каждый раз выбрасывал бы
+                                 Node и качал его заново. Каталог в .gitignore. -->
+                            <installDirectory>${project.basedir}/.node</installDirectory>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>install-node-and-npm</id>
+                                <goals>
+                                    <goal>install-node-and-npm</goal>
+                                </goals>
+                                <configuration>
+                                    <nodeVersion>${node.version}</nodeVersion>
+                                    <npmVersion>${npm.version}</npmVersion>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>npm-ci</id>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- ci, а не install: package-lock.json — закон,
+                                         а не пожелание, и сборка его не переписывает. -->
+                                    <arguments>ci --no-audit --no-fund</arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>npm-build</id>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <configuration>
+                                    <arguments>run build</arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>
