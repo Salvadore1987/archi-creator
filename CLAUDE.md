@@ -62,8 +62,10 @@ git config core.hooksPath .githooks # включить хук commit-msg, оди
 первом нарушении. Правишь спеку — прогони первые два; правишь требования — третий;
 четвёртый вызывается хуком сам.
 
-Требуется JDK 25 (`maven.compiler.source/target=25`) и Maven 3.9+. Обёртки `mvnw` нет —
-каталог `.mvn/` пустой.
+Требуется JDK 25 (`maven.compiler.source/target=25`). Maven приходит обёрткой:
+`./mvnw` качает Maven 3.9.16 сам, версия зафиксирована в
+`.mvn/wrapper/maven-wrapper.properties`. Обёртка скриптовая (`only-script`),
+jar'а в репозитории нет.
 
 `spring-boot:repackage` уже в сборке: на выходе `archi-creator-1.0-SNAPSHOT.jar`.
 Имя сохранено из [§10.2](docs/archi-creator.md#102-сборка), каталог изменился —

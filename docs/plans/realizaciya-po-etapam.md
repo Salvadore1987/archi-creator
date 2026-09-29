@@ -86,7 +86,7 @@
       realm в репозиторий для воспроизводимого поднятия
 - [x] Spring Security OAuth2 Resource Server в `archi-bootstrap`, маппинг ролей
       из JWT, заглушка профиля `dev`
-- [ ] Обёртка `mvnw` (каталог `.mvn/` пуст, в командах CLAUDE.md её нет)
+- [x] Обёртка `mvnw` (каталог `.mvn/` пуст, в командах CLAUDE.md её нет)
 
 ### Фронтенд-каркас
 
