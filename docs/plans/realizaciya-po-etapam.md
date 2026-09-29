@@ -102,7 +102,7 @@
 
 ### Контур проверок
 
-- [ ] ArchUnit в `archi-bootstrap`: изоляция контекстов друг от друга
+- [x] ArchUnit в `archi-bootstrap`: изоляция контекстов друг от друга
       (`modeling` не знает `advisor` и наоборот) — сборкой это не проверяется,
       см. `spec/README.md`, «Верификация»
 - [ ] CI ([§10.4](../archi-creator.md#104-ci)): сборка → юнит → golden-file →

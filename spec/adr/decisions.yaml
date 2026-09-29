@@ -42,7 +42,10 @@ decisions:
     note: |
       Реализовано: 17 проектов в реакторе, граница домена подкреплена правилом
       maven-enforcer-plugin в шести модулях. Изоляция контекстов друг от друга
-      остаётся за ArchUnit. Ход работы — docs/plans/multi-module-pom.md.
+      закрыта 2026-09-29 правилами ArchUnit в archi-bootstrap
+      (BoundedContextIsolationTest): сборка её не держит, потому что в bootstrap
+      все двенадцать модулей встречаются на одном classpath. Ход работы —
+      docs/plans/multi-module-pom.md.
 
   - id: ADR-0002
     title: Двойная идентификация — внутренний UUIDv7 и внешний archi_id
