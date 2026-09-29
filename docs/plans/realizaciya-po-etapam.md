@@ -98,7 +98,7 @@
       ([§3.2](../archi-creator.md#32-стек))
 - [x] `frontend-maven-plugin` в сборке: `npm ci && npm run build` →
       `target/classes/static` ([§10.2](../archi-creator.md#102-сборка))
-- [ ] Vite dev-сервер с прокси на `:8080` для профиля `dev`
+- [x] Vite dev-сервер с прокси на `:8080` для профиля `dev`
 
 ### Контур проверок
 
