@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>uz.salvadore.hamkorbank</groupId>
+        <artifactId>archi-creator</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>archi-advisor</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Archi Creator :: Advisor</name>
+    <description>
+        Агрегатор bounded context'а advisor (ADV): ИИ-помощник: ревью, подсказка, план, документация;
+        аудит и бюджет токенов.
+        Спека — spec/domain/advisor/, spec/application/advisor/, spec/contracts/advisor/,
+        spec/nfr/advisor.yaml. Инварианты имеют код INV-ADV-NNN, сценарии — UC-ADV-NNN.
+    </description>
+
+    <modules>
+        <module>archi-advisor-domain</module>
+        <module>archi-advisor-application</module>
+        <module>archi-advisor-adapter-rest</module>
+        <module>archi-advisor-adapter-persistence</module>
+    </modules>
+
+</project>

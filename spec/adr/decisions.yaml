@@ -1,6 +1,6 @@
 ---
-version: 1.0
-last_modified: 2026-09-28
+version: 1.1
+last_modified: 2026-09-29
 ---
 
 # ───────────────────────────────────────────────────────────────────
@@ -38,9 +38,11 @@ decisions:
     adr_file: 0001-maven-multi-module.md
     affects: [modeling, interchange, advisor]
     requirements: []
+    implemented: 2026-09-29
     note: |
-      Требует перекройки корневого pom.xml — сейчас проект одномодульный.
-      Работа этапа 0, не сделана.
+      Реализовано: 17 проектов в реакторе, граница домена подкреплена правилом
+      maven-enforcer-plugin в шести модулях. Изоляция контекстов друг от друга
+      остаётся за ArchUnit. Ход работы — docs/plans/multi-module-pom.md.
 
   - id: ADR-0002
     title: Двойная идентификация — внутренний UUIDv7 и внешний archi_id

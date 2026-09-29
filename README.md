@@ -10,9 +10,11 @@
 
 ## Статус
 
-**Этап 0 — каркас.** В репозитории пока лежат спецификация, макеты интерфейса на реальных
-данных и заготовка Maven-проекта (`Main.java`). Приложение ещё не собирается как сервис:
-ни Spring Boot, ни фронтенд-модуля в `pom.xml` нет.
+**Этап 0 — каркас.** В репозитории спецификация, макеты интерфейса на реальных данных
+и раскладка Maven по [`ADR-0001`](spec/adr/0001-maven-multi-module.md): 17 проектов,
+Spring Boot 4.1.1, fat jar на выходе. Логики нет ни строки — модули пусты, в них только
+`package-info.java`. Приложение собирается, но не запускается: `application.yaml`,
+миграции Flyway, `docker-compose.yml` и фронтенд-модуль ещё не заведены.
 
 Что уже готово и служит входом в разработку:
 
@@ -100,16 +102,29 @@ open docs/mockups/index.html
 
 ## Сборка
 
-Сейчас доступна только компиляция заготовки:
+Требуется JDK 25 и Maven 3.9+.
 
 ```
-mvn clean package
+mvn clean package          # 17 модулей, jar в archi-bootstrap/target/
 ```
 
-Целевая сборка по [§10.2](docs/archi-creator.md#102-сборка), когда появятся модули:
+Раскладка — по [`ADR-0001`](spec/adr/0001-maven-multi-module.md): модуль на слой
+и bounded context, фреймворк только в адаптерах и в `archi-bootstrap`. У доменных
+модулей нет ни Spring, ни JPA, и правило `maven-enforcer-plugin` не даёт их вернуть:
 
 ```
-mvn clean package          # npm ci && npm run build → target/classes/static, затем repackage
+archi-<bc>/archi-<bc>-domain              зависимостей нет, кроме junit (test)
+archi-<bc>/archi-<bc>-application         -> domain
+archi-<bc>/archi-<bc>-adapter-rest        -> application + Spring Web
+archi-<bc>/archi-<bc>-adapter-persistence -> application + Spring Data JPA
+archi-bootstrap                           все 12 + Spring Boot, здесь jar
+```
+
+Целевая сборка по [§10.2](docs/archi-creator.md#102-сборка) добавит к этому прогон
+фронтенда и запуск:
+
+```
+mvn clean package          # + npm ci && npm run build → classes/static
 docker compose build && docker compose up -d
 ```
 

@@ -10,9 +10,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Состояние репозитория
 
-**Этап 0 — каркас.** Кода практически нет: `src/main/java/uz/salvadore/hamkorbank/Main.java`
-— заготовка из шаблона IDEA, `pom.xml` — голый Maven без зависимостей. Ни Spring Boot,
-ни фронтенд-модуля, ни тестов, ни Flyway-миграций пока не заведено.
+**Этап 0 — каркас.** Собирается multi-module Maven по
+[`ADR-0001`](spec/adr/0001-maven-multi-module.md): 17 проектов в реакторе — родитель,
+три агрегатора контекстов, двенадцать модулей-слоёв, `archi-bootstrap` с классом запуска
+и fat jar. Логики нет ни строки: в модулях только `package-info.java`.
+
+```
+archi-<bc>/archi-<bc>-domain              зависимостей нет, кроме junit (test)
+archi-<bc>/archi-<bc>-application         -> domain
+archi-<bc>/archi-<bc>-adapter-rest        -> application + Spring Web
+archi-<bc>/archi-<bc>-adapter-persistence -> application + Spring Data JPA
+archi-bootstrap                           все 12 + Spring Boot, здесь jar
+```
+
+Пакеты — `uz.salvadore.hamkorbank.archi.<bc>.<layer>`, класс запуска —
+`uz.salvadore.hamkorbank.archi.ArchiCreatorApplication`.
+
+**Границу домена держит сборка, а не договорённость.** В шести модулях (`domain`
+и `application` трёх контекстов) правило `maven-enforcer-plugin` запрещает
+`org.springframework*`, `jakarta.persistence`, `jakarta.transaction`, `org.hibernate*`
+в любом scope, включая транзитивные. Нужен Spring — значит, код не в том модуле.
+Конфигурация правила одна, в `pluginManagement` родителя.
+
+Ещё не заведено: `application.yaml`, Flyway-миграции, `docker-compose.yml`,
+фронтенд-модуль (нет ни `package.json`, ни исходников React), генерация из
+`spec/contracts/*.openapi.yaml`, ни одного теста.
 
 Содержательная часть проекта — **спецификация**. Прежде чем писать код, читай её:
 почти каждое решение уже принято и обосновано, и переизобретать его не нужно.
@@ -25,7 +47,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Команды
 
 ```bash
-mvn clean package                  # сейчас: только компиляция заготовки
+mvn clean package                  # 17 модулей; jar в archi-bootstrap/target/
+mvn test -Dtest=ClassName#method   # один тест
+mvn -pl archi-modeling/archi-modeling-domain dependency:tree   # проверить чистоту модуля
 open docs/mockups/index.html       # макеты интерфейса, статика без сборки
 tools/check-links.py               # ссылки между файлами: существование файла и якоря
 tools/check-traceability.py        # требования ↔ якоря спеки: покрытие и обрывы
@@ -38,10 +62,14 @@ tools/render-requirements-index.py # перегенерировать §2 из �
 Требуется JDK 25 (`maven.compiler.source/target=25`) и Maven 3.9+. Обёртки `mvnw` нет —
 каталог `.mvn/` пустой.
 
-Целевые команды появятся вместе с модулями ([§10.2](docs/archi-creator.md#102-сборка)):
-`mvn clean package` будет прогонять `frontend-maven-plugin` (`npm ci && npm run build`
-→ `target/classes/static`) и `spring-boot:repackage`, дальше `docker compose up -d`.
-Запуск одного теста — `mvn test -Dtest=ClassName#method`.
+`spring-boot:repackage` уже в сборке: на выходе `archi-creator-1.0-SNAPSHOT.jar`.
+Имя сохранено из [§10.2](docs/archi-creator.md#102-сборка), каталог изменился —
+теперь `archi-bootstrap/target/`. Прогон `frontend-maven-plugin`
+(`npm ci && npm run build`) добавится вместе с фронтенд-модулем, `docker compose up -d` —
+вместе с `docker-compose.yml`.
+
+Приложение собирается, но **не запускается**: без `application.yaml`, PostgreSQL
+и Keycloak старт падает на отсутствующем `DataSource`. Это ожидаемо до этапа 2.
 
 ## Спецификация: как она устроена
 

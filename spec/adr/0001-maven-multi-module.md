@@ -10,8 +10,9 @@ date: 2026-09-22
 
 ## Статус
 
-Принято 2026-09-22. Не реализовано: корневой `pom.xml` пока одномодульный,
-перекройка — работа этапа 0.
+Принято 2026-09-22, **реализовано 2026-09-29**: 17 проектов в реакторе —
+родитель, три агрегатора контекстов, двенадцать модулей-слоёв и `archi-bootstrap`.
+Ход работы — [`docs/plans/multi-module-pom.md`](../../docs/plans/multi-module-pom.md).
 
 ## Контекст
 
@@ -36,10 +37,35 @@ date: 2026-09-22
 | — | `archi-<bc>-adapter-persistence` | application |
 | `nfr/<bc>.yaml` | `archi-bootstrap` | все модули, Spring Boot |
 
+## Как это выглядит после реализации
+
+```
+pom.xml                                   parent, packaging pom
+archi-modeling/                           агрегатор BC
+  archi-modeling-domain/                  зависимостей нет, кроме junit (test)
+  archi-modeling-application/             -> domain
+  archi-modeling-adapter-rest/            -> application + Spring Web
+  archi-modeling-adapter-persistence/     -> application + Spring Data JPA
+archi-interchange/  archi-advisor/        то же
+archi-bootstrap/                          все 12 модулей + Spring Boot, здесь jar
+```
+
+Версии приходят из BOM `spring-boot-dependencies`, импортированного
+в `dependencyManagement` родителя. Импорт BOM фиксирует версии и **не** добавляет
+ничего на classpath, поэтому доменные модули остаются чистыми.
+
+Сверх отсутствия зависимости в шести модулях (`domain` и `application` трёх
+контекстов) включено правило `maven-enforcer-plugin`, запрещающее
+`org.springframework*`, `jakarta.persistence`, `jakarta.transaction`,
+`org.hibernate*` в любом scope, включая транзитивные: отсутствия достаточно,
+пока никто не вернул зависимость обратно. Проверено умышленным нарушением —
+`spring-context` в `archi-modeling-domain` останавливает сборку на `validate`
+с текстом этого ADR.
+
 ## Последствия
 
-**Хорошие.** Граница держится компилятором: у `archi-<bc>-domain` в `pom.xml`
-нет ни Spring, ни JPA, поэтому `@Entity` в доменном классе не собирается.
+**Хорошие.** Граница держится сборкой: у `archi-<bc>-domain` в `pom.xml`
+нет ни Spring, ни JPA, поэтому `@Entity` в доменном классе не компилируется.
 Нарушение обнаруживается на сборке, а не на ревью и не в отчёте ArchUnit,
 который можно отключить.
 
@@ -47,9 +73,11 @@ date: 2026-09-22
 задевает три `pom.xml`. Импорт в IDE тяжелее. Для одной команды из нескольких
 человек это заметные накладные расходы.
 
-**Что становится обязательным.** Перекройка корневого `pom.xml` в multi-module
-до начала этапа 1: начинать кодек в одномодульном проекте значит сделать переезд
-позже и дороже.
+**Что осталось за рамками.** Изоляция контекстов друг от друга (`advisor` не должен
+зависеть от `modeling`) правилом enforcer'а не выражается одной общей конфигурацией —
+каждому модулю нужен свой список запрещённых. Сейчас держится тем, что зависимость
+не объявлена; проверку берёт на себя ArchUnit, предусмотренный разделом
+«Верификация» [`../README.md`](../README.md).
 
 ## Отвергнутая альтернатива
 

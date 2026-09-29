@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>uz.salvadore.hamkorbank</groupId>
+        <artifactId>archi-interchange</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>archi-interchange-application</artifactId>
+
+    <name>Archi Creator :: Interchange :: Application</name>
+    <description>
+        Сценарии interchange: use case'ы UC-IXC-NNN, входящие и исходящие порты.
+        Спека — spec/application/interchange/usecases/.
+
+        Зависит только от домена. Реализации портов живут в адаптерах — сюда
+        ни Spring, ни JPA не попадают.
+    </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>archi-interchange-domain</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- ADR-0001: запрет Spring, JPA и Hibernate. Правило — в pluginManagement родителя. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

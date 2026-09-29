@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>uz.salvadore.hamkorbank</groupId>
+        <artifactId>archi-creator</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>archi-modeling</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Archi Creator :: Modeling</name>
+    <description>
+        Агрегатор bounded context'а modeling (MDL): модель как таковая: папки, элементы, связи, представления,
+        блокировки, версии, валидация по метамодели.
+        Спека — spec/domain/modeling/, spec/application/modeling/, spec/contracts/modeling/,
+        spec/nfr/modeling.yaml. Инварианты имеют код INV-MDL-NNN, сценарии — UC-MDL-NNN.
+    </description>
+
+    <modules>
+        <module>archi-modeling-domain</module>
+        <module>archi-modeling-application</module>
+        <module>archi-modeling-adapter-rest</module>
+        <module>archi-modeling-adapter-persistence</module>
+    </modules>
+
+</project>
