@@ -10,10 +10,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Состояние репозитория
 
-**Этап 0 — каркас.** Собирается multi-module Maven по
+**Этап 0 закрыт (2026-09-29). Следующий — этап 1, кодек `.archimate`.**
+Собирается multi-module Maven по
 [`ADR-0001`](spec/adr/0001-maven-multi-module.md): 17 проектов в реакторе — родитель,
 три агрегатора контекстов, двенадцать модулей-слоёв, `archi-bootstrap` с классом запуска
-и fat jar. Логики нет ни строки: в модулях только `package-info.java`.
+и fat jar. **Доменной логики нет ни строки:** в двенадцати модулях только
+`package-info.java`, весь код этапа 0 — в `archi-bootstrap`.
 
 ```
 archi-<bc>/archi-<bc>-domain              зависимостей нет, кроме junit (test)
@@ -32,9 +34,30 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 в любом scope, включая транзитивные. Нужен Spring — значит, код не в том модуле.
 Конфигурация правила одна, в `pluginManagement` родителя.
 
-Ещё не заведено: `application.yaml`, Flyway-миграции, `docker-compose.yml`,
-фронтенд-модуль (нет ни `package.json`, ни исходников React), генерация из
-`spec/contracts/*.openapi.yaml`, ни одного теста.
+**Приложение запускается.** `docker compose up -d` поднимает `app`, `postgres:16`
+и `keycloak:26` ([§10.1](docs/archi-creator.md#101-состав)), `/actuator/health` = UP,
+вход через Keycloak отдаёт JWT с ролью `VIEWER`/`ARCHITECT`/`ADMIN` (FR-28).
+Секреты — из `.env` (образец `.env.example`), в репозиторий не попадают (NFR-06).
+
+Что появилось на этапе 0 и где лежит:
+
+| Что | Где |
+|---|---|
+| Конфигурация и профили `dev`/`prod` | `archi-bootstrap/src/main/resources/application*.yaml` |
+| Схема БД | `archi-bootstrap/src/main/resources/db/migration/V1__baseline.sql` — одна таблица `workspace` |
+| Безопасность: ресурс-сервер, роли из `realm_access`, заглушка `dev` | `archi-bootstrap/.../bootstrap/security/` |
+| Realm Keycloak с тремя ролями и клиентом SPA | `deploy/keycloak/archi-realm.json` |
+| Развёртывание | `docker-compose.yml`, `Dockerfile` (упаковывает готовый jar, сам не собирает) |
+| Каркас фронтенда | `archi-bootstrap/src/main/frontend/` — React 19 + TS + Vite ([`ADR-0016`](spec/adr/0016-frontend-location.md)) |
+| Конвейер и гейты | `.github/workflows/ci.yml` |
+
+Тестов семь, все в `archi-bootstrap`: маппинг ролей Keycloak и три правила
+ArchUnit на изоляцию контекстов. Доменных тестов нет — нет и домена.
+
+Ещё не заведено: таблицы модели (`element`, `relationship`, `view`, …) — этап 2,
+генерация из `spec/contracts/*.openapi.yaml`, клиент OIDC во фронтенде
+(страницу логина отдаёт Keycloak, но SPA на неё пока не уводит — этап 3),
+шаги CI golden-file, интеграционные и Playwright — этапы 1, 2 и 4.
 
 Содержательная часть проекта — **спецификация**. Прежде чем писать код, читай её:
 почти каждое решение уже принято и обосновано, и переизобретать его не нужно.
@@ -47,9 +70,18 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 ## Команды
 
 ```bash
-mvn clean package                  # 17 модулей; jar в archi-bootstrap/target/
-mvn test -Dtest=ClassName#method   # один тест
-mvn -pl archi-modeling/archi-modeling-domain dependency:tree   # проверить чистоту модуля
+./mvnw clean package               # 17 модулей + фронтенд; jar в archi-bootstrap/target/
+./mvnw clean package -P '!frontend' # то же без Node: правка не задевает интерфейс
+./mvnw test -Dtest=ClassName#method # один тест
+./mvnw -pl archi-modeling/archi-modeling-domain dependency:tree  # чистота модуля
+
+cp .env.example .env               # заполнить пароли, один раз на клон
+docker compose build && docker compose up -d   # app + postgres:16 + keycloak:26
+docker compose logs -f app         # логи приложения (в prod они в JSON)
+docker compose down                # остановить; -v чтобы снести и данные БД
+
+cd archi-bootstrap/src/main/frontend && npm run dev   # Vite на :5173, прокси на :8080
+
 open docs/mockups/index.html       # макеты интерфейса, статика без сборки
 tools/check-links.py               # ссылки между файлами: существование файла и якоря
 tools/check-traceability.py        # требования ↔ якоря спеки: покрытие и обрывы
@@ -67,14 +99,17 @@ git config core.hooksPath .githooks # включить хук commit-msg, оди
 `.mvn/wrapper/maven-wrapper.properties`. Обёртка скриптовая (`only-script`),
 jar'а в репозитории нет.
 
-`spring-boot:repackage` уже в сборке: на выходе `archi-creator-1.0-SNAPSHOT.jar`.
-Имя сохранено из [§10.2](docs/archi-creator.md#102-сборка), каталог изменился —
-теперь `archi-bootstrap/target/`. Прогон `frontend-maven-plugin`
-(`npm ci && npm run build`) добавится вместе с фронтенд-модулем, `docker compose up -d` —
-вместе с `docker-compose.yml`.
+Сборка идёт по [§10.2](docs/archi-creator.md#102-сборка): `frontend-maven-plugin`
+делает `npm ci && npm run build` в `src/main/frontend`, результат ложится
+в `target/classes/static`, `spring-boot:repackage` запекает всё в
+`archi-creator-1.0-SNAPSHOT.jar`. Node ставит сборка, а не разработчик:
+версия в `pom.xml` родителя, каталог — `archi-bootstrap/.node/` (вне `target/`,
+иначе `mvn clean` качал бы его заново).
 
-Приложение собирается, но **не запускается**: без `application.yaml`, PostgreSQL
-и Keycloak старт падает на отсутствующем `DataSource`. Это ожидаемо до этапа 2.
+Порты в `docker-compose.yml` — переменные со значениями по умолчанию
+из [§10.1](docs/archi-creator.md#101-состав): `ARCHI_APP_PORT` (8080),
+`ARCHI_DB_PORT` (5432), `ARCHI_KEYCLOAK_PORT` (8081). Занят соседним проектом —
+меняется `.env`, а не состав.
 
 ## Коммиты
 
