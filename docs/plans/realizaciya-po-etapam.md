@@ -115,7 +115,7 @@
 - [x] Правило conventional commits и проверка сообщения:
       `tools/check-commit-message.py`, хук `.githooks/commit-msg`
       (CLAUDE.md, раздел «Коммиты»)
-- [ ] Gate сообщений коммитов в CI:
+- [x] Gate сообщений коммитов в CI:
       `tools/check-commit-message.py --range origin/main..HEAD` — хук живёт
       на машине разработчика и обходится `--no-verify`, гейт не обходится
 

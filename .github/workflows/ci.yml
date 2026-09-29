@@ -56,6 +56,40 @@ jobs:
       - name: §2 совпадает с реестром требований
         run: tools/render-requirements-index.py --check
 
+  # Гейт сообщений коммитов. Хук .githooks/commit-msg живёт на машине
+  # разработчика и обходится --no-verify; этот гейт не обходится.
+  commits:
+    name: Сообщения коммитов
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Нужна история: проверяется диапазон, а не один коммит.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Правило действует с коммита, которым введено, поэтому проверяется
+      # диапазон новых коммитов, а не вся ветка: история до правила ему
+      # не подчиняется и переписываться не будет.
+      - name: Диапазон новых коммитов
+        id: range
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags origin "${{ github.base_ref }}"
+            echo "value=origin/${{ github.base_ref }}..HEAD" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            # Первый push ветки: сравнивать не с чем, берём последний коммит.
+            echo "value=HEAD~1..HEAD" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.event.before }}..HEAD" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Проверка сообщений
+        run: tools/check-commit-message.py --range "${{ steps.range.outputs.value }}"
+
   build:
     name: Сборка и тесты
     runs-on: ubuntu-latest
