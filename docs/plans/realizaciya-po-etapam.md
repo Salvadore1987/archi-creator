@@ -69,7 +69,7 @@
 
 ### Конфигурация и запуск
 
-- [ ] `archi-bootstrap/src/main/resources/application.yaml`: datasource, Flyway,
+- [x] `archi-bootstrap/src/main/resources/application.yaml`: datasource, Flyway,
       issuer Keycloak, модель ИИ (`claude-sonnet-5`), actuator, пул соединений
       и таймауты из [`spec/nfr/modeling.yaml`](../../spec/nfr/modeling.yaml)
 - [ ] Профили `dev` и `prod` ([§10.3](../archi-creator.md#103-профили-и-конфигурация)):

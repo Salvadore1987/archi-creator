@@ -73,6 +73,21 @@
             <artifactId>archi-advisor-adapter-persistence</artifactId>
         </dependency>
 
+        <!--
+            Actuator и реестр Prometheus: /actuator/health, /actuator/metrics,
+            /actuator/prometheus (docs/backend.md §8.4). Список выставленных
+            наружу точек закрыт в application.yaml.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
