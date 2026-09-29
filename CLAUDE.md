@@ -87,12 +87,38 @@ tools/check-links.py               # ссылки между файлами: с�
 tools/check-traceability.py        # требования ↔ якоря спеки: покрытие и обрывы
 tools/render-requirements-index.py # перегенерировать §2 из реестра (--check для CI)
 tools/check-commit-message.py      # сообщение коммита по правилу «Коммиты» (см. ниже)
+tools/render-depgraph.py           # граф зависимостей в PlantUML и PNG (см. ниже)
 git config core.hooksPath .githooks # включить хук commit-msg, один раз на клон
 ```
 
-Четыре скрипта на Python 3.9+ без зависимостей, каждый возвращает ненулевой код при
+Пять скриптов на Python 3.9+ без зависимостей, каждый возвращает ненулевой код при
 первом нарушении. Правишь спеку — прогони первые два; правишь требования — третий;
-четвёртый вызывается хуком сам.
+четвёртый вызывается хуком сам; пятый — по закрытии этапа.
+
+### Граф зависимостей
+
+**По закрытии каждого этапа перерисовывать граф и обновлять картинку в README.**
+
+```bash
+tools/render-depgraph.py           # оба графа: .puml и .png в docs/dependencies/
+tools/render-depgraph.py --puml    # без рендера, если нет ни plantuml, ни docker
+```
+
+Рисует [depgraph-maven-plugin](https://github.com/ferstl/depgraph-maven-plugin)
+(версия в `pom.xml` родителя, к жизненному циклу не привязан). Графа два:
+
+| Файл | Цель плагина | Что показывает |
+|---|---|---|
+| `docs/dependencies/reactor.*` | `aggregate` | 17 проектов реактора и всё, что они тянут; версии на узлах |
+| `docs/dependencies/archi-bootstrap.*` | `graph` + `showDuplicates`, `showConflicts` | то же дерево плюс дубли и конфликты версий |
+
+Два, а не один, потому что `showDuplicates` и `showConflicts` понимает только
+цель `graph`: у `aggregate` таких параметров нет вовсе, и попытка задать их
+в `pom.xml` роняет сборку — `Cannot find 'showDuplicates'`. Поэтому флаги
+живут в скрипте, рядом с той целью, которой принадлежат.
+
+`.puml` коммитятся вместе с `.png`: изменение зависимостей читается в диффе
+по тексту, а по PNG не читается никак.
 
 Требуется JDK 25 (`maven.compiler.source/target=25`). Maven приходит обёрткой:
 `./mvnw` качает Maven 3.9.16 сам, версия зафиксирована в
