@@ -1,0 +1,4 @@
+#!/bin/sh
+# Проверка сообщения коммита по правилу CLAUDE.md, раздел «Коммиты».
+# Включается один раз на клон:  git config core.hooksPath .githooks
+exec python3 "$(dirname "$0")/../tools/check-commit-message.py" "$1"
