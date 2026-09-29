@@ -75,7 +75,7 @@
 - [x] Профили `dev` и `prod` ([§10.3](../archi-creator.md#103-профили-и-конфигурация)):
       в `dev` авторизация заглушкой `ARCHITECT`, в `prod` Keycloak обязателен,
       CORS закрыт, Flyway `validate`, логи JSON
-- [ ] Секреты только через переменные окружения и `.env` вне репозитория
+- [x] Секреты только через переменные окружения и `.env` вне репозитория
       (`ANTHROPIC_API_KEY`, пароль БД, client secret) — NFR-06
 - [ ] Flyway `V1__baseline.sql`: `workspace` с полями `ai_enabled`,
       `ai_monthly_token_limit`, `strict_import`, `git_repo_url`, `git_branch`,
