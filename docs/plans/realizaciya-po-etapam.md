@@ -72,7 +72,7 @@
 - [x] `archi-bootstrap/src/main/resources/application.yaml`: datasource, Flyway,
       issuer Keycloak, модель ИИ (`claude-sonnet-5`), actuator, пул соединений
       и таймауты из [`spec/nfr/modeling.yaml`](../../spec/nfr/modeling.yaml)
-- [ ] Профили `dev` и `prod` ([§10.3](../archi-creator.md#103-профили-и-конфигурация)):
+- [x] Профили `dev` и `prod` ([§10.3](../archi-creator.md#103-профили-и-конфигурация)):
       в `dev` авторизация заглушкой `ARCHITECT`, в `prod` Keycloak обязателен,
       CORS закрыт, Flyway `validate`, логи JSON
 - [ ] Секреты только через переменные окружения и `.env` вне репозитория

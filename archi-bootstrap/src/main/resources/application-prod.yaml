@@ -1,0 +1,47 @@
+# ───────────────────────────────────────────────────────────────────
+# Профиль prod (§10.3): Keycloak обязателен, CORS закрыт,
+# Flyway validate, логи в JSON.
+#
+# Переменные без значения по умолчанию — намеренно: приложение обязано
+# не стартовать, если пароль БД или issuer не заданы, а не стартовать
+# с чем-то случайным.
+# ───────────────────────────────────────────────────────────────────
+spring:
+  datasource:
+    url: ${ARCHI_DB_URL}
+    username: ${ARCHI_DB_USER}
+    password: ${ARCHI_DB_PASSWORD}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${ARCHI_OIDC_ISSUER_URI}
+
+  flyway:
+    # Расхождение схемы с историей миграций — отказ старта, а не
+    # молчаливое выравнивание.
+    validate-on-migrate: true
+    baseline-on-migrate: false
+    clean-disabled: true
+
+archi:
+  web:
+    cors:
+      # Фронтенд отдаётся тем же приложением, поэтому кросс-доменных
+      # запросов быть не должно: пустой список закрывает CORS.
+      allowed-origins: []
+
+management:
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  # spec/nfr/modeling.yaml#observability.logging.format: json.
+  # ECS: traceId, spanId и MDC попадают в поля, а не в текст строки.
+  structured:
+    format:
+      console: ecs
+  level:
+    root: INFO
