@@ -1,0 +1,98 @@
+/* Токены корпуса взяты из макетов (docs/mockups/shared.css), токены слоёв
+   ArchiMate появятся вместе с канвой на этапе 3 — их единственный источник
+   spec/ui/design-tokens.yaml, и дублировать их здесь заранее нельзя.
+   Тема одна: графитовый корпус, светлый холст, переключателя нет (ADR-0011). */
+:root {
+  --ink-900: #0d0f12;
+  --ink-800: #171b21;
+  --ink-700: #232933;
+  --line: #2b323d;
+  --text-hi: #e9ecf0;
+  --text-mid: #98a2b0;
+  --text-low: #66707e;
+  --paper: #faf9f5;
+  --signal: #ff6a3d;
+  --ok: #3e9b62;
+  --err: #d9534f;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--ink-900);
+  color: var(--text-hi);
+  font: 14px/1.5 "Inter", system-ui, -apple-system, sans-serif;
+}
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.panel {
+  width: min(520px, 100%);
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px 28px;
+}
+
+.panel h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.panel p {
+  margin: 0 0 20px;
+  color: var(--text-mid);
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.row dt {
+  color: var(--text-low);
+}
+
+.row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.status--up { color: var(--ok); }
+.status--down { color: var(--err); }
+.status--unknown { color: var(--text-mid); }
+
+button {
+  margin-top: 20px;
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--ink-700);
+  color: var(--text-hi);
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--signal);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

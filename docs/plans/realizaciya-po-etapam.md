@@ -94,7 +94,7 @@
       собирается `frontend-maven-plugin` там же — реактор остаётся
       семнадцатипроектным, jar одним.
       [`ADR-0016`](../../spec/adr/0016-frontend-location.md)
-- [ ] `package.json`, Vite, React 19, TypeScript, Zustand, TanStack Query
+- [x] `package.json`, Vite, React 19, TypeScript, Zustand, TanStack Query
       ([§3.2](../archi-creator.md#32-стек))
 - [ ] `frontend-maven-plugin` в сборке: `npm ci && npm run build` →
       `target/classes/static` ([§10.2](../archi-creator.md#102-сборка))
