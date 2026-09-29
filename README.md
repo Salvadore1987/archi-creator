@@ -145,6 +145,32 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 (`BoundedContextIsolationTest`) по карте из
 [`spec/domain/bounded-contexts.yaml`](spec/domain/bounded-contexts.yaml).
 
+## Граф зависимостей
+
+Перерисовывается по закрытии каждого этапа — `tools/render-depgraph.py`
+([depgraph-maven-plugin](https://github.com/ferstl/depgraph-maven-plugin),
+формат PlantUML, версии на узлах). Состояние ниже — **этап 0**.
+
+**Реактор целиком** (`aggregate`): 17 проектов и всё, что они тянут.
+
+[![Граф зависимостей реактора](docs/dependencies/reactor.png)](docs/dependencies/reactor.png)
+
+**Модуль `archi-bootstrap`** (`graph` с `showDuplicates` и `showConflicts`):
+то же дерево плюс дубли и конфликты версий — их на этапе 0 нет, версии
+третьих сторон приходят из BOM Spring Boot и не расходятся.
+
+[![Граф зависимостей archi-bootstrap](docs/dependencies/archi-bootstrap.png)](docs/dependencies/archi-bootstrap.png)
+
+Картинки широкие: в README они сжаты до ширины страницы, читать — по клику.
+Исходники PlantUML лежат рядом (`docs/dependencies/*.puml`) и в отличие
+от PNG видны в диффе: изменение зависимостей читается по тексту, а не
+по перекрашенным пикселям.
+
+Графа два, потому что одним не обойтись: флаги `showDuplicates`
+и `showConflicts` понимает только цель `graph`, у `aggregate` таких
+параметров нет — агрегированный граф склеивает деревья разных модулей,
+и «дубль» в нём означал бы разное для разных пар.
+
 
 ## Принципы, которые стоит знать до первого коммита
 
