@@ -90,11 +90,10 @@
 
 ### Фронтенд-каркас
 
-- [ ] **Решение:** где живёт фронтенд — отдельный модуль реактора или
-      `archi-bootstrap/src/main/frontend`. `ADR-0001` фиксирует 17 проектов,
-      появление восемнадцатого — изменение решения, нужен `ADR-0016`.
-      Рекомендация: каталог внутри `archi-bootstrap` + `frontend-maven-plugin`
-      там же — реактор не меняется, jar остаётся один
+- [x] **Решение:** фронтенд живёт в `archi-bootstrap/src/main/frontend`,
+      собирается `frontend-maven-plugin` там же — реактор остаётся
+      семнадцатипроектным, jar одним.
+      [`ADR-0016`](../../spec/adr/0016-frontend-location.md)
 - [ ] `package.json`, Vite, React 19, TypeScript, Zustand, TanStack Query
       ([§3.2](../archi-creator.md#32-стек))
 - [ ] `frontend-maven-plugin` в сборке: `npm ci && npm run build` →
