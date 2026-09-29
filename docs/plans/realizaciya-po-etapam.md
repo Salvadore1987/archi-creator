@@ -80,7 +80,7 @@
 - [x] Flyway `V1__baseline.sql`: `workspace` с полями `ai_enabled`,
       `ai_monthly_token_limit`, `strict_import`, `git_repo_url`, `git_branch`,
       `git_token_ref` ([§4.1](../database.md#41-сущности), [§11.6](../database.md#116-что-нужно-сделать-уже-на-этапе-1))
-- [ ] `docker-compose.yml`: `app`, `postgres:16`, `keycloak:26`
+- [x] `docker-compose.yml`: `app`, `postgres:16`, `keycloak:26`
       ([§10.1](../archi-creator.md#101-состав)); путь к jar — `archi-bootstrap/target/`
 - [x] Realm Keycloak с ролями `VIEWER`, `ARCHITECT`, `ADMIN` (FR-28), экспорт
       realm в репозиторий для воспроизводимого поднятия

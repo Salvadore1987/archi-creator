@@ -1,0 +1,18 @@
+# В образ едет один jar; всё остальное только раздувает контекст сборки.
+.git
+.github
+.idea
+.mvn
+docs
+spec
+tools
+deploy
+node_modules
+**/src
+**/target/classes
+**/target/generated-sources
+**/target/maven-status
+**/target/maven-archiver
+**/target/*.jar.original
+.env
+.env.local
