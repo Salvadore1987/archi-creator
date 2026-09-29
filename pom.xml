@@ -36,6 +36,7 @@
         <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
         <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
         <archunit.version>1.5.1</archunit.version>
+        <depgraph-maven-plugin.version>4.0.5</depgraph-maven-plugin.version>
 
         <!--
             Node и npm ставит сборка, а не разработчик: иначе версия
@@ -168,6 +169,29 @@
                     <groupId>com.github.eirslett</groupId>
                     <artifactId>frontend-maven-plugin</artifactId>
                     <version>${frontend-maven-plugin.version}</version>
+                </plugin>
+
+                <!--
+                    Граф зависимостей (https://github.com/ferstl/depgraph-maven-plugin).
+                    К жизненному циклу не привязан: сборка от него не зависит, а лишний
+                    прогон на каждом mvn package стоил бы секунд без причины. Запускается
+                    руками по закрытии этапа — tools/depgraph.sh, правило в CLAUDE.md.
+
+                    Здесь общая часть настроек: формат PlantUML и версии на узлах.
+                    Флаги showDuplicates и showConflicts сюда НЕ вынесены — их понимает
+                    только цель graph, а цель aggregate на них падает: «Cannot find
+                    'showDuplicates'». Они живут в скрипте, рядом с той целью,
+                    которой принадлежат.
+                -->
+                <plugin>
+                    <groupId>com.github.ferstl</groupId>
+                    <artifactId>depgraph-maven-plugin</artifactId>
+                    <version>${depgraph-maven-plugin.version}</version>
+                    <configuration>
+                        <graphFormat>puml</graphFormat>
+                        <showVersions>true</showVersions>
+                        <outputDirectory>${session.executionRootDirectory}/docs/dependencies</outputDirectory>
+                    </configuration>
                 </plugin>
 
                 <!--
