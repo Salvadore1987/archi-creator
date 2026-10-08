@@ -162,7 +162,7 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 - ✅ Одиннадцать типов связей (FR-09): Composition, Aggregation, Assignment,
       Realization, Serving, Access, Influence, Triggering, Flow, Specialization,
       Association
-- ⬜ Матрица допустимых связей ArchiMate 3.2 таблицей-ресурсом (`INV-MDL-007`,
+- ✅ Матрица допустимых связей ArchiMate 3.2 таблицей-ресурсом (`INV-MDL-007`,
       FR-10); применяется к созданию, **не** к импорту
 - ⬜ Правила вложенности: какая связь подразумевается при помещении элемента
       в элемент (нужны на этапе 4 для FR-14, живут здесь)
@@ -241,9 +241,9 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 - ⬜ `RoundTripGoldenFileTest#opaqueNodesSurvive` (FR-03)
 - ⬜ `StrictImportTest#errorRejectsOnlyInStrictMode`,
       `#corruptedFileIsRejectedInBothModes` (`INV-IXC-007`)
-- ⬜ `RelationMatrixTest#forbiddenRelationIsRejectedOnCreate`,
+- ✅ `RelationMatrixTest#forbiddenRelationIsRejectedOnCreate`,
       `#importedViolationIsReportedNotRejected` (`INV-MDL-007`)
-- ⬜ Параметризованные тесты матрицы по тройкам «источник — цель — тип связи»
+- ✅ Параметризованные тесты матрицы по тройкам «источник — цель — тип связи»
       ([§9.2](../backend.md#92-юнит-тесты))
 - ⬜ Правила вложенности: подразумеваемая связь на каждую пару типов
 - ⬜ Производительность: файл на 5 000 строк XML ≤ 3 с (NFR-02)
@@ -986,3 +986,15 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
   хранится и выгружается, но не редактируется. Фикстура
   `capability_and_location` §9.1 этого и ждёт. Решать, в какую фазу их взять,
   — этапу 6.
+- **2026-10-08. Матрица связей взята из Archi, а не набрана руками.**
+  Ресурс `archimate-3.2-relationships.xml` — `relationships.xml` редактора
+  Archi без правок (MIT, происхождение в шапке файла). Набирать 3 844 клетки
+  заново значило бы получить таблицу, расходящуюся с Archi в паре мест,
+  и связь, нарисованную в одном инструменте, отвергал бы другой.
+  §9.2 просит кейсы «из таблицы спецификации ArchiMate 3.2»; генерировать
+  их из того же ресурса — проверять таблицу самой собой. Поэтому 31 тройка
+  выписана руками в `relation-matrix-cases.csv`, плюс свойства, которые
+  держит язык: ассоциация разрешена всегда, специализация — внутри типа
+  и в двух парах-подтипах (Contract ⊂ BusinessObject, Constraint ⊂
+  Requirement; первая версия теста о них не знала и упала — поправлен тест,
+  не матрица).
