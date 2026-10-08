@@ -26,8 +26,9 @@ stages: ["2"]
 **Then**
 1. Создаётся `ArchitectureModel` в состоянии `ACTIVE` с `UUIDv7` как внутренним
    ключом и `archi_id` формата `id-<32 hex>` ([`ADR-0002`](../../../adr/0002-dual-identity.md)).
-2. Заводится дерево папок с восемью системными корнями: `Strategy`, `Business`,
-   `Application`, `Technology`, `Motivation`, `Other`, `Relations`, `Views`
+2. Заводится дерево папок с девятью системными корнями: `Strategy`, `Business`,
+   `Application`, `Technology`, `Motivation`, `Implementation & Migration`,
+   `Other`, `Relations`, `Views`
    (`INV-MDL-009`). Они создаются сразу, а не по первому элементу: файл Archi
    без них невалиден.
 3. Повтор с тем же ключом идемпотентности возвращает ту же модель и не создаёт
@@ -69,5 +70,5 @@ stages: ["2"]
 | Проверка | Тест |
 |---|---|
 | Переходы состояний | `ArchitectureModelStateMachineTest#onlyAllowedTransitionsArePermitted` |
-| Восемь корней при создании | `FolderTreeTest#eightRootFoldersAlwaysExist` |
+| Девять корней при создании | `FolderTreeTest#rootFoldersAlwaysExist` |
 | Идемпотентность | `IdempotencyIT#sameKeyDifferentBodyReturns409` |

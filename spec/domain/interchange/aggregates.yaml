@@ -180,7 +180,7 @@ value_objects:
       - { name: name,          type: String,                 constraints: [not_null] }
       - { name: archiVersion,  type: String,                 constraints: [not_null] }
       - { name: documentation, type: Optional<String>,       constraints: [optional] }
-      - { name: folders,       type: List<DocumentNode>,     constraints: [not_null, min_size: 8] }
+      - { name: folders,       type: List<DocumentNode>,     constraints: [not_null, min_size: 9] }
       - { name: elements,      type: List<DocumentNode>,     constraints: [not_null] }
       - { name: relationships, type: List<DocumentNode>,     constraints: [not_null] }
       - { name: views,         type: List<DocumentNode>,     constraints: [not_null] }

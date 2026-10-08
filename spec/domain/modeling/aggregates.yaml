@@ -53,7 +53,7 @@ aggregates:
       - { name: documentation, type: Optional<String>,    constraints: [optional] }
       - { name: archiVersion,  type: String,              constraints: [not_null, pattern: "^\\d+\\.\\d+\\.\\d+$"], default: "5.0.0" }
       - { name: status,        type: ModelStatus,         constraints: [not_null], default: ACTIVE }
-      - { name: folders,       type: List<ModelFolder>,   constraints: [not_null, min_size: 8] }
+      - { name: folders,       type: List<ModelFolder>,   constraints: [not_null, min_size: 9] }
       - { name: elements,      type: List<Element>,       constraints: [not_null] }
       - { name: relationships, type: List<Relationship>,  constraints: [not_null] }
       - { name: properties,    type: List<PropertyEntry>, constraints: [not_null] }
@@ -163,7 +163,7 @@ entities:
     type: entity
     parent: ArchitectureModel
     identity: FolderId
-    description: Узел дерева организации модели. Корневых папок восемь, вложенность произвольная.
+    description: Узел дерева организации модели. Корневых папок девять, вложенность произвольная.
     fields:
       - { name: id,         type: FolderId,           constraints: [not_null, immutable] }
       - { name: parentId,   type: Optional<FolderId>, constraints: [optional] }
@@ -345,8 +345,12 @@ enums:
     values: [HELD, RELEASED, EXPIRED]
 
   FolderType:
-    values: [STRATEGY, BUSINESS, APPLICATION, TECHNOLOGY, MOTIVATION, OTHER, RELATIONS, DIAGRAMS]
-    note: Восемь корневых папок Archi. У вложенных пользовательских папок тип не задан.
+    values: [STRATEGY, BUSINESS, APPLICATION, TECHNOLOGY, MOTIVATION, IMPLEMENTATION_MIGRATION, OTHER, RELATIONS, DIAGRAMS]
+    note: |
+      Девять корневых папок Archi; в файле — атрибут type в нижнем регистре
+      (implementation_migration). У вложенных пользовательских папок тип не задан.
+      До 2026-10-08 спека знала восемь и пропускала implementation_migration,
+      которая есть и в Archi, и в эталонной модели.
 
   Layer:
     values: [BUSINESS, APPLICATION, TECHNOLOGY, MOTIVATION, STRATEGY, PHYSICAL, IMPLEMENTATION, OTHER]

@@ -357,11 +357,11 @@ zoom/pan, сетка и привязка, `Group`, `Note`, `Junction`, пере�
 **Правило:** `ARCHITECT` и `ADMIN` получают полный набор действий, `VIEWER` —
 только неизменяющие («Показать на представлении», «Где используется»,
 «Копировать имя»). Пункт удаления не появляется для системных папок формата:
-`Strategy`, `Business`, `Application`, `Technology`, `Motivation`, `Other`,
-`Relations`, `Views`.
+`Strategy`, `Business`, `Application`, `Technology`, `Motivation`,
+`Implementation & Migration`, `Other`, `Relations`, `Views`.
 
 **Нарушение:** удаление системной папки делает файл невалидным для Archi,
-который ожидает все восемь корней (`INV-MDL-009`).
+который ожидает все девять корней (`INV-MDL-009`).
 
 **Требование:** FR-36, FR-33, FR-28 · **Домен:** `INV-MDL-009`
 
