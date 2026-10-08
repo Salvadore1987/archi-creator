@@ -131,6 +131,32 @@
             <artifactId>archunit-junit5</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!--
+            Интеграционные тесты (§9.3): контекст целиком на настоящем postgres:16
+            в Testcontainers — тот же образ, что в docker-compose.yml (§10.1).
+            Классы *IT гоняет failsafe на фазе verify; Docker обязателен.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -141,6 +167,15 @@
         -->
         <finalName>archi-creator-${project.version}</finalName>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <!-- После repackage классы лежат в BOOT-INF/ внутри jar, и failsafe
+                         их там не видит: тесты берут классы из target/classes. -->
+                    <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

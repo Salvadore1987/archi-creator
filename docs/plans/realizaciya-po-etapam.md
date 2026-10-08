@@ -374,13 +374,29 @@
 
 ### 2.3 Персистентность (`archi-*-adapter-persistence`)
 
-- ⬜ JPA-сущности и маппинг на домен (домен о JPA не знает — enforcer)
-- ⬜ Чтение дерева модели одним запросом ([§4.3](../database.md#43-стратегия-хранения))
-- ⬜ Payload представления по требованию, сборка дерева одним запросом
-- ⬜ Оптимистичная блокировка `version` на агрегатах (NFR-07)
-- ⬜ Репозитории портов: `ModelRepository`, `ElementRepository`,
-      `RelationshipRepository`, `FolderRepository`, `ViewRepository`,
-      `ModelLockRepository`, `ModelVersionRepository`, `ImportSessionRepository`
+- ✅ JPA-сущности и маппинг на домен (домен о JPA не знает — enforcer).
+      Сущности плоские, без ассоциаций: ссылки — ключами, граф собирает маппер
+- ✅ Чтение дерева модели ([§4.3](../database.md#43-стратегия-хранения)) —
+      по запросу на таблицу (модель, папки, элементы со свойствами, связи со
+      свойствами, места представлений): число запросов не зависит от размера
+      модели. «Одним запросом» §4.3 буквально не выполнено — см. журнал
+- ✅ Payload представления по требованию: узлы и рёбра двумя запросами;
+      все представления модели — тремя (для снимка версии)
+- ✅ Оптимистичная блокировка `version` на модели и представлении (NFR-07):
+      любое изменение содержимого поднимает версию строки
+      (`OPTIMISTIC_FORCE_INCREMENT`), конфликт — `409` с кодом `INV-MDL-006`
+- ✅ Репозитории портов: `ModelRepository` (папки, элементы и связи — внутри
+      агрегата, отдельные `ElementRepository`/`RelationshipRepository`/
+      `FolderRepository` не понадобились), `ViewRepository`,
+      `ModelLockRepository`, `ModelVersionRepository`, `ModelAccessListRepository`,
+      `IdempotencyRepository`, `WorkspaceRepository`. `ImportSessionRepository` —
+      в адаптере interchange (§2.4)
+- ✅ Проводка в `archi-bootstrap` (`bootstrap.wiring`): `UnitOfWork` на
+      `TransactionTemplate`, события после коммита, метрики use case'ов
+      на Micrometer, первое рабочее пространство при старте на пустой базе
+- ✅ Интеграционные тесты на Testcontainers `postgres:16`, failsafe, отдельный
+      шаг CI. `ModelPersistenceIT#duplicateArchiIdViolatesUniqueConstraint`
+      и круг записи–чтения дерева и представления
 
 ### 2.4 Сценарии (`archi-*-application`)
 
@@ -479,7 +495,7 @@
 
 ### 2.9 Тесты этапа
 
-- ⬜ `ModelPersistenceIT#duplicateArchiIdViolatesUniqueConstraint`
+- ✅ `ModelPersistenceIT#duplicateArchiIdViolatesUniqueConstraint`
 - ⬜ `ModelLifecycleIT#purgeRequiresDeletedState`
 - ⬜ `IdempotencyIT#sameKeyDifferentBodyReturns409`
 - ⬜ `ElementDeletionIT#restrictViolationReturns409`
@@ -490,7 +506,7 @@
       `#corruptedFileIsRejectedInBothModes`
 - ⬜ `ExportJobTest#exportPinsSourceVersion` (`INV-IXC-008`)
 - ⬜ Ролевой доступ: `VIEWER` → `403` на запись, `ARCHITECT` → `200`
-- ⬜ Testcontainers `postgres:16` и `keycloak:26`
+- ⬜ Testcontainers `postgres:16` ✅ и `keycloak:26`
       ([§9.3](../backend.md#93-интеграционные-тесты-testcontainers))
 - ⬜ Нагрузочный профиль NFR-03: p95 ≤ 300 мс на операциях кроме ИИ и импорта
       (у требования нет якоря намеренно — проверяет профиль)
@@ -1248,3 +1264,14 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
   **Регрессия вероятна** у любого, кто «упростит» сборку до записи всех четырёх
   координат: эталон останется зелёным, а файл Archi с узлом по умолчанию получит
   лишние атрибуты.
+- **2026-10-08. «Дерево одним запросом» (§4.3) — запросом на таблицу.** Буквально
+  один запрос — `UNION` разнотипных строк или JSON-агрегат в базе — вернул бы
+  разбор строк в Java вручную и отказ от JPA ровно там, где он полезен. Взято
+  так: модель, папки, элементы со свойствами (`join fetch`), связи со свойствами,
+  места представлений — пять запросов, их число от размера модели не зависит,
+  N+1 нет. Смысл требования — не обходить ассоциации по одной — соблюдён.
+- **2026-10-08. Failsafe и перепакованный jar.** Первый прогон `*IT` не нашёл
+  `@SpringBootConfiguration`: после `spring-boot:repackage` классы лежат в
+  `BOOT-INF/` внутри jar, а failsafe по умолчанию берёт именно jar. Лечится
+  `classesDirectory = target/classes` в конфигурации failsafe модуля
+  `archi-bootstrap`.
