@@ -156,7 +156,7 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 - ⬜ Каталог типов фазы 1: Business, Application, Technology (FR-07)
 - ⬜ Вывод `Layer` из `archiType`, `OTHER` для незнакомых типов
 - ⬜ Реестр `xsi:type` ↔ внутренний тип (`ArchiTypeRegistry`, [§3.3](../backend.md#33-состав-модулей-бэкенда))
-- ⬜ Одиннадцать типов связей (FR-09): Composition, Aggregation, Assignment,
+- ✅ Одиннадцать типов связей (FR-09): Composition, Aggregation, Assignment,
       Realization, Serving, Access, Influence, Triggering, Flow, Specialization,
       Association
 - ⬜ Матрица допустимых связей ArchiMate 3.2 таблицей-ресурсом (`INV-MDL-007`,
