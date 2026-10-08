@@ -176,37 +176,73 @@ value_objects:
       modeling: обе стороны читают и пишут одну и ту же форму, ни одна не
       диктует её другой.
     composite:
-      - { name: archiId,       type: ArchiId,                constraints: [not_null] }
-      - { name: name,          type: String,                 constraints: [not_null] }
-      - { name: archiVersion,  type: String,                 constraints: [not_null] }
-      - { name: documentation, type: Optional<String>,       constraints: [optional] }
-      - { name: folders,       type: List<DocumentNode>,     constraints: [not_null, min_size: 9] }
-      - { name: elements,      type: List<DocumentNode>,     constraints: [not_null] }
-      - { name: relationships, type: List<DocumentNode>,     constraints: [not_null] }
-      - { name: views,         type: List<DocumentNode>,     constraints: [not_null] }
-      - { name: orphanFragments, type: List<RawXmlFragment>, constraints: [not_null] }
+      - { name: attributes, type: List<Attribute>,       constraints: [not_null], note: "атрибуты archimate:model в порядке файла, объявления пространств имён первыми" }
+      - { name: content,    type: List<DocumentContent>, constraints: [not_null], note: "папки, purpose, свойства и фрагменты корня в порядке файла" }
+    derived:
+      - { name: archiId,         type: ArchiId,                from: "attributes.id" }
+      - { name: name,            type: String,                 from: "attributes.name" }
+      - { name: archiVersion,    type: String,                 from: "attributes.version" }
+      - { name: documentation,   type: Optional<String>,       from: "<purpose>" }
+      - { name: folders,         type: List<DocumentNode>,     from: "папки верхнего уровня, min_size: 9" }
+      - { name: elements,        type: List<DocumentNode>,     from: "<element> кроме связей и представлений" }
+      - { name: relationships,   type: List<DocumentNode>,     from: "<element xsi:type=\"…Relationship\">" }
+      - { name: views,           type: List<DocumentNode>,     from: "<element xsi:type=\"…Model\">" }
+      - { name: orphanFragments, type: List<RawXmlFragment>,   from: "фрагменты прямо в корне" }
     note: |
       Содержимое узлов не раскрывается здесь по полям: форма повторяет
       modeling/aggregates.yaml, и дублировать её означало бы завести второй
       источник правды, который разойдётся с первым.
 
+      До 2026-10-08 срезы folders/elements/relationships/views были полями.
+      В файле Archi элементы лежат внутри папок, и отдельные списки рядом с
+      деревом — вторая копия, которой нужен адрес папки и которая расходится
+      с первой. Срезы вычисляются из дерева.
+
+  DocumentContent:
+    kind: sealed
+    variants: [DocumentNode, DocumentValue, RawXmlFragment]
+    composite:
+      - { name: order, type: DocumentOrder, constraints: [not_null] }
+    note: |
+      Единица содержимого узла. Общий список, а не отдельные children/values/raw:
+      порядок между ними — тоже часть файла, и писатель обязан его воспроизвести.
+
   DocumentNode:
     composite:
-      - { name: archiId,   type: ArchiId,        constraints: [not_null] }
-      - { name: archiType, type: String,         constraints: [not_null] }
-      - { name: order,     type: DocumentOrder,  constraints: [not_null] }
-      - { name: attributes, type: Map<String,String>, constraints: [not_null] }
-      - { name: children,  type: List<DocumentNode>, constraints: [not_null] }
-      - { name: raw,       type: Optional<RawXmlFragment>, constraints: [optional] }
+      - { name: tag,        type: String,                constraints: [not_null, enum: [folder, element, child, sourceConnection]] }
+      - { name: order,      type: DocumentOrder,         constraints: [not_null] }
+      - { name: attributes, type: List<Attribute>,       constraints: [not_null], note: "все, включая незнакомые, в порядке файла; id обязателен" }
+      - { name: content,    type: List<DocumentContent>, constraints: [not_null] }
+    derived:
+      - { name: archiId,   type: ArchiId,          from: "attributes.id" }
+      - { name: archiType, type: Optional<String>, from: "attributes[xsi:type]; у папок пусто" }
     note: |
       Однородный узел вместо типизированной иерархии: читатель обязан принять
       и то, чего метамодель текущей фазы не знает (FR-03), а типизация этого
-      не позволяет.
+      не позволяет. Поля raw у узла нет: незнакомый узел целиком становится
+      RawXmlFragment в содержимом родителя, незнакомый атрибут — строкой
+      в attributes на своём месте.
+
+  DocumentValue:
+    composite:
+      - { name: tag,        type: String,           constraints: [not_null, enum: [documentation, purpose, property, bounds, bendpoint, content]] }
+      - { name: order,      type: DocumentOrder,    constraints: [not_null] }
+      - { name: attributes, type: List<Attribute>,  constraints: [not_null] }
+      - { name: text,       type: Optional<String>, constraints: [optional] }
+    note: |
+      Значение без собственного id. Хранится обобщённо, чтобы незнакомый
+      атрибут у знакомого тега не потерялся; типизированное чтение — забота
+      потребителя.
+
+  Attribute:
+    composite:
+      - { name: name,  type: String, constraints: [not_null], note: "квалифицированное имя как в файле: xsi:type" }
+      - { name: value, type: String, constraints: [not_null] }
 
   RawXmlFragment:
     composite:
       - { name: xml,          type: String,        constraints: [not_null] }
-      - { name: parentArchiId, type: Optional<ArchiId>, constraints: [optional] }
+      - { name: parentArchiId, type: Optional<ArchiId>, constraints: [optional], note: "пусто — прямо в корне модели" }
       - { name: order,        type: DocumentOrder, constraints: [not_null] }
     note: |
       Непрозрачный фрагмент с адресом: куда вернуть при записи и в каком

@@ -171,7 +171,7 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 
 Кодек лежит в доменном модуле: StAX — часть JDK, запрет enforcer'а не нарушается.
 
-- ⬜ VO: `ArchiId`, `DocumentOrder`, `RawXmlFragment`, `DocumentNode`,
+- ✅ VO: `ArchiId`, `DocumentOrder`, `RawXmlFragment`, `DocumentNode`,
       `ModelDocument`, `ContentHash`
       ([aggregates.yaml](../../spec/domain/interchange/aggregates.yaml))
 - ⬜ Порт `ArchiDocumentReader` и потоковая реализация на StAX (NFR-02:
@@ -1006,3 +1006,15 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
   на структуре. Тест `FolderTreeTest#eightRootFoldersAlwaysExist` переименован
   в `#rootFoldersAlwaysExist`: число в имени теста — та же ошибка в третьем месте.
   Макеты `docs/mockups/` ненормативны и не правились.
+- **2026-10-08. Форма `ModelDocument` и `DocumentNode` изменена в спеке.**
+  По спеке у узла были `attributes`, `children` и `raw`, а у документа —
+  отдельные списки `folders`, `elements`, `relationships`, `views`.
+  Ни то ни другое не держит round-trip: `documentation`, `property` и
+  `bounds` — не узлы (у них нет `id`, а INV-IXC-001 требует его у каждого
+  узла), и класть их было некуда; порядок между ними и детьми терялся;
+  элементы в файле лежат внутри папок, и плоские списки рядом с деревом —
+  вторая копия, расходящаяся с первой. Теперь содержимое — один
+  упорядоченный список `DocumentContent` (узел | значение | фрагмент),
+  срезы спеки вычисляются из дерева. `ArchiId` в interchange свой, а не
+  общий с modeling: модули доменов друг от друга не зависят (Maven не
+  допускает цикла, а partnership в карте контекстов — в обе стороны).
