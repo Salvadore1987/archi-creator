@@ -4,7 +4,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Отказ домена modeling. {@code code} — код инварианта ({@code INV-MDL-004}) или
+ * Отказ домена modeling. {@code code} — код инварианта (вида {@code INV-MDL-NNN}) или
  * код ошибки ({@code RELATION_NOT_PERMITTED}): он уходит в поле {@code code}
  * ответа {@code problem+json} и в label {@code error_code} метрик.
  *
