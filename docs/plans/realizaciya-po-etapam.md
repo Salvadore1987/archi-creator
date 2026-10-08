@@ -423,9 +423,15 @@
       **тем же значением**, с порядком атрибутов, и даёт те же байты писателя
       (`DocumentMappingTest`); правка столбца перекрывает остаток, новый объект
       встаёт в раскладке Archi. Здесь же порты снимка modeling (`ArchimateSnapshots`)
-- ⬜ `UC-IXC-001` — импорт файла: применение одной транзакцией, отчёт
-- ⬜ `UC-IXC-002` — экспорт модели в `.archimate` по версии
-      (`ModelDocumentAssembler`, `VersionSnapshotReader`)
+- ✅ `UC-IXC-001` — импорт файла: сессия `RECEIVED → PARSED → VALIDATED → APPLIED`,
+      проверка методологии матрицей modeling (`MethodologyCheck`), применение одной
+      транзакцией вместе с версией 1, отчёт и у отклонённого. Строгость импорта
+      пространства меняет `ADMIN` (`ConfigureImportPolicy` — строка добавлена
+      в `spec/nfr/interchange.yaml`)
+- ✅ `UC-IXC-002` — экспорт модели в `.archimate` по версии: файл версии — её
+      снимок, собранный из базы при сохранении (`DocumentAssembler`); указанная
+      или последняя версия, удалённая модель — `409 MODEL_DELETED`, очищенный
+      снимок без Git — `410`
 - ✅ `LockGuard`: любая запись требует `HELD`-блокировки автора (`INV-MDL-006`).
       Не отдельный порт, а одна точка — `ModelingKernel.writableModel` — с
       правилом в домене (`ModelLock.requireWriteAccess`): порт без второй
@@ -501,10 +507,13 @@
 - ⬜ `ElementDeletionIT#restrictViolationReturns409`
 - ⬜ `ConcurrentSaveIT#secondWriterGets409` (NFR-07)
 - ⬜ `ValidationReportIT#importedViolationsAppearInReport`
-- ⬜ `ModelImportIT#folderTreeSurvivesRoundTrip`
-- ⬜ `ImportIT#applyTwiceIsRejected`, `#retryDoesNotCreateSecondModel`,
-      `#corruptedFileIsRejectedInBothModes`
-- ⬜ `ExportJobTest#exportPinsSourceVersion` (`INV-IXC-008`)
+- ✅ `ModelImportIT#folderTreeSurvivesRoundTrip` — эталон через базу, плюс
+      `#fixtureSurvivesDatabaseRoundTrip` на пяти фикстурах §9.1 и
+      `#referenceImportsWithinThreeSeconds` (NFR-02)
+- ✅ `ImportIT#applyTwiceIsRejected`, `#retryDoesNotCreateSecondModel`,
+      `#corruptedFileIsRejectedInBothModes`, плюс строгий режим против матрицы
+      и роли на импорте
+- ✅ `ExportJobTest#exportPinsSourceVersion` (`INV-IXC-008`) — с этапа 1
 - ⬜ Ролевой доступ: `VIEWER` → `403` на запись, `ARCHITECT` → `200`
 - ⬜ Testcontainers `postgres:16` ✅ и `keycloak:26`
       ([§9.3](../backend.md#93-интеграционные-тесты-testcontainers))

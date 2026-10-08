@@ -38,7 +38,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
  *
  * <p>На этапе 1 цикл идёт через кодек; на этапе 2 тот же тест пойдёт через БД.
  */
-class RoundTripGoldenFileTest {
+public class RoundTripGoldenFileTest {
 
     /**
      * Эталон читается из docs/, а не копируется в фикстуры: INV-IXC-005 называет
@@ -168,7 +168,7 @@ class RoundTripGoldenFileTest {
     }
 
     /** Файл репозитория — из каталога модуля (так запускает Maven) или из корня (так — IDE). */
-    static Path repositoryFile(String relative) {
+    public static Path repositoryFile(String relative) {
         return Stream.of(Path.of("..").resolve(relative), Path.of(relative))
                 .filter(Files::isRegularFile)
                 .findFirst()

@@ -30,12 +30,12 @@ import org.w3c.dom.NodeList;
  * <p>Расхождение сообщается путём до места и обеими версиями: «где-то не сошлось»
  * на файле в 4 000 строк не помогает.
  */
-final class XmlEquivalence {
+public final class XmlEquivalence {
 
     private XmlEquivalence() {
     }
 
-    static void assertXmlEquivalent(byte[] expected, byte[] actual) {
+    public static void assertXmlEquivalent(byte[] expected, byte[] actual) {
         Element left = parse(expected, "ожидаемый");
         Element right = parse(actual, "фактический");
         compare(left, right, "/" + name(left));

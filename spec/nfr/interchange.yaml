@@ -1,6 +1,6 @@
 ---
-version: 0.1
-last_modified: 2026-09-22
+version: 0.2
+last_modified: 2026-10-08
 bounded_context: interchange
 target_module: archi-bootstrap
 ---
@@ -140,6 +140,9 @@ security:
     PullModelFromGit:     [ARCHITECT, ADMIN]
     MergeModelBranch:     [ARCHITECT, ADMIN]
     ConfigureGitBinding:  [ADMIN]
+    # Добавлено 2026-10-08, этап 2: FR-49 отдаёт строгость импорта ADMIN,
+    # а операции в таблице не было.
+    ConfigureImportPolicy: [ADMIN]
   note: |
     Экспорт доступен роли VIEWER намеренно (FR-28): читатель должен уметь
     забрать ландшафт в документ, не получая прав на правку.
