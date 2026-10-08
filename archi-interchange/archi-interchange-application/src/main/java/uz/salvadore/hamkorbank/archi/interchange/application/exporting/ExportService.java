@@ -90,6 +90,7 @@ public final class ExportService {
         job.render(snapshot.versionNo(), artifact, LossReport.lossless());
         job.deliver();
         events.publish(List.of(ExportCompleted.of(job, clock.instant())));
+        metrics.exportLosses(format.name(), job.lossReport().map(r -> r.entries().size()).orElse(0));
         return new Export(artifact, snapshot.versionNo());
     }
 

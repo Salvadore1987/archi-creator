@@ -116,13 +116,13 @@ public final class ImportService {
         session.parse(reader, new ByteArrayInputStream(content), this::findingId, clock.instant());
         if (session.status() == ImportStatus.REJECTED) {
             sessions.save(session);
-            return report(session, false);
+            return finished(session);
         }
         ModelDocument document = session.document().orElseThrow();
         session.validate(methodology.check(document, this::findingId), clock.instant());
         if (session.status() == ImportStatus.REJECTED) {
             sessions.save(session);
-            return report(session, false);
+            return finished(session);
         }
         Instant now = clock.instant();
         ModelId modelId = ModelId.of(uuids.next());
@@ -138,7 +138,8 @@ public final class ImportService {
                 version.versionNo(), opaque, now);
         sessions.save(session);
         events.publish(List.of(applied));
-        return report(session, false);
+        metrics.opaqueObjects(modelId.value(), opaque);
+        return finished(session);
     }
 
     private ImportRequest request(WorkspaceId workspace, String fileName, byte[] content, String key,
@@ -149,6 +150,14 @@ public final class ImportService {
         } catch (IllegalArgumentException invalid) {
             throw new InterchangeException("IXC_INVALID_REQUEST", Failure.UNPROCESSABLE, invalid.getMessage(), Map.of());
         }
+    }
+
+    private ImportReport finished(ImportSession session) {
+        ImportReport report = report(session, false);
+        metrics.importFinished(report.status() == ImportStatus.APPLIED ? "applied"
+                : report.rejectedAsCorrupt() ? "rejected_corrupt" : "rejected_strict", session.strictMode(),
+                session.findings());
+        return report;
     }
 
     private static ImportReport report(ImportSession session, boolean replayed) {

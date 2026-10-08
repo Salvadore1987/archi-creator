@@ -26,8 +26,7 @@ public class InterchangeConfiguration {
 
     @Bean
     InterchangeMetrics interchangeMetrics(MeterRegistry registry) {
-        MicrometerUseCaseMetrics metrics = new MicrometerUseCaseMetrics(registry, "interchange", ErrorCodes::of);
-        return metrics::observe;
+        return new InterchangeMicrometerMetrics(registry);
     }
 
     @Bean

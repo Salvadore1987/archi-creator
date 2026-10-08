@@ -47,8 +47,11 @@ public final class ModelQueryService {
 
     /** Дерево модели: папки, элементы, связи, список представлений (OpenModel, NFR-01). */
     public ArchitectureModel open(EditorIdentity actor, ModelId modelId) {
-        return kernel.run(Operation.OPEN_MODEL, actor,
-                () -> kernel.unitOfWork.read(() -> kernel.visibleModel(modelId, actor, AclAccess.READ)));
+        return kernel.run(Operation.OPEN_MODEL, actor, () -> kernel.unitOfWork.read(() -> {
+            ArchitectureModel model = kernel.visibleModel(modelId, actor, AclAccess.READ);
+            kernel.metrics.modelSize(modelId, model.elements().size());
+            return model;
+        }));
     }
 
     /** Payload представления по требованию (OpenView). */
@@ -62,8 +65,12 @@ public final class ModelQueryService {
 
     /** Отчёт валидации метамодели без ИИ (FR-10): импортированные нарушения видны здесь. */
     public List<ValidationFinding> validate(EditorIdentity actor, ModelId modelId) {
-        return kernel.run(Operation.VALIDATE_MODEL, actor, () -> kernel.unitOfWork.read(
-                () -> validator.validate(kernel.visibleModel(modelId, actor, AclAccess.READ))));
+        return kernel.run(Operation.VALIDATE_MODEL, actor, () -> kernel.unitOfWork.read(() -> {
+            List<ValidationFinding> findings = validator.validate(kernel.visibleModel(modelId, actor, AclAccess.READ));
+            kernel.metrics.validationFindings(modelId, findings.stream().collect(java.util.stream.Collectors
+                    .groupingBy(f -> f.severity().name(), java.util.stream.Collectors.counting())));
+            return findings;
+        }));
     }
 
     /** Действующая блокировка — чтобы остальные видели модель read-only с владельцем (UC-MDL-005). */

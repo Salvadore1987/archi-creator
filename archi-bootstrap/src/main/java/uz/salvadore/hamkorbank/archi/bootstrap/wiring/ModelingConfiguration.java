@@ -68,8 +68,7 @@ public class ModelingConfiguration {
 
     @Bean
     UseCaseMetrics modelingMetrics(MeterRegistry registry) {
-        MicrometerUseCaseMetrics metrics = new MicrometerUseCaseMetrics(registry, "modeling", ErrorCodes::of);
-        return metrics::observe;
+        return new ModelingMicrometerMetrics(registry);
     }
 
     /** До этапа 7a Git не настроен ни у кого: снимки не чистятся (FR-47). */

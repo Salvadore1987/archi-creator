@@ -507,15 +507,25 @@
 
 ### 2.8 Наблюдаемость
 
-- ⬜ Метрики из `spec/nfr/*.yaml`: `*_usecase_requests_total`,
+- ✅ Метрики из `spec/nfr/*.yaml`: `*_usecase_requests_total`,
       `*_usecase_duration_seconds`, `*_usecase_errors_total` с label `error_code`
-      = код инварианта, `modeling_lock_wait_seconds`,
-      `modeling_validation_findings_total`
-- ⬜ Actuator: `/actuator/health`, `/metrics`, `/prometheus`
-      ([§8.4](../backend.md#84-логирование-и-наблюдаемость))
-- ⬜ Структурированные логи JSON с `traceId`, пользователем и id модели,
-      маскирование PII
-- ⬜ Алерты `HighErrorRateSaveModel`, `SlowOpenModelP95`, `ConcurrentSaveConflicts`
+      = код инварианта, `modeling_lock_wait_seconds`, `modeling_model_elements`,
+      `modeling_validation_findings` (gauge — Prometheus не даёт gauge суффикс
+      `_total`, имя в спеке с ним), `interchange_import_sessions_total`,
+      `interchange_import_findings_total`, `interchange_opaque_objects`,
+      `interchange_export_loss_entries_total`. Ожидание блокировки — остаток срока
+      чужой блокировки в момент отказа: сервер не ждёт, второй получает `409` сразу
+- ✅ Actuator: `/actuator/health`, `/metrics`, `/prometheus`
+      ([§8.4](../backend.md#84-логирование-и-наблюдаемость)) — с этапа 0;
+      метрики сценариев в Prometheus проверены (`ObservabilityIT`)
+- ✅ Структурированные логи JSON (ECS, профиль `prod`) с `traceId`, пользователем
+      и id модели в MDC — `RequestCorrelationFilter`; `traceId` берётся из W3C
+      `traceparent` и возвращается заголовком `X-Trace-Id`. Маскирование PII —
+      в MDC только subject, путь и trace-id, персональных полей в домене нет
+      (`pii_fields: []`). Экспорт спанов (OpenTelemetry) — не этап 2
+- ✅ Алерты `HighErrorRateSaveModel`, `SlowOpenModelP95`, `ConcurrentSaveConflicts`
+      и из interchange — `RoundTripLossDetected`, `SlowImportP95` —
+      `deploy/prometheus/alerts.yaml`, выражения дословно из спеки
 
 ### 2.9 Тесты этапа
 

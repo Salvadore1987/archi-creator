@@ -1,0 +1,61 @@
+# ───────────────────────────────────────────────────────────────────
+# Правила алертов Prometheus — исполнимая форма observability.alerts
+# из spec/nfr/modeling.yaml и spec/nfr/interchange.yaml. Выражения
+# переписаны дословно; источник правды — спека, файл — её копия для
+# Prometheus, и правится вслед за ней.
+#
+# Метрики выставляет /actuator/prometheus (роль ADMIN, docs/backend.md §8.4).
+# Алерт GitBindingUnreachable из interchange.yaml появится на этапе 7a,
+# вместе с PushModelToGit.
+# ───────────────────────────────────────────────────────────────────
+groups:
+  - name: archi-creator-modeling
+    rules:
+      - alert: HighErrorRateSaveModel
+        expr: |
+          sum(rate(modeling_usecase_errors_total{usecase="SaveModel"}[5m]))
+            / sum(rate(modeling_usecase_requests_total{usecase="SaveModel"}[5m])) > 0.01
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: Ошибка сохранения — прямая угроза потери работы архитектора.
+
+      - alert: SlowOpenModelP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(modeling_usecase_duration_seconds_bucket{usecase="OpenModel"}[5m]))
+          ) > 1
+        for: 10m
+        labels: { severity: ticket }
+        annotations:
+          summary: Нарушение NFR-01 — открытие модели дольше секунды в p95.
+
+      - alert: ConcurrentSaveConflicts
+        expr: |
+          sum(rate(modeling_usecase_errors_total{error_code="INV-MDL-006"}[15m])) > 0.05
+        for: 15m
+        labels: { severity: ticket }
+        annotations:
+          summary: |
+            Частые 409 означают, что блокировка не удерживается или UI её не
+            показывает: пользователи наступают друг другу на правки.
+
+  - name: archi-creator-interchange
+    rules:
+      - alert: RoundTripLossDetected
+        expr: |
+          sum(rate(interchange_export_loss_entries_total{format=~"ARCHIMATE|GIT_YAML"}[5m])) > 0
+        for: 0m
+        labels: { severity: page }
+        annotations:
+          summary: Потеря при выгрузке в формат без потерь — нарушение INV-IXC-005 в проде.
+
+      - alert: SlowImportP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(interchange_usecase_duration_seconds_bucket{usecase="ImportArchimateFile"}[15m]))
+          ) > 3
+        for: 15m
+        labels: { severity: ticket }
+        annotations:
+          summary: Нарушение NFR-02 — импорт дольше трёх секунд в p95.

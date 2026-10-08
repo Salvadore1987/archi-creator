@@ -28,8 +28,13 @@ public final class LockService {
             if (header.status() != ModelStatus.ACTIVE) {
                 throw new ModelingException("INV-MDL-002", Failure.CONFLICT, "удалённая модель не редактируется");
             }
+            var current = kernel.locks.find(modelId);
+            current.filter(l -> !l.heldBy(actor.subject(), kernel.now()) && l.status(kernel.now())
+                            == uz.salvadore.hamkorbank.archi.modeling.domain.lock.LockStatus.HELD)
+                    .ifPresent(l -> kernel.metrics.lockWait(modelId,
+                            java.time.Duration.between(kernel.now(), l.expiresAt())));
             ModelLock.Acquisition acquisition =
-                    ModelLock.acquire(modelId, kernel.locks.find(modelId), actor, kernel.now(), kernel.lockTtl);
+                    ModelLock.acquire(modelId, current, actor, kernel.now(), kernel.lockTtl);
             kernel.locks.save(acquisition.lock());
             acquisition.expiredPrevious().ifPresent(e -> kernel.events.publish(List.of(e)));
             return acquisition.lock();
