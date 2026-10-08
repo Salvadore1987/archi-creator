@@ -262,8 +262,8 @@ value_objects:
 
   ArchiId:
     underlying: String
-    constraints: [pattern: "^id-[0-9a-f]{24}$"]
-    generation: preserved_on_import_generated_in_same_format_for_new
+    constraints: [pattern: "^[A-Za-z0-9_][A-Za-z0-9_.-]{0,254}$"]
+    generation: preserved_on_import_generated_as_id_32_hex_for_new
     uniqueness: per_model
     serialization: { json: string }
     note: |

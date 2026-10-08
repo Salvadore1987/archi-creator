@@ -25,7 +25,7 @@ stages: ["2"]
 
 **Then**
 1. Создаётся `ArchitectureModel` в состоянии `ACTIVE` с `UUIDv7` как внутренним
-   ключом и `archi_id` формата `id-<24 hex>`.
+   ключом и `archi_id` формата `id-<32 hex>` ([`ADR-0002`](../../../adr/0002-dual-identity.md)).
 2. Заводится дерево папок с восемью системными корнями: `Strategy`, `Business`,
    `Application`, `Technology`, `Motivation`, `Other`, `Relations`, `Views`
    (`INV-MDL-009`). Они создаются сразу, а не по первому элементу: файл Archi

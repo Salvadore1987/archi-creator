@@ -190,7 +190,7 @@ value_objects:
 
   ElementRef:
     composite:
-      - { name: archiId, type: String, constraints: [not_null, pattern: "^id-[0-9a-f]{24}$"] }
+      - { name: archiId, type: String, constraints: [not_null, pattern: "^[A-Za-z0-9_][A-Za-z0-9_.-]{0,254}$"] }
       - { name: name,    type: String, constraints: [not_null] }
     note: |
       Единственный способ, которым помощник указывает на модель.

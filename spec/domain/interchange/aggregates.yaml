@@ -222,7 +222,14 @@ value_objects:
 
   ArchiId:
     underlying: String
-    constraints: [pattern: "^id-[0-9a-f]{24}$"]
+    constraints: [pattern: "^[A-Za-z0-9_][A-Za-z0-9_.-]{0,254}$"]
+    generation: "id-<32 hex>, как UUIDFactory в Archi"
+    note: |
+      Шаблон принимает любой идентификатор, допустимый в файле Archi: сам Archi
+      требует от id только пригодности для XML ID. Формат id-<24 hex> из
+      эталонной модели — частный случай; Archi генерирует id-<32 hex>, а модели
+      старых версий и импорт из OEF дают иные формы. Узкий шаблон отклонил бы
+      настоящий файл Archi — FR-01.
     shared_with: modeling
     serialization: { json: string }
 
