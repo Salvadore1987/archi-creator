@@ -96,14 +96,19 @@ public class InterchangeController {
 
     /**
      * Выгрузка зафиксированной версии (INV-IXC-008): {@code version} — номер, без него —
-     * последняя. Формат {@code archimate}; OEF придёт на этапе 6a.
+     * последняя. Форматы {@code archimate} и {@code csv} (§5.2: {@code folder} — archi_id
+     * папки, {@code sep} — разделитель); OEF придёт на этапе 6a.
      */
     @GetMapping("/models/{id}/export")
     public ResponseEntity<byte[]> export(EditorIdentity actor, @PathVariable UUID id,
                                          @RequestParam(defaultValue = "archimate") String fmt,
-                                         @RequestParam Optional<Long> version) {
+                                         @RequestParam Optional<Long> version,
+                                         @RequestParam Optional<String> folder,
+                                         @RequestParam Optional<String> sep) {
         ExportService.Export export = switch (fmt) {
             case "archimate" -> exports.archimate(actor, id, version);
+            case "csv" -> exports.catalogCsv(actor, id, version,
+                    uz.salvadore.hamkorbank.archi.interchange.application.exporting.CatalogCsvOptions.of(sep, folder));
             case "oef" -> throw new InterchangeException("IXC_FORMAT_NOT_AVAILABLE", Failure.UNPROCESSABLE,
                     "выгрузка в Open Exchange Format появится на этапе 6a", Map.of("format", fmt));
             default -> throw new InterchangeException("IXC_UNKNOWN_FORMAT", Failure.UNPROCESSABLE,

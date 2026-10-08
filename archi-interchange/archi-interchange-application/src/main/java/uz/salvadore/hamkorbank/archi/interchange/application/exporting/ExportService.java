@@ -38,6 +38,7 @@ public final class ExportService {
     private final InterchangeMetrics metrics;
     private final Clock clock;
     private final UuidV7 uuids;
+    private final CatalogCsvWriter csv = new CatalogCsvWriter();
 
     public ExportService(VersionService versions, InterchangeEvents events, InterchangeMetrics metrics, Clock clock) {
         this.versions = versions;
@@ -59,6 +60,25 @@ public final class ExportService {
                     uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
             return deliver(actor, snapshot, ExportFormat.ARCHIMATE, ExportOptions.none(),
                     Artifact.of(snapshot.xml(), ARCHIMATE_MEDIA_TYPE, fileName(snapshot, "archimate")));
+        });
+    }
+
+    /**
+     * Каталог в CSV (§5.2, FR-45) — из той же зафиксированной версии, что и файл модели:
+     * таблица и {@code .archimate} одной версии не расходятся (INV-IXC-008). Доступно
+     * {@code VIEWER}: читатель забирает ландшафт, не получая прав на правку.
+     */
+    public Export catalogCsv(EditorIdentity actor, UUID modelId, Optional<Long> versionNo, CatalogCsvOptions options) {
+        InterchangeOperation operation = InterchangeOperation.EXPORT_CATALOG_CSV;
+        return metrics.observe(operation.useCase(), () -> {
+            operation.require(actor);
+            VersionSnapshot snapshot = versions.snapshot(actor,
+                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
+            byte[] zip = csv.write(snapshot.xml(), options);
+            ExportOptions exportOptions = new ExportOptions(Optional.empty(), Optional.empty(), Optional.empty(),
+                    Optional.of(String.valueOf(options.separator())), options.folderArchiId());
+            return deliver(actor, snapshot, ExportFormat.CSV_CATALOG, exportOptions,
+                    Artifact.of(zip, "application/zip", fileName(snapshot, "csv.zip")));
         });
     }
 

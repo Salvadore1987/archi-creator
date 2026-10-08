@@ -83,10 +83,14 @@ paths:
       x-operation: ExportArchimate
       parameters:
         - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
-        - { in: query, name: fmt, required: false, schema: { type: string, enum: [archimate, oef], default: archimate },
-            description: "oef — этап 6a, сейчас 422 `IXC_FORMAT_NOT_AVAILABLE`." }
+        - { in: query, name: fmt, required: false, schema: { type: string, enum: [archimate, csv, oef], default: archimate },
+            description: "csv — каталог (§5.2, FR-45, x-operation ExportCatalogCsv); oef — этап 6a, сейчас 422 `IXC_FORMAT_NOT_AVAILABLE`." }
         - { in: query, name: version, required: false, schema: { type: integer, format: int64 },
             description: "Номер версии; без него — последняя." }
+        - { in: query, name: folder, required: false, schema: { type: string },
+            description: "Только csv: archi_id папки — выгрузка поддерева («каталог приложений»)." }
+        - { in: query, name: sep, required: false, schema: { type: string, enum: [";", ",", "tab"], default: ";" },
+            description: "Только csv: разделитель; ';' — для русской локали Excel." }
       responses:
         '200':
           description: |
@@ -94,6 +98,9 @@ paths:
             в заголовке `X-Archi-Version-No`, отпечаток — в `ETag`.
           content:
             application/xml: { schema: { type: string, format: binary } }
+            application/zip:
+              schema: { type: string, format: binary }
+              description: "csv: elements.csv и relations.csv, UTF-8 с BOM." 
         '404':
           description: Модели нет или она скрыта списком доступа (INV-MDL-011).
           content:
