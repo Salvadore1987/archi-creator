@@ -91,7 +91,7 @@ aggregates:
       - { name: modelId,    type: ModelId,             constraints: [not_null, immutable] }
       - { name: folderId,   type: FolderId,            constraints: [not_null] }
       - { name: archiId,    type: ArchiId,             constraints: [not_null, immutable] }
-      - { name: archiType,  type: ArchiType,           constraints: [not_null, immutable], default: "archimate:ArchimateDiagramModel", note: "SketchModel и canvas:CanvasModel хранятся и выгружаются, но не редактируются (FR-03)" }
+      - { name: archiType,  type: DiagramType,         constraints: [not_null, immutable], default: "archimate:ArchimateDiagramModel", note: "SketchModel и canvas:CanvasModel хранятся и выгружаются, но не редактируются (FR-03)" }
       - { name: name,       type: String,              constraints: [not_null, max: 500] }
       - { name: documentation, type: Optional<String>, constraints: [optional] }
       - { name: viewpoint,  type: Optional<String>,    constraints: [optional] }
@@ -256,7 +256,7 @@ entities:
       - { name: id,        type: ViewNodeId,           constraints: [not_null, immutable] }
       - { name: parentId,  type: Optional<ViewNodeId>, constraints: [optional], note: "вложенность в Group или в другой узел" }
       - { name: archiId,   type: ArchiId,              constraints: [not_null, immutable] }
-      - { name: archiType, type: ArchiType,            constraints: [not_null, immutable], note: "xsi:type узла: archimate:DiagramObject, archimate:Group, archimate:Note, archimate:DiagramModelReference, узлы скетча и холста" }
+      - { name: archiType, type: DiagramType,          constraints: [not_null, immutable], note: "xsi:type узла: archimate:DiagramObject, archimate:Group, archimate:Note, archimate:DiagramModelReference, узлы скетча и холста" }
       - { name: kind,      type: ViewNodeKind,         constraints: [not_null, computed: "derived from archiType"] }
       - { name: elementId, type: Optional<ElementId>,  constraints: [optional, not_null_when: "kind = DIAGRAM_OBJECT", null_when: "kind in (GROUP, NOTE)"] }
       - { name: bounds,    type: Bounds,               constraints: [not_null] }
@@ -272,7 +272,7 @@ entities:
     fields:
       - { name: id,             type: ViewEdgeId,     constraints: [not_null, immutable] }
       - { name: archiId,        type: ArchiId,        constraints: [not_null, immutable] }
-      - { name: archiType,      type: ArchiType,      constraints: [not_null, immutable], default: "archimate:Connection" }
+      - { name: archiType,      type: DiagramType,    constraints: [not_null, immutable], default: "archimate:Connection" }
       - { name: relationshipId, type: Optional<RelationshipId>, constraints: [optional], note: "null у соединений, не отражающих связь модели" }
       - { name: source,         type: ViewEndpoint,   constraints: [not_null], note: "узел или другое ребро того же представления" }
       - { name: target,         type: ViewEndpoint,   constraints: [not_null] }
@@ -315,6 +315,15 @@ value_objects:
       Намеренно не enum: типы вне текущей фазы метамодели должны сохраняться
       и отдаваться при экспорте (FR-03). Каталог поддержанных типов живёт
       в метамодели и проверяется отдельно от хранения.
+
+  DiagramType:
+    underlying: String
+    constraints: [pattern: "^[A-Za-z][A-Za-z0-9]*:[A-Za-z][A-Za-z0-9]*$"]
+    serialization: { json: string }
+    note: |
+      xsi:type представления, узла и ребра. Не ArchiType: холст Archi пишет свои
+      объекты в пространстве canvas: (canvas:CanvasModel, canvas:CanvasModelBlock),
+      и шаблон ArchiType отклонил бы их — а они есть в фикстуре unknown_extension.
 
   SortOrder:
     underlying: Long

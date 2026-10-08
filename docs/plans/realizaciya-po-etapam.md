@@ -346,21 +346,22 @@
 
 ### 2.2 Домен (`archi-modeling-domain`)
 
-- ⬜ Агрегаты `ArchitectureModel`, `View`, `ModelLock`, `ModelVersion`,
-      `Workspace`
-- ⬜ Сущности `ModelFolder`, `Element`, `Relationship`, `ViewNode`, `ViewEdge`
-- ⬜ VO: идентификаторы на `UUIDv7` (генерация на стороне приложения),
+- ✅ Агрегаты `ArchitectureModel`, `View`, `ModelLock`, `ModelVersion`,
+      `Workspace`, плюс `ModelAccessList` (FR-29) и `IdempotencyRecord`
+      (`INV-MDL-003`) — оба заведены в спеке на §2.0
+- ✅ Сущности `ModelFolder`, `Element`, `Relationship`, `ViewNode`, `ViewEdge`
+- ✅ VO: идентификаторы на `UUIDv7` (генерация на стороне приложения),
       `SortOrder`, `Bounds`, `Bendpoint`, `PropertyEntry`, `StyleOverride`,
-      `RawXml`, `EditorIdentity`
-- ⬜ State machine модели: `ACTIVE → DELETED → PURGED`, прямой
+      `RawXml`, `EditorIdentity`, `ConceptRef`, `ViewEndpoint`, `DiagramType`
+- ✅ State machine модели: `ACTIVE → DELETED → PURGED`, прямой
       `ACTIVE → PURGED` запрещён (`INV-MDL-002`)
-- ⬜ State machine блокировки: `HELD → RELEASED | EXPIRED`; просроченная
+- ✅ State machine блокировки: `HELD → RELEASED | EXPIRED`; просроченная
       блокировка не даёт прав (`INV-MDL-006`)
-- ⬜ Инварианты как проверки домена: `INV-MDL-001`, `004`, `005`, `007`,
-      `008`, `009`, `010`
-- ⬜ Доменные события `ModelVersionCommitted`, `ModelLockReleased`,
-      `ModelDeleted` ([events.yaml](../../spec/domain/modeling/events.yaml)),
-      публикация `direct` после коммита (`ADR-0003`, временно)
+- ✅ Инварианты как проверки домена: `INV-MDL-001`, `004`, `005`, `007`,
+      `008`, `009`, `010`, `011`; отчёт валидации `ModelValidator` (FR-10)
+- ✅ Доменные события `ModelVersionCommitted`, `ModelLockReleased`,
+      `ModelDeleted` ([events.yaml](../../spec/domain/modeling/events.yaml)).
+      Публикация `direct` после коммита — в application-слое (§2.4)
 
 ### 2.3 Персистентность (`archi-*-adapter-persistence`)
 
@@ -1167,3 +1168,24 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
   исправлена до кода. Закрыты пункты 1–3 и 8 журнала: имя модели — 500 символов,
   UC-IXC-001 проходит `PARSED`, §4.3 относит Git к 7a, у FR-29 появились
   `INV-MDL-011` и `UC-MDL-007`. Решения записаны в §2.0.
+- **2026-10-08. Домен modeling: изменения копит агрегат, пишет хранилище.**
+  Модель на 400 элементов не переписывается целиком ради одного
+  переименования: `TrackedMap` помнит добавленное, изменённое и удалённое
+  с момента загрузки, репозиторий пишет только это. Представления — отдельный
+  агрегат, модель знает о них `ViewRef` (папка и место в нумерации): без этого
+  нельзя ни отказать в удалении непустой папки, ни дать новому объекту позицию
+  в папке, где лежат и представления.
+  Два решения, которых в спеке не было, приняты в коде и записаны здесь:
+  **непустая папка не удаляется** (`MDL_FOLDER_NOT_EMPTY`, `409`) — Archi
+  удаляет содержимое рекурсивно, но это тот же каскад, от которого
+  `INV-MDL-004` отказывается для связей; и **элемент кладётся только в поддерево
+  корня своего слоя** — иначе Archi при открытии переложит его сам и round-trip
+  сломается на структуре (`INV-MDL-009`, «перекладка объектов»). Импорт этим
+  не ограничен: что пришло в файле, то и хранится.
+  Холст Archi пишет объекты в пространстве `canvas:`, а `ArchiType` знает лишь
+  `archimate:` — для представлений, узлов и рёбер заведён `DiagramType`, правка
+  внесена в `aggregates.yaml`. **Уникальность `archi_id` между таблицами база
+  не держит** (у каждой таблицы свой `UNIQUE (model_id, archi_id)`): агрегат
+  модели проверяет папки, элементы, связи и представления, агрегат представления —
+  свои узлы и рёбра; столкновение узла с элементом исключает генератор
+  (128 случайных бит), а импорт — читатель, отклоняющий дубль на разборе.

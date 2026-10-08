@@ -1,0 +1,21 @@
+package uz.salvadore.hamkorbank.archi.modeling.domain.view;
+
+/**
+ * Геометрия узла относительно родителя: у корневых — относительно представления,
+ * у детей группы — относительно группы (§3.4, п. 4). {@code -1} в размере — «по
+ * умолчанию» Archi: так записан узел, размер которого не меняли.
+ */
+public record Bounds(int x, int y, int width, int height) {
+
+    public static final int DEFAULT_SIZE = -1;
+
+    public Bounds {
+        if (!validSize(width) || !validSize(height)) {
+            throw new IllegalArgumentException("размер узла положителен или -1: " + width + "×" + height);
+        }
+    }
+
+    public static boolean validSize(int size) {
+        return size > 0 || size == DEFAULT_SIZE;
+    }
+}
