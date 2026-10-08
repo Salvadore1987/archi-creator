@@ -1,5 +1,5 @@
 ---
-version: 1.1
+version: 1.2
 last_modified: 2026-09-29
 ---
 
@@ -42,7 +42,10 @@ decisions:
     note: |
       Реализовано: 17 проектов в реакторе, граница домена подкреплена правилом
       maven-enforcer-plugin в шести модулях. Изоляция контекстов друг от друга
-      остаётся за ArchUnit. Ход работы — docs/plans/multi-module-pom.md.
+      закрыта 2026-09-29 правилами ArchUnit в archi-bootstrap
+      (BoundedContextIsolationTest): сборка её не держит, потому что в bootstrap
+      все двенадцать модулей встречаются на одном classpath. Ход работы —
+      docs/plans/multi-module-pom.md.
 
   - id: ADR-0002
     title: Двойная идентификация — внутренний UUIDv7 и внешний archi_id
@@ -209,3 +212,17 @@ decisions:
     rationale_ref: docs/backend.md#75-лимиты-расходов
     requirements: [FR-51, FR-52, FR-53]
     anchors: [INV-ADV-005, INV-ADV-006, INV-ADV-007]
+
+  - id: ADR-0016
+    title: Фронтенд внутри archi-bootstrap, а не отдельным модулем реактора
+    status: accepted
+    date: 2026-09-29
+    kind: architecture
+    adr_file: 0016-frontend-location.md
+    affects: [ui]
+    requirements: []
+    note: |
+      Фронтенд не участвует в графе зависимостей Java: его результат —
+      статика в target/classes/static, и ни один модуль от него не зависит.
+      Восемнадцатый проект реактора не являлся бы ни слоем, ни контекстом
+      и ломал бы правило ADR-0001, по которому здесь заводят модули.

@@ -10,11 +10,17 @@
 
 ## Статус
 
-**Этап 0 — каркас.** В репозитории спецификация, макеты интерфейса на реальных данных
-и раскладка Maven по [`ADR-0001`](spec/adr/0001-maven-multi-module.md): 17 проектов,
-Spring Boot 4.1.1, fat jar на выходе. Логики нет ни строки — модули пусты, в них только
-`package-info.java`. Приложение собирается, но не запускается: `application.yaml`,
-миграции Flyway, `docker-compose.yml` и фронтенд-модуль ещё не заведены.
+**Этап 0 закрыт (2026-09-29). В работе — этап 1, кодек `.archimate`.**
+Приложение поднимается: `docker compose up -d` даёт `app`, `postgres:16` и `keycloak:26`,
+`/actuator/health` отвечает UP, вход через Keycloak выдаёт JWT с ролью
+`VIEWER`/`ARCHITECT`/`ADMIN`. Есть конфигурация и профили `dev`/`prod`, миграция Flyway,
+ресурс-сервер OAuth2, realm Keycloak в репозитории, каркас React 19 + TypeScript + Vite
+внутри jar ([`ADR-0016`](spec/adr/0016-frontend-location.md)), правила ArchUnit
+на изоляцию контекстов и конвейер CI с гейтами на спеку и на сообщения коммитов.
+
+**Доменной логики нет ни строки:** в двенадцати модулях-слоях только `package-info.java`,
+весь код этапа 0 живёт в `archi-bootstrap`. Редактора, кодека и API ещё нет —
+они приходят этапами 1–4.
 
 Что уже готово и служит входом в разработку:
 
@@ -38,7 +44,7 @@ Spring Boot 4.1.1, fat jar на выходе. Логики нет ни стро�
 | [`spec/application/`](spec/application/) | 11 use case'ов `UC-<BC>-NNN`: Given/When/Then, порты, отказы |
 | [`spec/ui/`](spec/ui/README.md) | Слой интерфейса: 21 правило `UI-NNN`, токены стиля, контракт геометрии фигур |
 | [`spec/contracts/`](spec/contracts/) | OpenAPI и AsyncAPI по контекстам |
-| [`spec/adr/`](spec/adr/README.md) | Регистр решений: 15 записей, три с разбором в формате MADR |
+| [`spec/adr/`](spec/adr/README.md) | Регистр решений: 16 записей, четыре с разбором в формате MADR |
 | [`spec/nfr/`](spec/nfr/) | SLO, latency, throughput, security по контекстам |
 
 Начинать чтение — с [`spec/README.md`](spec/README.md).
@@ -64,8 +70,10 @@ tools/render-requirements-index.py  # перегенерация §2 из рее
 ```
 
 Python 3.9+, без зависимостей. Каждый возвращает ненулевой код при первом нарушении,
-поэтому годится как gate в CI. Сейчас: 474 ссылки, 78 якорей, 59 из 61 требования
-покрыты — два непокрытых объявлены полем `note` с объяснением.
+поэтому годятся как gate в CI — и стоят там с этапа 0
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)). Сейчас: 596 ссылок,
+79 якорей, 59 из 61 требования покрыты — два непокрытых объявлены полем `note`
+с объяснением.
 
 ## Макеты
 
@@ -100,13 +108,23 @@ open docs/mockups/index.html
 Фронтенд собирается тем же Maven-прогоном (`frontend-maven-plugin`) и укладывается в jar —
 на выходе один артефакт.
 
-## Сборка
+## Сборка и запуск
 
-Требуется JDK 25 и Maven 3.9+.
+Требуется JDK 25 и Docker. Maven приходит обёрткой — `./mvnw` качает 3.9.16 сам,
+Node ставит `frontend-maven-plugin`.
 
 ```
-mvn clean package          # 17 модулей, jar в archi-bootstrap/target/
+./mvnw clean package                          # 17 модулей + фронтенд, jar в archi-bootstrap/target/
+cp .env.example .env                          # заполнить пароли; .env в репозиторий не попадает
+docker compose build && docker compose up -d  # app + postgres:16 + keycloak:26
 ```
+
+Приложение — `http://localhost:8080`, Keycloak — `http://localhost:8081`
+(демонстрационные пользователи realm'а — [`deploy/keycloak/README.md`](deploy/keycloak/README.md)).
+Порты меняются переменными в `.env`, если заняты соседним проектом.
+
+Разработка фронтенда — отдельный процесс с прокси на приложение:
+[`archi-bootstrap/src/main/frontend/README.md`](archi-bootstrap/src/main/frontend/README.md).
 
 Раскладка — по [`ADR-0001`](spec/adr/0001-maven-multi-module.md): модуль на слой
 и bounded context, фреймворк только в адаптерах и в `archi-bootstrap`. У доменных
@@ -118,17 +136,41 @@ archi-<bc>/archi-<bc>-application         -> domain
 archi-<bc>/archi-<bc>-adapter-rest        -> application + Spring Web
 archi-<bc>/archi-<bc>-adapter-persistence -> application + Spring Data JPA
 archi-bootstrap                           все 12 + Spring Boot, здесь jar
+                                          + конфигурация, миграции, security,
+                                            фронтенд (ADR-0016)
 ```
 
-Целевая сборка по [§10.2](docs/archi-creator.md#102-сборка) добавит к этому прогон
-фронтенда и запуск:
+Изоляцию контекстов друг от друга сборка не держит — в `archi-bootstrap` все
+двенадцать модулей встречаются на одном classpath. Её держат правила ArchUnit
+(`BoundedContextIsolationTest`) по карте из
+[`spec/domain/bounded-contexts.yaml`](spec/domain/bounded-contexts.yaml).
 
-```
-mvn clean package          # + npm ci && npm run build → classes/static
-docker compose build && docker compose up -d
-```
+## Граф зависимостей
 
-Требуется JDK 25 и Maven 3.9+.
+Перерисовывается по закрытии каждого этапа — `tools/render-depgraph.py`
+([depgraph-maven-plugin](https://github.com/ferstl/depgraph-maven-plugin),
+формат PlantUML, версии на узлах). Состояние ниже — **этап 0**.
+
+**Реактор целиком** (`aggregate`): 17 проектов и всё, что они тянут.
+
+[![Граф зависимостей реактора](docs/dependencies/reactor.png)](docs/dependencies/reactor.png)
+
+**Модуль `archi-bootstrap`** (`graph` с `showDuplicates` и `showConflicts`):
+то же дерево плюс дубли и конфликты версий — их на этапе 0 нет, версии
+третьих сторон приходят из BOM Spring Boot и не расходятся.
+
+[![Граф зависимостей archi-bootstrap](docs/dependencies/archi-bootstrap.png)](docs/dependencies/archi-bootstrap.png)
+
+Картинки широкие: в README они сжаты до ширины страницы, читать — по клику.
+Исходники PlantUML лежат рядом (`docs/dependencies/*.puml`) и в отличие
+от PNG видны в диффе: изменение зависимостей читается по тексту, а не
+по перекрашенным пикселям.
+
+Графа два, потому что одним не обойтись: флаги `showDuplicates`
+и `showConflicts` понимает только цель `graph`, у `aggregate` таких
+параметров нет — агрегированный граф склеивает деревья разных модулей,
+и «дубль» в нём означал бы разное для разных пар.
+
 
 ## Принципы, которые стоит знать до первого коммита
 

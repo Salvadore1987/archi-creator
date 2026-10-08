@@ -10,10 +10,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Состояние репозитория
 
-**Этап 0 — каркас.** Собирается multi-module Maven по
+**Этапы 0 и 1 закрыты (2026-10-08). Следующий — этап 2, БД и REST API.**
+Собирается multi-module Maven по
 [`ADR-0001`](spec/adr/0001-maven-multi-module.md): 17 проектов в реакторе — родитель,
 три агрегатора контекстов, двенадцать модулей-слоёв, `archi-bootstrap` с классом запуска
-и fat jar. Логики нет ни строки: в модулях только `package-info.java`.
+и fat jar. Код есть в двух доменных модулях — `archi-modeling-domain` (метамодель)
+и `archi-interchange-domain` (кодек); в `application`, адаптерах и всём `advisor` —
+только `package-info.java`.
 
 ```
 archi-<bc>/archi-<bc>-domain              зависимостей нет, кроме junit (test)
@@ -32,9 +35,50 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 в любом scope, включая транзитивные. Нужен Spring — значит, код не в том модуле.
 Конфигурация правила одна, в `pluginManagement` родителя.
 
-Ещё не заведено: `application.yaml`, Flyway-миграции, `docker-compose.yml`,
-фронтенд-модуль (нет ни `package.json`, ни исходников React), генерация из
-`spec/contracts/*.openapi.yaml`, ни одного теста.
+**Приложение запускается.** `docker compose up -d` поднимает `app`, `postgres:16`
+и `keycloak:26` ([§10.1](docs/archi-creator.md#101-состав)), `/actuator/health` = UP,
+вход через Keycloak отдаёт JWT с ролью `VIEWER`/`ARCHITECT`/`ADMIN` (FR-28).
+Секреты — из `.env` (образец `.env.example`), в репозиторий не попадают (NFR-06).
+
+Что появилось на этапе 0 и где лежит:
+
+| Что | Где |
+|---|---|
+| Конфигурация и профили `dev`/`prod` | `archi-bootstrap/src/main/resources/application*.yaml` |
+| Схема БД | `archi-bootstrap/src/main/resources/db/migration/V1__baseline.sql` — одна таблица `workspace` |
+| Безопасность: ресурс-сервер, роли из `realm_access`, заглушка `dev` | `archi-bootstrap/.../bootstrap/security/` |
+| Realm Keycloak с тремя ролями и клиентом SPA | `deploy/keycloak/archi-realm.json` |
+| Развёртывание | `docker-compose.yml`, `Dockerfile` (упаковывает готовый jar, сам не собирает) |
+| Каркас фронтенда | `archi-bootstrap/src/main/frontend/` — React 19 + TS + Vite ([`ADR-0016`](spec/adr/0016-frontend-location.md)) |
+| Конвейер и гейты | `.github/workflows/ci.yml` |
+
+Что появилось на этапе 1 и где лежит:
+
+| Что | Где |
+|---|---|
+| Каталог типов ArchiMate 3.2 со слоями и фазами, `ArchiType` | `archi-modeling-domain/.../modeling/domain/metamodel/` |
+| Матрица допустимых связей — таблица Archi без правок | `archi-modeling-domain/src/main/resources/.../metamodel/archimate-3.2-relationships.xml` |
+| Документ `.archimate` как значение (`ModelDocument`, `DocumentNode`, `RawXmlFragment`) | `archi-interchange-domain/.../interchange/domain/document/` |
+| Читатель на StAX и детерминированный писатель | `archi-interchange-domain/.../interchange/domain/codec/` |
+| Сессия импорта, идемпотентность, задание выгрузки | `.../interchange/domain/importing/`, `.../exporting/` |
+| Golden-file round-trip, `assertXmlEquivalent`, фикстуры §9.1 | `archi-bootstrap/src/test/.../bootstrap/roundtrip/`, `archi-bootstrap/src/test/resources/fixtures/` |
+
+Эталон round-trip читается прямо из `docs/Hamkorbank_AS_IS_strict.archimate`, копии
+в фикстурах нет. Писатель пишет в раскладке Archi и совпадает с эталоном побайтово
+везде, кроме двух пустых папок и перевода строки в конце — эталон собран скриптом.
+
+Модули доменов друг от друга **не зависят**: Maven не допускает цикла, а partnership
+в карте контекстов двусторонний. Поэтому у interchange свой `ArchiId`, а проверка
+матрицы при импорте (`RelationMatrix.check`) соединяется с сессией в application-слое
+на этапе 2.
+
+Тестов 169: 78 в метамодели, 63 в кодеке, 28 в `archi-bootstrap` (golden-file,
+ArchUnit, роли Keycloak).
+
+Ещё не заведено: таблицы модели (`element`, `relationship`, `view`, …) — этап 2,
+генерация из `spec/contracts/*.openapi.yaml`, клиент OIDC во фронтенде
+(страницу логина отдаёт Keycloak, но SPA на неё пока не уводит — этап 3),
+шаги CI интеграционные и Playwright — этапы 2 и 4.
 
 Содержательная часть проекта — **спецификация**. Прежде чем писать код, читай её:
 почти каждое решение уже принято и обосновано, и переизобретать его не нужно.
@@ -47,32 +91,74 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 ## Команды
 
 ```bash
-mvn clean package                  # 17 модулей; jar в archi-bootstrap/target/
-mvn test -Dtest=ClassName#method   # один тест
-mvn -pl archi-modeling/archi-modeling-domain dependency:tree   # проверить чистоту модуля
+./mvnw clean package               # 17 модулей + фронтенд; jar в archi-bootstrap/target/
+./mvnw clean package -P '!frontend' # то же без Node: правка не задевает интерфейс
+./mvnw test -Dtest=ClassName#method # один тест
+./mvnw -P '!frontend' -pl archi-bootstrap -am test -Dtest=RoundTripGoldenFileTest \
+       -Dsurefire.failIfNoSpecifiedTests=false   # round-trip, как шаг CI (NFR-05)
+./mvnw -pl archi-modeling/archi-modeling-domain dependency:tree  # чистота модуля
+
+cp .env.example .env               # заполнить пароли, один раз на клон
+docker compose build && docker compose up -d   # app + postgres:16 + keycloak:26
+docker compose logs -f app         # логи приложения (в prod они в JSON)
+docker compose down                # остановить; -v чтобы снести и данные БД
+
+cd archi-bootstrap/src/main/frontend && npm run dev   # Vite на :5173, прокси на :8080
+
 open docs/mockups/index.html       # макеты интерфейса, статика без сборки
 tools/check-links.py               # ссылки между файлами: существование файла и якоря
 tools/check-traceability.py        # требования ↔ якоря спеки: покрытие и обрывы
 tools/render-requirements-index.py # перегенерировать §2 из реестра (--check для CI)
 tools/check-commit-message.py      # сообщение коммита по правилу «Коммиты» (см. ниже)
+tools/render-depgraph.py           # граф зависимостей в PlantUML и PNG (см. ниже)
 git config core.hooksPath .githooks # включить хук commit-msg, один раз на клон
 ```
 
-Четыре скрипта на Python 3.9+ без зависимостей, каждый возвращает ненулевой код при
+Пять скриптов на Python 3.9+ без зависимостей, каждый возвращает ненулевой код при
 первом нарушении. Правишь спеку — прогони первые два; правишь требования — третий;
-четвёртый вызывается хуком сам.
+четвёртый вызывается хуком сам; пятый — по закрытии этапа.
 
-Требуется JDK 25 (`maven.compiler.source/target=25`) и Maven 3.9+. Обёртки `mvnw` нет —
-каталог `.mvn/` пустой.
+### Граф зависимостей
 
-`spring-boot:repackage` уже в сборке: на выходе `archi-creator-1.0-SNAPSHOT.jar`.
-Имя сохранено из [§10.2](docs/archi-creator.md#102-сборка), каталог изменился —
-теперь `archi-bootstrap/target/`. Прогон `frontend-maven-plugin`
-(`npm ci && npm run build`) добавится вместе с фронтенд-модулем, `docker compose up -d` —
-вместе с `docker-compose.yml`.
+**По закрытии каждого этапа перерисовывать граф и обновлять картинку в README.**
 
-Приложение собирается, но **не запускается**: без `application.yaml`, PostgreSQL
-и Keycloak старт падает на отсутствующем `DataSource`. Это ожидаемо до этапа 2.
+```bash
+tools/render-depgraph.py           # оба графа: .puml и .png в docs/dependencies/
+tools/render-depgraph.py --puml    # без рендера, если нет ни plantuml, ни docker
+```
+
+Рисует [depgraph-maven-plugin](https://github.com/ferstl/depgraph-maven-plugin)
+(версия в `pom.xml` родителя, к жизненному циклу не привязан). Графа два:
+
+| Файл | Цель плагина | Что показывает |
+|---|---|---|
+| `docs/dependencies/reactor.*` | `aggregate` | 17 проектов реактора и всё, что они тянут; версии на узлах |
+| `docs/dependencies/archi-bootstrap.*` | `graph` + `showDuplicates`, `showConflicts` | то же дерево плюс дубли и конфликты версий |
+
+Два, а не один, потому что `showDuplicates` и `showConflicts` понимает только
+цель `graph`: у `aggregate` таких параметров нет вовсе, и попытка задать их
+в `pom.xml` роняет сборку — `Cannot find 'showDuplicates'`. Поэтому флаги
+живут в скрипте, рядом с той целью, которой принадлежат.
+
+`.puml` коммитятся вместе с `.png`: изменение зависимостей читается в диффе
+по тексту, а по PNG не читается никак.
+
+Требуется JDK 25 (`maven.compiler.source/target=25`). Maven приходит обёрткой:
+`./mvnw` качает Maven 3.9.16 сам, версия зафиксирована в
+`.mvn/wrapper/maven-wrapper.properties`. Обёртка скриптовая (`only-script`),
+jar'а в репозитории нет.
+
+Сборка идёт по [§10.2](docs/archi-creator.md#102-сборка): `frontend-maven-plugin`
+делает `npm ci && npm run build` в `src/main/frontend`, результат ложится
+в `target/classes/static`, `spring-boot:repackage` запекает всё в
+`archi-creator-1.0-SNAPSHOT.jar`. Node ставит сборка, а не разработчик:
+версия в `pom.xml` родителя, каталог — `archi-bootstrap/.node/` (вне `target/`,
+иначе `mvn clean` качал бы его заново).
+
+Порты в `docker-compose.yml` — переменные со значениями по умолчанию
+из [§10.1](docs/archi-creator.md#101-состав): `ARCHI_APP_PORT` (8080),
+`ARCHI_DB_PORT` (5432), `ARCHI_KEYCLOAK_PORT` (8081). Занят соседним проектом —
+меняется `.env`, а не состав.
 
 ## Коммиты
 
@@ -115,11 +201,12 @@ Co-Authored-By: …
 ### Один таск — один коммит
 
 **Изменения коммитятся по завершении каждого таска, а не пачкой в конце.**
-Таск — отмеченный чекбокс в `docs/plans/<план>.md`; если работа идёт без плана —
+Таск — один пункт в `docs/plans/<план>.md` (сделанное ✅, несделанное ⬜);
+если работа идёт без плана —
 атомарная законченная задача.
 
 - В коммит входит всё, что закрывает таск: код, тест из таблицы «Маппинг
-  на тесты», правка спеки, если она понадобилась, и **отметка `[x]` в плане**.
+  на тесты», правка спеки, если она понадобилась, и **отметка ✅ в плане**.
   План коммитится вместе с кодом: через месяц «почему сделано так» отвечает он.
 - Два таска в одном коммите — нет: откат одного потянет второй, а `git log`
   перестаёт отвечать на вопрос «когда это появилось».
@@ -201,7 +288,7 @@ Co-Authored-By: …
 тесты на `docs/Hamkorbank_AS_IS_strict.archimate` гоняются на каждом коммите, регрессия
 блокирует сборку. Из этого следуют инварианты, которые нельзя нарушать нигде в коде:
 
-- **Идентификаторы сохраняются буквально** (`id-<24 hex>`), при импорте не перегенерируются.
+- **Идентификаторы сохраняются буквально** (любой допустимый для Archi; новые — `id-<32 hex>`), при импорте не перегенерируются.
 - **Папки — часть модели**, а не производная от типа элемента; дерево папок хранится в БД.
 - **Порядок узлов сохраняется**: `sort_order` в пределах родителя, писатель обходит дерево
   в порядке читателя. `sort_order` **разреженный, шаг 1000** — вставка не перенумеровывает

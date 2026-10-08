@@ -1,0 +1,98 @@
+# ───────────────────────────────────────────────────────────────────
+# Состав — §10.1: app, postgres:16, keycloak:26.
+#
+# Порядок запуска: mvn clean package → docker compose build → up -d.
+# Образ приложения только упаковывает готовый jar (см. Dockerfile).
+#
+# Порты вынесены в переменные со значениями по умолчанию из §10.1:
+# на машине разработчика 8080 и 5432 часто заняты соседним проектом,
+# и это не повод менять состав. Переопределяются через .env.
+#
+# Секреты — из .env (образец: .env.example), NFR-06.
+# ───────────────────────────────────────────────────────────────────
+name: archi-creator
+
+services:
+
+  postgres:
+    image: postgres:16
+    container_name: archi-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-archi}
+      POSTGRES_USER: ${POSTGRES_USER:-archi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?пароль БД обязателен, см. .env.example}
+    ports:
+      - "${ARCHI_DB_PORT:-5432}:5432"
+    volumes:
+      - archi-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-archi} -d ${POSTGRES_DB:-archi}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    container_name: archi-keycloak
+    command: ["start-dev", "--http-port=8081", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?пароль администратора Keycloak обязателен}
+      KC_HEALTH_ENABLED: "true"
+      # Адрес фиксируется снаружи, потому что он попадает в iss токена.
+      # Браузер ходит на localhost, приложение — на keycloak:8081; без
+      # фиксации iss зависел бы от того, кто спросил, и токен из браузера
+      # не проходил бы проверку в приложении.
+      KC_HOSTNAME: http://localhost:${ARCHI_KEYCLOAK_PORT:-8081}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "false"
+    volumes:
+      - ./deploy/keycloak/archi-realm.json:/opt/keycloak/data/import/archi-realm.json:ro
+    ports:
+      - "${ARCHI_KEYCLOAK_PORT:-8081}:8081"
+    healthcheck:
+      # В образе нет ни curl, ни wget — проверка идёт через /dev/tcp.
+      # Именно bash, а не CMD-SHELL: /bin/sh в этих образах — dash,
+      # а /dev/tcp есть только у bash.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: archi-creator:${ARCHI_IMAGE_TAG:-local}
+    container_name: archi-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      ARCHI_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-archi}
+      ARCHI_DB_USER: ${POSTGRES_USER:-archi}
+      ARCHI_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # Проверка подписи идёт внутрь сети, а issuer сверяется с тем адресом,
+      # который видит браузер: ключи и доверие берутся из разных мест
+      # намеренно — см. комментарий к KC_HOSTNAME выше.
+      ARCHI_OIDC_ISSUER_URI: http://localhost:${ARCHI_KEYCLOAK_PORT:-8081}/realms/archi
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8081/realms/archi/protocol/openid-connect/certs
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "${ARCHI_APP_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /actuator/health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"status\":\"UP\"' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  archi-pgdata:

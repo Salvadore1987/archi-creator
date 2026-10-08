@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:archimate="http://www.archimatetool.com/archimate" name="Собственные стили объектов" id="id-6364de820db3d8ceb8e4f8e55088d26c" version="5.0.0">
+  <folder name="Strategy" id="id-0438d0b7d718f7d85aea86fb22562b8c" type="strategy"/>
+  <folder name="Business" id="id-594f3111fa13a45c647ce66e4fa3e4f1" type="business">
+    <element xsi:type="archimate:BusinessActor" name="Клиент" id="id-2f94fadfa4017fa75de30d4f46ed19e5"/>
+  </folder>
+  <folder name="Application" id="id-27662110ddc8ba46c96c7ba35f959288" type="application">
+    <element xsi:type="archimate:ApplicationComponent" name="HamkorMobile" id="id-e3f9ac2cb3a8029c5967f04e18f307a7"/>
+    <element xsi:type="archimate:ApplicationComponent" name="АБС" id="id-ccc5bae1ce79703ef7b86159c19480df"/>
+  </folder>
+  <folder name="Technology &amp; Physical" id="id-e6fe110f5cb23330b1d5c72092cd93c6" type="technology"/>
+  <folder name="Motivation" id="id-399a510d91237d0e500c3f0d43266640" type="motivation"/>
+  <folder name="Implementation &amp; Migration" id="id-6a6d709474aa4589990073fa2518ec3e" type="implementation_migration"/>
+  <folder name="Other" id="id-bcf9af91c15976103566381dfaa91264" type="other"/>
+  <folder name="Relations" id="id-932295df816cc5fa2ff1448f89ea9c78" type="relations">
+    <element xsi:type="archimate:ServingRelationship" id="id-926ae8a2bc90382288cdab1483a03cdb" source="id-e3f9ac2cb3a8029c5967f04e18f307a7" target="id-2f94fadfa4017fa75de30d4f46ed19e5"/>
+    <element xsi:type="archimate:FlowRelationship" name="платёж" id="id-0be63ccd9cb0e70e58caddb7295106e5" source="id-e3f9ac2cb3a8029c5967f04e18f307a7" target="id-ccc5bae1ce79703ef7b86159c19480df"/>
+  </folder>
+  <folder name="Views" id="id-fa47dc2eb9e153cc03b7837ffda5e5ff" type="diagrams">
+    <element xsi:type="archimate:ArchimateDiagramModel" name="Собственные стили" id="id-231319074ce48620122a10edd5bb895b" connectionRouterType="2" background="1">
+      <child xsi:type="archimate:Group" id="id-3e74f4054399b88d8d04498898b61213" name="Внешние системы" fillColor="#F5F6F7" alpha="200" lineColor="#9aa4ae" lineWidth="2" font="1|Segoe UI|10.0|1|WINDOWS|1|-13|0|0|0|700|0|0|0|0|3|2|1|34|Segoe UI" fontColor="#1f2328" textAlignment="1" textPosition="0" borderType="1">
+        <bounds x="20" y="20" width="420" height="220"/>
+        <child xsi:type="archimate:DiagramObject" id="id-d98400d12fe42b03447ab0ed6de50147" fillColor="#b5ffff" gradient="1" lineColor="#003366" deriveElementLineColor="false" font="1|Arial|9.0|0|WINDOWS|1|-12|0|0|0|400|0|0|0|0|3|2|1|34|Arial" fontColor="#c00000" textAlignment="4" textPosition="1" iconColor="#ff0000" archimateElement="id-e3f9ac2cb3a8029c5967f04e18f307a7">
+          <bounds x="20" y="40" width="160" height="70"/>
+          <sourceConnection xsi:type="archimate:Connection" id="id-9d76e00d603bb5532673206cc59710ce" lineColor="#ff0000" lineWidth="3" font="1|Segoe UI|8.0|2|WINDOWS|1|-11|0|0|0|400|255|0|0|0|3|2|1|34|Segoe UI" fontColor="#7f7f7f" textPosition="0" nameVisible="false" source="id-d98400d12fe42b03447ab0ed6de50147" target="id-4b977b44df1f4c2f6961a95641b344b8" archimateRelationship="id-0be63ccd9cb0e70e58caddb7295106e5"/>
+          <sourceConnection xsi:type="archimate:Connection" id="id-9d963af7291f314ca83fb026a6f7e6f3" lineColor="#00aa00" source="id-d98400d12fe42b03447ab0ed6de50147" target="id-695ec75325ad07706941e291bd6da65f" archimateRelationship="id-926ae8a2bc90382288cdab1483a03cdb"/>
+        </child>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-4b977b44df1f4c2f6961a95641b344b8" targetConnections="id-9d76e00d603bb5532673206cc59710ce" alpha="128" lineAlpha="64" archimateElement="id-ccc5bae1ce79703ef7b86159c19480df" type="1">
+        <bounds x="520" y="60" width="160" height="70"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-695ec75325ad07706941e291bd6da65f" targetConnections="id-9d963af7291f314ca83fb026a6f7e6f3" fillColor="#ffffb5" archimateElement="id-2f94fadfa4017fa75de30d4f46ed19e5">
+        <bounds x="520" y="200" width="160" height="70"/>
+      </child>
+      <child xsi:type="archimate:Note" id="id-71ceb465a7046f0af529195ab44377db" fillColor="#ffffe0" font="1|Consolas|9.0|0|WINDOWS|1|-12|0|0|0|400|0|0|0|0|3|2|1|49|Consolas" textAlignment="1" borderType="2">
+        <bounds x="20" y="300" width="300" height="90"/>
+        <content>Легенда:
+красное — платёжный поток;
+зелёное — обслуживание клиента.</content>
+      </child>
+    </element>
+  </folder>
+</archimate:model>

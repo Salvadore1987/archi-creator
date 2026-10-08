@@ -1,0 +1,36 @@
+# Тройки «источник — цель — связь» с ожидаемым ответом (docs/backend.md §9.2).
+# Выписаны руками из ArchiMate 3.2 (гл. 5, 8–10 и приложение B), а не из
+# ресурса матрицы: тест, сгенерированный из проверяемой таблицы, проверял бы
+# её саму с собой.
+source,target,relationship,permitted
+BusinessActor,BusinessRole,ASSIGNMENT,true
+BusinessRole,BusinessProcess,ASSIGNMENT,true
+BusinessProcess,BusinessService,REALIZATION,true
+BusinessProcess,BusinessProcess,TRIGGERING,true
+BusinessProcess,BusinessObject,ACCESS,true
+BusinessService,BusinessActor,SERVING,true
+ApplicationComponent,ApplicationFunction,ASSIGNMENT,true
+ApplicationComponent,ApplicationInterface,COMPOSITION,true
+ApplicationComponent,ApplicationComponent,FLOW,true
+ApplicationComponent,ApplicationComponent,SPECIALIZATION,true
+ApplicationInterface,ApplicationService,ASSIGNMENT,true
+ApplicationService,BusinessProcess,SERVING,true
+ApplicationProcess,DataObject,ACCESS,true
+DataObject,BusinessObject,REALIZATION,true
+Node,SystemSoftware,COMPOSITION,true
+Node,Artifact,ASSIGNMENT,true
+Artifact,ApplicationComponent,REALIZATION,true
+Artifact,DataObject,REALIZATION,true
+TechnologyService,ApplicationComponent,SERVING,true
+Device,CommunicationNetwork,ASSOCIATION,true
+SystemSoftware,SystemSoftware,AGGREGATION,true
+BusinessActor,ApplicationComponent,COMPOSITION,false
+BusinessProcess,BusinessActor,ASSIGNMENT,false
+BusinessObject,BusinessActor,ASSIGNMENT,false
+BusinessObject,BusinessProcess,TRIGGERING,false
+DataObject,ApplicationComponent,SERVING,false
+ApplicationComponent,ApplicationComponent,ACCESS,false
+ApplicationService,ApplicationComponent,COMPOSITION,false
+ApplicationComponent,BusinessActor,SPECIALIZATION,false
+Artifact,Node,ASSIGNMENT,false
+DataObject,DataObject,TRIGGERING,false

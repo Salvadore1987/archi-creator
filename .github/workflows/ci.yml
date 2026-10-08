@@ -1,0 +1,197 @@
+# ───────────────────────────────────────────────────────────────────
+# Конвейер сборки (§10.4).
+#
+# Порядок из спеки: сборка → юнит → golden-file → интеграционные →
+# фронтенд → Playwright → образ. Здесь пока шаги, которым есть что
+# проверять: golden-file round-trip, юнит-тесты, сборка фронтенда
+# внутрь jar и образ.
+#
+# Отсутствующие шаги не заведены пустыми намеренно: зелёная галочка
+# над ненаписанным тестом хуже отсутствующей. Где они появятся:
+#   интеграционные    — этап 2, Testcontainers на postgres:16
+#   Playwright        — этап 4, docs/frontend.md §9.4
+# ───────────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: '25'
+
+jobs:
+
+  # Гейт целостности спеки. Идёт отдельной работой и не ждёт сборку:
+  # обрыв ссылки или требование без якоря видно за секунды, и узнавать
+  # об этом после пятиминутной сборки незачем.
+  spec:
+    name: Целостность спеки
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Каждый скрипт возвращает ненулевой код при первом нарушении.
+      # Зависимостей у них нет — ставить нечего.
+      - name: Ссылки между файлами
+        run: tools/check-links.py
+
+      - name: Требования ↔ якоря спеки
+        run: tools/check-traceability.py
+
+      # §2 docs/archi-creator.md — производная таблица. Флаг --check ловит
+      # правку руками: она была бы затёрта следующей генерацией.
+      - name: §2 совпадает с реестром требований
+        run: tools/render-requirements-index.py --check
+
+  # Гейт сообщений коммитов. Хук .githooks/commit-msg живёт на машине
+  # разработчика и обходится --no-verify; этот гейт не обходится.
+  commits:
+    name: Сообщения коммитов
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Нужна история: проверяется диапазон, а не один коммит.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Правило действует с коммита, которым введено, поэтому проверяется
+      # диапазон новых коммитов, а не вся ветка: история до правила ему
+      # не подчиняется и переписываться не будет.
+      - name: Диапазон новых коммитов
+        id: range
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags origin "${{ github.base_ref }}"
+            echo "value=origin/${{ github.base_ref }}..HEAD" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            # Первый push ветки: сравнивать не с чем, берём последний коммит.
+            echo "value=HEAD~1..HEAD" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.event.before }}..HEAD" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Проверка сообщений
+        run: tools/check-commit-message.py --range "${{ steps.range.outputs.value }}"
+
+  build:
+    name: Сборка и тесты
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      # Node ставит frontend-maven-plugin сам (версия в pom.xml родителя),
+      # поэтому setup-node здесь нет: две установки разошлись бы в версиях.
+      - name: Кэш npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ hashFiles('archi-bootstrap/src/main/frontend/package-lock.json') }}
+          restore-keys: npm-
+
+      # NFR-05: round-trip — отдельный шаг, а не строка в отчёте verify.
+      # Регрессия видна по имени шага и останавливает конвейер до полной
+      # сборки; в verify эти тесты пройдут ещё раз, это секунды.
+      # Фронтенд не нужен: кодек его не касается.
+      - name: Golden-file round-trip (NFR-05)
+        run: >-
+          ./mvnw -B --no-transfer-progress -P '!frontend'
+          -pl archi-bootstrap -am test
+          -Dtest='RoundTripGoldenFileTest,XmlEquivalenceTest'
+          -Dsurefire.failIfNoSpecifiedTests=false
+
+      # Профиль frontend включён по умолчанию: jar обязан уехать
+      # со статикой внутри (§10.2), и выключать его в CI нельзя.
+      - name: mvn verify
+        run: ./mvnw -B --no-transfer-progress clean verify
+
+      - name: Собранный jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: archi-creator-jar
+          path: archi-bootstrap/target/archi-creator-*.jar
+          if-no-files-found: error
+          retention-days: 7
+
+  image:
+    name: Образ приложения
+    needs: build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: archi
+          POSTGRES_USER: archi
+          POSTGRES_PASSWORD: smoke
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U archi -d archi"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Собранный jar
+        uses: actions/download-artifact@v4
+        with:
+          name: archi-creator-jar
+          path: archi-bootstrap/target
+
+      # Dockerfile упаковывает готовый jar и сам ничего не собирает (§10.2),
+      # поэтому образ строится из артефакта предыдущей работы, а не заново.
+      - name: docker build
+        run: docker build -t archi-creator:${{ github.sha }} .
+
+      # Проверяется не «собрался», а «поднимается»: образ с базой должен
+      # дойти до UP. Это тот же критерий готовности этапа 0, только без
+      # Keycloak — вход проверяется руками, автоматический тест входа
+      # придёт вместе с Playwright на этапе 4.
+      - name: Образ поднимается и отвечает UP
+        run: |
+          docker run -d --name archi-smoke --network host \
+            -e SPRING_PROFILES_ACTIVE=dev \
+            -e ARCHI_DB_URL=jdbc:postgresql://localhost:5432/archi \
+            -e ARCHI_DB_USER=archi \
+            -e ARCHI_DB_PASSWORD=smoke \
+            archi-creator:${{ github.sha }}
+          for i in $(seq 1 45); do
+            if curl -fs http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
+              echo "health UP"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs archi-smoke
+          exit 1
+
+      - name: Логи при отказе
+        if: failure()
+        run: docker logs archi-smoke || true

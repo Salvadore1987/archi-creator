@@ -1,0 +1,284 @@
+@startuml
+skinparam defaultTextAlignment center
+skinparam rectangle {
+  BackgroundColor<<optional>> beige
+  BackgroundColor<<test>> lightGreen
+  BackgroundColor<<runtime>> lightBlue
+  BackgroundColor<<provided>> lightGray
+}
+rectangle "archi-bootstrap\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_bootstrap_jar
+rectangle "archi-modeling-domain\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_modeling_domain_jar
+rectangle "archi-modeling-application\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_modeling_application_jar
+rectangle "archi-modeling-adapter-rest\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_modeling_adapter_rest_jar
+rectangle "archi-modeling-adapter-persistence\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_modeling_adapter_persistence_jar
+rectangle "archi-interchange-domain\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_interchange_domain_jar
+rectangle "archi-interchange-application\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_interchange_application_jar
+rectangle "archi-interchange-adapter-rest\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar
+rectangle "archi-interchange-adapter-persistence\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_interchange_adapter_persistence_jar
+rectangle "archi-advisor-domain\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_advisor_domain_jar
+rectangle "archi-advisor-application\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_advisor_application_jar
+rectangle "archi-advisor-adapter-rest\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_advisor_adapter_rest_jar
+rectangle "archi-advisor-adapter-persistence\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_advisor_adapter_persistence_jar
+rectangle "logback-classic\n1.5.38" as ch_qos_logback_logback_classic_jar
+rectangle "logback-core\n1.5.38" as ch_qos_logback_logback_core_jar
+rectangle "slf4j-api\n2.0.18" as org_slf4j_slf4j_api_jar
+rectangle "spring-boot-starter-logging\n4.1.1" as org_springframework_boot_spring_boot_starter_logging_jar
+rectangle "log4j-to-slf4j\n2.25.5" as org_apache_logging_log4j_log4j_to_slf4j_jar
+rectangle "log4j-api\n2.25.5" as org_apache_logging_log4j_log4j_api_jar
+rectangle "jul-to-slf4j\n2.0.18" as org_slf4j_jul_to_slf4j_jar
+rectangle "spring-boot-starter\n4.1.1" as org_springframework_boot_spring_boot_starter_jar
+rectangle "spring-boot-autoconfigure\n4.1.1" as org_springframework_boot_spring_boot_autoconfigure_jar
+rectangle "spring-boot\n4.1.1" as org_springframework_boot_spring_boot_jar
+rectangle "jakarta.annotation-api\n3.0.0" as jakarta_annotation_jakarta_annotation_api_jar
+rectangle "snakeyaml\n2.6" as org_yaml_snakeyaml_jar
+rectangle "spring-boot-starter-actuator\n4.1.1" as org_springframework_boot_spring_boot_starter_actuator_jar
+rectangle "spring-boot-starter-micrometer-metrics\n4.1.1" as org_springframework_boot_spring_boot_starter_micrometer_metrics_jar
+rectangle "spring-boot-micrometer-metrics\n4.1.1" as org_springframework_boot_spring_boot_micrometer_metrics_jar
+rectangle "spring-boot-micrometer-observation\n4.1.1" as org_springframework_boot_spring_boot_micrometer_observation_jar
+rectangle "micrometer-observation\n1.17.1" as io_micrometer_micrometer_observation_jar
+rectangle "micrometer-core\n1.17.1" as io_micrometer_micrometer_core_jar
+rectangle "spring-boot-actuator-autoconfigure\n4.1.1" as org_springframework_boot_spring_boot_actuator_autoconfigure_jar
+rectangle "spring-boot-actuator\n4.1.1" as org_springframework_boot_spring_boot_actuator_jar
+rectangle "spring-boot-health\n4.1.1" as org_springframework_boot_spring_boot_health_jar
+rectangle "jspecify\n1.0.1" as org_jspecify_jspecify_jar
+rectangle "micrometer-commons\n1.17.1" as io_micrometer_micrometer_commons_jar
+rectangle "micrometer-jakarta9\n1.17.1" as io_micrometer_micrometer_jakarta9_jar
+rectangle "micrometer-registry-prometheus\n1.17.1" as io_micrometer_micrometer_registry_prometheus_jar<<runtime>>
+rectangle "HdrHistogram\n2.2.2" as org_hdrhistogram_HdrHistogram_jar<<runtime>>
+rectangle "prometheus-metrics-model\n1.7.0" as io_prometheus_prometheus_metrics_model_jar<<runtime>>
+rectangle "prometheus-metrics-config\n1.7.0" as io_prometheus_prometheus_metrics_config_jar<<runtime>>
+rectangle "prometheus-metrics-core\n1.7.0" as io_prometheus_prometheus_metrics_core_jar<<runtime>>
+rectangle "prometheus-metrics-tracer-common\n1.7.0" as io_prometheus_prometheus_metrics_tracer_common_jar<<runtime>>
+rectangle "prometheus-metrics-exposition-textformats\n1.7.0" as io_prometheus_prometheus_metrics_exposition_textformats_jar<<runtime>>
+rectangle "prometheus-metrics-exposition-formats\n1.7.0" as io_prometheus_prometheus_metrics_exposition_formats_jar<<runtime>>
+rectangle "spring-boot-starter-security\n4.1.1" as org_springframework_boot_spring_boot_starter_security_jar
+rectangle "spring-boot-security\n4.1.1" as org_springframework_boot_spring_boot_security_jar
+rectangle "spring-security-core\n7.1.1" as org_springframework_security_spring_security_core_jar
+rectangle "spring-security-crypto\n7.1.1" as org_springframework_security_spring_security_crypto_jar
+rectangle "spring-aop\n7.0.9" as org_springframework_spring_aop_jar
+rectangle "spring-beans\n7.0.9" as org_springframework_spring_beans_jar
+rectangle "spring-context\n7.0.9" as org_springframework_spring_context_jar
+rectangle "spring-core\n7.0.9" as org_springframework_spring_core_jar
+rectangle "spring-expression\n7.0.9" as org_springframework_spring_expression_jar
+rectangle "spring-security-config\n7.1.1" as org_springframework_security_spring_security_config_jar
+rectangle "spring-security-web\n7.1.1" as org_springframework_security_spring_security_web_jar
+rectangle "spring-web\n7.0.9" as org_springframework_spring_web_jar
+rectangle "commons-logging\n1.3.6" as commons_logging_commons_logging_jar
+rectangle "spring-boot-starter-oauth2-resource-server\n4.1.1" as org_springframework_boot_spring_boot_starter_oauth2_resource_server_jar
+rectangle "spring-boot-security-oauth2-resource-server\n4.1.1" as org_springframework_boot_spring_boot_security_oauth2_resource_server_jar
+rectangle "spring-security-oauth2-jose\n7.1.1" as org_springframework_security_spring_security_oauth2_jose_jar
+rectangle "spring-security-oauth2-core\n7.1.1" as org_springframework_security_spring_security_oauth2_core_jar
+rectangle "nimbus-jose-jwt\n10.9.1" as com_nimbusds_nimbus_jose_jwt_jar
+rectangle "spring-security-oauth2-resource-server\n7.1.1" as org_springframework_security_spring_security_oauth2_resource_server_jar
+rectangle "spring-boot-flyway\n4.1.1" as org_springframework_boot_spring_boot_flyway_jar
+rectangle "spring-boot-jdbc\n4.1.1" as org_springframework_boot_spring_boot_jdbc_jar
+rectangle "spring-boot-sql\n4.1.1" as org_springframework_boot_spring_boot_sql_jar
+rectangle "spring-boot-transaction\n4.1.1" as org_springframework_boot_spring_boot_transaction_jar
+rectangle "spring-boot-persistence\n4.1.1" as org_springframework_boot_spring_boot_persistence_jar
+rectangle "spring-tx\n7.0.9" as org_springframework_spring_tx_jar
+rectangle "spring-jdbc\n7.0.9" as org_springframework_spring_jdbc_jar
+rectangle "flyway-core\n12.4.0" as org_flywaydb_flyway_core_jar
+rectangle "jackson-databind\n3.1.5" as tools_jackson_core_jackson_databind_jar
+rectangle "jackson-annotations\n2.21" as com_fasterxml_jackson_core_jackson_annotations_jar
+rectangle "jackson-core\n3.1.5" as tools_jackson_core_jackson_core_jar
+rectangle "flyway-database-postgresql\n12.4.0" as org_flywaydb_flyway_database_postgresql_jar
+rectangle "postgresql\n42.7.13" as org_postgresql_postgresql_jar<<runtime>>
+rectangle "checker-qual\n3.55.1" as org_checkerframework_checker_qual_jar<<runtime>>
+rectangle "archunit\n1.5.1" as com_tngtech_archunit_archunit_jar<<test>>
+rectangle "archunit-junit5-api\n1.5.1" as com_tngtech_archunit_archunit_junit5_api_jar<<test>>
+rectangle "archunit-junit5\n1.5.1" as com_tngtech_archunit_archunit_junit5_jar<<test>>
+rectangle "archunit-junit5-engine\n1.5.1" as com_tngtech_archunit_archunit_junit5_engine_jar<<test>>
+rectangle "archunit-junit5-engine-api\n1.5.1" as com_tngtech_archunit_archunit_junit5_engine_api_jar<<test>>
+rectangle "junit-platform-engine\n6.0.3" as org_junit_platform_junit_platform_engine_jar<<test>>
+rectangle "junit-jupiter-api\n6.0.3" as org_junit_jupiter_junit_jupiter_api_jar<<test>>
+rectangle "opentest4j\n1.3.0" as org_opentest4j_opentest4j_jar<<test>>
+rectangle "junit-platform-commons\n6.0.3" as org_junit_platform_junit_platform_commons_jar<<test>>
+rectangle "apiguardian-api\n1.1.2" as org_apiguardian_apiguardian_api_jar<<test>>
+rectangle "junit-jupiter\n6.0.3" as org_junit_jupiter_junit_jupiter_jar<<test>>
+rectangle "junit-jupiter-params\n6.0.3" as org_junit_jupiter_junit_jupiter_params_jar<<test>>
+rectangle "junit-jupiter-engine\n6.0.3" as org_junit_jupiter_junit_jupiter_engine_jar<<test>>
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_modeling_domain_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_modeling_application_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_modeling_adapter_rest_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_modeling_adapter_persistence_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_domain_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_application_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_adapter_persistence_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_advisor_domain_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_advisor_application_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_advisor_adapter_rest_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_advisor_adapter_persistence_jar
+ch_qos_logback_logback_classic_jar -[#000000]-> ch_qos_logback_logback_core_jar
+ch_qos_logback_logback_classic_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
+org_springframework_boot_spring_boot_starter_logging_jar -[#000000]-> ch_qos_logback_logback_classic_jar
+org_apache_logging_log4j_log4j_to_slf4j_jar -[#000000]-> org_apache_logging_log4j_log4j_api_jar
+org_apache_logging_log4j_log4j_to_slf4j_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
+org_springframework_boot_spring_boot_starter_logging_jar -[#000000]-> org_apache_logging_log4j_log4j_to_slf4j_jar
+org_slf4j_jul_to_slf4j_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
+org_springframework_boot_spring_boot_starter_logging_jar -[#000000]-> org_slf4j_jul_to_slf4j_jar
+org_springframework_boot_spring_boot_starter_jar -[#000000]-> org_springframework_boot_spring_boot_starter_logging_jar
+org_springframework_boot_spring_boot_autoconfigure_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
+org_springframework_boot_spring_boot_starter_jar -[#000000]-> org_springframework_boot_spring_boot_autoconfigure_jar
+org_springframework_boot_spring_boot_starter_jar -[#000000]-> jakarta_annotation_jakarta_annotation_api_jar
+org_springframework_boot_spring_boot_starter_jar -[#000000]-> org_yaml_snakeyaml_jar
+org_springframework_boot_spring_boot_starter_actuator_jar -[#000000]-> org_springframework_boot_spring_boot_starter_jar
+org_springframework_boot_spring_boot_starter_micrometer_metrics_jar .[#ABABAB].> org_springframework_boot_spring_boot_starter_jar
+org_springframework_boot_spring_boot_micrometer_metrics_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
+org_springframework_boot_spring_boot_micrometer_observation_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
+org_springframework_boot_spring_boot_micrometer_observation_jar .[#ABABAB].> io_micrometer_micrometer_observation_jar
+org_springframework_boot_spring_boot_micrometer_metrics_jar -[#000000]-> org_springframework_boot_spring_boot_micrometer_observation_jar
+org_springframework_boot_spring_boot_micrometer_metrics_jar .[#ABABAB].> io_micrometer_micrometer_core_jar
+org_springframework_boot_spring_boot_starter_micrometer_metrics_jar -[#000000]-> org_springframework_boot_spring_boot_micrometer_metrics_jar
+org_springframework_boot_spring_boot_starter_actuator_jar -[#000000]-> org_springframework_boot_spring_boot_starter_micrometer_metrics_jar
+org_springframework_boot_spring_boot_actuator_autoconfigure_jar .[#ABABAB].> org_springframework_boot_spring_boot_autoconfigure_jar
+org_springframework_boot_spring_boot_actuator_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
+org_springframework_boot_spring_boot_actuator_autoconfigure_jar -[#000000]-> org_springframework_boot_spring_boot_actuator_jar
+org_springframework_boot_spring_boot_starter_actuator_jar -[#000000]-> org_springframework_boot_spring_boot_actuator_autoconfigure_jar
+org_springframework_boot_spring_boot_health_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
+org_springframework_boot_spring_boot_starter_actuator_jar -[#000000]-> org_springframework_boot_spring_boot_health_jar
+io_micrometer_micrometer_observation_jar .[#ABABAB].> org_jspecify_jspecify_jar
+io_micrometer_micrometer_commons_jar .[#ABABAB].> org_jspecify_jspecify_jar
+io_micrometer_micrometer_observation_jar -[#000000]-> io_micrometer_micrometer_commons_jar
+org_springframework_boot_spring_boot_starter_actuator_jar -[#000000]-> io_micrometer_micrometer_observation_jar
+io_micrometer_micrometer_jakarta9_jar .[#ABABAB].> org_jspecify_jspecify_jar
+io_micrometer_micrometer_jakarta9_jar .[#ABABAB].> io_micrometer_micrometer_core_jar
+io_micrometer_micrometer_jakarta9_jar .[#ABABAB].> io_micrometer_micrometer_commons_jar
+io_micrometer_micrometer_jakarta9_jar .[#ABABAB].> io_micrometer_micrometer_observation_jar
+org_springframework_boot_spring_boot_starter_actuator_jar -[#000000]-> io_micrometer_micrometer_jakarta9_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_springframework_boot_spring_boot_starter_actuator_jar
+io_micrometer_micrometer_registry_prometheus_jar -[#000000]-> org_jspecify_jspecify_jar
+io_micrometer_micrometer_core_jar .[#ABABAB].> org_jspecify_jspecify_jar
+io_micrometer_micrometer_core_jar .[#ABABAB].> io_micrometer_micrometer_commons_jar
+io_micrometer_micrometer_core_jar .[#ABABAB].> io_micrometer_micrometer_observation_jar
+io_micrometer_micrometer_core_jar -[#000000]-> org_hdrhistogram_HdrHistogram_jar
+io_micrometer_micrometer_registry_prometheus_jar -[#000000]-> io_micrometer_micrometer_core_jar
+io_prometheus_prometheus_metrics_model_jar .[#ABABAB].> io_prometheus_prometheus_metrics_config_jar
+io_prometheus_prometheus_metrics_core_jar -[#000000]-> io_prometheus_prometheus_metrics_model_jar
+io_prometheus_prometheus_metrics_core_jar -[#000000]-> io_prometheus_prometheus_metrics_config_jar
+io_micrometer_micrometer_registry_prometheus_jar -[#000000]-> io_prometheus_prometheus_metrics_core_jar
+io_micrometer_micrometer_registry_prometheus_jar -[#000000]-> io_prometheus_prometheus_metrics_tracer_common_jar
+io_prometheus_prometheus_metrics_exposition_textformats_jar .[#ABABAB].> io_prometheus_prometheus_metrics_model_jar
+io_prometheus_prometheus_metrics_exposition_textformats_jar .[#ABABAB].> io_prometheus_prometheus_metrics_config_jar
+io_prometheus_prometheus_metrics_exposition_formats_jar -[#000000]-> io_prometheus_prometheus_metrics_exposition_textformats_jar
+io_micrometer_micrometer_registry_prometheus_jar -[#000000]-> io_prometheus_prometheus_metrics_exposition_formats_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> io_micrometer_micrometer_registry_prometheus_jar
+org_springframework_boot_spring_boot_starter_security_jar .[#ABABAB].> org_springframework_boot_spring_boot_starter_jar
+org_springframework_boot_spring_boot_security_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
+org_springframework_security_spring_security_core_jar -[#000000]-> org_springframework_security_spring_security_crypto_jar
+org_springframework_security_spring_security_core_jar .[#ABABAB].> org_springframework_spring_aop_jar
+org_springframework_security_spring_security_core_jar .[#ABABAB].> org_springframework_spring_beans_jar
+org_springframework_security_spring_security_core_jar .[#ABABAB].> org_springframework_spring_context_jar
+org_springframework_security_spring_security_core_jar .[#ABABAB].> org_springframework_spring_core_jar
+org_springframework_security_spring_security_core_jar .[#ABABAB].> org_springframework_spring_expression_jar
+org_springframework_security_spring_security_core_jar .[#ABABAB].> io_micrometer_micrometer_observation_jar
+org_springframework_security_spring_security_config_jar -[#000000]-> org_springframework_security_spring_security_core_jar
+org_springframework_security_spring_security_config_jar .[#ABABAB].> org_springframework_spring_aop_jar
+org_springframework_security_spring_security_config_jar .[#ABABAB].> org_springframework_spring_beans_jar
+org_springframework_security_spring_security_config_jar .[#ABABAB].> org_springframework_spring_context_jar
+org_springframework_security_spring_security_config_jar .[#ABABAB].> org_springframework_spring_core_jar
+org_springframework_boot_spring_boot_security_jar -[#000000]-> org_springframework_security_spring_security_config_jar
+org_springframework_security_spring_security_web_jar .[#ABABAB].> org_springframework_security_spring_security_core_jar
+org_springframework_security_spring_security_web_jar .[#ABABAB].> org_springframework_spring_core_jar
+org_springframework_security_spring_security_web_jar .[#ABABAB].> org_springframework_spring_aop_jar
+org_springframework_security_spring_security_web_jar .[#ABABAB].> org_springframework_spring_beans_jar
+org_springframework_security_spring_security_web_jar .[#ABABAB].> org_springframework_spring_context_jar
+org_springframework_spring_expression_jar .[#ABABAB].> org_springframework_spring_core_jar
+org_springframework_security_spring_security_web_jar -[#000000]-> org_springframework_spring_expression_jar
+org_springframework_spring_web_jar .[#ABABAB].> org_springframework_spring_beans_jar
+org_springframework_spring_web_jar .[#ABABAB].> org_springframework_spring_core_jar
+org_springframework_spring_web_jar .[#ABABAB].> io_micrometer_micrometer_observation_jar
+org_springframework_security_spring_security_web_jar -[#000000]-> org_springframework_spring_web_jar
+org_springframework_boot_spring_boot_security_jar -[#000000]-> org_springframework_security_spring_security_web_jar
+org_springframework_boot_spring_boot_starter_security_jar -[#000000]-> org_springframework_boot_spring_boot_security_jar
+org_springframework_spring_beans_jar .[#ABABAB].> org_springframework_spring_core_jar
+org_springframework_spring_aop_jar -[#000000]-> org_springframework_spring_beans_jar
+org_springframework_spring_core_jar -[#000000]-> commons_logging_commons_logging_jar
+org_springframework_spring_core_jar .[#ABABAB].> org_jspecify_jspecify_jar
+org_springframework_spring_aop_jar -[#000000]-> org_springframework_spring_core_jar
+org_springframework_boot_spring_boot_starter_security_jar -[#000000]-> org_springframework_spring_aop_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_springframework_boot_spring_boot_starter_security_jar
+org_springframework_boot_spring_boot_starter_oauth2_resource_server_jar .[#ABABAB].> org_springframework_boot_spring_boot_starter_jar
+org_springframework_boot_spring_boot_starter_oauth2_resource_server_jar .[#ABABAB].> org_springframework_boot_spring_boot_starter_security_jar
+org_springframework_boot_spring_boot_security_oauth2_resource_server_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
+org_springframework_security_spring_security_oauth2_jose_jar .[#ABABAB].> org_springframework_security_spring_security_core_jar
+org_springframework_security_spring_security_oauth2_core_jar .[#ABABAB].> org_springframework_security_spring_security_core_jar
+org_springframework_security_spring_security_oauth2_core_jar .[#ABABAB].> org_springframework_spring_core_jar
+org_springframework_security_spring_security_oauth2_core_jar .[#ABABAB].> org_springframework_spring_web_jar
+org_springframework_security_spring_security_oauth2_jose_jar -[#000000]-> org_springframework_security_spring_security_oauth2_core_jar
+org_springframework_security_spring_security_oauth2_jose_jar .[#ABABAB].> org_springframework_spring_core_jar
+org_springframework_security_spring_security_oauth2_jose_jar -[#000000]-> com_nimbusds_nimbus_jose_jwt_jar
+org_springframework_boot_spring_boot_security_oauth2_resource_server_jar -[#000000]-> org_springframework_security_spring_security_oauth2_jose_jar
+org_springframework_security_spring_security_oauth2_resource_server_jar .[#ABABAB].> org_springframework_security_spring_security_core_jar
+org_springframework_security_spring_security_oauth2_resource_server_jar .[#ABABAB].> org_springframework_security_spring_security_oauth2_core_jar
+org_springframework_security_spring_security_oauth2_resource_server_jar .[#ABABAB].> org_springframework_security_spring_security_web_jar
+org_springframework_security_spring_security_oauth2_resource_server_jar .[#ABABAB].> org_springframework_spring_core_jar
+org_springframework_boot_spring_boot_security_oauth2_resource_server_jar -[#000000]-> org_springframework_security_spring_security_oauth2_resource_server_jar
+org_springframework_boot_spring_boot_security_oauth2_resource_server_jar .[#ABABAB].> org_springframework_boot_spring_boot_security_jar
+org_springframework_boot_spring_boot_starter_oauth2_resource_server_jar -[#000000]-> org_springframework_boot_spring_boot_security_oauth2_resource_server_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_springframework_boot_spring_boot_starter_oauth2_resource_server_jar
+org_springframework_boot_spring_boot_jar .[#ABABAB].> org_springframework_spring_core_jar
+org_springframework_spring_context_jar .[#ABABAB].> org_springframework_spring_aop_jar
+org_springframework_spring_context_jar .[#ABABAB].> org_springframework_spring_beans_jar
+org_springframework_spring_context_jar .[#ABABAB].> org_springframework_spring_core_jar
+org_springframework_spring_context_jar .[#ABABAB].> org_springframework_spring_expression_jar
+org_springframework_spring_context_jar .[#ABABAB].> io_micrometer_micrometer_observation_jar
+org_springframework_boot_spring_boot_jar -[#000000]-> org_springframework_spring_context_jar
+org_springframework_boot_spring_boot_flyway_jar -[#000000]-> org_springframework_boot_spring_boot_jar
+org_springframework_boot_spring_boot_jdbc_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
+org_springframework_boot_spring_boot_sql_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
+org_springframework_boot_spring_boot_jdbc_jar -[#000000]-> org_springframework_boot_spring_boot_sql_jar
+org_springframework_boot_spring_boot_transaction_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
+org_springframework_boot_spring_boot_persistence_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
+org_springframework_boot_spring_boot_persistence_jar .[#ABABAB].> org_springframework_spring_tx_jar
+org_springframework_boot_spring_boot_transaction_jar -[#000000]-> org_springframework_boot_spring_boot_persistence_jar
+org_springframework_spring_tx_jar .[#ABABAB].> org_springframework_spring_beans_jar
+org_springframework_spring_tx_jar .[#ABABAB].> org_springframework_spring_core_jar
+org_springframework_boot_spring_boot_transaction_jar -[#000000]-> org_springframework_spring_tx_jar
+org_springframework_boot_spring_boot_jdbc_jar -[#000000]-> org_springframework_boot_spring_boot_transaction_jar
+org_springframework_spring_jdbc_jar .[#ABABAB].> org_springframework_spring_beans_jar
+org_springframework_spring_jdbc_jar .[#ABABAB].> org_springframework_spring_core_jar
+org_springframework_spring_jdbc_jar .[#ABABAB].> org_springframework_spring_tx_jar
+org_springframework_boot_spring_boot_jdbc_jar -[#000000]-> org_springframework_spring_jdbc_jar
+org_springframework_boot_spring_boot_flyway_jar -[#000000]-> org_springframework_boot_spring_boot_jdbc_jar
+org_springframework_boot_spring_boot_flyway_jar .[#ABABAB].> org_flywaydb_flyway_core_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_springframework_boot_spring_boot_flyway_jar
+tools_jackson_core_jackson_databind_jar -[#000000]-> com_fasterxml_jackson_core_jackson_annotations_jar
+tools_jackson_core_jackson_databind_jar -[#000000]-> tools_jackson_core_jackson_core_jar
+org_flywaydb_flyway_core_jar -[#000000]-> tools_jackson_core_jackson_databind_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_flywaydb_flyway_core_jar
+org_flywaydb_flyway_database_postgresql_jar .[#ABABAB].> org_flywaydb_flyway_core_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_flywaydb_flyway_database_postgresql_jar
+org_postgresql_postgresql_jar -[#000000]-> org_checkerframework_checker_qual_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_postgresql_postgresql_jar
+com_tngtech_archunit_archunit_jar -[#000000]-> org_slf4j_slf4j_api_jar
+com_tngtech_archunit_archunit_junit5_api_jar -[#000000]-> com_tngtech_archunit_archunit_jar
+com_tngtech_archunit_archunit_junit5_jar -[#000000]-> com_tngtech_archunit_archunit_junit5_api_jar
+com_tngtech_archunit_archunit_junit5_engine_jar .[#ABABAB].> com_tngtech_archunit_archunit_jar
+com_tngtech_archunit_archunit_junit5_engine_jar .[#ABABAB].> com_tngtech_archunit_archunit_junit5_api_jar
+com_tngtech_archunit_archunit_junit5_engine_api_jar .[#ABABAB].> org_junit_platform_junit_platform_engine_jar
+com_tngtech_archunit_archunit_junit5_engine_jar -[#000000]-> com_tngtech_archunit_archunit_junit5_engine_api_jar
+com_tngtech_archunit_archunit_junit5_jar -[#000000]-> com_tngtech_archunit_archunit_junit5_engine_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> com_tngtech_archunit_archunit_junit5_jar
+org_junit_jupiter_junit_jupiter_api_jar -[#000000]-> org_opentest4j_opentest4j_jar
+org_junit_platform_junit_platform_commons_jar .[#ABABAB].> org_apiguardian_apiguardian_api_jar
+org_junit_platform_junit_platform_commons_jar .[#ABABAB].> org_jspecify_jspecify_jar
+org_junit_jupiter_junit_jupiter_api_jar -[#000000]-> org_junit_platform_junit_platform_commons_jar
+org_junit_jupiter_junit_jupiter_api_jar -[#000000]-> org_apiguardian_apiguardian_api_jar
+org_junit_jupiter_junit_jupiter_api_jar .[#ABABAB].> org_jspecify_jspecify_jar
+org_junit_jupiter_junit_jupiter_jar -[#000000]-> org_junit_jupiter_junit_jupiter_api_jar
+org_junit_jupiter_junit_jupiter_params_jar .[#ABABAB].> org_junit_jupiter_junit_jupiter_api_jar
+org_junit_jupiter_junit_jupiter_params_jar .[#ABABAB].> org_apiguardian_apiguardian_api_jar
+org_junit_jupiter_junit_jupiter_params_jar .[#ABABAB].> org_jspecify_jspecify_jar
+org_junit_jupiter_junit_jupiter_jar -[#000000]-> org_junit_jupiter_junit_jupiter_params_jar
+org_junit_platform_junit_platform_engine_jar .[#ABABAB].> org_opentest4j_opentest4j_jar
+org_junit_platform_junit_platform_engine_jar .[#ABABAB].> org_junit_platform_junit_platform_commons_jar
+org_junit_platform_junit_platform_engine_jar .[#ABABAB].> org_apiguardian_apiguardian_api_jar
+org_junit_platform_junit_platform_engine_jar .[#ABABAB].> org_jspecify_jspecify_jar
+org_junit_jupiter_junit_jupiter_engine_jar -[#000000]-> org_junit_platform_junit_platform_engine_jar
+org_junit_jupiter_junit_jupiter_engine_jar .[#ABABAB].> org_junit_jupiter_junit_jupiter_api_jar
+org_junit_jupiter_junit_jupiter_engine_jar .[#ABABAB].> org_apiguardian_apiguardian_api_jar
+org_junit_jupiter_junit_jupiter_engine_jar .[#ABABAB].> org_jspecify_jspecify_jar
+org_junit_jupiter_junit_jupiter_jar -[#000000]-> org_junit_jupiter_junit_jupiter_engine_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_junit_jupiter_junit_jupiter_jar
+@enduml

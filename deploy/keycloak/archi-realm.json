@@ -1,0 +1,115 @@
+{
+  "realm": "archi",
+  "displayName": "Archi Creator",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "roles": {
+    "realm": [
+      {
+        "name": "VIEWER",
+        "description": "Чтение моделей и экспорт (FR-28)"
+      },
+      {
+        "name": "ARCHITECT",
+        "description": "Редактирование, захват блокировки, импорт (FR-28)"
+      },
+      {
+        "name": "ADMIN",
+        "description": "Рабочие пространства, пользователи, принудительное снятие блокировки (FR-28)"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "archi-creator-ui",
+      "name": "Archi Creator UI",
+      "description": "SPA на React: authorization code + PKCE, секрета у клиента нет",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": true,
+      "redirectUris": [
+        "http://localhost:8080/*",
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:8080",
+        "http://localhost:5173"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8080/*##http://localhost:5173/*"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "viewer",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Просмотр",
+      "lastName": "Демо",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "viewer",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "VIEWER"
+      ],
+      "email": "viewer@archi.local",
+      "requiredActions": []
+    },
+    {
+      "username": "architect",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Архитектор",
+      "lastName": "Демо",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "architect",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ARCHITECT"
+      ],
+      "email": "architect@archi.local",
+      "requiredActions": []
+    },
+    {
+      "username": "administrator",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Администратор",
+      "lastName": "Демо",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "administrator",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ADMIN"
+      ],
+      "email": "administrator@archi.local",
+      "requiredActions": []
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+# ───────────────────────────────────────────────────────────────────
+# Общая конфигурация. Здесь только то, что одинаково в dev и prod;
+# различия — в application-dev.yaml и application-prod.yaml (§10.3).
+#
+# Числа не выдуманы: пул соединений, таймауты и доля трассировки взяты
+# из spec/nfr/modeling.yaml (секции storage, upstream_calls,
+# observability). Спека — источник, файл — её исполнимая форма.
+#
+# Секретов в файле нет: пароль БД, ключ Anthropic и client secret
+# приходят переменными окружения (NFR-06). Значения по умолчанию
+# заданы только там, где это не секрет.
+# ───────────────────────────────────────────────────────────────────
+spring:
+  application:
+    name: archi-creator
+
+  datasource:
+    url: ${ARCHI_DB_URL:jdbc:postgresql://localhost:5432/archi}
+    username: ${ARCHI_DB_USER:archi}
+    password: ${ARCHI_DB_PASSWORD}
+    hikari:
+      # spec/nfr/modeling.yaml#storage.connection_pool. Пул небольшой:
+      # масштаб — архитектурная практика банка, десятки пользователей.
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 3000        # мс; HikariConfig принимает число, не Duration
+      leak-detection-threshold: 30000 # мс
+      pool-name: archi-pool
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Схему ведёт Flyway. ddl-auto любого другого значения означало бы
+      # два источника правды о схеме.
+      ddl-auto: none
+    properties:
+      # spec/nfr/modeling.yaml#storage.query_timeout — выше типового:
+      # дерево модели читается одним запросом на тысячи строк (§4.3).
+      jakarta.persistence.query.timeout: 15000
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Keycloak 26, realm archi (§10.1). Проверка подписи идёт по
+          # кэшированному JWKS, вызова на запрос нет
+          # (spec/nfr/modeling.yaml#upstream_calls.keycloak_jwks).
+          issuer-uri: ${ARCHI_OIDC_ISSUER_URI:http://localhost:8081/realms/archi}
+
+  jackson:
+    default-property-inclusion: non_null
+
+  servlet:
+    multipart:
+      # Импорт .archimate идёт файлом; референсная модель ~2 МБ,
+      # запас на порядок.
+      max-file-size: 32MB
+      max-request-size: 32MB
+
+server:
+  port: 8080
+  shutdown: graceful
+  error:
+    whitelabel:
+      enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # docs/backend.md §8.4. Список закрытый: всё остальное наружу
+        # не выставляется даже в dev.
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      # spec/nfr/modeling.yaml#observability.tracing.ratio
+      probability: 0.1
+
+# ── Настройки приложения ───────────────────────────────────────────
+archi:
+  ai:
+    # NFR-06: ключ живёт только на сервере и в браузер не попадает.
+    # Пустой ключ = ИИ выключен, приложение стартует без него.
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: claude-sonnet-5
+    base-url: https://api.anthropic.com
+  web:
+    cors:
+      # Пустой список = CORS закрыт. В dev список расширяется
+      # адресом Vite dev-сервера (§10.3).
+      allowed-origins: []
+
+logging:
+  level:
+    root: INFO
+    uz.salvadore.hamkorbank.archi: INFO

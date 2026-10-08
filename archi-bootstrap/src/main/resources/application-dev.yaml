@@ -1,0 +1,39 @@
+# ───────────────────────────────────────────────────────────────────
+# Профиль dev (§10.3): PostgreSQL в Docker, Vite dev-сервер с прокси
+# на :8080, авторизация заглушкой ARCHITECT.
+#
+# Keycloak в dev не поднимается. Поэтому автоконфигурация ресурс-сервера
+# выключена явно: при заданном issuer-uri Spring создаёт JwtDecoder
+# на старте и лезет за JWKS — приложение не поднялось бы без Keycloak,
+# хотя в dev токен всё равно не проверяется.
+# ───────────────────────────────────────────────────────────────────
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.security.oauth2.server.resource.autoconfigure.OAuth2ResourceServerAutoConfiguration
+
+  datasource:
+    password: ${ARCHI_DB_PASSWORD:archi}
+
+  flyway:
+    # В dev схема может отставать от миграций после переключения ветки:
+    # ставим версию на текущую, а не падаем.
+    baseline-on-migrate: true
+
+archi:
+  web:
+    cors:
+      # Vite dev-сервер ходит на :8080 через прокси, но прямые запросы
+      # из браузера к API при отладке тоже должны работать.
+      allowed-origins:
+        - http://localhost:5173
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    uz.salvadore.hamkorbank.archi: DEBUG
+    org.flywaydb: INFO

@@ -26,7 +26,8 @@ bounded_context: modeling
 
 **Формулировка:** каждый элемент, связь, представление, узел и ребро
 представления, а также каждая папка обязаны иметь непустой `archiId`
-формата `id-<24 hex>`. Внутри одной модели `archiId` не повторяется.
+в формате, допустимом для Archi
+(новые — `id-<32 hex>`, см. [`ADR-0002`](../../adr/0002-dual-identity.md)). Внутри одной модели `archiId` не повторяется.
 Между моделями повторение допустимо и ошибкой не является.
 
 **Нарушение:** два объекта одной модели с одинаковым `archiId` — экспорт
@@ -169,13 +170,13 @@ bounded_context: modeling
 
 ---
 
-## INV-MDL-009 — Дерево папок корректно: восемь корней, без циклов, с раскладкой по видам
+## INV-MDL-009 — Дерево папок корректно: девять корней, без циклов, с раскладкой по видам
 
 **Тип:** структурный
 
-**Формулировка:** у каждой модели существуют все восемь корневых папок
+**Формулировка:** у каждой модели существуют все девять корневых папок
 Archi (`strategy`, `business`, `application`, `technology`, `motivation`,
-`other`, `relations`, `diagrams`), и они неудалимы. Пользовательские папки
+`implementation_migration`, `other`, `relations`, `diagrams`), и они неудалимы. Пользовательские папки
 образуют дерево без циклов, `folderType` у них не задан. Связи лежат в
 поддереве `relations`, представления — в поддереве `diagrams`.
 
@@ -183,7 +184,7 @@ Archi (`strategy`, `business`, `application`, `technology`, `motivation`,
 поддереве дают файл, который Archi открывает с перекладкой объектов, —
 round-trip ломается на структуре, а не на содержимом.
 
-**Тест:** `FolderTreeTest#eightRootFoldersAlwaysExist`,
+**Тест:** `FolderTreeTest#rootFoldersAlwaysExist`,
 `FolderTreeTest#moveIntoOwnSubtreeIsRejected`
 
 ---
@@ -222,7 +223,7 @@ round-trip ломается на структуре, а не на содержи
 | INV-MDL-006 | `ModelLockTest#writeWithoutHeldLockIsRejected` | `ConcurrentSaveIT#secondWriterGets409` |
 | INV-MDL-007 | `RelationMatrixTest#forbiddenRelationIsRejectedOnCreate` | `ValidationReportIT#importedViolationsAppearInReport` |
 | INV-MDL-008 | `ViewIntegrityTest#diagramObjectRequiresElementOfSameModel` | — |
-| INV-MDL-009 | `FolderTreeTest#eightRootFoldersAlwaysExist` | `ModelImportIT#folderTreeSurvivesRoundTrip` |
+| INV-MDL-009 | `FolderTreeTest#rootFoldersAlwaysExist` | `ModelImportIT#folderTreeSurvivesRoundTrip` |
 | INV-MDL-010 | `ModelVersionTest#versionNumbersAreMonotonic` | `SnapshotRetentionIT#purgeIsDisabledWithoutGitBinding` |
 
 **Покрытие use case'ами** (2026-09-28): все десять инвариантов связаны
@@ -241,7 +242,6 @@ round-trip ломается на структуре, а не на содержи
 | INV-MDL-009 | `UC-MDL-001`, `UC-MDL-006` |
 | INV-MDL-010 | `UC-MDL-004` |
 
-**Тестов пока нет ни одного:** имена в таблице — контракт на то, как тест
-будет назван, а не ссылка на существующий код. Этап 1 начинается с
-golden-file тестов round-trip (BC `interchange`), и большая часть таблицы
-выше становится исполнимой на этапе 2.
+**Исполним пока один тест таблицы** — `RelationMatrixTest` (`INV-MDL-007`,
+этап 1, 2026-10-08). Остальные имена — контракт на то, как тест будет назван:
+агрегатов модели ещё нет, и таблица становится исполнимой на этапе 2.

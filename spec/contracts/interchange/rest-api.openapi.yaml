@@ -110,7 +110,7 @@ components:
         severity: { type: string, enum: [ERROR, WARNING, INFO] }
         code:     { type: string, examples: ["IXC_UNKNOWN_ELEMENT_TYPE"] }
         message:  { type: string }
-        archiId:  { type: string, pattern: '^id-[0-9a-f]{24}$' }
+        archiId:  { type: string, pattern: '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,254}$' }
         xmlLine:  { type: integer, minimum: 1 }
 
     LossReport:
@@ -131,7 +131,7 @@ components:
       type: object
       required: [archiId, objectKind, lostAspect, reason]
       properties:
-        archiId:    { type: string, pattern: '^id-[0-9a-f]{24}$' }
+        archiId:    { type: string, pattern: '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,254}$' }
         objectKind: { type: string, enum: [element, relationship, view, node, edge, property] }
         lostAspect: { type: string }
         reason:     { type: string }
