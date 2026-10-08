@@ -211,7 +211,7 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 
 - ✅ `ImportSession` со state machine `RECEIVED → PARSED → VALIDATED → APPLIED`,
       отказ из любого нетерминального (`INV-IXC-002`)
-- ⬜ Идемпотентность по `Idempotency-Key` + `sourceHash` (`INV-IXC-003`)
+- ✅ Идемпотентность по `Idempotency-Key` + `sourceHash` (`INV-IXC-003`)
 - ✅ `ImportFinding` с `severity`, `code`, `archiId`, `xmlLine`
 - ✅ `strictMode`: `ERROR` отклоняет только в строгом режиме (`INV-IXC-007`,
       FR-49, [§8.3](../backend.md#83-строгость-импорта)). Автомат, находки
@@ -239,7 +239,7 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 
 - ✅ `ArchiReaderTest#unknownNodeIsPreservedAsRawFragment` (`INV-IXC-001`)
 - ✅ `ImportSessionStateMachineTest#applyIsAllowedOnlyFromValidated` (`INV-IXC-002`)
-- ⬜ `ImportIdempotencyTest#sameKeyReturnsExistingSession` (`INV-IXC-003`)
+- ✅ `ImportIdempotencyTest#sameKeyReturnsExistingSession` (`INV-IXC-003`)
 - ✅ `ArchiWriterTest#writingTwiceProducesIdenticalBytes` (`INV-IXC-004`)
 - ✅ `ArchiCodecTest#documentSurvivesWriteReadCycle` (`INV-IXC-005`)
 - ⬜ `RoundTripGoldenFileTest#hamkorbankAsIsSurvivesRoundTrip` (`INV-IXC-005`, NFR-05)
