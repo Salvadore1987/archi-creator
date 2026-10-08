@@ -56,6 +56,7 @@ decisions:
     affects: [modeling, interchange]
     requirements: [FR-01, FR-02]
     anchors: [INV-MDL-001, INV-IXC-001]
+    implemented: 2026-10-08
 
   - id: ADR-0003
     title: Механизм публикации доменных событий
@@ -236,3 +237,4 @@ decisions:
     affects: [modeling, interchange]
     requirements: [FR-02, FR-03, NFR-05]
     anchors: [INV-IXC-001, INV-IXC-005, INV-MDL-005]
+    implemented: 2026-10-08
