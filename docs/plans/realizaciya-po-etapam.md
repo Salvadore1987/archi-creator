@@ -329,19 +329,28 @@
 Сущности и ограничения — [§4.1](../database.md#41-сущности),
 [§4.2](../database.md#42-индексы-и-ограничения).
 
-- ⬜ `model`, `model_folder`, `element`, `relationship`, `view`, `view_node`,
-      `view_edge`, `element_property`, `relationship_property`, `view_property`,
-      `model_version`, `model_lock`, `ai_audit_log`
-- ⬜ `UNIQUE (model_id, archi_id)` на всех сущностях с `archi_id` (`INV-MDL-001`)
-- ⬜ `INDEX (model_id, archi_type)`, `INDEX (view_id, parent_id, sort_order)`
-- ⬜ `relationship.source_element_id/target_element_id` — `ON DELETE RESTRICT`
-      (`INV-MDL-004`)
-- ⬜ `sort_order` разреженный, шаг 1000, во всех таблицах с порядком
+Миграция `V2__model.sql`. Проверена на `postgres:16` до кода адаптера:
+связь вставляется раньше своих элементов, удаление связанного элемента
+отклоняется на коммите, удаление модели каскадом чистит всё содержимое.
+
+- ✅ `model`, `model_folder`, `element`, `relationship`, `view`, `view_node`,
+      `view_edge`, `model_property`, `element_property`, `relationship_property`,
+      `view_property`, `model_version`, `model_lock`, `model_access_entry`,
+      `ai_audit_log`
+- ✅ `UNIQUE (model_id, archi_id)` на всех сущностях с `archi_id` (`INV-MDL-001`);
+      у `view_node` и `view_edge` ради этого повторён `model_id`
+- ✅ `INDEX (model_id, archi_type)`, `INDEX (view_id, parent_id, sort_order)`
+- ✅ Концы связи — `ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED`
+      (`INV-MDL-004`): по смыслу `RESTRICT`, проверка в конце транзакции —
+      см. журнал. Конец — элемент или связь, ровно одно из пары (`CHECK`)
+- ✅ `sort_order` разреженный, шаг 1000, во всех таблицах с порядком —
+      `CHECK > 0` без `DEFAULT`: порядок назначает домен
       (`INV-MDL-005`, [§11.6](../database.md#116-что-нужно-сделать-уже-на-этапе-1))
-- ⬜ `raw_xml` заполняется для всего неподдержанного (FR-03) — иначе цикл
-      БД → Git → БД потеряет данные
-- ⬜ `model_version.snapshot` — `bytea` gzip, nullable; `git_sha` nullable
-- ⬜ Таблица ключей идемпотентности (`INV-MDL-003`) и таблица `import_session`
+- ✅ `raw_xml` у каждой строки с `archi_id` и у модели (ADR-0017); у opaque
+      элемента и связи — обязателен (`CHECK supported OR raw_xml IS NOT NULL`, FR-03)
+- ✅ `model_version.snapshot` — `bytea` gzip, nullable; `git_sha` nullable;
+      `content_hash` — ответ на «есть ли изменения» без снимка
+- ✅ Таблица ключей идемпотентности (`INV-MDL-003`) и таблица `import_session`
       с находками
 
 ### 2.2 Домен (`archi-modeling-domain`)
@@ -1189,3 +1198,12 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
   модели проверяет папки, элементы, связи и представления, агрегат представления —
   свои узлы и рёбра; столкновение узла с элементом исключает генератор
   (128 случайных бит), а импорт — читатель, отклоняющий дубль на разборе.
+- **2026-10-08. Концы связи — `NO ACTION DEFERRABLE`, а не `RESTRICT`.**
+  План (§4.2) требовал `ON DELETE RESTRICT`. У `RESTRICT` в PostgreSQL нет
+  отложенной проверки, и на нём не работали бы две вещи: импорт, где связь
+  ссылается на связь, вставленную позже (ассоциация к связи), и физическое
+  удаление модели каскадом, где элемент и связь уходят одним оператором.
+  `NO ACTION DEFERRABLE INITIALLY DEFERRED` даёт тот же отказ при удалении
+  связанного элемента — проверено вживую, — только в конце транзакции.
+  Отказ пользователю всё равно приходит раньше, из домена (`INV-MDL-004`, `409`);
+  база — страховка, и её ошибка на коммите тоже отображается в `409`.
