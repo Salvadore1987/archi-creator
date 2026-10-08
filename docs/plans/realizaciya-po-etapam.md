@@ -232,7 +232,7 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 - ⬜ `all_relationship_types.archimate` — 11 типов связей и `Junction`
 - ⬜ `styled_objects.archimate` — собственные `fillColor`, `font`, `lineColor`
 - ⬜ `unknown_extension.archimate` — неизвестные узлы и атрибуты
-- ⬜ Хелпер `assertXmlEquivalent`: нормализация форматирования, строгий
+- ✅ Хелпер `assertXmlEquivalent`: нормализация форматирования, строгий
       контроль порядка узлов, id и содержимого
 
 Тесты (имена — контракт из таблиц «Маппинг на тесты»):
@@ -1052,3 +1052,11 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
   режиме только `ERROR` — строгий импорт не отклонил бы ничего. Исправлен UC:
   нарушение матрицы — `ERROR`, незнакомый тип — `INFO`. Правило «`ERROR` в мягком
   режиме не отказ» остаётся за инвариантом.
+- **2026-10-08. Golden-file тесты — в `archi-bootstrap`, как в таблице
+  «Маппинг на тесты» `INV-IXC-*`.** Кодек лежит в `archi-interchange-domain`,
+  и его юнит-тесты там же, а `RoundTripGoldenFileTest` и
+  `assertXmlEquivalent` — в `archi-bootstrap/src/test`: на этапе 2 тот же
+  тест пойдёт через БД (импорт → таблицы → экспорт), и переносить его
+  не придётся. Хелпер проверен собственным тестом (`XmlEquivalenceTest`):
+  сравнение, которое прощает лишнее, сделало бы golden-file зелёным над
+  сломанным round-trip.
