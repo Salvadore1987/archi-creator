@@ -38,16 +38,19 @@ Workspace 1──* Model 1──* ModelFolder ──* ModelFolder (вложен�
 | Сущность | Поля |
 |----------|------|
 | `Workspace` | `id`, `name`, `ai_enabled`, `ai_monthly_token_limit` ([§7.5](backend.md#75-лимиты-расходов)), `strict_import` (по умолчанию `false`, [§8.3](backend.md#83-строгость-импорта)), `created_at`, `git_repo_url`, `git_branch`, `git_token_ref` (все nullable, §11.6) |
-| `Model` | `id`, `workspace_id`, `name`, `documentation`, `archi_version` (`5.0.0`), `root_id` (id из файла), `created_by`, `created_at`, `updated_at`, `deleted` |
-| `ModelFolder` | `id`, `model_id`, `parent_id`, `archi_id`, `name`, `folder_type` (`strategy`…`diagrams`, null у вложенных), `sort_order` |
+| `Model` | `id`, `workspace_id`, `archi_id` (id корня из файла), `name`, `documentation`, `archi_version` (`5.0.0`), `status` (`ACTIVE`/`DELETED`; `PURGED` строки не оставляет), `raw_xml`, `created_by`, `created_at`, `updated_at`, `version` |
+| `ModelFolder` | `id`, `model_id`, `parent_id`, `archi_id`, `name`, `folder_type` (`strategy`…`diagrams`, null у вложенных), `sort_order`, `raw_xml` |
 | `Element` | `id`, `model_id`, `folder_id`, `archi_id`, `archi_type` (`archimate:ApplicationComponent`), `layer`, `name`, `documentation`, `sort_order`, `supported` (false → opaque), `raw_xml` |
-| `Relationship` | `id`, `model_id`, `folder_id`, `archi_id`, `archi_type`, `source_element_id`, `target_element_id`, `name`, `documentation`, `access_type`, `directed`, `sort_order`, `supported`, `raw_xml` |
-| `View` | `id`, `model_id`, `folder_id`, `archi_id`, `name`, `documentation`, `sort_order`, `viewpoint` |
-| `ViewNode` | `id`, `view_id`, `parent_id`, `archi_id`, `kind` (`DIAGRAM_OBJECT`/`GROUP`/`NOTE`/`JUNCTION`), `element_id` (null для групп/заметок), `x`, `y`, `width`, `height`, `fill_color`, `font`, `font_color`, `line_color`, `text_alignment`, `sort_order`, `raw_xml` |
-| `ViewEdge` | `id`, `view_id`, `archi_id`, `relationship_id`, `source_node_id`, `target_node_id`, `bendpoints` (jsonb), `line_color`, `font`, `sort_order`, `raw_xml` |
-| `ElementProperty` / `RelationshipProperty` / `ViewProperty` | `id`, `owner_id`, `key`, `value`, `sort_order` |
-| `ModelVersion` | `id`, `model_id`, `version_no`, `author`, `comment`, `label` (метка релиза, nullable), `created_at`, `snapshot` (сжатый `.archimate`, **nullable** — может быть очищен, §4.4), `git_sha` (nullable, §11.6) |
+| `Relationship` | `id`, `model_id`, `folder_id`, `archi_id`, `archi_type`, `source_element_id` \| `source_relationship_id`, `target_element_id` \| `target_relationship_id` (конец — элемент или связь, ровно одно из пары), `name`, `documentation`, `access_type`, `directed`, `sort_order`, `supported`, `raw_xml` |
+| `View` | `id`, `model_id`, `folder_id`, `archi_id`, `archi_type`, `name`, `documentation`, `sort_order`, `viewpoint`, `raw_xml` |
+| `ViewNode` | `id`, `model_id`, `view_id`, `parent_id`, `archi_id`, `archi_type`, `kind` (`DIAGRAM_OBJECT`/`GROUP`/`NOTE`/`OTHER`), `element_id` (null для групп/заметок), `x`, `y`, `width`, `height`, `fill_color`, `font`, `font_color`, `line_color`, `text_alignment`, `sort_order`, `raw_xml` |
+| `ViewEdge` | `id`, `model_id`, `view_id`, `archi_id`, `archi_type`, `relationship_id`, `source_node_id` \| `source_edge_id`, `target_node_id` \| `target_edge_id`, `bendpoints` (jsonb), `fill_color`, `font`, `font_color`, `line_color`, `text_alignment`, `sort_order` (позиция в содержимом источника), `raw_xml` |
+| `ModelProperty` / `ElementProperty` / `RelationshipProperty` / `ViewProperty` | `owner_id`, `sort_order`, `key`, `value` |
+| `ModelVersion` | `id`, `model_id`, `version_no`, `author`, `comment`, `label` (метка релиза, nullable), `created_at`, `snapshot` (сжатый `.archimate`, **nullable** — может быть очищен, §4.4), `content_hash` (SHA-256 несжатого снимка), `git_sha` (nullable, §11.6) |
 | `ModelLock` | `model_id` (PK), `owner`, `acquired_at`, `expires_at` |
+| `ModelAccessEntry` | `model_id`, `principal_type` (`USER`/`GROUP`), `principal`, `access` (`READ`/`WRITE`) — FR-29, `INV-MDL-011` |
+| `IdempotencyRecord` | `scope`, `actor`, `idem_key`, `fingerprint`, `result_ref`, `created_at` — `INV-MDL-003` |
+| `ImportSession` / `ImportFinding` | сессия импорта и её находки (`INV-IXC-002`, `INV-IXC-003`) |
 | `AiAuditLog` | `id`, `workspace_id`, `model_id`, `user`, `action`, `prompt_tokens`, `completion_tokens`, `created_at` |
 
 ### 4.2 Индексы и ограничения
@@ -55,7 +58,8 @@ Workspace 1──* Model 1──* ModelFolder ──* ModelFolder (вложен�
 - `UNIQUE (model_id, archi_id)` на `Element`, `Relationship`, `View`, `ViewNode`, `ViewEdge`, `ModelFolder` — гарантия уникальности идентификаторов внутри модели.
 - `INDEX (model_id, archi_type)` — выборка по типу для палитры и валидации.
 - `INDEX (view_id, parent_id, sort_order)` — сборка дерева представления одним запросом.
-- `Relationship.source_element_id`/`target_element_id` — `ON DELETE RESTRICT`: удаление элемента требует явного удаления его связей (как в Archi).
+- Концы связи — `ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED`: удаление элемента требует явного удаления его связей (как в Archi). По смыслу это `RESTRICT`, но проверка в конце транзакции: импорт пишет тысячи строк одной транзакцией, а связь может ссылаться на связь, вставленную позже. Отказ при удалении даёт домен раньше базы (`INV-MDL-004`), база — страховка.
+- `raw_xml` — остаток XML объекта ([`ADR-0017`](../spec/adr/0017-xml-residue.md)): всё, что не легло в столбцы, с позициями. Столбцы сильнее остатка.
 - Снимок `ModelVersion.snapshot` — `bytea`, gzip.
 - `sort_order` — **разреженный, шаг 1000** (§11.6): вставка элемента не перенумеровывает
   соседей, иначе каждая вставка давала бы diff на всю папку при выгрузке в Git.
@@ -67,7 +71,7 @@ PostgreSQL — источник правды. Открытие модели: о�
 связи, папки) и по запросу — payload представления. Файл `.archimate` — результат
 сериализации, а не способ хранения.
 
-**Этап 2 (Git):** выгрузка модели в Git-репозиторий при сохранении (`commit`),
+**Этап 7a (Git):** выгрузка модели в Git-репозиторий при сохранении (`commit`),
 импорт состояния по ссылке и слияние по сущностям при расхождении. Полностью описано
 в [§11](backend.md#11-git-интеграция-и-формат-хранения); база остаётся источником правды, репозиторий — производная величина.
 
