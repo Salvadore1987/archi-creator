@@ -442,22 +442,32 @@
 
 ### 2.5 REST и контракты (`archi-*-adapter-rest`)
 
-- ⬜ Наполнить `paths` в трёх `spec/contracts/*/rest-api.openapi.yaml` — по
-      одному endpoint'у на экспонированный use case со ссылкой на `UC-*`
-      (сейчас `paths: {}`, это осознанный скелет)
-- ⬜ Эндпоинты из [§5](../backend.md#5-rest-api): `/models`, `/models/{id}`,
+- ✅ Наполнить `paths` в `spec/contracts/{modeling,interchange}/rest-api.openapi.yaml` —
+      по одному endpoint'у на экспонированный use case, `x-use-case` и
+      `x-operation` (строка таблицы доступа). Контракт advisor остаётся скелетом
+      до этапа 5. Оговорки «каталог use case'ов пуст» в `nfr/*.yaml` и
+      `events.yaml` сняты (журнал, п. 5–6)
+- ✅ Эндпоинты из [§5](../backend.md#5-rest-api): `/models`, `/models/{id}`,
       `/models/import`, `/models/{id}/export`, `/models/{id}/lock`,
       `/models/{id}/versions*`, `/models/{id}/validate`, `/elements*`,
       `/relationships*`, `/views/{id}`, `/views/{id}/layout`,
-      `/views/{id}/nodes`, `/view-nodes/{id}`, `/metamodel/*`
-- ⬜ DTO `ModelTree`, `ViewPayload`, `LayoutPatch`, `ElementPatch`,
-      `VersionInfo`, `LockInfo`, `Finding` ([§5.1](../backend.md#51-ключевые-dto))
-- ⬜ Problem Details RFC 7807 с полем `code`, `@RestControllerAdvice`
-      ([§8.1](../backend.md#81-формат-ответа))
-- ⬜ Таблица сценариев ошибок [§8.2](../backend.md#82-основные-сценарии):
+      `/views/{id}/nodes`, `/view-nodes/{id}`, `/metamodel/*`. Сверх таблицы §5 —
+      то, без чего сценарии не исполнить: `POST /models/{id}/versions` (сохранение,
+      UC-MDL-004), `/restore` и `/purge` модели, `/folders` и `/tree/*` (UC-MDL-006),
+      `POST /models/{id}/views`, `/acl` (UC-MDL-007), `/workspaces` и строгость
+      импорта. `auto-layout` — этап 4, экспорт картинок — 5a
+- ✅ DTO `ModelTree`, `ViewPayload`, `LayoutPatch`, `ElementPatch`,
+      `VersionInfo`, `LockInfo`, `Finding` ([§5.1](../backend.md#51-ключевые-dto)).
+      Остаток XML наружу не отдаётся. **Для этапа 3:** подписи групп и текст
+      заметок живут пока в остатке — `ViewPayload` их не несёт, канве придётся
+      типизировать `name` и `content` узла (поля спеки + столбцы)
+- ✅ Problem Details RFC 7807 с полем `code`, `@RestControllerAdvice`
+      ([§8.1](../backend.md#81-формат-ответа)); класс отказа домена (`Failure`)
+      определяет статус одинаково для обоих контекстов
+- ✅ Таблица сценариев ошибок [§8.2](../backend.md#82-основные-сценарии):
       `409` блокировка и конкурентное сохранение, `422` недопустимая связь,
       `409` удаление элемента со связями, `400` битый XML, `422` строгий импорт
-- ⬜ Отчёт валидации метамодели без ИИ: `GET /models/{id}/validate` → `Finding[]`
+- ✅ Отчёт валидации метамодели без ИИ: `GET /models/{id}/validate` → `Finding[]`
       (FR-10 для импортированных нарушений)
 - ⬜ Экспорт каталога в CSV ([§5.2](../backend.md#52-экспорт-каталога-в-csv),
       FR-45): zip из `elements.csv` и `relations.csv`, UTF-8 **с BOM**,
@@ -473,8 +483,9 @@
       `ReorganizeTree`, `ManageModelAccess`
 - ✅ Чужую блокировку снимает только `ADMIN`; `PurgeModel`, `RestoreModel` —
       только `ADMIN`
-- ⬜ ACL на уровне модели (FR-29, `INV-MDL-011`, `UC-MDL-007`): список
-      доступа сужает роли и не расширяет их, скрытая модель отвечает `404`.
+- ✅ ACL на уровне модели (FR-29, `INV-MDL-011`, `UC-MDL-007`): список
+      доступа сужает роли и не расширяет их, скрытая модель отвечает `404`;
+      группы — из claim `groups` токена.
       Спека заведена 2026-10-08 (§2.0), раньше пункт был заблокирован
 
 ### 2.7 Версии и ретеншен
@@ -502,11 +513,11 @@
 ### 2.9 Тесты этапа
 
 - ✅ `ModelPersistenceIT#duplicateArchiIdViolatesUniqueConstraint`
-- ⬜ `ModelLifecycleIT#purgeRequiresDeletedState`
-- ⬜ `IdempotencyIT#sameKeyDifferentBodyReturns409`
-- ⬜ `ElementDeletionIT#restrictViolationReturns409`
-- ⬜ `ConcurrentSaveIT#secondWriterGets409` (NFR-07)
-- ⬜ `ValidationReportIT#importedViolationsAppearInReport`
+- ✅ `ModelLifecycleIT#purgeRequiresDeletedState`
+- ✅ `IdempotencyIT#sameKeyDifferentBodyReturns409`
+- ✅ `ElementDeletionIT#restrictViolationReturns409`
+- ✅ `ConcurrentSaveIT#secondWriterGets409` (NFR-07)
+- ✅ `ValidationReportIT#importedViolationsAppearInReport`
 - ✅ `ModelImportIT#folderTreeSurvivesRoundTrip` — эталон через базу, плюс
       `#fixtureSurvivesDatabaseRoundTrip` на пяти фикстурах §9.1 и
       `#referenceImportsWithinThreeSeconds` (NFR-02)
@@ -514,7 +525,8 @@
       `#corruptedFileIsRejectedInBothModes`, плюс строгий режим против матрицы
       и роли на импорте
 - ✅ `ExportJobTest#exportPinsSourceVersion` (`INV-IXC-008`) — с этапа 1
-- ⬜ Ролевой доступ: `VIEWER` → `403` на запись, `ARCHITECT` → `200`
+- ✅ Ролевой доступ: `VIEWER` → `403` на запись, `ARCHITECT` → `200`
+      (`RoleAccessIT`), список доступа — `ModelAclIT#hiddenModelAnswers404`
 - ⬜ Testcontainers `postgres:16` ✅ и `keycloak:26`
       ([§9.3](../backend.md#93-интеграционные-тесты-testcontainers))
 - ⬜ Нагрузочный профиль NFR-03: p95 ≤ 300 мс на операциях кроме ИИ и импорта
@@ -522,8 +534,9 @@
 
 **Выход этапа**
 
-- ⬜ Цикл «импорт файла → сохранение в БД → экспорт через API» даёт исходный
-      файл, сравнение `assertXmlEquivalent` зелёное
+- ✅ Цикл «импорт файла → сохранение в БД → экспорт через API» даёт исходный
+      файл, сравнение `assertXmlEquivalent` зелёное —
+      `RoundTripApiIT#importStoreExportThroughApi` на эталонной модели
 
 ---
 
@@ -1284,3 +1297,10 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
   `BOOT-INF/` внутри jar, а failsafe по умолчанию берёт именно jar. Лечится
   `classesDirectory = target/classes` в конфигурации failsafe модуля
   `archi-bootstrap`.
+- **2026-10-08. `-parameters` у компилятора.** Первые тесты REST упали на
+  «Name for argument of type UUID not specified»: Spring связывает `@PathVariable`
+  по имени параметра, а имя есть в байткоде только с флагом `-parameters`.
+  Его включает `spring-boot-starter-parent`, которого проект не наследует
+  (ADR-0001: родитель свой). Флаг добавлен в `maven-compiler-plugin` родителя.
+  Ловушка: инкрементальная сборка не перекомпилирует классы после смены флага —
+  нужен `clean`.

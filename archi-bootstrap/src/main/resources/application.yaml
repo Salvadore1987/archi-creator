@@ -62,10 +62,10 @@ spring:
 
   servlet:
     multipart:
-      # Импорт .archimate идёт файлом; референсная модель ~2 МБ,
-      # запас на порядок.
-      max-file-size: 32MB
-      max-request-size: 32MB
+      # Импорт .archimate идёт файлом; предел — spec/nfr/interchange.yaml
+      # #security.upload_limits (50 МБ). Больше — 413 до чтения тела.
+      max-file-size: 50MB
+      max-request-size: 51MB
 
 server:
   port: 8080

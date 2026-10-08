@@ -2,22 +2,24 @@ openapi: 3.1.0
 
 info:
   title: Modeling API
-  version: 0.1.0
+  version: 1.0.0
   description: |
-    Синхронный REST API для BC Modeling.
+    Синхронный REST API для BC Modeling (docs/backend.md §5).
 
-    Эта спека генерируется из `spec/application/modeling/usecases/`
-    через use case → endpoint mapping. Не редактируется вручную.
+    Каждая операция ссылается на use case в `x-use-case` и на операцию таблицы
+    доступа в `x-operation` (spec/nfr/modeling.yaml#security.authorization): роль
+    проверяется на границе use case'а, а не матчером URL. Наполнено на этапе 2
+    (2026-10-08) по одному endpoint'у на экспонированный сценарий; до этого
+    `paths` был пуст намеренно — endpoint без `UC-*` нарушал бы трассируемость.
 
-    **Состояние: скелет.** Секция `paths` пуста намеренно: каталог use
-    case'ов пока пуст, а endpoint без ссылки на `UC-MDL-NNN` нарушает
-    проверку целостности «контракт без use case»
-    (`references/cross-references.md`, проверка 4). Endpoint'ы появляются
-    здесь при вызове режима add-usecase — по одному на каждый
-    экспонированный use case.
+    Ошибки — `application/problem+json` (§8.1) с полем `code`: код инварианта
+    (`INV-MDL-NNN`) или бизнес-ошибки (`RELATION_NOT_PERMITTED`, `MDL_*`).
+    Класс отказа домена определяет статус: не найдено или скрыто списком доступа —
+    `404`, конфликт состояния — `409`, нарушение правила — `422`, роль — `403`,
+    очищенный снимок — `410`.
 
-    Перечень операций, которые предстоит описать, зафиксирован в
-    прозаической спецификации: `docs/backend.md` §5.
+    Остаток XML (`raw_xml`, ADR-0017) наружу не отдаётся: это внутренний формат
+    interchange.
 
 servers:
   - url: /api/v1
@@ -27,43 +29,660 @@ security:
   - bearerAuth: []
 
 tags:
-  - name: modeling
-    description: Модели, элементы, связи, представления, блокировки, версии.
+  - name: models
+    description: Модели, блокировки, версии, список доступа.
+  - name: content
+    description: Элементы, связи, дерево папок.
+  - name: views
+    description: Представления и геометрия.
+  - name: metamodel
+    description: Каталог типов и матрица связей.
 
-paths: {}
+paths:
 
-# ───────────────────────────────────────────────────────────────────
-# Планируемые операции (docs/backend.md §5).
-# Перенос в paths — отдельным шагом на каждый use case, вместе с якорем.
-#
-#   GET    /models                              список моделей
-#   POST   /models                              создать пустую модель
-#   GET    /models/{id}                         дерево модели
-#   PATCH  /models/{id}                         переименование, документация
-#   DELETE /models/{id}                         soft delete
-#   POST   /models/{id}/lock                    захватить блокировку
-#   DELETE /models/{id}/lock                    освободить (ADMIN — принудительно)
-#   GET    /models/{id}/versions                история версий
-#   POST   /models/{id}/versions/{no}/restore   откат к версии
-#   PUT    /models/{id}/versions/{no}/label     пометить версию как релиз
-#   GET    /models/{id}/validate                отчёт валидации метамодели
-#   POST   /models/{id}/elements                создать элемент
-#   PATCH  /elements/{id}                       изменить элемент
-#   DELETE /elements/{id}                       удалить элемент
-#   POST   /models/{id}/relationships           создать связь
-#   DELETE /relationships/{id}                  удалить связь
-#   GET    /views/{id}                          payload представления
-#   PUT    /views/{id}/layout                   сохранить геометрию
-#   POST   /views/{id}/nodes                    разместить элемент
-#   DELETE /view-nodes/{id}                     убрать из представления
-#   POST   /views/{id}/auto-layout              авторазметка
-#   GET    /metamodel/elements                  каталог типов для палитры
-#   GET    /metamodel/relations                 допустимые связи для пары типов
-#
-# Импорт и экспорт (POST /models/import, GET /models/{id}/export,
-# GET /views/{id}/export) принадлежат BC interchange и описаны в
-# contracts/interchange/rest-api.openapi.yaml.
-# ───────────────────────────────────────────────────────────────────
+  /workspaces:
+    get:
+      tags: [models]
+      operationId: listWorkspaces
+      summary: Рабочие пространства
+      x-use-case: UC-MDL-001
+      responses:
+        '200':
+          description: Пространства; первое заводится при старте на пустой базе.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Workspace' } }
+
+  /models:
+    get:
+      tags: [models]
+      operationId: listModels
+      summary: Модели пространства, видимые автору (FR-04, INV-MDL-011)
+      x-use-case: UC-MDL-001
+      x-operation: OpenModel
+      parameters:
+        - { in: query, name: workspaceId, required: false, schema: { type: string, format: uuid },
+            description: "Без него — первое пространство." }
+      responses:
+        '200':
+          description: Удалённые видит только ADMIN.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/ModelSummary' } }
+    post:
+      tags: [models]
+      operationId: createModel
+      summary: Пустая модель с девятью корневыми папками и версией 1
+      x-use-case: UC-MDL-001
+      x-operation: CreateModel
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:        { type: string, maxLength: 500 }
+                workspaceId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Модель создана; повтор ключа с тем же телом — та же модель (INV-MDL-003).
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ModelSummary' } }
+        '403': { $ref: '#/components/responses/Forbidden403' }
+        '409': { $ref: '#/components/responses/Conflict409' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity422' }
+
+  /models/{id}:
+    parameters: [ { $ref: '#/components/parameters/ModelId' } ]
+    get:
+      tags: [models]
+      operationId: openModel
+      summary: Дерево модели — папки, элементы, связи, список представлений
+      x-use-case: UC-MDL-001
+      x-operation: OpenModel
+      responses:
+        '200':
+          description: Списки — в порядке sort_order.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ModelTree' } }
+        '404': { $ref: '#/components/responses/NotFound404' }
+    patch:
+      tags: [models]
+      operationId: editModel
+      summary: Переименование и документация
+      x-use-case: UC-MDL-001
+      x-operation: RenameModel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:          { type: string, maxLength: 500 }
+                documentation: { type: string, description: "Пустая строка снимает документацию." }
+      responses:
+        '200':
+          description: Изменено.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ModelSummary' } }
+        '409': { $ref: '#/components/responses/Conflict409' }
+    delete:
+      tags: [models]
+      operationId: deleteModel
+      summary: Soft delete (INV-MDL-002); требует своей блокировки
+      x-use-case: UC-MDL-001
+      x-operation: DeleteModel
+      responses:
+        '204': { description: Модель в DELETED, блокировка снята. }
+        '409': { $ref: '#/components/responses/Conflict409' }
+
+  /models/{id}/restore:
+    parameters: [ { $ref: '#/components/parameters/ModelId' } ]
+    post:
+      tags: [models]
+      operationId: restoreModel
+      summary: DELETED → ACTIVE, только ADMIN
+      x-use-case: UC-MDL-001
+      x-operation: RestoreModel
+      responses:
+        '200':
+          description: Восстановлена.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ModelSummary' } }
+        '403': { $ref: '#/components/responses/Forbidden403' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity422' }
+
+  /models/{id}/purge:
+    parameters: [ { $ref: '#/components/parameters/ModelId' } ]
+    post:
+      tags: [models]
+      operationId: purgeModel
+      summary: DELETED → PURGED, только ADMIN; ACTIVE → PURGED запрещён (INV-MDL-002)
+      x-use-case: UC-MDL-001
+      x-operation: PurgeModel
+      responses:
+        '204': { description: Модель уничтожена вместе с версиями. }
+        '403': { $ref: '#/components/responses/Forbidden403' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity422' }
+
+  /models/{id}/lock:
+    parameters: [ { $ref: '#/components/parameters/ModelId' } ]
+    get:
+      tags: [models]
+      operationId: currentLock
+      summary: Действующая блокировка — чтобы остальные видели модель read-only
+      x-use-case: UC-MDL-005
+      x-operation: OpenModel
+      responses:
+        '200':
+          description: Модель заблокирована.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/LockInfo' } }
+        '204': { description: Блокировки нет. }
+    post:
+      tags: [models]
+      operationId: acquireLock
+      summary: Захват или продление своей блокировки (FR-05)
+      x-use-case: UC-MDL-005
+      x-operation: AcquireLock
+      responses:
+        '200':
+          description: Блокировка у автора до expiresAt.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/LockInfo' } }
+        '409': { $ref: '#/components/responses/Conflict409' }
+    delete:
+      tags: [models]
+      operationId: releaseLock
+      summary: Освобождение; чужую — только ADMIN
+      x-use-case: UC-MDL-005
+      x-operation: ReleaseLock
+      responses:
+        '204': { description: Снята или её не было. }
+        '403': { $ref: '#/components/responses/Forbidden403' }
+
+  /models/{id}/versions:
+    parameters: [ { $ref: '#/components/parameters/ModelId' } ]
+    get:
+      tags: [models]
+      operationId: listVersions
+      summary: История версий (FR-06)
+      x-use-case: UC-MDL-004
+      x-operation: ListVersions
+      responses:
+        '200':
+          description: От новых к старым.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/VersionInfo' } }
+    post:
+      tags: [models]
+      operationId: saveModel
+      summary: Сохранить модель новой версией
+      x-use-case: UC-MDL-004
+      x-operation: SaveModel
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment: { type: string, maxLength: 1000 }
+      responses:
+        '201':
+          description: Создана новая версия.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/SaveResult' } }
+        '200':
+          description: Изменений нет или повтор ключа — версия не создаётся, отдаётся последняя.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/SaveResult' } }
+        '409': { $ref: '#/components/responses/Conflict409' }
+
+  /models/{id}/versions/{no}/restore:
+    parameters:
+      - $ref: '#/components/parameters/ModelId'
+      - { in: path, name: no, required: true, schema: { type: integer, format: int64 } }
+    post:
+      tags: [models]
+      operationId: rollbackToVersion
+      summary: Откат — содержимое версии становится текущим и фиксируется новой версией
+      x-use-case: UC-MDL-004
+      x-operation: RestoreVersion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment: { type: string }
+      responses:
+        '200':
+          description: Новая версия с содержимым старой.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/VersionInfo' } }
+        '409': { $ref: '#/components/responses/Conflict409' }
+        '410': { $ref: '#/components/responses/Gone410' }
+
+  /models/{id}/versions/{no}/label:
+    parameters:
+      - $ref: '#/components/parameters/ModelId'
+      - { in: path, name: no, required: true, schema: { type: integer, format: int64 } }
+    put:
+      tags: [models]
+      operationId: labelVersion
+      summary: Метка релиза — снимок помеченной версии не удаляется (FR-48)
+      x-use-case: UC-MDL-004
+      x-operation: LabelVersion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label: { type: string, maxLength: 100, description: "Пустая — снять метку." }
+      responses:
+        '200':
+          description: Помечена.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/VersionInfo' } }
+
+  /models/{id}/validate:
+    parameters: [ { $ref: '#/components/parameters/ModelId' } ]
+    get:
+      tags: [models]
+      operationId: validateModel
+      summary: Отчёт валидации метамодели без ИИ — нарушения из импорта видны здесь (FR-10)
+      x-use-case: UC-MDL-003
+      x-operation: ValidateModel
+      responses:
+        '200':
+          description: Находки, сначала ERROR.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Finding' } }
+
+  /models/{id}/acl:
+    parameters: [ { $ref: '#/components/parameters/ModelId' } ]
+    get:
+      tags: [models]
+      operationId: getModelAccess
+      summary: Список доступа (FR-29)
+      x-use-case: UC-MDL-007
+      x-operation: OpenModel
+      responses:
+        '200':
+          description: Пустой — модель открыта по ролям.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/AclEntry' } }
+    put:
+      tags: [models]
+      operationId: replaceModelAccess
+      summary: Заменить список целиком — автор модели или ADMIN (INV-MDL-011)
+      x-use-case: UC-MDL-007
+      x-operation: ManageModelAccess
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: array, items: { $ref: '#/components/schemas/AclEntry' } }
+      responses:
+        '200':
+          description: Новый список.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/AclEntry' } }
+        '403': { $ref: '#/components/responses/Forbidden403' }
+
+  /models/{id}/elements:
+    parameters: [ { $ref: '#/components/parameters/ModelId' } ]
+    post:
+      tags: [content]
+      operationId: createElement
+      summary: Элемент в папке своего слоя; тип — фазы 1 (FR-07)
+      x-use-case: UC-MDL-002
+      x-operation: CreateElement
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [archiType, name]
+              properties:
+                archiType: { type: string, examples: ["archimate:ApplicationComponent"] }
+                name:      { type: string, maxLength: 500 }
+                folderId:  { type: string, format: uuid, description: "Без него — корень слоя." }
+      responses:
+        '201':
+          description: Создан.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Element' } }
+        '409': { $ref: '#/components/responses/Conflict409' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity422' }
+
+  /elements/{id}:
+    parameters: [ { in: path, name: id, required: true, schema: { type: string, format: uuid } } ]
+    patch:
+      tags: [content]
+      operationId: updateElement
+      summary: Имя, документация, свойства; переименование видно на всех представлениях (FR-11)
+      x-use-case: UC-MDL-002
+      x-operation: UpdateElement
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/ElementPatch' } }
+      responses:
+        '200':
+          description: Изменён.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Element' } }
+    delete:
+      tags: [content]
+      operationId: deleteElement
+      summary: Удалить; со связями — 409 с их перечнем в `relationships` (INV-MDL-004)
+      x-use-case: UC-MDL-006
+      x-operation: DeleteElement
+      responses:
+        '204': { description: Удалён вместе с размещениями на представлениях. }
+        '409': { $ref: '#/components/responses/Conflict409' }
+
+  /models/{id}/relationships:
+    parameters: [ { $ref: '#/components/parameters/ModelId' } ]
+    post:
+      tags: [content]
+      operationId: createRelationship
+      summary: Связь по матрице ArchiMate 3.2; по запросу — и ребро на представлении
+      x-use-case: UC-MDL-003
+      x-operation: CreateRelationship
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [archiType, sourceId, targetId]
+              properties:
+                archiType: { type: string, examples: ["archimate:ServingRelationship"] }
+                sourceId:  { type: string, format: uuid, description: "Элемент или связь." }
+                targetId:  { type: string, format: uuid }
+                name:      { type: string }
+                view:
+                  type: object
+                  properties:
+                    viewId:       { type: string, format: uuid }
+                    sourceNodeId: { type: string, format: uuid }
+                    targetNodeId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Создана.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Relationship' } }
+        '200':
+          description: Дубль того же типа между той же парой — существующая связь.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Relationship' } }
+        '422':
+          description: |
+            `RELATION_NOT_PERMITTED` с перечнем допустимых в `permitted` (INV-MDL-007)
+            либо конец из другой модели (INV-MDL-004).
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+
+  /relationships/{id}:
+    parameters: [ { in: path, name: id, required: true, schema: { type: string, format: uuid } } ]
+    patch:
+      tags: [content]
+      operationId: updateRelationship
+      summary: Имя, документация, свойства связи
+      x-use-case: UC-MDL-003
+      x-operation: UpdateRelationship
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/ElementPatch' } }
+      responses:
+        '200':
+          description: Изменена.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Relationship' } }
+    delete:
+      tags: [content]
+      operationId: deleteRelationship
+      summary: Удалить вместе с рёбрами; примыкающая связь — 409 (INV-MDL-004)
+      x-use-case: UC-MDL-003
+      x-operation: DeleteRelationship
+      responses:
+        '204': { description: Удалена. }
+        '409': { $ref: '#/components/responses/Conflict409' }
+
+  /models/{id}/folders:
+    parameters: [ { $ref: '#/components/parameters/ModelId' } ]
+    post:
+      tags: [content]
+      operationId: createFolder
+      summary: Пользовательская папка
+      x-use-case: UC-MDL-006
+      x-operation: ReorganizeTree
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [parentId, name]
+              properties:
+                parentId: { type: string, format: uuid }
+                name:     { type: string, maxLength: 500 }
+      responses:
+        '201':
+          description: Создана в конце родителя (INV-MDL-005).
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Folder' } }
+
+  /models/{id}/tree/{itemId}:
+    parameters:
+      - $ref: '#/components/parameters/ModelId'
+      - { in: path, name: itemId, required: true, schema: { type: string, format: uuid } }
+    patch:
+      tags: [content]
+      operationId: renameItem
+      summary: Переименовать папку, элемент, связь или представление
+      x-use-case: UC-MDL-006
+      x-operation: ReorganizeTree
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [name], properties: { name: { type: string } } }
+      responses:
+        '204': { description: Переименовано. }
+
+  /models/{id}/tree/move:
+    parameters: [ { $ref: '#/components/parameters/ModelId' } ]
+    post:
+      tags: [content]
+      operationId: moveToFolder
+      summary: Перенос в папку; соседи не перенумеровываются, корни не меняются (INV-MDL-009)
+      x-use-case: UC-MDL-006
+      x-operation: ReorganizeTree
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetFolderId, itemIds]
+              properties:
+                targetFolderId: { type: string, format: uuid }
+                itemIds:        { type: array, items: { type: string, format: uuid } }
+      responses:
+        '204': { description: Перенесено целиком. }
+        '422': { $ref: '#/components/responses/UnprocessableEntity422' }
+
+  /models/{id}/tree/delete:
+    parameters: [ { $ref: '#/components/parameters/ModelId' } ]
+    post:
+      tags: [content]
+      operationId: deleteItems
+      summary: Групповое удаление одной транзакцией
+      x-use-case: UC-MDL-006
+      x-operation: ReorganizeTree
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [itemIds]
+              properties:
+                itemIds: { type: array, items: { type: string, format: uuid } }
+      responses:
+        '204': { description: Удалено целиком. }
+        '409': { $ref: '#/components/responses/Conflict409' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity422' }
+
+  /models/{id}/views:
+    parameters: [ { $ref: '#/components/parameters/ModelId' } ]
+    post:
+      tags: [views]
+      operationId: createView
+      summary: Пустая диаграмма ArchiMate в поддереве diagrams
+      x-use-case: UC-MDL-002
+      x-operation: CreateView
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:     { type: string, maxLength: 500 }
+                folderId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Создано.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ViewSummary' } }
+
+  /views/{id}:
+    parameters: [ { in: path, name: id, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [views]
+      operationId: openView
+      summary: Payload представления — узлы, рёбра, геометрия (NFR-01)
+      x-use-case: UC-MDL-002
+      x-operation: OpenView
+      responses:
+        '200':
+          description: Узлы и рёбра в порядке sort_order.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ViewPayload' } }
+
+  /views/{id}/layout:
+    parameters: [ { in: path, name: id, required: true, schema: { type: string, format: uuid } } ]
+    put:
+      tags: [views]
+      operationId: saveViewLayout
+      summary: Геометрия после перемещений одной транзакцией (NFR-03)
+      x-use-case: UC-MDL-002
+      x-operation: SaveViewLayout
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/LayoutPatch' } }
+      responses:
+        '204': { description: Сохранено. }
+
+  /views/{id}/nodes:
+    parameters: [ { in: path, name: id, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [views]
+      operationId: placeElement
+      summary: Разместить элемент; уже размещённый не дублируется (UI-002)
+      x-use-case: UC-MDL-002
+      x-operation: SaveViewLayout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [elementId, x, y]
+              properties:
+                elementId: { type: string, format: uuid }
+                x:         { type: integer }
+                y:         { type: integer }
+                width:     { type: integer, description: "По умолчанию 120, как у Archi." }
+                height:    { type: integer, description: "По умолчанию 55." }
+                parentId:  { type: string, format: uuid, description: "Узел-контейнер; bounds — относительно него." }
+      responses:
+        '201':
+          description: Узел.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ViewNode' } }
+
+  /view-nodes/{id}:
+    parameters: [ { in: path, name: id, required: true, schema: { type: string, format: uuid } } ]
+    delete:
+      tags: [views]
+      operationId: removeViewNode
+      summary: Убрать из представления; элемент остаётся в модели
+      x-use-case: UC-MDL-002
+      x-operation: SaveViewLayout
+      responses:
+        '204': { description: Узел, вложенные узлы и их рёбра убраны. }
+
+  /metamodel/elements:
+    get:
+      tags: [metamodel]
+      operationId: elementTypes
+      summary: Каталог типов для палитры с фазами (FR-07, FR-08)
+      x-use-case: UC-MDL-002
+      responses:
+        '200':
+          description: Типы элементов и Junction.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/ElementType' } }
+
+  /metamodel/relations:
+    get:
+      tags: [metamodel]
+      operationId: relationTypes
+      summary: Допустимые связи для упорядоченной пары типов; первая — по умолчанию
+      x-use-case: UC-MDL-003
+      parameters:
+        - { in: query, name: source, required: true, schema: { type: string } }
+        - { in: query, name: target, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Пусто — матрица не допускает ни одной.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/RelationType' } }
+
+# Ещё не здесь: POST /views/{id}/auto-layout — этап 4 (docs/backend.md §5).
+# Импорт и экспорт принадлежат BC interchange: contracts/interchange/rest-api.openapi.yaml.
 
 components:
 
@@ -72,27 +691,33 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT, выданный Keycloak. Роли VIEWER / ARCHITECT / ADMIN — в claim'ах токена (FR-28).
+      description: JWT, выданный Keycloak. Роли VIEWER / ARCHITECT / ADMIN — в claim'ах токена (FR-28), группы — в `groups`.
 
   parameters:
     IdempotencyKey:
       in: header
       name: Idempotency-Key
-      required: true
+      required: false
       schema: { type: string, maxLength: 64 }
       description: |
-        Уникальный ключ для дедупликации повторов. Тот же ключ с тем же телом
-        возвращает результат первого выполнения; тот же ключ с другим телом —
-        `409`. См. INV-MDL-003.
+        Ключ дедупликации повторов. Тот же ключ с тем же телом возвращает результат
+        первого выполнения; тот же ключ с другим телом — `409` (INV-MDL-003).
+        Ключ принадлежит пользователю: чужой ключ с тем же значением не конфликтует.
+    ModelId:
+      in: path
+      name: id
+      required: true
+      schema: { type: string, format: uuid }
 
   schemas:
 
     Problem:
       type: object
       description: |
-        RFC 7807 Problem Details + поле `code` для бизнес-правил.
-        Формат ответа об ошибке описан в `docs/backend.md` §8.1.
-      required: [type, title, status]
+        RFC 7807 Problem Details + поле `code` (docs/backend.md §8.1). Дополнительные поля
+        по ситуации: `lockOwner` и `expiresAt` у чужой блокировки, `relationships` у удаления
+        связанного элемента, `permitted` у недопустимой связи.
+      required: [type, title, status, code]
       properties:
         type:     { type: string, format: uri }
         title:    { type: string }
@@ -101,27 +726,281 @@ components:
         instance: { type: string }
         code:
           type: string
-          description: |
-            Код нарушенного инварианта (`INV-MDL-001` … `INV-MDL-010`,
-            см. `domain/modeling/invariants.md`) или иной бизнес-ошибки.
-          examples: ["INV-MDL-004", "INV-MDL-006"]
+          description: Код инварианта (`INV-MDL-NNN`, domain/modeling/invariants.md) или иной бизнес-ошибки.
+          examples: ["INV-MDL-004", "INV-MDL-006", "RELATION_NOT_PERMITTED"]
+        lockOwner:     { type: string }
+        relationships: { type: array, items: { type: string, format: uuid } }
+        permitted:     { type: array, items: { type: string } }
+
+    Workspace:
+      type: object
+      properties:
+        id:   { type: string, format: uuid }
+        name: { type: string }
+
+    ModelSummary:
+      type: object
+      properties:
+        id:            { type: string, format: uuid }
+        workspaceId:   { type: string, format: uuid }
+        archiId:       { type: string }
+        name:          { type: string }
+        documentation: { type: string }
+        status:        { type: string, enum: [ACTIVE, DELETED] }
+        archiVersion:  { type: string }
+        createdBy:     { type: string }
+        createdAt:     { type: string, format: date-time }
+        updatedAt:     { type: string, format: date-time }
+
+    Property:
+      type: object
+      properties:
+        key:   { type: string, maxLength: 200 }
+        value: { type: string }
+
+    Folder:
+      type: object
+      properties:
+        id:         { type: string, format: uuid }
+        parentId:   { type: string, format: uuid }
+        archiId:    { type: string }
+        name:       { type: string }
+        folderType: { type: string, enum: [STRATEGY, BUSINESS, APPLICATION, TECHNOLOGY, MOTIVATION, IMPLEMENTATION_MIGRATION, OTHER, RELATIONS, DIAGRAMS] }
+        sortOrder:  { type: integer, format: int64 }
+
+    Element:
+      type: object
+      properties:
+        id:            { type: string, format: uuid }
+        folderId:      { type: string, format: uuid }
+        archiId:       { type: string }
+        archiType:     { type: string }
+        layer:         { type: string }
+        name:          { type: string }
+        documentation: { type: string }
+        properties:    { type: array, items: { $ref: '#/components/schemas/Property' } }
+        supported:     { type: boolean, description: "false — opaque (FR-03): хранится, но не редактируется." }
+        sortOrder:     { type: integer, format: int64 }
+
+    ElementPatch:
+      type: object
+      description: Отсутствующее поле не меняется; `properties` — список целиком, пустой снимает все.
+      properties:
+        name:          { type: string }
+        documentation: { type: string }
+        properties:    { type: array, items: { $ref: '#/components/schemas/Property' } }
+
+    Relationship:
+      type: object
+      properties:
+        id:            { type: string, format: uuid }
+        folderId:      { type: string, format: uuid }
+        archiId:       { type: string }
+        archiType:     { type: string }
+        sourceId:      { type: string, format: uuid }
+        targetId:      { type: string, format: uuid }
+        name:          { type: string }
+        documentation: { type: string }
+        accessType:    { type: string, enum: [WRITE, READ, ACCESS, READ_WRITE] }
+        directed:      { type: boolean }
+        properties:    { type: array, items: { $ref: '#/components/schemas/Property' } }
+        supported:     { type: boolean }
+        sortOrder:     { type: integer, format: int64 }
+        edgeId:        { type: string, format: uuid, description: "Ребро, если его просили создать." }
+
+    ViewSummary:
+      type: object
+      properties:
+        id:        { type: string, format: uuid }
+        folderId:  { type: string, format: uuid }
+        archiId:   { type: string }
+        archiType: { type: string }
+        name:      { type: string }
+        sortOrder: { type: integer, format: int64 }
+
+    ModelTree:
+      type: object
+      properties:
+        model:         { $ref: '#/components/schemas/ModelSummary' }
+        folders:       { type: array, items: { $ref: '#/components/schemas/Folder' } }
+        elements:      { type: array, items: { $ref: '#/components/schemas/Element' } }
+        relationships: { type: array, items: { $ref: '#/components/schemas/Relationship' } }
+        views:         { type: array, items: { $ref: '#/components/schemas/ViewSummary' } }
+
+    Style:
+      type: object
+      description: Собственный стиль объекта — сильнее токена слоя (FR-21). Нет стиля — null.
+      properties:
+        fillColor:     { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
+        font:          { type: string }
+        fontColor:     { type: string }
+        lineColor:     { type: string }
+        textAlignment: { type: integer }
+
+    ViewNode:
+      type: object
+      properties:
+        id:        { type: string, format: uuid }
+        parentId:  { type: string, format: uuid }
+        archiId:   { type: string }
+        archiType: { type: string }
+        kind:      { type: string, enum: [DIAGRAM_OBJECT, GROUP, NOTE, OTHER] }
+        elementId: { type: string, format: uuid }
+        x:         { type: integer, description: "Относительно родителя (§3.4, п. 4)." }
+        y:         { type: integer }
+        width:     { type: integer, description: "-1 — размер по умолчанию Archi." }
+        height:    { type: integer }
+        style:     { $ref: '#/components/schemas/Style' }
+        sortOrder: { type: integer, format: int64 }
+
+    Bendpoint:
+      type: object
+      properties:
+        startX: { type: integer }
+        startY: { type: integer }
+        endX:   { type: integer }
+        endY:   { type: integer }
+
+    ViewEdge:
+      type: object
+      properties:
+        id:             { type: string, format: uuid }
+        archiId:        { type: string }
+        archiType:      { type: string }
+        relationshipId: { type: string, format: uuid }
+        sourceId:       { type: string, format: uuid, description: "Узел или ребро." }
+        targetId:       { type: string, format: uuid }
+        bendpoints:     { type: array, items: { $ref: '#/components/schemas/Bendpoint' } }
+        style:          { $ref: '#/components/schemas/Style' }
+        sortOrder:      { type: integer, format: int64 }
+
+    ViewPayload:
+      type: object
+      properties:
+        id:            { type: string, format: uuid }
+        modelId:       { type: string, format: uuid }
+        folderId:      { type: string, format: uuid }
+        archiId:       { type: string }
+        archiType:     { type: string }
+        name:          { type: string }
+        documentation: { type: string }
+        viewpoint:     { type: string }
+        properties:    { type: array, items: { $ref: '#/components/schemas/Property' } }
+        editable:      { type: boolean, description: "false у скетча и холста (FR-03)." }
+        nodes:         { type: array, items: { $ref: '#/components/schemas/ViewNode' } }
+        edges:         { type: array, items: { $ref: '#/components/schemas/ViewEdge' } }
+
+    LayoutPatch:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            type: object
+            required: [id, x, y, width, height]
+            properties:
+              id:     { type: string, format: uuid }
+              x:      { type: integer }
+              y:      { type: integer }
+              width:  { type: integer }
+              height: { type: integer }
+        edges:
+          type: array
+          items:
+            type: object
+            required: [id, bendpoints]
+            properties:
+              id:         { type: string, format: uuid }
+              bendpoints: { type: array, items: { $ref: '#/components/schemas/Bendpoint' } }
+
+    VersionInfo:
+      type: object
+      properties:
+        versionNo:         { type: integer, format: int64 }
+        author:            { type: string }
+        comment:           { type: string }
+        label:             { type: string }
+        createdAt:         { type: string, format: date-time }
+        snapshotAvailable: { type: boolean, description: "false — снимок очищен по ретеншену (§4.4)." }
+        gitSha:            { type: string }
+
+    SaveResult:
+      type: object
+      properties:
+        version: { $ref: '#/components/schemas/VersionInfo' }
+        created: { type: boolean }
+
+    LockInfo:
+      type: object
+      properties:
+        modelId:    { type: string, format: uuid }
+        owner:      { type: string }
+        acquiredAt: { type: string, format: date-time }
+        expiresAt:  { type: string, format: date-time }
+
+    Finding:
+      type: object
+      description: Общий формат находки — валидатор и ИИ (§5.1).
+      properties:
+        severity:   { type: string, enum: [ERROR, WARNING, INFO] }
+        code:       { type: string }
+        message:    { type: string }
+        targetKind: { type: string }
+        targetId:   { type: string, description: "archi_id объекта." }
+        suggestion: { type: string }
+
+    AclEntry:
+      type: object
+      required: [principalType, principal, access]
+      properties:
+        principalType: { type: string, enum: [USER, GROUP] }
+        principal:     { type: string, maxLength: 200 }
+        access:        { type: string, enum: [READ, WRITE] }
+
+    ElementType:
+      type: object
+      properties:
+        archiType: { type: string }
+        kind:      { type: string, enum: [ELEMENT, JUNCTION] }
+        layer:     { type: string }
+        phase:     { type: string }
+        supported: { type: boolean }
+
+    RelationType:
+      type: object
+      properties:
+        archiType: { type: string }
+        type:      { type: string }
+        byDefault: { type: boolean }
 
   responses:
 
+    NotFound404:
+      description: Объекта нет — или он скрыт списком доступа модели (INV-MDL-011).
+      content:
+        application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+
+    Forbidden403:
+      description: Роль не даёт права на операцию (FR-28) либо список доступа даёт только чтение.
+      content:
+        application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+
     Conflict409:
       description: |
-        Конкурентное сохранение без блокировки (INV-MDL-006), повтор с тем же
-        Idempotency-Key и другим телом (INV-MDL-003) либо удаление элемента,
-        у которого остались связи (INV-MDL-004).
+        Блокировки нет или она чужая, конкурентное сохранение (INV-MDL-006), повтор
+        Idempotency-Key с другим телом (INV-MDL-003), удаление связанного элемента
+        (INV-MDL-004), команда к удалённой модели (INV-MDL-002).
       content:
-        application/problem+json:
-          schema: { $ref: '#/components/schemas/Problem' }
+        application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 
     UnprocessableEntity422:
       description: |
-        Нарушение бизнес-правила — например, связь, недопустимая по матрице
-        ArchiMate 3.2 (INV-MDL-007). Поле `code` содержит идентификатор
-        инварианта.
+        Нарушение бизнес-правила: недопустимая связь (INV-MDL-007), тип не той фазы,
+        папка чужой модели или не того корня (INV-MDL-009), запрещённый переход (INV-MDL-002).
       content:
-        application/problem+json:
-          schema: { $ref: '#/components/schemas/Problem' }
+        application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+
+    Gone410:
+      description: Снимок версии очищен по ретеншену, а Git не настроен — восстанавливать неоткуда (FR-47).
+      content:
+        application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }

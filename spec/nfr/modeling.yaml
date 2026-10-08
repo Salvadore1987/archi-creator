@@ -12,8 +12,9 @@ target_module: archi-bootstrap
 # придуманы заново: спека здесь даёт им исполнимую форму, а не новые числа.
 #
 # Ключи в секциях latency и authorization — имена use case'ов из
-# ubiquitous-language.md. Каталог application/modeling/usecases/ пока пуст;
-# якоря UC-MDL-NNN проставляются режимом add-usecase.
+# ubiquitous-language.md. Use case'ы, к которым они относятся, — UC-MDL-001…007
+# (application/modeling/usecases/); исполнимая форма таблицы authorization —
+# Operation в archi-modeling-application (этап 2).
 # ───────────────────────────────────────────────────────────────────
 
 availability:

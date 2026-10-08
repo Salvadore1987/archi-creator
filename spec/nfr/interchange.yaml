@@ -10,7 +10,8 @@ target_module: archi-bootstrap
 #
 # Значения взяты из docs/archi-creator.md §2.2 (NFR-02, NFR-05) и §6.10.
 # Ключи в latency и authorization — имена use case'ов из
-# ubiquitous-language.md; якоря UC-IXC-NNN проставляются режимом add-usecase.
+# ubiquitous-language.md; use case'ы — UC-IXC-001…003 (application/interchange/
+# usecases/), исполнимая форма authorization — InterchangeOperation (этап 2).
 # ───────────────────────────────────────────────────────────────────
 
 availability:

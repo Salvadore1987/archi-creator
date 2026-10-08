@@ -13,9 +13,8 @@ publication_target: contracts/modeling/events.asyncapi.yaml
 # in-process после коммита транзакции. AsyncAPI по ссылке в
 # publication_target фиксирует контракт полезной нагрузки, а не транспорт.
 #
-# triggers: имена use case'ов. Каталог application/modeling/usecases/ пока
-# пуст — имена ниже соответствуют командам из ubiquitous-language.md и
-# получат якоря UC-MDL-NNN при вызове режима add-usecase.
+# triggers: имена команд из ubiquitous-language.md; use case'ы, в которых
+# они исполняются, — UC-MDL-001…007 (application/modeling/usecases/).
 # ───────────────────────────────────────────────────────────────────
 
 events:
