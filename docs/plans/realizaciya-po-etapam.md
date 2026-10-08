@@ -9,16 +9,13 @@
 Если задача ни на что не ссылается — это либо пробел спеки (заводить якорь),
 либо лишняя работа.
 
-**Состояние на 2026-10-08:** **этапы 0 и 1 закрыты.** Метамодель ArchiMate 3.2
-и кодек `.archimate` готовы: эталонная модель Hamkorbank и пять фикстур §9.1
-проходят round-trip, регрессия блокирует сборку отдельным шагом CI (NFR-05).
-Код этапа 1 — в двух доменных модулях: `archi-modeling-domain` (пакет
-`metamodel`: каталог типов, матрица связей, правила вложенности) и
-`archi-interchange-domain` (документ, читатель, писатель, сессия импорта,
-задание выгрузки). Golden-file тесты — в `archi-bootstrap`. Тестов 169.
-
-Хранения, API и application-слоя по-прежнему нет: в модулях `application`
-и адаптерах — `package-info.java`. Следующий этап — 2, БД и REST API.
+**Состояние на 2026-10-08:** **этапы 0, 1 и 2 закрыты.** Модель хранится
+в PostgreSQL (ADR-0017: типизированные столбцы плюс остаток XML), сценарии
+UC-MDL-001…007 и UC-IXC-001…002 работают через REST, импорт → БД → экспорт
+через API даёт исходный файл (`RoundTripApiIT`), версии, блокировки, ACL,
+идемпотентность, CSV-каталог, метрики и алерты на месте. Тестов 258: 225
+юнит-тестов и 33 интеграционных на Testcontainers (`postgres:16`, `keycloak:26`).
+Следующий этап — 3, канва.
 
 **Как вести файл.** Сделанное — ✅, несделанное — ⬜. Отметка ставится по факту,
 а не по намерению: задача закрыта, когда есть код **и** тест из таблицы «Маппинг
@@ -288,152 +285,286 @@
 ## Этап 2 — хранение, API, блокировки, версии
 
 **Критерий готовности (§12):** импорт → БД → экспорт без потерь через API.
+**Закрыт 2026-10-08**, проверка — в разделе «Выход этапа» и в журнале.
+
+### 2.0 Проектные решения этапа и правка спеки
+
+Решения, без которых код этапа не пишется; каждое — в спеке, здесь сводка.
+
+- ✅ **Остаток XML** ([`ADR-0017`](../../spec/adr/0017-xml-residue.md)): строка
+      с `archi_id` хранит типизированные столбцы по `aggregates.yaml` и `raw_xml` —
+      порядок атрибутов, незнакомые атрибуты и узлы без id с позициями, метки мест
+      типизированных значений. Формат остатка — interchange, modeling его не
+      разбирает. При выгрузке столбец сильнее остатка
+- ✅ **Одна разреженная нумерация на родителя:** позиции дочерних строк
+      (`sort_order`) и элементов остатка — в одном пространстве с шагом 1000.
+      Рёбра лежат в содержимом своего источника, как `sourceConnection` в файле
+- ✅ **Правка спеки по фактам файла Archi**, найденным на фикстурах этапа 1:
+      конец связи — элемент *или связь* (`ConceptRef`, ассоциация к связи
+      в `all_relationship_types`); конец ребра — узел или ребро (`ViewEndpoint`);
+      точка перегиба — `startX/startY/endX/endY`, а не `x, y`; размер `-1` —
+      «по умолчанию» Archi; вид узла `JUNCTION` ошибочен (Junction — элемент,
+      на представлении он `DIAGRAM_OBJECT`), добавлен `OTHER` для ссылок
+      на представления, скетчей, холстов; у представления и узла — `archiType`
+- ✅ Имя модели — до 500 символов, как у всех имён (журнал, п. 1);
+      UC-IXC-001 проходит `PARSED` (журнал, п. 2); §4.3 относит Git к 7a (п. 3)
+- ✅ ACL модели: `INV-MDL-011` и `UC-MDL-007` заведены, §2.6 разблокирован
+- ✅ **Слои и зависимости.** `interchange-application → modeling-application`:
+      импорт пишет модель командой modeling, экспорт читает её запросом modeling,
+      а снимок версии modeling получает через свой порт `SnapshotWriter`,
+      реализованный в interchange. modeling об interchange не знает — Maven
+      не допускает цикла, и направление выбрано по тому, кто переводит язык
+- ✅ **Транзакции и события вне Spring:** application-слой вызывает порт
+      `UnitOfWork`, реализация — `TransactionTemplate` в `archi-bootstrap`;
+      события уходят после коммита через `TransactionSynchronization` (`ADR-0003`,
+      `direct`)
+- ✅ **Роли проверяются на границе use case'а** по таблице
+      `security.authorization` из `spec/nfr/<bc>.yaml`, а не матчерами URL —
+      так решено ещё на этапе 0 (`SecurityConfig`, javadoc)
 
 ### 2.1 Схема БД (Flyway, `archi-bootstrap`)
 
 Сущности и ограничения — [§4.1](../database.md#41-сущности),
 [§4.2](../database.md#42-индексы-и-ограничения).
 
-- ⬜ `model`, `model_folder`, `element`, `relationship`, `view`, `view_node`,
-      `view_edge`, `element_property`, `relationship_property`, `view_property`,
-      `model_version`, `model_lock`, `ai_audit_log`
-- ⬜ `UNIQUE (model_id, archi_id)` на всех сущностях с `archi_id` (`INV-MDL-001`)
-- ⬜ `INDEX (model_id, archi_type)`, `INDEX (view_id, parent_id, sort_order)`
-- ⬜ `relationship.source_element_id/target_element_id` — `ON DELETE RESTRICT`
-      (`INV-MDL-004`)
-- ⬜ `sort_order` разреженный, шаг 1000, во всех таблицах с порядком
+Миграция `V2__model.sql`. Проверена на `postgres:16` до кода адаптера:
+связь вставляется раньше своих элементов, удаление связанного элемента
+отклоняется на коммите, удаление модели каскадом чистит всё содержимое.
+
+- ✅ `model`, `model_folder`, `element`, `relationship`, `view`, `view_node`,
+      `view_edge`, `model_property`, `element_property`, `relationship_property`,
+      `view_property`, `model_version`, `model_lock`, `model_access_entry`,
+      `ai_audit_log`
+- ✅ `UNIQUE (model_id, archi_id)` на всех сущностях с `archi_id` (`INV-MDL-001`);
+      у `view_node` и `view_edge` ради этого повторён `model_id`
+- ✅ `INDEX (model_id, archi_type)`, `INDEX (view_id, parent_id, sort_order)`
+- ✅ Концы связи — `ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED`
+      (`INV-MDL-004`): по смыслу `RESTRICT`, проверка в конце транзакции —
+      см. журнал. Конец — элемент или связь, ровно одно из пары (`CHECK`)
+- ✅ `sort_order` разреженный, шаг 1000, во всех таблицах с порядком —
+      `CHECK > 0` без `DEFAULT`: порядок назначает домен
       (`INV-MDL-005`, [§11.6](../database.md#116-что-нужно-сделать-уже-на-этапе-1))
-- ⬜ `raw_xml` заполняется для всего неподдержанного (FR-03) — иначе цикл
-      БД → Git → БД потеряет данные
-- ⬜ `model_version.snapshot` — `bytea` gzip, nullable; `git_sha` nullable
-- ⬜ Таблица ключей идемпотентности (`INV-MDL-003`) и таблица `import_session`
+- ✅ `raw_xml` у каждой строки с `archi_id` и у модели (ADR-0017); у opaque
+      элемента и связи — обязателен (`CHECK supported OR raw_xml IS NOT NULL`, FR-03)
+- ✅ `model_version.snapshot` — `bytea` gzip, nullable; `git_sha` nullable;
+      `content_hash` — ответ на «есть ли изменения» без снимка
+- ✅ Таблица ключей идемпотентности (`INV-MDL-003`) и таблица `import_session`
       с находками
 
 ### 2.2 Домен (`archi-modeling-domain`)
 
-- ⬜ Агрегаты `ArchitectureModel`, `View`, `ModelLock`, `ModelVersion`,
-      `Workspace`
-- ⬜ Сущности `ModelFolder`, `Element`, `Relationship`, `ViewNode`, `ViewEdge`
-- ⬜ VO: идентификаторы на `UUIDv7` (генерация на стороне приложения),
+- ✅ Агрегаты `ArchitectureModel`, `View`, `ModelLock`, `ModelVersion`,
+      `Workspace`, плюс `ModelAccessList` (FR-29) и `IdempotencyRecord`
+      (`INV-MDL-003`) — оба заведены в спеке на §2.0
+- ✅ Сущности `ModelFolder`, `Element`, `Relationship`, `ViewNode`, `ViewEdge`
+- ✅ VO: идентификаторы на `UUIDv7` (генерация на стороне приложения),
       `SortOrder`, `Bounds`, `Bendpoint`, `PropertyEntry`, `StyleOverride`,
-      `RawXml`, `EditorIdentity`
-- ⬜ State machine модели: `ACTIVE → DELETED → PURGED`, прямой
+      `RawXml`, `EditorIdentity`, `ConceptRef`, `ViewEndpoint`, `DiagramType`
+- ✅ State machine модели: `ACTIVE → DELETED → PURGED`, прямой
       `ACTIVE → PURGED` запрещён (`INV-MDL-002`)
-- ⬜ State machine блокировки: `HELD → RELEASED | EXPIRED`; просроченная
+- ✅ State machine блокировки: `HELD → RELEASED | EXPIRED`; просроченная
       блокировка не даёт прав (`INV-MDL-006`)
-- ⬜ Инварианты как проверки домена: `INV-MDL-001`, `004`, `005`, `007`,
-      `008`, `009`, `010`
-- ⬜ Доменные события `ModelVersionCommitted`, `ModelLockReleased`,
-      `ModelDeleted` ([events.yaml](../../spec/domain/modeling/events.yaml)),
-      публикация `direct` после коммита (`ADR-0003`, временно)
+- ✅ Инварианты как проверки домена: `INV-MDL-001`, `004`, `005`, `007`,
+      `008`, `009`, `010`, `011`; отчёт валидации `ModelValidator` (FR-10)
+- ✅ Доменные события `ModelVersionCommitted`, `ModelLockReleased`,
+      `ModelDeleted` ([events.yaml](../../spec/domain/modeling/events.yaml)).
+      Публикация `direct` после коммита — в application-слое (§2.4)
 
 ### 2.3 Персистентность (`archi-*-adapter-persistence`)
 
-- ⬜ JPA-сущности и маппинг на домен (домен о JPA не знает — enforcer)
-- ⬜ Чтение дерева модели одним запросом ([§4.3](../database.md#43-стратегия-хранения))
-- ⬜ Payload представления по требованию, сборка дерева одним запросом
-- ⬜ Оптимистичная блокировка `version` на агрегатах (NFR-07)
-- ⬜ Репозитории портов: `ModelRepository`, `ElementRepository`,
-      `RelationshipRepository`, `FolderRepository`, `ViewRepository`,
-      `ModelLockRepository`, `ModelVersionRepository`, `ImportSessionRepository`
+- ✅ JPA-сущности и маппинг на домен (домен о JPA не знает — enforcer).
+      Сущности плоские, без ассоциаций: ссылки — ключами, граф собирает маппер
+- ✅ Чтение дерева модели ([§4.3](../database.md#43-стратегия-хранения)) —
+      по запросу на таблицу (модель, папки, элементы со свойствами, связи со
+      свойствами, места представлений): число запросов не зависит от размера
+      модели. «Одним запросом» §4.3 буквально не выполнено — см. журнал
+- ✅ Payload представления по требованию: узлы и рёбра двумя запросами;
+      все представления модели — тремя (для снимка версии)
+- ✅ Оптимистичная блокировка `version` на модели и представлении (NFR-07):
+      любое изменение содержимого поднимает версию строки
+      (`OPTIMISTIC_FORCE_INCREMENT`), конфликт — `409` с кодом `INV-MDL-006`
+- ✅ Репозитории портов: `ModelRepository` (папки, элементы и связи — внутри
+      агрегата, отдельные `ElementRepository`/`RelationshipRepository`/
+      `FolderRepository` не понадобились), `ViewRepository`,
+      `ModelLockRepository`, `ModelVersionRepository`, `ModelAccessListRepository`,
+      `IdempotencyRepository`, `WorkspaceRepository`. `ImportSessionRepository` —
+      в адаптере interchange (§2.4)
+- ✅ Проводка в `archi-bootstrap` (`bootstrap.wiring`): `UnitOfWork` на
+      `TransactionTemplate`, события после коммита, метрики use case'ов
+      на Micrometer, первое рабочее пространство при старте на пустой базе
+- ✅ Интеграционные тесты на Testcontainers `postgres:16`, failsafe, отдельный
+      шаг CI. `ModelPersistenceIT#duplicateArchiIdViolatesUniqueConstraint`
+      и круг записи–чтения дерева и представления
 
 ### 2.4 Сценарии (`archi-*-application`)
 
-- ⬜ `UC-MDL-001` — создать, переименовать, удалить модель; девять корневых
-      папок сразу при создании (`FolderTreeInitializer`)
-- ⬜ `UC-MDL-002` — создать элемент, разместить на представлении
-- ⬜ `UC-MDL-003` — создать связь, `SuggestRelationTypes` по матрице
-- ⬜ `UC-MDL-004` — сохранить модель как версию, `LabelVersion`,
-      `RollbackToVersion`; порты `SnapshotWriter`, `GitPublisher` (необязателен)
-- ⬜ `UC-MDL-005` — захват, освобождение и принудительное снятие блокировки
-- ⬜ `UC-MDL-006` — переместить, переименовать, создать папку, удалить
-- ⬜ `UC-IXC-001` — импорт файла: применение одной транзакцией, отчёт
-- ⬜ `UC-IXC-002` — экспорт модели в `.archimate` по версии
-      (`ModelDocumentAssembler`, `VersionSnapshotReader`)
-- ⬜ `LockGuard` как общий порт: любая запись требует `HELD`-блокировки автора
-      (`INV-MDL-006`)
-- ⬜ Идемпотентность команд изменения: тот же ключ и то же тело → первый
-      результат, другое тело → `409` (`INV-MDL-003`)
+Сценарии modeling — в `archi-modeling-application/.../service`, проверены на портах
+в памяти (`ModelingScenariosTest`): блокировка, роли, ACL, идемпотентность,
+«нет изменений — нет версии», групповое удаление элемента со связью.
+
+- ✅ `UC-MDL-001` — создать, переименовать, удалить, восстановить, уничтожить
+      модель; девять корневых папок сразу при создании (`FolderTreeInitializer`)
+      и версия 1 — точка отсчёта истории
+- ✅ `UC-MDL-002` — создать элемент, создать представление, разместить элемент
+- ✅ `UC-MDL-003` — создать связь (с ребром на представлении по запросу),
+      `SuggestRelationTypes` по матрице с порядком «по умолчанию»
+- ✅ `UC-MDL-004` — сохранить модель как версию, `LabelVersion`,
+      `RollbackToVersion`; порты `SnapshotWriter` и `SnapshotReader` реализует
+      interchange. `GitPublisher` — этап 7a, вместо него порт `GitBinding`
+      с ответом «нет» для всех: от него зависит только ретеншен
+- ✅ `UC-MDL-005` — захват, продление, освобождение и принудительное снятие блокировки
+- ✅ `UC-MDL-006` — переместить, переименовать, создать папку, удалить группой
+- ✅ `UC-MDL-007` — список доступа к модели (§2.6)
+- ✅ Раскладка документа по агрегатам и сборка обратно (ADR-0017) —
+      `DocumentDecomposer`, `DocumentAssembler`, формат остатка `NodeResidue`.
+      Проверено без базы на эталоне и пяти фикстурах: документ возвращается
+      **тем же значением**, с порядком атрибутов, и даёт те же байты писателя
+      (`DocumentMappingTest`); правка столбца перекрывает остаток, новый объект
+      встаёт в раскладке Archi. Здесь же порты снимка modeling (`ArchimateSnapshots`)
+- ✅ `UC-IXC-001` — импорт файла: сессия `RECEIVED → PARSED → VALIDATED → APPLIED`,
+      проверка методологии матрицей modeling (`MethodologyCheck`), применение одной
+      транзакцией вместе с версией 1, отчёт и у отклонённого. Строгость импорта
+      пространства меняет `ADMIN` (`ConfigureImportPolicy` — строка добавлена
+      в `spec/nfr/interchange.yaml`)
+- ✅ `UC-IXC-002` — экспорт модели в `.archimate` по версии: файл версии — её
+      снимок, собранный из базы при сохранении (`DocumentAssembler`); указанная
+      или последняя версия, удалённая модель — `409 MODEL_DELETED`, очищенный
+      снимок без Git — `410`
+- ✅ `LockGuard`: любая запись требует `HELD`-блокировки автора (`INV-MDL-006`).
+      Не отдельный порт, а одна точка — `ModelingKernel.writableModel` — с
+      правилом в домене (`ModelLock.requireWriteAccess`): порт без второй
+      реализации был бы церемонией
+- ✅ Идемпотентность команд изменения: тот же ключ и то же тело → первый
+      результат, перечитанный заново, другое тело → `409` (`INV-MDL-003`).
+      Ключ необязателен; хранится ссылка на результат, а не ответ
 
 ### 2.5 REST и контракты (`archi-*-adapter-rest`)
 
-- ⬜ Наполнить `paths` в трёх `spec/contracts/*/rest-api.openapi.yaml` — по
-      одному endpoint'у на экспонированный use case со ссылкой на `UC-*`
-      (сейчас `paths: {}`, это осознанный скелет)
-- ⬜ Эндпоинты из [§5](../backend.md#5-rest-api): `/models`, `/models/{id}`,
+- ✅ Наполнить `paths` в `spec/contracts/{modeling,interchange}/rest-api.openapi.yaml` —
+      по одному endpoint'у на экспонированный use case, `x-use-case` и
+      `x-operation` (строка таблицы доступа). Контракт advisor остаётся скелетом
+      до этапа 5. Оговорки «каталог use case'ов пуст» в `nfr/*.yaml` и
+      `events.yaml` сняты (журнал, п. 5–6)
+- ✅ Эндпоинты из [§5](../backend.md#5-rest-api): `/models`, `/models/{id}`,
       `/models/import`, `/models/{id}/export`, `/models/{id}/lock`,
       `/models/{id}/versions*`, `/models/{id}/validate`, `/elements*`,
       `/relationships*`, `/views/{id}`, `/views/{id}/layout`,
-      `/views/{id}/nodes`, `/view-nodes/{id}`, `/metamodel/*`
-- ⬜ DTO `ModelTree`, `ViewPayload`, `LayoutPatch`, `ElementPatch`,
-      `VersionInfo`, `LockInfo`, `Finding` ([§5.1](../backend.md#51-ключевые-dto))
-- ⬜ Problem Details RFC 7807 с полем `code`, `@RestControllerAdvice`
-      ([§8.1](../backend.md#81-формат-ответа))
-- ⬜ Таблица сценариев ошибок [§8.2](../backend.md#82-основные-сценарии):
+      `/views/{id}/nodes`, `/view-nodes/{id}`, `/metamodel/*`. Сверх таблицы §5 —
+      то, без чего сценарии не исполнить: `POST /models/{id}/versions` (сохранение,
+      UC-MDL-004), `/restore` и `/purge` модели, `/folders` и `/tree/*` (UC-MDL-006),
+      `POST /models/{id}/views`, `/acl` (UC-MDL-007), `/workspaces` и строгость
+      импорта. `auto-layout` — этап 4, экспорт картинок — 5a
+- ✅ DTO `ModelTree`, `ViewPayload`, `LayoutPatch`, `ElementPatch`,
+      `VersionInfo`, `LockInfo`, `Finding` ([§5.1](../backend.md#51-ключевые-dto)).
+      Остаток XML наружу не отдаётся. **Для этапа 3:** подписи групп и текст
+      заметок живут пока в остатке — `ViewPayload` их не несёт, канве придётся
+      типизировать `name` и `content` узла (поля спеки + столбцы)
+- ✅ Problem Details RFC 7807 с полем `code`, `@RestControllerAdvice`
+      ([§8.1](../backend.md#81-формат-ответа)); класс отказа домена (`Failure`)
+      определяет статус одинаково для обоих контекстов
+- ✅ Таблица сценариев ошибок [§8.2](../backend.md#82-основные-сценарии):
       `409` блокировка и конкурентное сохранение, `422` недопустимая связь,
       `409` удаление элемента со связями, `400` битый XML, `422` строгий импорт
-- ⬜ Отчёт валидации метамодели без ИИ: `GET /models/{id}/validate` → `Finding[]`
+- ✅ Отчёт валидации метамодели без ИИ: `GET /models/{id}/validate` → `Finding[]`
       (FR-10 для импортированных нарушений)
-- ⬜ Экспорт каталога в CSV ([§5.2](../backend.md#52-экспорт-каталога-в-csv),
+- ✅ Экспорт каталога в CSV ([§5.2](../backend.md#52-экспорт-каталога-в-csv),
       FR-45): zip из `elements.csv` и `relations.csv`, UTF-8 **с BOM**,
       разделитель `;`, параметр `sep`, динамические столбцы свойств по частоте
-      ключа, фильтр `folder=<id>`, доступно `VIEWER`
+      ключа, фильтр `folder=<id>`, доступно `VIEWER`. Строится из снимка
+      зафиксированной версии, как и `.archimate` (`INV-IXC-008`); `folder` —
+      `archi_id` папки: внутренний ключ меняется при откате, `archi_id` нет.
+      Связи в отфильтрованном каталоге — те, у которых оба конца в поддереве
 
 ### 2.6 Доступ
 
-- ⬜ Маппинг ролей на операции по таблице `security.authorization`
-      в [`spec/nfr/modeling.yaml`](../../spec/nfr/modeling.yaml) (FR-28)
-- ⬜ Чужую блокировку снимает только `ADMIN`; `PurgeModel`, `RestoreModel` —
+- ✅ Маппинг ролей на операции по таблице `security.authorization`
+      в [`spec/nfr/modeling.yaml`](../../spec/nfr/modeling.yaml) (FR-28) —
+      `Operation` в application-слое. В таблицу добавлены пять операций, которых
+      она не называла: `ListVersions`, `UpdateRelationship`, `CreateView`,
+      `ReorganizeTree`, `ManageModelAccess`
+- ✅ Чужую блокировку снимает только `ADMIN`; `PurgeModel`, `RestoreModel` —
       только `ADMIN`
-- ⬜ **Заблокировано спекой:** ACL на уровне модели (FR-29) не имеет ни
-      инварианта, ни use case'а. Сначала завести `INV-MDL-011` и `UC-MDL-007`,
-      потом писать код — иначе механизм доступа окажется вне нормативной части
-      (см. [«Журнал»](#журнал), п. 8)
+- ✅ ACL на уровне модели (FR-29, `INV-MDL-011`, `UC-MDL-007`): список
+      доступа сужает роли и не расширяет их, скрытая модель отвечает `404`;
+      группы — из claim `groups` токена.
+      Спека заведена 2026-10-08 (§2.0), раньше пункт был заблокирован
 
 ### 2.7 Версии и ретеншен
 
-- ⬜ Версия на каждое сохранение: автор, время, комментарий, монотонный
-      `versionNo` (`INV-MDL-010`, FR-06)
-- ⬜ Метка версии (`label`) — релиз архитектуры, снимок не удаляется (FR-48)
-- ⬜ Правило ретеншена ([§4.4](../database.md#44-хранение-и-очистка-версий),
-      FR-46): последние 30 дней, помеченные, последняя за календарный месяц
-- ⬜ Фоновая задача очистки написана, но **выключена** до этапа 7a: без Git
-      снимок — единственная копия (FR-47, `SnapshotRetentionTest#purgeIsDisabledWithoutGitBinding`)
+- ✅ Версия на каждое сохранение: автор, время, комментарий, монотонный
+      `versionNo` (`INV-MDL-010`, FR-06); без изменений версия не создаётся
+      (отпечаток снимка совпал с последним)
+- ✅ Метка версии (`label`) — релиз архитектуры, снимок не удаляется (FR-48)
+- ✅ Правило ретеншена ([§4.4](../database.md#44-хранение-и-очистка-версий),
+      FR-46): последние 30 дней, помеченные, последняя за календарный месяц —
+      `SnapshotRetention` в домене
+- ✅ Фоновая задача очистки написана, но **выключена** до этапа 7a
+      (`archi.modeling.retention-enabled: false`), а и включённая не трогает
+      пространство без доступного Git: снимок — единственная копия (FR-47).
+      `SnapshotRetentionTest` и `SnapshotRetentionIT#purgeIsDisabledWithoutGitBinding`
 
 ### 2.8 Наблюдаемость
 
-- ⬜ Метрики из `spec/nfr/*.yaml`: `*_usecase_requests_total`,
+- ✅ Метрики из `spec/nfr/*.yaml`: `*_usecase_requests_total`,
       `*_usecase_duration_seconds`, `*_usecase_errors_total` с label `error_code`
-      = код инварианта, `modeling_lock_wait_seconds`,
-      `modeling_validation_findings_total`
-- ⬜ Actuator: `/actuator/health`, `/metrics`, `/prometheus`
-      ([§8.4](../backend.md#84-логирование-и-наблюдаемость))
-- ⬜ Структурированные логи JSON с `traceId`, пользователем и id модели,
-      маскирование PII
-- ⬜ Алерты `HighErrorRateSaveModel`, `SlowOpenModelP95`, `ConcurrentSaveConflicts`
+      = код инварианта, `modeling_lock_wait_seconds`, `modeling_model_elements`,
+      `modeling_validation_findings` (gauge — Prometheus не даёт gauge суффикс
+      `_total`, имя в спеке с ним), `interchange_import_sessions_total`,
+      `interchange_import_findings_total`, `interchange_opaque_objects`,
+      `interchange_export_loss_entries_total`. Ожидание блокировки — остаток срока
+      чужой блокировки в момент отказа: сервер не ждёт, второй получает `409` сразу
+- ✅ Actuator: `/actuator/health`, `/metrics`, `/prometheus`
+      ([§8.4](../backend.md#84-логирование-и-наблюдаемость)) — с этапа 0;
+      метрики сценариев в Prometheus проверены (`ObservabilityIT`)
+- ✅ Структурированные логи JSON (ECS, профиль `prod`) с `traceId`, пользователем
+      и id модели в MDC — `RequestCorrelationFilter`; `traceId` берётся из W3C
+      `traceparent` и возвращается заголовком `X-Trace-Id`. Маскирование PII —
+      в MDC только subject, путь и trace-id, персональных полей в домене нет
+      (`pii_fields: []`). Экспорт спанов (OpenTelemetry) — не этап 2
+- ✅ Алерты `HighErrorRateSaveModel`, `SlowOpenModelP95`, `ConcurrentSaveConflicts`
+      и из interchange — `RoundTripLossDetected`, `SlowImportP95` —
+      `deploy/prometheus/alerts.yaml`, выражения дословно из спеки
 
 ### 2.9 Тесты этапа
 
-- ⬜ `ModelPersistenceIT#duplicateArchiIdViolatesUniqueConstraint`
-- ⬜ `ModelLifecycleIT#purgeRequiresDeletedState`
-- ⬜ `IdempotencyIT#sameKeyDifferentBodyReturns409`
-- ⬜ `ElementDeletionIT#restrictViolationReturns409`
-- ⬜ `ConcurrentSaveIT#secondWriterGets409` (NFR-07)
-- ⬜ `ValidationReportIT#importedViolationsAppearInReport`
-- ⬜ `ModelImportIT#folderTreeSurvivesRoundTrip`
-- ⬜ `ImportIT#applyTwiceIsRejected`, `#retryDoesNotCreateSecondModel`,
-      `#corruptedFileIsRejectedInBothModes`
-- ⬜ `ExportJobTest#exportPinsSourceVersion` (`INV-IXC-008`)
-- ⬜ Ролевой доступ: `VIEWER` → `403` на запись, `ARCHITECT` → `200`
-- ⬜ Testcontainers `postgres:16` и `keycloak:26`
-      ([§9.3](../backend.md#93-интеграционные-тесты-testcontainers))
-- ⬜ Нагрузочный профиль NFR-03: p95 ≤ 300 мс на операциях кроме ИИ и импорта
-      (у требования нет якоря намеренно — проверяет профиль)
+- ✅ `ModelPersistenceIT#duplicateArchiIdViolatesUniqueConstraint`
+- ✅ `ModelLifecycleIT#purgeRequiresDeletedState`
+- ✅ `IdempotencyIT#sameKeyDifferentBodyReturns409`
+- ✅ `ElementDeletionIT#restrictViolationReturns409`
+- ✅ `ConcurrentSaveIT#secondWriterGets409` (NFR-07)
+- ✅ `ValidationReportIT#importedViolationsAppearInReport`
+- ✅ `ModelImportIT#folderTreeSurvivesRoundTrip` — эталон через базу, плюс
+      `#fixtureSurvivesDatabaseRoundTrip` на пяти фикстурах §9.1 и
+      `#referenceImportsWithinThreeSeconds` (NFR-02)
+- ✅ `ImportIT#applyTwiceIsRejected`, `#retryDoesNotCreateSecondModel`,
+      `#corruptedFileIsRejectedInBothModes`, плюс строгий режим против матрицы
+      и роли на импорте
+- ✅ `ExportJobTest#exportPinsSourceVersion` (`INV-IXC-008`) — с этапа 1
+- ✅ Ролевой доступ: `VIEWER` → `403` на запись, `ARCHITECT` → `200`
+      (`RoleAccessIT`), список доступа — `ModelAclIT#hiddenModelAnswers404`
+- ✅ Testcontainers `postgres:16` и `keycloak:26`
+      ([§9.3](../backend.md#93-интеграционные-тесты-testcontainers)): Keycloak
+      с realm проекта поднимает `KeycloakIT` — токены парольным грантом клиента
+      SPA, подпись проверяет настоящий ресурс-сервер, роли — из `realm_access`.
+      Остальные тесты REST кладут токен через `spring-security-test`: Keycloak
+      на каждый класс — полминуты ни за что
+- ✅ Нагрузочный профиль NFR-03: p95 ≤ 300 мс на операциях кроме ИИ и импорта
+      (у требования нет якоря намеренно — проверяет профиль) — `LoadProfileIT`
+      на эталонной модели. Первый замер (2026-10-08, локально): p95 CreateElement
+      20 мс, SaveViewLayout 14 мс, OpenModel 12 мс, OpenView 4 мс — запас на порядок.
+      Профиль последовательный и в процессе: ловит деградацию хранения (N+1,
+      перезапись агрегата целиком), а не пропускную способность стенда
 
 **Выход этапа**
 
-- ⬜ Цикл «импорт файла → сохранение в БД → экспорт через API» даёт исходный
-      файл, сравнение `assertXmlEquivalent` зелёное
+- ✅ Цикл «импорт файла → сохранение в БД → экспорт через API» даёт исходный
+      файл, сравнение `assertXmlEquivalent` зелёное —
+      `RoundTripApiIT#importStoreExportThroughApi` на эталонной модели
+- ✅ Проверено вживую: собранный jar в профиле `dev` на `postgres:16` — импорт
+      эталона curl'ом за 0,7 с, выгрузка семантически равна исходнику и
+      побайтово отличается ровно там же, где на этапе 1 (две пустые папки и
+      перевод строки в конце эталона); блокировка, элемент, версия 2, отчёт
+      валидации, CSV — ответы по контракту
 
 ---
 
@@ -1120,3 +1251,99 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
   изменений.** `tools/render-depgraph.py` дал побайтово те же `.puml` и `.png`:
   этап не добавил ни одной зависимости. Кодек и матрица обходятся JDK (StAX),
   тесты — JUnit, который уже был. Картинка в README актуальна.
+- **2026-10-08. Этап 2 начат с правки спеки.** Раскладка `.archimate` по таблицам
+  потребовала решения, которого в спеке не было: куда деть всё, что не описано
+  полями агрегатов, — `alpha`, `lineWidth`, `feature`, `profile`, свойства
+  папок, узлы расширений и порядок всего этого. Принят
+  [`ADR-0017`](../../spec/adr/0017-xml-residue.md): типизированные столбцы плюс
+  непрозрачный остаток XML с позициями. Отклонены столбец на каждый атрибут
+  (гонка за Archi), объект целиком строкой (нет редактирования) и исходный файл
+  рядом с таблицами (две правды). Те же фикстуры показали пять расхождений
+  спеки с форматом Archi — связь концом связи, ребро концом ребра, точки
+  перегиба `startX…endY`, размер `-1`, ошибочный вид `JUNCTION`; спека
+  исправлена до кода. Закрыты пункты 1–3 и 8 журнала: имя модели — 500 символов,
+  UC-IXC-001 проходит `PARSED`, §4.3 относит Git к 7a, у FR-29 появились
+  `INV-MDL-011` и `UC-MDL-007`. Решения записаны в §2.0.
+- **2026-10-08. Домен modeling: изменения копит агрегат, пишет хранилище.**
+  Модель на 400 элементов не переписывается целиком ради одного
+  переименования: `TrackedMap` помнит добавленное, изменённое и удалённое
+  с момента загрузки, репозиторий пишет только это. Представления — отдельный
+  агрегат, модель знает о них `ViewRef` (папка и место в нумерации): без этого
+  нельзя ни отказать в удалении непустой папки, ни дать новому объекту позицию
+  в папке, где лежат и представления.
+  Два решения, которых в спеке не было, приняты в коде и записаны здесь:
+  **непустая папка не удаляется** (`MDL_FOLDER_NOT_EMPTY`, `409`) — Archi
+  удаляет содержимое рекурсивно, но это тот же каскад, от которого
+  `INV-MDL-004` отказывается для связей; и **элемент кладётся только в поддерево
+  корня своего слоя** — иначе Archi при открытии переложит его сам и round-trip
+  сломается на структуре (`INV-MDL-009`, «перекладка объектов»). Импорт этим
+  не ограничен: что пришло в файле, то и хранится.
+  Холст Archi пишет объекты в пространстве `canvas:`, а `ArchiType` знает лишь
+  `archimate:` — для представлений, узлов и рёбер заведён `DiagramType`, правка
+  внесена в `aggregates.yaml`. **Уникальность `archi_id` между таблицами база
+  не держит** (у каждой таблицы свой `UNIQUE (model_id, archi_id)`): агрегат
+  модели проверяет папки, элементы, связи и представления, агрегат представления —
+  свои узлы и рёбра; столкновение узла с элементом исключает генератор
+  (128 случайных бит), а импорт — читатель, отклоняющий дубль на разборе.
+- **2026-10-08. Концы связи — `NO ACTION DEFERRABLE`, а не `RESTRICT`.**
+  План (§4.2) требовал `ON DELETE RESTRICT`. У `RESTRICT` в PostgreSQL нет
+  отложенной проверки, и на нём не работали бы две вещи: импорт, где связь
+  ссылается на связь, вставленную позже (ассоциация к связи), и физическое
+  удаление модели каскадом, где элемент и связь уходят одним оператором.
+  `NO ACTION DEFERRABLE INITIALLY DEFERRED` даёт тот же отказ при удалении
+  связанного элемента — проверено вживую, — только в конце транзакции.
+  Отказ пользователю всё равно приходит раньше, из домена (`INV-MDL-004`, `409`);
+  база — страховка, и её ошибка на коммите тоже отображается в `409`.
+- **2026-10-08. Снимок версии — из базы, и он же источник выгрузки.**
+  `UC-IXC-002` выгружает зафиксированную версию (`INV-IXC-008`), значит экспорт
+  отдаёт снимок, а не собирает файл из текущих таблиц. Чтобы снимок проверял
+  хранение, а не копировал вход, `VersionService.commit` перечитывает модель и
+  представления из репозитория и только потом отдаёт их писателю. «Изменений нет —
+  версия не создаётся» решается сравнением SHA-256 нового снимка с последним
+  (`content_hash`): отдельный счётчик правок пришлось бы держать согласованным
+  с каждой командой, а отпечаток согласован по построению.
+- **2026-10-08. Остаток XML — сам XML, и значения в нём — текстом, а не атрибутом.**
+  Формат остатка закрытый, поэтому записан тем же StAX, что и `.archimate`, без
+  JSON-библиотеки в домене. Первая версия клала значения незнакомых атрибутов
+  в атрибуты записи — и перевод строки внутри значения (`labelExpression` у `feature`
+  его содержит) парсер нормализовал бы в пробел: тихая порча на втором круге.
+  Значения легли текстом элемента, возврат каретки — ссылкой на символ
+  (`NodeResidueTest`). Умолчания Archi учтены отдельно: EMF не пишет атрибут
+  со значением по умолчанию (`x="0"`, `width="-1"`), поэтому сборщик пишет
+  размеченные в остатке атрибуты всегда, а прочие — только отличные от умолчания.
+  **Регрессия вероятна** у любого, кто «упростит» сборку до записи всех четырёх
+  координат: эталон останется зелёным, а файл Archi с узлом по умолчанию получит
+  лишние атрибуты.
+- **2026-10-08. «Дерево одним запросом» (§4.3) — запросом на таблицу.** Буквально
+  один запрос — `UNION` разнотипных строк или JSON-агрегат в базе — вернул бы
+  разбор строк в Java вручную и отказ от JPA ровно там, где он полезен. Взято
+  так: модель, папки, элементы со свойствами (`join fetch`), связи со свойствами,
+  места представлений — пять запросов, их число от размера модели не зависит,
+  N+1 нет. Смысл требования — не обходить ассоциации по одной — соблюдён.
+- **2026-10-08. Failsafe и перепакованный jar.** Первый прогон `*IT` не нашёл
+  `@SpringBootConfiguration`: после `spring-boot:repackage` классы лежат в
+  `BOOT-INF/` внутри jar, а failsafe по умолчанию берёт именно jar. Лечится
+  `classesDirectory = target/classes` в конфигурации failsafe модуля
+  `archi-bootstrap`.
+- **2026-10-08. `-parameters` у компилятора.** Первые тесты REST упали на
+  «Name for argument of type UUID not specified»: Spring связывает `@PathVariable`
+  по имени параметра, а имя есть в байткоде только с флагом `-parameters`.
+  Его включает `spring-boot-starter-parent`, которого проект не наследует
+  (ADR-0001: родитель свой). Флаг добавлен в `maven-compiler-plugin` родителя.
+  Ловушка: инкрементальная сборка не перекомпилирует классы после смены флага —
+  нужен `clean`.
+- **2026-10-08. Граф зависимостей по закрытии этапа 2 перерисован.** Новое
+  ребро между контекстами — `interchange-application → modeling-application`
+  (§2.0) — и тестовые зависимости `archi-bootstrap` (Testcontainers 2.0.5,
+  `spring-security-test`, MockMvc). Дублей и конфликтов версий нет. Скрипт
+  `tools/render-depgraph.py` для цели `graph` модуля ищет SNAPSHOT-зависимости
+  в `~/.m2`: перед ним нужен `./mvnw install -DskipTests`, иначе отказ
+  разрешения зависимостей.
+- **2026-10-08. Этап 2 закрыт.** Критерий §12 выполнен и проверен дважды —
+  тестом через API и вживую. Пункты 1–3, 5, 6, 8 журнала разногласий спеки
+  закрыты; п. 9 (`ADR-0003`) по-прежнему открыт — `direct` работает, outbox нужен
+  к 7a. **Что этап оставляет следующим:** подписи групп и текст заметок живут
+  в остатке XML и в `ViewPayload` не попадают — канва этапа 3 типизирует `name`
+  и `content` узла; браузерный вход (OIDC-клиент SPA) — этап 3; авторазметка —
+  этап 4; экспорт картинок — 5a; OEF — 6a (сейчас `422 IXC_FORMAT_NOT_AVAILABLE`);
+  спаны трассировки не экспортируются — корреляция логов идёт по `traceparent`.

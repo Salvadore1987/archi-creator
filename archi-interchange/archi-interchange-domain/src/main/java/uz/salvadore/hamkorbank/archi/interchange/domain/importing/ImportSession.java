@@ -46,6 +46,8 @@ public final class ImportSession {
     private ModelDocument document;
     private final List<ImportFinding> findings = new ArrayList<>();
     private Instant finishedAt;
+    private ModelId appliedModelId;
+    private long appliedVersionNo;
     private final List<ImportApplied> events = new ArrayList<>();
 
     private ImportSession(ImportSessionId id, ImportRequest request, Instant startedAt) {
@@ -59,6 +61,24 @@ public final class ImportSession {
         this.strictMode = request.strictMode();
         this.startedBy = request.startedBy();
         this.startedAt = Objects.requireNonNull(startedAt, "startedAt");
+    }
+
+    /**
+     * Сессия из хранилища. Документ не хранится: он нужен лишь в пределах одного
+     * импорта, а отчёт и результат — навсегда. Повтор по ключу отдаёт этот результат,
+     * а не применяет документ снова (INV-IXC-003).
+     */
+    public static ImportSession restore(ImportSessionId id, ImportRequest request, Instant startedAt,
+                                        ImportStatus status, List<ImportFinding> findings,
+                                        Optional<Instant> finishedAt, Optional<ModelId> appliedModelId,
+                                        long appliedVersionNo) {
+        ImportSession session = new ImportSession(id, request, startedAt);
+        session.status = Objects.requireNonNull(status, "status");
+        session.findings.addAll(findings);
+        session.finishedAt = finishedAt.orElse(null);
+        session.appliedModelId = appliedModelId.orElse(null);
+        session.appliedVersionNo = appliedVersionNo;
+        return session;
     }
 
     /** Файл принят к рассмотрению: {@code RECEIVED}, ещё ничего не прочитано. */
@@ -113,6 +133,8 @@ public final class ImportSession {
     public ImportApplied apply(ModelId modelId, long versionNo, int opaqueObjectCount, Instant now) {
         require(ImportStatus.VALIDATED, "ApplyImport");
         finish(ImportStatus.APPLIED, now);
+        this.appliedModelId = Objects.requireNonNull(modelId, "modelId");
+        this.appliedVersionNo = versionNo;
         ImportApplied applied = new ImportApplied(id, workspaceId, modelId, versionNo, sourceName, sourceHash,
                 strictMode, findingCounts(), opaqueObjectCount, now);
         events.add(applied);
@@ -197,6 +219,16 @@ public final class ImportSession {
 
     public Instant startedAt() {
         return startedAt;
+    }
+
+    /** Модель, созданная применением; есть у {@code APPLIED}. */
+    public Optional<ModelId> appliedModelId() {
+        return Optional.ofNullable(appliedModelId);
+    }
+
+    /** Первая версия созданной модели; 0 — не применялась. */
+    public long appliedVersionNo() {
+        return appliedVersionNo;
     }
 
     /** Есть у терминальных сессий. */

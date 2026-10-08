@@ -37,6 +37,12 @@ spring:
       # spec/nfr/modeling.yaml#storage.query_timeout — выше типового:
       # дерево модели читается одним запросом на тысячи строк (§4.3).
       jakarta.persistence.query.timeout: 15000
+      # Импорт пишет тысячи строк одной транзакцией (UC-IXC-001, п. 5): без пакетов
+      # это тысячи обращений к базе. Ключи — UUIDv7 от приложения, поэтому пакетная
+      # вставка не упирается в последовательности.
+      hibernate.jdbc.batch_size: 200
+      hibernate.order_inserts: true
+      hibernate.order_updates: true
 
   flyway:
     enabled: true
@@ -56,10 +62,10 @@ spring:
 
   servlet:
     multipart:
-      # Импорт .archimate идёт файлом; референсная модель ~2 МБ,
-      # запас на порядок.
-      max-file-size: 32MB
-      max-request-size: 32MB
+      # Импорт .archimate идёт файлом; предел — spec/nfr/interchange.yaml
+      # #security.upload_limits (50 МБ). Больше — 413 до чтения тела.
+      max-file-size: 50MB
+      max-request-size: 51MB
 
 server:
   port: 8080
@@ -90,6 +96,13 @@ management:
 
 # ── Настройки приложения ───────────────────────────────────────────
 archi:
+  modeling:
+    # Срок блокировки (UC-MDL-005); клиент продлевает её повторным захватом.
+    lock-ttl: 30m
+    default-workspace-name: Основное рабочее пространство
+    # Очистка снимков версий (docs/database.md §4.4) выключена до этапа 7a:
+    # без Git снимок — единственная копия содержимого (FR-47).
+    retention-enabled: false
   ai:
     # NFR-06: ключ живёт только на сервере и в браузер не попадает.
     # Пустой ключ = ИИ выключен, приложение стартует без него.

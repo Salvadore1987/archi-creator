@@ -1,0 +1,72 @@
+package uz.salvadore.hamkorbank.archi.interchange.application.importing;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Supplier;
+import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
+import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
+import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
+import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
+import uz.salvadore.hamkorbank.archi.interchange.domain.importing.Severity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
+import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
+import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationMatrix;
+import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationViolation;
+
+/**
+ * Проверка методологии на импорте (UC-IXC-001, п. 3): нарушения матрицы ArchiMate 3.2 —
+ * {@code ERROR} с кодом {@code RELATION_NOT_PERMITTED}, неизвестные типы — {@code INFO}.
+ * Уровень {@code ERROR} сам по себе не отказ: отклоняет строгий режим (INV-IXC-007).
+ *
+ * <p>Здесь соединяются сессия interchange и матрица modeling — доменные модули друг
+ * друга не видят, а application-слой видит оба.
+ */
+public final class MethodologyCheck {
+
+    public static final String UNKNOWN_TYPE = "IXC_UNKNOWN_ELEMENT_TYPE";
+
+    private final RelationMatrix matrix = RelationMatrix.archimate32();
+    private final ArchiTypeRegistry registry = ArchiTypeRegistry.archimate32();
+
+    public List<ImportFinding> check(ModelDocument document, Supplier<FindingId> ids) {
+        Map<String, String> types = new HashMap<>();
+        document.allNodes().forEach(n -> n.archiType().ifPresent(t -> types.put(n.archiId().value(), t)));
+        List<ImportFinding> findings = new ArrayList<>();
+        for (DocumentNode relationship : document.relationships()) {
+            Optional<ArchiType> type = archiType(relationship.archiType().orElse(""));
+            Optional<ArchiType> source = relationship.attribute("source").map(types::get).flatMap(this::archiType);
+            Optional<ArchiType> target = relationship.attribute("target").map(types::get).flatMap(this::archiType);
+            if (type.isEmpty() || source.isEmpty() || target.isEmpty()) {
+                continue;
+            }
+            matrix.check(source.get(), target.get(), type.get()).ifPresent(v -> findings.add(new ImportFinding(
+                    ids.get(), Severity.ERROR, RelationViolation.CODE, message(v),
+                    Optional.of(relationship.archiId()), Optional.empty())));
+        }
+        for (DocumentNode element : document.elements()) {
+            String xsiType = element.archiType().orElse("");
+            if (registry.findByXsiType(xsiType).isEmpty()) {
+                findings.add(new ImportFinding(ids.get(), Severity.INFO, UNKNOWN_TYPE,
+                        "Тип " + xsiType + " метамодели неизвестен: объект сохранён как есть и не редактируется (FR-03)",
+                        Optional.of(element.archiId()), Optional.empty()));
+            }
+        }
+        return findings;
+    }
+
+    private Optional<ArchiType> archiType(String value) {
+        try {
+            return Optional.of(ArchiType.of(value));
+        } catch (IllegalArgumentException | NullPointerException notArchimate) {
+            return Optional.empty();
+        }
+    }
+
+    private static String message(RelationViolation violation) {
+        return "Связь " + violation.relationship() + " от " + violation.source().simpleName() + " к "
+                + violation.target().simpleName() + " не разрешена в ArchiMate 3.2; допустимы " + violation.permitted();
+    }
+}

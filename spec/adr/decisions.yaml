@@ -1,6 +1,6 @@
 ---
-version: 1.2
-last_modified: 2026-09-29
+version: 1.3
+last_modified: 2026-10-08
 ---
 
 # ───────────────────────────────────────────────────────────────────
@@ -56,6 +56,7 @@ decisions:
     affects: [modeling, interchange]
     requirements: [FR-01, FR-02]
     anchors: [INV-MDL-001, INV-IXC-001]
+    implemented: 2026-10-08
 
   - id: ADR-0003
     title: Механизм публикации доменных событий
@@ -226,3 +227,14 @@ decisions:
       статика в target/classes/static, и ни один модуль от него не зависит.
       Восемнадцатый проект реактора не являлся бы ни слоем, ни контекстом
       и ломал бы правило ADR-0001, по которому здесь заводят модули.
+
+  - id: ADR-0017
+    title: Типизированные столбцы и непрозрачный остаток XML в хранении модели
+    status: accepted
+    date: 2026-10-08
+    kind: architecture
+    adr_file: 0017-xml-residue.md
+    affects: [modeling, interchange]
+    requirements: [FR-02, FR-03, NFR-05]
+    anchors: [INV-IXC-001, INV-IXC-005, INV-MDL-005]
+    implemented: 2026-10-08

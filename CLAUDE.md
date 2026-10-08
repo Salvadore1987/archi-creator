@@ -10,17 +10,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Состояние репозитория
 
-**Этапы 0 и 1 закрыты (2026-10-08). Следующий — этап 2, БД и REST API.**
+**Этапы 0, 1 и 2 закрыты (2026-10-08). Следующий — этап 3, канва.**
 Собирается multi-module Maven по
 [`ADR-0001`](spec/adr/0001-maven-multi-module.md): 17 проектов в реакторе — родитель,
 три агрегатора контекстов, двенадцать модулей-слоёв, `archi-bootstrap` с классом запуска
-и fat jar. Код есть в двух доменных модулях — `archi-modeling-domain` (метамодель)
-и `archi-interchange-domain` (кодек); в `application`, адаптерах и всём `advisor` —
+и fat jar. Код есть в modeling и interchange во всех четырёх слоях; в `advisor` —
 только `package-info.java`.
 
 ```
 archi-<bc>/archi-<bc>-domain              зависимостей нет, кроме junit (test)
-archi-<bc>/archi-<bc>-application         -> domain
+archi-<bc>/archi-<bc>-application         -> domain (interchange — ещё и modeling-application)
 archi-<bc>/archi-<bc>-adapter-rest        -> application + Spring Web
 archi-<bc>/archi-<bc>-adapter-persistence -> application + Spring Data JPA
 archi-bootstrap                           все 12 + Spring Boot, здесь jar
@@ -67,18 +66,40 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 в фикстурах нет. Писатель пишет в раскладке Archi и совпадает с эталоном побайтово
 везде, кроме двух пустых папок и перевода строки в конце — эталон собран скриптом.
 
+Что появилось на этапе 2 и где лежит:
+
+| Что | Где |
+|---|---|
+| Схема модели, версий, блокировок, ACL, сессий импорта | `archi-bootstrap/.../db/migration/V2__model.sql` |
+| Агрегаты `ArchitectureModel`, `View`, `ModelLock`, `ModelVersion`, ACL | `archi-modeling-domain/.../modeling/domain/` |
+| Сценарии UC-MDL-001…007, порты, таблица ролей `Operation` | `archi-modeling-application/.../application/` |
+| Раскладка документа по строкам и сборка (ADR-0017), импорт и экспорт, CSV | `archi-interchange-application/.../application/` |
+| JPA-адаптеры | `archi-*-adapter-persistence` |
+| REST и `problem+json` | `archi-*-adapter-rest`, контракты — `spec/contracts/*/rest-api.openapi.yaml` |
+| Проводка, метрики, корреляция логов | `archi-bootstrap/.../bootstrap/wiring/`, `.../bootstrap/web/` |
+| Алерты Prometheus | `deploy/prometheus/alerts.yaml` |
+| Интеграционные тесты (`*IT`, Testcontainers) | `archi-bootstrap/src/test/.../bootstrap/{api,interchange,persistence,security,version}/` |
+
+**Хранение — типизированные столбцы плюс остаток XML** (`raw_xml`,
+[`ADR-0017`](spec/adr/0017-xml-residue.md)): всё, что не легло в поля агрегатов, лежит
+в остатке с позициями, формат остатка — interchange, modeling его не разбирает. При
+выгрузке столбец сильнее остатка. Править `raw_xml` в обход interchange нельзя.
+Выгрузка отдаёт **снимок зафиксированной версии** (INV-IXC-008), собранный из базы при
+сохранении; правки без сохранения в файл не попадают.
+
+Application-слои без Spring: транзакция — порт `UnitOfWork`, события — после коммита,
+роль проверяется на границе use case'а по таблице `spec/nfr/<bc>.yaml`, а не URL.
+
 Модули доменов друг от друга **не зависят**: Maven не допускает цикла, а partnership
 в карте контекстов двусторонний. Поэтому у interchange свой `ArchiId`, а проверка
 матрицы при импорте (`RelationMatrix.check`) соединяется с сессией в application-слое
 на этапе 2.
 
-Тестов 169: 78 в метамодели, 63 в кодеке, 28 в `archi-bootstrap` (golden-file,
-ArchUnit, роли Keycloak).
+Тестов 258: 225 юнит-тестов (`./mvnw test`) и 33 интеграционных `*IT` на
+Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
 
-Ещё не заведено: таблицы модели (`element`, `relationship`, `view`, …) — этап 2,
-генерация из `spec/contracts/*.openapi.yaml`, клиент OIDC во фронтенде
-(страницу логина отдаёт Keycloak, но SPA на неё пока не уводит — этап 3),
-шаги CI интеграционные и Playwright — этапы 2 и 4.
+Ещё не заведено: клиент OIDC во фронтенде и канва (этап 3), авторазметка (4), экспорт
+картинок (5a), OEF (6a), Git (7a–7c), Playwright в CI (этап 4).
 
 Содержательная часть проекта — **спецификация**. Прежде чем писать код, читай её:
 почти каждое решение уже принято и обосновано, и переизобретать его не нужно.
@@ -93,6 +114,9 @@ ArchUnit, роли Keycloak).
 ```bash
 ./mvnw clean package               # 17 модулей + фронтенд; jar в archi-bootstrap/target/
 ./mvnw clean package -P '!frontend' # то же без Node: правка не задевает интерфейс
+./mvnw verify                      # плюс интеграционные *IT на Testcontainers (Docker)
+./mvnw -P '!frontend' -pl archi-bootstrap -am verify -DskipUnitTests -Dit.test=RoundTripApiIT
+                                   # один интеграционный; -DskipITs — без них
 ./mvnw test -Dtest=ClassName#method # один тест
 ./mvnw -P '!frontend' -pl archi-bootstrap -am test -Dtest=RoundTripGoldenFileTest \
        -Dsurefire.failIfNoSpecifiedTests=false   # round-trip, как шаг CI (NFR-05)
@@ -232,7 +256,7 @@ Co-Authored-By: …
 | [`spec/application/<bc>/usecases/`](spec/application/) | Use case'ы `UC-<BC>-NNN`: Given/When/Then, порты, отказы |
 | [`spec/ui/`](spec/ui/README.md) | Слой интерфейса: правила `UI-NNN`, токены стиля, контракт геометрии фигур |
 | [`spec/contracts/<bc>/`](spec/contracts/) | OpenAPI и AsyncAPI |
-| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 15 записей, три с файлами MADR |
+| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 17 записей, пять с файлами MADR |
 | [`spec/nfr/<bc>.yaml`](spec/nfr/) | SLO, latency, throughput, security по контекстам |
 
 Правила при правке `spec/`:

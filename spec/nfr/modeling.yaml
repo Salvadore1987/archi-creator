@@ -1,6 +1,6 @@
 ---
-version: 0.1
-last_modified: 2026-09-22
+version: 0.2
+last_modified: 2026-10-08
 bounded_context: modeling
 target_module: archi-bootstrap
 ---
@@ -12,8 +12,9 @@ target_module: archi-bootstrap
 # придуманы заново: спека здесь даёт им исполнимую форму, а не новые числа.
 #
 # Ключи в секциях latency и authorization — имена use case'ов из
-# ubiquitous-language.md. Каталог application/modeling/usecases/ пока пуст;
-# якоря UC-MDL-NNN проставляются режимом add-usecase.
+# ubiquitous-language.md. Use case'ы, к которым они относятся, — UC-MDL-001…007
+# (application/modeling/usecases/); исполнимая форма таблицы authorization —
+# Operation в archi-modeling-application (этап 2).
 # ───────────────────────────────────────────────────────────────────
 
 availability:
@@ -141,6 +142,13 @@ security:
     RestoreModel:       [ADMIN]
     PurgeModel:         [ADMIN]
     ReleaseLock:        [ARCHITECT, ADMIN]   # чужую блокировку снимает только ADMIN — INV-MDL-006
+    # Добавлены 2026-10-08, этап 2: операции use case'ов UC-MDL-003, 006, 007,
+    # которых таблица не называла, а без строки здесь их некому разрешить.
+    ListVersions:       [VIEWER, ARCHITECT, ADMIN]
+    UpdateRelationship: [ARCHITECT, ADMIN]
+    CreateView:         [ARCHITECT, ADMIN]
+    ReorganizeTree:     [ARCHITECT, ADMIN]   # UC-MDL-006: папки, перенос, переименование
+    ManageModelAccess:  [ARCHITECT, ADMIN]   # и только автор модели или ADMIN — UC-MDL-007
   acl:
     level: model
     note: |

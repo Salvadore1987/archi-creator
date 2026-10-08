@@ -149,14 +149,22 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 
 Перерисовывается по закрытии каждого этапа — `tools/render-depgraph.py`
 ([depgraph-maven-plugin](https://github.com/ferstl/depgraph-maven-plugin),
-формат PlantUML, версии на узлах). Состояние ниже — **этап 0**.
+формат PlantUML, версии на узлах). Состояние ниже — **этап 2** (2026-10-08).
+
+Что изменил этап 2: появилось первое ребро между контекстами —
+`archi-interchange-application → archi-modeling-application` (импорт пишет
+модель командой modeling, снимок версии modeling получает через свой порт,
+реализованный в interchange; обратного ребра нет — Maven не допускает цикла).
+В `archi-bootstrap` пришли тестовые зависимости: Testcontainers 2.0.5,
+`spring-boot-starter-test`, `spring-boot-starter-webmvc-test`,
+`spring-security-test`.
 
 **Реактор целиком** (`aggregate`): 17 проектов и всё, что они тянут.
 
 [![Граф зависимостей реактора](docs/dependencies/reactor.png)](docs/dependencies/reactor.png)
 
 **Модуль `archi-bootstrap`** (`graph` с `showDuplicates` и `showConflicts`):
-то же дерево плюс дубли и конфликты версий — их на этапе 0 нет, версии
+то же дерево плюс дубли и конфликты версий — их по-прежнему нет: версии
 третьих сторон приходят из BOM Spring Boot и не расходятся.
 
 [![Граф зависимостей archi-bootstrap](docs/dependencies/archi-bootstrap.png)](docs/dependencies/archi-bootstrap.png)

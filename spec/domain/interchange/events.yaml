@@ -13,9 +13,8 @@ publication_target: contracts/interchange/events.asyncapi.yaml
 # AsyncAPI по ссылке в publication_target фиксирует контракт полезной
 # нагрузки, а не транспорт.
 #
-# triggers: имена use case'ов. Каталог application/interchange/usecases/
-# пока пуст — имена соответствуют командам из ubiquitous-language.md и
-# получат якоря UC-IXC-NNN при вызове режима add-usecase.
+# triggers: имена команд из ubiquitous-language.md; use case'ы, в которых
+# они исполняются, — UC-IXC-001…003 (application/interchange/usecases/).
 # ───────────────────────────────────────────────────────────────────
 
 events:

@@ -2,20 +2,15 @@ openapi: 3.1.0
 
 info:
   title: Interchange API
-  version: 0.1.0
+  version: 1.0.0
   description: |
-    Синхронный REST API для BC Interchange: импорт и экспорт модели,
-    выгрузка представлений, обмен с Git.
+    Синхронный REST API для BC Interchange: импорт и экспорт модели
+    (docs/backend.md §5, §5.2, §8.2–§8.3).
 
-    Эта спека генерируется из `spec/application/interchange/usecases/`
-    через use case → endpoint mapping. Не редактируется вручную.
-
-    **Состояние: скелет.** Секция `paths` пуста намеренно: каталог use
-    case'ов пока пуст, а endpoint без ссылки на `UC-IXC-NNN` нарушает
-    проверку целостности «контракт без use case». Endpoint'ы появляются
-    здесь при вызове режима add-usecase.
-
-    Перечень операций зафиксирован в `docs/backend.md` §5.
+    Каждая операция ссылается на use case в `x-use-case` и на строку таблицы
+    доступа в `x-operation` (spec/nfr/interchange.yaml#security.authorization).
+    Наполнено на этапе 2 (2026-10-08); операции этапов 5a, 6a и 7a–7c
+    перечислены в конце раздела `paths` и появятся вместе со своими use case'ами.
 
 servers:
   - url: /api/v1
@@ -28,21 +23,140 @@ tags:
   - name: interchange
     description: Импорт, экспорт, рендер представлений, обмен с Git.
 
-paths: {}
+paths:
+
+  /models/import:
+    post:
+      tags: [interchange]
+      operationId: importArchimateFile
+      summary: Импорт .archimate новой моделью (FR-01, FR-49, FR-50)
+      x-use-case: UC-IXC-001
+      x-operation: ImportArchimateFile
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - { in: query, name: workspaceId, required: false, schema: { type: string, format: uuid },
+            description: "Без него — первое пространство." }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary, description: "До 50 МБ (spec/nfr/interchange.yaml)." }
+      responses:
+        '201':
+          description: Модель создана с версией 1; нарушения матрицы — в `findings` (мягкий режим).
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ImportReport' } }
+        '200':
+          description: Повтор ключа — результат первой попытки (INV-IXC-003).
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ImportReport' } }
+        '400':
+          description: |
+            Повреждённые данные — невалидный XML, битая ссылка, дубль id, связь без конца —
+            отказ в любом режиме (FR-50). `code: IXC_CORRUPT_DOCUMENT`, находки — в `findings`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '403':
+          description: Импорт доступен ARCHITECT и ADMIN.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '409':
+          description: Ключ уже использован для другого файла (INV-IXC-003).
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '413':
+          description: Файл больше предела — отказ до чтения тела.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '422': { $ref: '#/components/responses/UnprocessableEntity422' }
+
+  /models/{id}/export:
+    get:
+      tags: [interchange]
+      operationId: exportModel
+      summary: Выгрузка зафиксированной версии (INV-IXC-008)
+      x-use-case: UC-IXC-002
+      x-operation: ExportArchimate
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+        - { in: query, name: fmt, required: false, schema: { type: string, enum: [archimate, csv, oef], default: archimate },
+            description: "csv — каталог (§5.2, FR-45, x-operation ExportCatalogCsv); oef — этап 6a, сейчас 422 `IXC_FORMAT_NOT_AVAILABLE`." }
+        - { in: query, name: version, required: false, schema: { type: integer, format: int64 },
+            description: "Номер версии; без него — последняя." }
+        - { in: query, name: folder, required: false, schema: { type: string },
+            description: "Только csv: archi_id папки — выгрузка поддерева («каталог приложений»)." }
+        - { in: query, name: sep, required: false, schema: { type: string, enum: [";", ",", "tab"], default: ";" },
+            description: "Только csv: разделитель; ';' — для русской локали Excel." }
+      responses:
+        '200':
+          description: |
+            Файл версии; побайтово тот же при повторе (INV-IXC-004). Номер версии —
+            в заголовке `X-Archi-Version-No`, отпечаток — в `ETag`.
+          content:
+            application/xml: { schema: { type: string, format: binary } }
+            application/zip:
+              schema: { type: string, format: binary }
+              description: "csv: elements.csv и relations.csv, UTF-8 с BOM." 
+        '404':
+          description: Модели нет или она скрыта списком доступа (INV-MDL-011).
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '409':
+          description: Модель удалена — `MODEL_DELETED`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '410':
+          description: Снимок версии очищен, Git не настроен (FR-47).
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+
+  /workspaces/{id}/import-settings:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [interchange]
+      operationId: importSettings
+      summary: Строгость импорта пространства (FR-49)
+      x-use-case: UC-IXC-001
+      responses:
+        '200':
+          description: Текущее значение.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ImportSettings' } }
+    put:
+      tags: [interchange]
+      operationId: configureImportSettings
+      summary: Строгость меняет только ADMIN (FR-49)
+      x-use-case: UC-IXC-001
+      x-operation: ConfigureImportPolicy
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/ImportSettings' } }
+      responses:
+        '200':
+          description: Новое значение.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ImportSettings' } }
+        '403':
+          description: Не ADMIN.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 
 # ───────────────────────────────────────────────────────────────────
-# Планируемые операции (docs/backend.md §5, §5.2, §6.10).
+# Появятся со своими use case'ами:
 #
-#   POST /models/import                 импорт .archimate (multipart)
-#   GET  /models/{id}/export            ?fmt=archimate|oef|csv[&folder=&sep=]
-#   GET  /views/{id}/export             ?fmt=svg|png&scale=&outline=&background=
-#   GET  /models/{id}/views/export      пакетная выгрузка всех представлений (zip)
-#
-# Этапы 7a–7c добавят:
-#   POST /models/{id}/git/push          выгрузить состояние коммитом
-#   POST /models/{id}/git/pull          импортировать состояние по ссылке
-#   POST /models/{id}/git/merge         слияние предложения по сущностям
-#   PUT  /workspaces/{id}/git-binding   настроить привязку к репозиторию
+#   GET  /views/{id}/export             ?fmt=svg|png — этап 5a (§6.10)
+#   GET  /models/{id}/views/export      пакетная выгрузка — этап 5a
+#   GET  /models/{id}/export?fmt=oef    этап 6a (§3.5)
+#   POST /models/{id}/git/push          этап 7a
+#   POST /models/{id}/git/pull          этап 7b
+#   POST /models/{id}/git/merge         этап 7c
+#   PUT  /workspaces/{id}/git-binding   этап 7a
 #
 # Импорта из OEF и CSV в этом списке нет и не будет: единственный
 # принимаемый формат — .archimate (FR-01, docs/backend.md §3.5).
@@ -60,12 +174,13 @@ components:
     IdempotencyKey:
       in: header
       name: Idempotency-Key
-      required: true
+      required: false
       schema: { type: string, maxLength: 64 }
       description: |
         Ключ дедупликации импорта. Тот же ключ возвращает существующую
         сессию; тот же ключ с другим содержимым файла — `409`.
-        См. INV-IXC-003.
+        См. INV-IXC-003. Без ключа сервер берёт случайный: повтор такого
+        запроса — новая модель.
 
   schemas:
 
@@ -89,19 +204,23 @@ components:
       description: |
         Отчёт импорта. Отдаётся и при успехе, и при отказе: отказ без
         объяснения превращает строгий режим в чёрный ящик (INV-IXC-007).
-      required: [sessionId, status, strictMode, findings]
+        При отказе те же поля — в теле `problem+json`.
+      required: [sessionId, status, findings]
       properties:
         sessionId: { type: string, format: uuid }
         modelId:   { type: string, format: uuid }
+        versionNo: { type: integer, format: int64 }
         status:    { type: string, enum: [RECEIVED, PARSED, VALIDATED, APPLIED, REJECTED] }
-        strictMode: { type: boolean }
-        opaqueObjectCount:
-          type: integer
-          minimum: 0
-          description: Сколько объектов сохранено как непрозрачные (FR-03).
+        replayed:  { type: boolean, description: "Повтор ключа — результат первой попытки." }
         findings:
           type: array
           items: { $ref: '#/components/schemas/ImportFinding' }
+
+    ImportSettings:
+      type: object
+      required: [strictImport]
+      properties:
+        strictImport: { type: boolean }
 
     ImportFinding:
       type: object
@@ -140,9 +259,8 @@ components:
 
     UnprocessableEntity422:
       description: |
-        Файл принят, но применить нельзя: повреждённые данные либо находки
-        уровня ERROR в строгом режиме (INV-IXC-007). Тело — `ImportReport`
-        с причиной.
+        Строгий режим и находки уровня ERROR — модель не создана (INV-IXC-007, FR-49).
+        `code: IXC_STRICT_IMPORT_REJECTED`, находки — в `findings`.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }

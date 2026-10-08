@@ -17,14 +17,23 @@
         Сценарии interchange: use case'ы UC-IXC-NNN, входящие и исходящие порты.
         Спека — spec/application/interchange/usecases/.
 
-        Зависит только от домена. Реализации портов живут в адаптерах — сюда
-        ни Spring, ни JPA не попадают.
+        Зависит от своего домена и от application-слоя modeling: импорт пишет
+        модель командой modeling, экспорт берёт снимок версии её запросом, а снимок
+        modeling получает через свой порт SnapshotWriter, реализованный здесь.
+        Обратной зависимости нет и быть не может — Maven не допускает цикла;
+        направление выбрано по тому, кто переводит язык (partnership в карте
+        контекстов, spec/domain/bounded-contexts.yaml). Реализации портов живут
+        в адаптерах — сюда ни Spring, ни JPA не попадают.
     </description>
 
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>archi-interchange-domain</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>archi-modeling-application</artifactId>
         </dependency>
     </dependencies>
 

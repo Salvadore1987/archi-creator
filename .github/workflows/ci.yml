@@ -3,12 +3,11 @@
 #
 # Порядок из спеки: сборка → юнит → golden-file → интеграционные →
 # фронтенд → Playwright → образ. Здесь пока шаги, которым есть что
-# проверять: golden-file round-trip, юнит-тесты, сборка фронтенда
-# внутрь jar и образ.
+# проверять: golden-file round-trip, интеграционные на Testcontainers,
+# юнит-тесты, сборка фронтенда внутрь jar и образ.
 #
 # Отсутствующие шаги не заведены пустыми намеренно: зелёная галочка
 # над ненаписанным тестом хуже отсутствующей. Где они появятся:
-#   интеграционные    — этап 2, Testcontainers на postgres:16
 #   Playwright        — этап 4, docs/frontend.md §9.4
 # ───────────────────────────────────────────────────────────────────
 name: CI
@@ -123,10 +122,18 @@ jobs:
           -Dtest='RoundTripGoldenFileTest,XmlEquivalenceTest'
           -Dsurefire.failIfNoSpecifiedTests=false
 
+      # Классы *IT (§9.3): контекст целиком на postgres:16 в Testcontainers.
+      # Отдельным шагом, как golden-file: падение видно по имени шага.
+      - name: Интеграционные (Testcontainers, postgres:16)
+        run: >-
+          ./mvnw -B --no-transfer-progress -P '!frontend'
+          -pl archi-bootstrap -am verify -DskipUnitTests
+
       # Профиль frontend включён по умолчанию: jar обязан уехать
       # со статикой внутри (§10.2), и выключать его в CI нельзя.
+      # Интеграционные уже прошли шагом выше — здесь не повторяются.
       - name: mvn verify
-        run: ./mvnw -B --no-transfer-progress clean verify
+        run: ./mvnw -B --no-transfer-progress clean verify -DskipITs
 
       - name: Собранный jar
         uses: actions/upload-artifact@v4

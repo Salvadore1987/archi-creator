@@ -1,6 +1,6 @@
 ---
-version: 0.1
-last_modified: 2026-09-22
+version: 0.2
+last_modified: 2026-10-08
 bounded_context: modeling
 target_module: archi-modeling-domain
 ---
@@ -57,6 +57,7 @@ aggregates:
       - { name: elements,      type: List<Element>,       constraints: [not_null] }
       - { name: relationships, type: List<Relationship>,  constraints: [not_null] }
       - { name: properties,    type: List<PropertyEntry>, constraints: [not_null] }
+      - { name: rawXml,        type: Optional<RawXml>,    constraints: [optional], note: "остаток корня archimate:model — объявления пространств имён, profile, неизвестное (ADR-0017)" }
       - { name: createdBy,     type: EditorIdentity,      constraints: [not_null, immutable] }
       - { name: createdAt,     type: Timestamp,           constraints: [not_null, immutable] }
       - { name: updatedAt,     type: Timestamp,           constraints: [not_null] }
@@ -90,9 +91,11 @@ aggregates:
       - { name: modelId,    type: ModelId,             constraints: [not_null, immutable] }
       - { name: folderId,   type: FolderId,            constraints: [not_null] }
       - { name: archiId,    type: ArchiId,             constraints: [not_null, immutable] }
-      - { name: name,       type: String,              constraints: [not_null, min: 1, max: 500] }
+      - { name: archiType,  type: DiagramType,         constraints: [not_null, immutable], default: "archimate:ArchimateDiagramModel", note: "SketchModel и canvas:CanvasModel хранятся и выгружаются, но не редактируются (FR-03)" }
+      - { name: name,       type: String,              constraints: [not_null, max: 500] }
       - { name: documentation, type: Optional<String>, constraints: [optional] }
       - { name: viewpoint,  type: Optional<String>,    constraints: [optional] }
+      - { name: properties, type: List<PropertyEntry>, constraints: [not_null] }
       - { name: nodes,      type: List<ViewNode>,      constraints: [not_null] }
       - { name: edges,      type: List<ViewEdge>,      constraints: [not_null] }
       - { name: sortOrder,  type: SortOrder,           constraints: [not_null] }
@@ -141,6 +144,7 @@ aggregates:
       - { name: label,      type: Optional<String>, constraints: [optional, max: 100] }
       - { name: createdAt,  type: Timestamp,        constraints: [not_null, immutable] }
       - { name: snapshot,   type: Optional<Bytes>,  constraints: [optional] }
+      - { name: contentHash, type: String,          constraints: [not_null, immutable, pattern: "^[0-9a-f]{64}$"], note: "SHA-256 несжатого снимка; переживает очистку снимка и отвечает на «есть ли изменения» без него" }
       - { name: gitSha,     type: Optional<String>, constraints: [optional, pattern: "^[0-9a-f]{40}$"] }
     state_machine:
       initial: WITH_SNAPSHOT
@@ -150,6 +154,37 @@ aggregates:
       note: |
         Очистка снимка разрешена только там, где настроен и доступен Git
         (FR-47): иначе снимок — единственная копия содержимого.
+    invariants_ref: invariants.md
+    domain_events_published: []
+
+  ModelAccessList:
+    type: aggregate_root
+    identity: ModelId
+    description: |
+      Список доступа к модели поверх ролей (FR-29, INV-MDL-011). Отдельный
+      агрегат: меняется администратором и автором модели, не меняя саму
+      модель и не порождая её версий. Пустой список — модель открыта всем
+      по ролям; непустой — только перечисленным и ADMIN.
+    fields:
+      - { name: modelId, type: ModelId,          constraints: [not_null, immutable] }
+      - { name: entries, type: List<AclEntry>,   constraints: [not_null] }
+    invariants_ref: invariants.md
+    domain_events_published: []
+
+  IdempotencyRecord:
+    type: aggregate_root
+    identity: "(scope, actor, key)"
+    description: |
+      Результат команды, выполненной с ключом идемпотентности (INV-MDL-003).
+      Хранит отпечаток тела и ссылку на результат, а не сам ответ: повтор
+      перечитывает результат и отдаёт его в текущем виде.
+    fields:
+      - { name: scope,       type: String,    constraints: [not_null], note: "имя команды: CreateModel, SaveModel, CreateElement…" }
+      - { name: actor,       type: String,    constraints: [not_null], note: "subject: ключ одного пользователя не конфликтует с ключом другого" }
+      - { name: key,         type: String,    constraints: [not_null, max: 64] }
+      - { name: fingerprint, type: String,    constraints: [not_null, pattern: "^[0-9a-f]{64}$"] }
+      - { name: resultRef,   type: String,    constraints: [not_null], note: "идентификатор созданного объекта или номер версии" }
+      - { name: createdAt,   type: Timestamp, constraints: [not_null] }
     invariants_ref: invariants.md
     domain_events_published: []
 
@@ -195,14 +230,14 @@ entities:
     type: entity
     parent: ArchitectureModel
     identity: RelationshipId
-    description: Направленная связь между двумя элементами одной модели.
+    description: Направленная связь между двумя концептами одной модели — элементами или связями.
     fields:
       - { name: id,            type: RelationshipId,      constraints: [not_null, immutable] }
       - { name: folderId,      type: FolderId,            constraints: [not_null] }
       - { name: archiId,       type: ArchiId,             constraints: [not_null, immutable] }
       - { name: archiType,     type: ArchiType,           constraints: [not_null] }
-      - { name: sourceId,      type: ElementId,           constraints: [not_null] }
-      - { name: targetId,      type: ElementId,           constraints: [not_null] }
+      - { name: source,        type: ConceptRef,          constraints: [not_null], note: "элемент или связь той же модели — ArchiMate допускает связь как конец ассоциации и агрегации" }
+      - { name: target,        type: ConceptRef,          constraints: [not_null] }
       - { name: name,          type: Optional<String>,    constraints: [optional, max: 500] }
       - { name: documentation, type: Optional<String>,    constraints: [optional] }
       - { name: accessType,    type: Optional<AccessType>, constraints: [optional], note: "только для Access" }
@@ -221,8 +256,9 @@ entities:
       - { name: id,        type: ViewNodeId,           constraints: [not_null, immutable] }
       - { name: parentId,  type: Optional<ViewNodeId>, constraints: [optional], note: "вложенность в Group или в другой узел" }
       - { name: archiId,   type: ArchiId,              constraints: [not_null, immutable] }
-      - { name: kind,      type: ViewNodeKind,         constraints: [not_null] }
-      - { name: elementId, type: Optional<ElementId>,  constraints: [optional, not_null_when: "kind = DIAGRAM_OBJECT"] }
+      - { name: archiType, type: DiagramType,          constraints: [not_null, immutable], note: "xsi:type узла: archimate:DiagramObject, archimate:Group, archimate:Note, archimate:DiagramModelReference, узлы скетча и холста" }
+      - { name: kind,      type: ViewNodeKind,         constraints: [not_null, computed: "derived from archiType"] }
+      - { name: elementId, type: Optional<ElementId>,  constraints: [optional, not_null_when: "kind = DIAGRAM_OBJECT", null_when: "kind in (GROUP, NOTE)"] }
       - { name: bounds,    type: Bounds,               constraints: [not_null] }
       - { name: style,     type: Optional<StyleOverride>, constraints: [optional] }
       - { name: sortOrder, type: SortOrder,            constraints: [not_null] }
@@ -236,12 +272,13 @@ entities:
     fields:
       - { name: id,             type: ViewEdgeId,     constraints: [not_null, immutable] }
       - { name: archiId,        type: ArchiId,        constraints: [not_null, immutable] }
+      - { name: archiType,      type: DiagramType,    constraints: [not_null, immutable], default: "archimate:Connection" }
       - { name: relationshipId, type: Optional<RelationshipId>, constraints: [optional], note: "null у соединений, не отражающих связь модели" }
-      - { name: sourceNodeId,   type: ViewNodeId,     constraints: [not_null] }
-      - { name: targetNodeId,   type: ViewNodeId,     constraints: [not_null] }
+      - { name: source,         type: ViewEndpoint,   constraints: [not_null], note: "узел или другое ребро того же представления" }
+      - { name: target,         type: ViewEndpoint,   constraints: [not_null] }
       - { name: bendpoints,     type: List<Bendpoint>, constraints: [not_null] }
       - { name: style,          type: Optional<StyleOverride>, constraints: [optional] }
-      - { name: sortOrder,      type: SortOrder,      constraints: [not_null] }
+      - { name: sortOrder,      type: SortOrder,      constraints: [not_null], note: "позиция внутри содержимого источника: в файле ребро — sourceConnection своего источника" }
       - { name: rawXml,         type: Optional<RawXml>, constraints: [optional] }
 
 # ───────────────────────────────────────────────────────────────────
@@ -279,6 +316,15 @@ value_objects:
       и отдаваться при экспорте (FR-03). Каталог поддержанных типов живёт
       в метамодели и проверяется отдельно от хранения.
 
+  DiagramType:
+    underlying: String
+    constraints: [pattern: "^[A-Za-z][A-Za-z0-9]*:[A-Za-z][A-Za-z0-9]*$"]
+    serialization: { json: string }
+    note: |
+      xsi:type представления, узла и ребра. Не ArchiType: холст Archi пишет свои
+      объекты в пространстве canvas: (canvas:CanvasModel, canvas:CanvasModelBlock),
+      и шаблон ArchiType отклонил бы их — а они есть в фикстуре unknown_extension.
+
   SortOrder:
     underlying: Long
     constraints: [not_null, positive]
@@ -294,15 +340,33 @@ value_objects:
     composite:
       - { name: x,      type: Int, constraints: [not_null] }
       - { name: y,      type: Int, constraints: [not_null] }
-      - { name: width,  type: Int, constraints: [not_null, positive] }
-      - { name: height, type: Int, constraints: [not_null, positive] }
+      - { name: width,  type: Int, constraints: [not_null, "positive or -1"] }
+      - { name: height, type: Int, constraints: [not_null, "positive or -1"] }
     origin: parent_relative
-    note: Отсчёт от родительского узла, а не от холста. У корневых узлов родитель — само представление.
+    note: |
+      Отсчёт от родительского узла, а не от холста. У корневых узлов родитель — само представление.
+      -1 в размере — «размер по умолчанию» Archi: так записывает редактор узел,
+      размер которого не меняли. До 2026-10-08 спека требовала строго положительный
+      размер и отклонила бы такой файл.
 
   Bendpoint:
     composite:
-      - { name: x, type: Int, constraints: [not_null] }
-      - { name: y, type: Int, constraints: [not_null] }
+      - { name: startX, type: Int, constraints: [not_null] }
+      - { name: startY, type: Int, constraints: [not_null] }
+      - { name: endX,   type: Int, constraints: [not_null] }
+      - { name: endY,   type: Int, constraints: [not_null] }
+    note: |
+      Как в Archi: точка перегиба задана смещениями от центров источника (start)
+      и цели (end), а не координатой холста — поэтому она едет вместе с узлами.
+      До 2026-10-08 спека описывала пару x, y, которой в файле нет.
+
+  ConceptRef:
+    oneOf: [ElementId, RelationshipId]
+    note: Конец связи. Связь концом связи — законный ArchiMate (ассоциация к связи, агрегация связи).
+
+  ViewEndpoint:
+    oneOf: [ViewNodeId, ViewEdgeId]
+    note: Конец ребра представления. Ребро к ребру рисует связь, конец которой — связь.
 
   PropertyEntry:
     composite:
@@ -319,17 +383,28 @@ value_objects:
       - { name: textAlignment, type: Optional<Int>,    constraints: [optional] }
     note: Приоритет над токеном слоя (FR-21). Пустое переопределение и его отсутствие — одно и то же.
 
+  AclEntry:
+    composite:
+      - { name: principalType, type: PrincipalType, constraints: [not_null] }
+      - { name: principal,     type: String,        constraints: [not_null, max: 200], note: "subject пользователя или имя группы Keycloak" }
+      - { name: access,        type: AclAccess,     constraints: [not_null] }
+
   RawXml:
     underlying: String
     serialization: { json: string }
     note: |
       Непрозрачное значение. modeling его хранит и отдаёт, но не разбирает:
-      разбор — язык BC interchange.
+      разбор — язык BC interchange. Содержимое — «остаток XML» объекта
+      (ADR-0017): порядок атрибутов, незнакомые атрибуты и узлы без id
+      с позициями, места типизированных значений. Всё, что типизировано
+      в полях объекта, в остатке не дублируется — при выгрузке поля
+      сильнее остатка.
 
   EditorIdentity:
     composite:
       - { name: subject, type: String,      constraints: [not_null] }
       - { name: roles,   type: Set<Role>,   constraints: [not_null, min_size: 1] }
+      - { name: groups,  type: Set<String>, constraints: [not_null], note: "группы Keycloak, claim groups; нужны ACL модели (INV-MDL-011)" }
     note: Приходит из JWT Keycloak. Персональные данные в домене не хранятся.
 
 # ───────────────────────────────────────────────────────────────────
@@ -357,7 +432,13 @@ enums:
     note: Выводится из archiType. OTHER — для типов, которые метамодель текущей фазы не знает.
 
   ViewNodeKind:
-    values: [DIAGRAM_OBJECT, GROUP, NOTE, JUNCTION]
+    values: [DIAGRAM_OBJECT, GROUP, NOTE, OTHER]
+    note: |
+      Выводится из archiType узла. Junction в файле Archi — элемент модели,
+      а на представлении — обычный DIAGRAM_OBJECT над ним; вид JUNCTION
+      до 2026-10-08 стоял здесь ошибочно. OTHER — ссылка на представление
+      (DiagramModelReference), узлы скетча и холста и типы, которых метамодель
+      не знает: хранятся и выгружаются, но не редактируются (FR-03).
 
   AccessType:
     values: [WRITE, READ, ACCESS, READ_WRITE]
@@ -366,6 +447,13 @@ enums:
   Role:
     values: [VIEWER, ARCHITECT, ADMIN]
     note: FR-28. Роли приходят из Keycloak, ACL модели накладывается поверх них.
+
+  PrincipalType:
+    values: [USER, GROUP]
+
+  AclAccess:
+    values: [READ, WRITE]
+    note: WRITE включает READ. Ни одно не расширяет роль — VIEWER со WRITE остаётся читателем.
 
   LockReleaseReason:
     values: [RELEASED_BY_OWNER, FORCED_BY_ADMIN, EXPIRED]
