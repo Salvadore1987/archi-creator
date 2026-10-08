@@ -209,12 +209,14 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 
 ### 1.4 Сессии и отчёты (домен, без хранения)
 
-- ⬜ `ImportSession` со state machine `RECEIVED → PARSED → VALIDATED → APPLIED`,
+- ✅ `ImportSession` со state machine `RECEIVED → PARSED → VALIDATED → APPLIED`,
       отказ из любого нетерминального (`INV-IXC-002`)
 - ⬜ Идемпотентность по `Idempotency-Key` + `sourceHash` (`INV-IXC-003`)
-- ⬜ `ImportFinding` с `severity`, `code`, `archiId`, `xmlLine`
-- ⬜ `strictMode`: `ERROR` отклоняет только в строгом режиме (`INV-IXC-007`,
-      FR-49, [§8.3](../backend.md#83-строгость-импорта))
+- ✅ `ImportFinding` с `severity`, `code`, `archiId`, `xmlLine`
+- ✅ `strictMode`: `ERROR` отклоняет только в строгом режиме (`INV-IXC-007`,
+      FR-49, [§8.3](../backend.md#83-строгость-импорта)). Автомат, находки
+      и строгость — один агрегат и один таск: порог отказа живёт в переходе
+      `validate`, а повреждения отклоняются уже в `parse`
 - ⬜ `ExportJob`, `LossReport`, `LossEntry`; для `ARCHIMATE` список потерь
       обязан быть пуст (`INV-IXC-006`)
 
@@ -236,13 +238,13 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 Тесты (имена — контракт из таблиц «Маппинг на тесты»):
 
 - ✅ `ArchiReaderTest#unknownNodeIsPreservedAsRawFragment` (`INV-IXC-001`)
-- ⬜ `ImportSessionStateMachineTest#applyIsAllowedOnlyFromValidated` (`INV-IXC-002`)
+- ✅ `ImportSessionStateMachineTest#applyIsAllowedOnlyFromValidated` (`INV-IXC-002`)
 - ⬜ `ImportIdempotencyTest#sameKeyReturnsExistingSession` (`INV-IXC-003`)
 - ✅ `ArchiWriterTest#writingTwiceProducesIdenticalBytes` (`INV-IXC-004`)
 - ✅ `ArchiCodecTest#documentSurvivesWriteReadCycle` (`INV-IXC-005`)
 - ⬜ `RoundTripGoldenFileTest#hamkorbankAsIsSurvivesRoundTrip` (`INV-IXC-005`, NFR-05)
 - ⬜ `RoundTripGoldenFileTest#opaqueNodesSurvive` (FR-03)
-- ⬜ `StrictImportTest#errorRejectsOnlyInStrictMode`,
+- ✅ `StrictImportTest#errorRejectsOnlyInStrictMode`,
       `#corruptedFileIsRejectedInBothModes` (`INV-IXC-007`)
 - ✅ `RelationMatrixTest#forbiddenRelationIsRejectedOnCreate`,
       `#importedViolationIsReportedNotRejected` (`INV-MDL-007`)
