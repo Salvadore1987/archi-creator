@@ -6,7 +6,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeExceptio
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
 /**
- * Параметры каталога (§5.2): разделитель — {@code ;} по умолчанию, {@code ,} для
+ * Параметры каталога: разделитель — {@code ;} по умолчанию, {@code ,} для
  * стандартного CSV; {@code folderArchiId} — поддерево папки, {@code archi_id} которой
  * стабилен между версиями, в отличие от внутреннего ключа.
  */

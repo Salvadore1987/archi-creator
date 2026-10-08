@@ -29,7 +29,7 @@ import uz.salvadore.hamkorbank.archi.bootstrap.roundtrip.RoundTripGoldenFileTest
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Containers;
 
 /**
- * FR-28 на настоящем Keycloak 26 (§9.3): realm проекта, токены от Keycloak, проверка
+ * Роли модели доступа на настоящем Keycloak 26: realm проекта, токены от Keycloak, проверка
  * подписи ресурс-сервером, роли из {@code realm_access}. Остальные тесты REST кладут
  * токен через {@code spring-security-test}; этот — единственный, где путь от входа
  * до отказа роли пройден целиком.

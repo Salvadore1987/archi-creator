@@ -14,15 +14,14 @@
 
     <name>Archi Creator :: Interchange :: Application</name>
     <description>
-        Сценарии interchange: use case'ы UC-IXC-NNN, входящие и исходящие порты.
-        Спека — spec/application/interchange/usecases/.
+        Сценарии interchange: use case'ы, входящие и исходящие порты.
 
         Зависит от своего домена и от application-слоя modeling: импорт пишет
         модель командой modeling, экспорт берёт снимок версии её запросом, а снимок
         modeling получает через свой порт SnapshotWriter, реализованный здесь.
         Обратной зависимости нет и быть не может — Maven не допускает цикла;
-        направление выбрано по тому, кто переводит язык (partnership в карте
-        контекстов, spec/domain/bounded-contexts.yaml). Реализации портов живут
+        направление выбрано по тому, кто переводит язык (partnership
+        контекстов). Реализации портов живут
         в адаптерах — сюда ни Spring, ни JPA не попадают.
     </description>
 
@@ -39,7 +38,7 @@
 
     <build>
         <plugins>
-            <!-- ADR-0001: запрет Spring, JPA и Hibernate. Правило — в pluginManagement родителя. -->
+            <!-- Граница слоя: запрет Spring, JPA и Hibernate. Правило — в pluginManagement родителя. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>

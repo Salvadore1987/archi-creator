@@ -9,7 +9,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 
 /**
- * Отрисовка связи на представлении (INV-MDL-008). В файле ребро — {@code sourceConnection}
+ * Отрисовка связи на представлении. В файле ребро — {@code sourceConnection}
  * своего источника, поэтому {@code sortOrder} — позиция в содержимом источника.
  *
  * @param relationshipId пусто у соединений, не отражающих связь модели (заметка → элемент)

@@ -1,6 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.validation;
 
-/** Уровень находки отчёта валидации (docs/backend.md §5.1, {@code Finding}). */
+/** Уровень находки отчёта валидации. */
 public enum Severity {
     ERROR,
     WARNING,

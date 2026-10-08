@@ -17,7 +17,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.access.ModelAccessList;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.PrincipalType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
-/** Списки доступа (INV-MDL-011): запись заменяет список целиком. */
+/** Списки доступа модели: запись заменяет список целиком. */
 @Repository
 public class JpaAccessListStore implements ModelAccessListRepository {
 

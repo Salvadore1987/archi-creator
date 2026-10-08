@@ -12,7 +12,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotencyRecord;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 
-/** Ключи идемпотентности (INV-MDL-003). Гонка двух запросов с одним ключом — конфликт ключа, {@code 409}. */
+/** Ключи идемпотентности. Гонка двух запросов с одним ключом — конфликт ключа, {@code 409}. */
 @Repository
 public class JpaIdempotencyStore implements IdempotencyRepository {
 

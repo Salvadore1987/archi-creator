@@ -34,20 +34,20 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
 
 /**
- * Потоковое чтение {@code .archimate} на StAX (NFR-02): дерево DOM не строится,
+ * Потоковое чтение {@code .archimate} на StAX: дерево DOM не строится,
  * файл проходится один раз.
  *
- * <p>Что делает с файлом (docs/backend.md §3.4):
+ * <p>Что делает с файлом:
  * <ul>
- *   <li>идентификаторы берёт буквально (INV-IXC-001, ADR-0002);</li>
+ *   <li>идентификаторы берёт буквально, не перегенерирует;</li>
  *   <li>порядок содержимого фиксирует {@link DocumentOrder} — плотно, с нуля;</li>
  *   <li>атрибуты хранит все и в исходном порядке, знакомые и нет;</li>
  *   <li>элемент, которого не понимает, переносит {@link RawXmlFragment} с адресом
- *       родителя и позицией (FR-03);</li>
+ *       родителя и позицией;</li>
  *   <li>{@code bounds} не пересчитывает: они уже относительны родителю, как в файле.</li>
  * </ul>
  *
- * <p>Повреждённые данные (FR-50) собираются все за один проход и бросаются
+ * <p>Повреждённые данные собираются все за один проход и бросаются
  * {@link CorruptDocumentException}: невалидный XML, узел без {@code id} или
  * {@code xsi:type}, дубль идентификатора, ссылка в пустоту, связь без конца,
  * {@code targetConnections}, не совпадающий с соединениями узла.

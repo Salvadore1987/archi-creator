@@ -15,7 +15,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
 
-/** Сценарии interchange — бинами. Транзакция — общая с modeling (UC-IXC-001, п. 5). */
+/** Сценарии interchange — бинами. Транзакция — общая с modeling. */
 @Configuration
 public class InterchangeConfiguration {
 

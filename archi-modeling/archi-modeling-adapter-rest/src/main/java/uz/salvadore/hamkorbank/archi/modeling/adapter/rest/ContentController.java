@@ -45,8 +45,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 
 /**
- * Содержимое модели: элементы, связи, дерево папок, метамодель для палитры
- * (UC-MDL-002, UC-MDL-003, UC-MDL-006).
+ * Содержимое модели: элементы, связи, дерево папок, метамодель для палитры.
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -62,7 +61,7 @@ public class ContentController {
         this.tree = tree;
     }
 
-    // ── Элементы (UC-MDL-002) ───────────────────────────────────────
+    // ── Элементы ────────────────────────────────────────────────────
 
     @PostMapping("/models/{id}/elements")
     public ResponseEntity<ElementDto> createElement(EditorIdentity actor, @PathVariable UUID id,
@@ -79,14 +78,14 @@ public class ContentController {
                 Optional.ofNullable(patch.documentation()), properties(patch.properties())));
     }
 
-    /** Со связями — {@code 409} с их перечнем в {@code relationships} (INV-MDL-004). */
+    /** Со связями — {@code 409} с их перечнем в {@code relationships}. */
     @DeleteMapping("/elements/{id}")
     public ResponseEntity<Void> deleteElement(EditorIdentity actor, @PathVariable UUID id) {
         elements.delete(actor, ElementId.of(id));
         return ResponseEntity.noContent().build();
     }
 
-    // ── Связи (UC-MDL-003) ──────────────────────────────────────────
+    // ── Связи ───────────────────────────────────────────────────────
 
     /** Новая — {@code 201}; дубль того же типа между той же парой — {@code 200} с существующей. */
     @PostMapping("/models/{id}/relationships")
@@ -119,7 +118,7 @@ public class ContentController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── Дерево (UC-MDL-006) ─────────────────────────────────────────
+    // ── Дерево ──────────────────────────────────────────────────────
 
     @PostMapping("/models/{id}/folders")
     public ResponseEntity<FolderDto> createFolder(EditorIdentity actor, @PathVariable UUID id,
@@ -154,7 +153,7 @@ public class ContentController {
 
     // ── Метамодель ──────────────────────────────────────────────────
 
-    /** Каталог типов для палитры: что редактируется в текущей фазе (FR-07, FR-08). */
+    /** Каталог типов для палитры: что редактируется в текущей фазе. */
     @GetMapping("/metamodel/elements")
     public List<ElementTypeDto> elementTypes() {
         ArchiTypeRegistry registry = ArchiTypeRegistry.archimate32();
@@ -165,7 +164,7 @@ public class ContentController {
                 .toList();
     }
 
-    /** Допустимые связи для пары типов; первая — выбор по умолчанию (UC-MDL-003, п. 1–2). */
+    /** Допустимые связи для пары типов; первая — выбор по умолчанию. */
     @GetMapping("/metamodel/relations")
     public List<RelationTypeDto> relationTypes(@RequestParam String source, @RequestParam String target) {
         List<RelationshipType> permitted = RelationshipService.suggest(archiType(source), archiType(target));

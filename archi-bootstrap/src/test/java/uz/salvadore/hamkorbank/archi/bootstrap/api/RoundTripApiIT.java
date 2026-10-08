@@ -20,8 +20,8 @@ import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 
 /**
- * Выход этапа 2 (§12): «импорт файла → сохранение в БД → экспорт через API» даёт
- * исходный файл, {@code assertXmlEquivalent} зелёный (NFR-05, INV-IXC-005).
+ * Выход этапа 2: «импорт файла → сохранение в БД → экспорт через API» даёт
+ * исходный файл, {@code assertXmlEquivalent} зелёный.
  */
 class RoundTripApiIT extends ApiTest {
 

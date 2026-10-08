@@ -18,7 +18,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 
-/** UC-MDL-002 и UC-MDL-006 для элементов: создать, изменить, удалить (FR-07, FR-11). */
+/** Элементы модели: создать, изменить, удалить. */
 public final class ElementService {
 
     private final ModelingKernel kernel;
@@ -31,7 +31,7 @@ public final class ElementService {
     public record PropertyValue(String key, String value) {
     }
 
-    /** Новый элемент в папке своего слоя; повтор с тем же ключом — тот же элемент (INV-MDL-003). */
+    /** Новый элемент в папке своего слоя; повтор с тем же ключом — тот же элемент. */
     public Element create(EditorIdentity actor, ModelId modelId, ArchiType archiType, String name,
                           Optional<FolderId> folderId, Optional<String> idempotencyKey) {
         return kernel.run(Operation.CREATE_ELEMENT, actor, () -> kernel.unitOfWork.write(() ->
@@ -50,7 +50,7 @@ public final class ElementService {
 
     /**
      * PATCH элемента. Переименование видно на всех представлениях сразу: узел ссылается
-     * на элемент, а не копирует его имя (FR-11).
+     * на элемент, а не копирует его имя.
      */
     public Element update(EditorIdentity actor, ElementId elementId, Optional<String> name,
                           Optional<String> documentation, Optional<List<PropertyValue>> properties) {
@@ -65,7 +65,7 @@ public final class ElementService {
         }));
     }
 
-    /** Удаление; со связями — {@code 409} (INV-MDL-004). Размещения на представлениях уходят вместе с ним. */
+    /** Удаление; со связями — {@code 409}. Размещения на представлениях уходят вместе с ним. */
     public void delete(EditorIdentity actor, ElementId elementId) {
         kernel.run(Operation.DELETE_ELEMENT, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.writableModel(ownerOf(elementId.value()), actor);
@@ -89,7 +89,7 @@ public final class ElementService {
         return kernel.models.ownerOf(objectId).orElseThrow(() -> ModelingException.notFound("объект " + objectId));
     }
 
-    /** Свойства получают разреженный порядок по месту в списке (INV-MDL-005). */
+    /** Свойства получают разреженный порядок по месту в списке. */
     static List<PropertyEntry> numbered(List<PropertyValue> values) {
         java.util.ArrayList<PropertyEntry> entries = new java.util.ArrayList<>();
         for (int i = 0; i < values.size(); i++) {

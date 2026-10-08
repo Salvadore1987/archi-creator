@@ -10,8 +10,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ViewId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
 /**
- * Выгрузка завершена (spec/domain/interchange/events.yaml#ExportCompleted). Публикуется
- * и при пустом отчёте о потерях — отсутствие потерь тоже факт.
+ * Выгрузка завершена. Публикуется и при пустом отчёте о потерях — отсутствие потерь тоже факт.
  */
 public record ExportCompleted(ExportJobId exportJobId, WorkspaceId workspaceId, ModelId modelId,
                               Optional<ViewId> viewId, ExportFormat format, long sourceVersionNo,

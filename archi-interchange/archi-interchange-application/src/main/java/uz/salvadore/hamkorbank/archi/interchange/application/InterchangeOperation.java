@@ -8,8 +8,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 
 /**
- * Операции interchange и роли — исполнимая форма {@code security.authorization}
- * из spec/nfr/interchange.yaml (FR-28). Экспорт доступен {@code VIEWER} намеренно.
+ * Операции interchange и роли, которым они разрешены: проверка идёт по операции
+ * сценария, а не по URL. Экспорт доступен {@code VIEWER} намеренно.
  */
 public enum InterchangeOperation {
     IMPORT_ARCHIMATE_FILE("ImportArchimateFile", Role.ARCHITECT, Role.ADMIN),

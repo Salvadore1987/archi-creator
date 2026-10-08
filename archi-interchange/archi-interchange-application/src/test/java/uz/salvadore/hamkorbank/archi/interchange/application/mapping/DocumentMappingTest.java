@@ -35,7 +35,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
- * ADR-0017 без базы: документ → строки модели с остатком → документ. Сравнивается
+ * Раскладка без базы: документ → строки модели с остатком → документ. Сравнивается
  * не XML, а сам документ как значение — со строгим порядком атрибутов и содержимого,
  * то есть строже {@code assertXmlEquivalent}. Через таблицы тот же путь проверяет
  * {@code ModelImportIT}.

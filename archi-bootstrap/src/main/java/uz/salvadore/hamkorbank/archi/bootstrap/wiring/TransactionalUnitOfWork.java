@@ -8,7 +8,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 /**
  * {@code UnitOfWork} обоих контекстов на {@link TransactionTemplate}. Распространение —
  * {@code REQUIRED}: импорт interchange и сохранение версии modeling внутри него — одна
- * транзакция (UC-IXC-001, п. 5).
+ * транзакция.
  */
 public final class TransactionalUnitOfWork implements UnitOfWork {
 

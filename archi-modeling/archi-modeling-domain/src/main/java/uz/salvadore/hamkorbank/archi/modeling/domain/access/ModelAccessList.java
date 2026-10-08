@@ -9,7 +9,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
 /**
- * Список доступа к модели поверх ролей — агрегат (INV-MDL-011, FR-29).
+ * Список доступа к модели поверх ролей — агрегат.
  *
  * <p>Пустой — модель открыта по ролям. Непустой — только перечисленным и {@code ADMIN}.
  * Список сужает роль и не расширяет её: проверка роли идёт отдельно и раньше.
@@ -48,7 +48,7 @@ public record ModelAccessList(ModelId modelId, List<AclEntry> entries) {
         throw new ModelingException(INVARIANT, Failure.NOT_FOUND, "модель " + modelId + " не найдена");
     }
 
-    /** Список меняют {@code ADMIN} и автор модели (UC-MDL-007). */
+    /** Список меняют {@code ADMIN} и автор модели. */
     public static void requireManager(EditorIdentity editor, String modelCreatedBy) {
         if (!editor.isAdmin() && !editor.subject().equals(modelCreatedBy)) {
             throw new ModelingException(ModelingException.Codes.ACCESS_DENIED, Failure.FORBIDDEN,

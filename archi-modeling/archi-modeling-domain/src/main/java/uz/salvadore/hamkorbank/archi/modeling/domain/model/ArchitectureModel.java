@@ -35,11 +35,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
- * Архитектурная модель — агрегат (spec/domain/modeling/aggregates.yaml#ArchitectureModel).
+ * Архитектурная модель — агрегат.
  *
- * <p>Граница согласованности: уникальность {@code archiId} (INV-MDL-001), концы связей
- * (INV-MDL-004), порядок в папке (INV-MDL-005), дерево папок (INV-MDL-009) и жизненный
- * цикл (INV-MDL-002) проверяются в пределах одного экземпляра. Представления — отдельный
+ * <p>Граница согласованности: уникальность {@code archiId}, концы связей, порядок в папке,
+ * дерево папок и жизненный цикл проверяются в пределах одного экземпляра. Представления — отдельный
  * агрегат; модель знает о них лишь {@link ViewRef}: где лежат и какое место занимают.
  *
  * <p>Изменения копятся в {@link TrackedMap}: хранилище пишет только тронутое.
@@ -90,7 +89,7 @@ public final class ArchitectureModel {
 
     // ── Создание и загрузка ─────────────────────────────────────────
 
-    /** Пустая модель с девятью корневыми папками (UC-MDL-001, INV-MDL-009). */
+    /** Пустая модель с девятью корневыми папками. */
     public static ArchitectureModel create(ModelId id, WorkspaceId workspaceId, ArchiId archiId, String name,
                                            EditorIdentity author, Instant now, Supplier<FolderId> folderIds,
                                            Supplier<ArchiId> archiIds) {
@@ -105,7 +104,7 @@ public final class ArchitectureModel {
     /**
      * Модель из импортированного документа: всё содержимое новое. Структура проверяется
      * так же, как при правке, кроме матрицы связей — нарушения импорта сообщаются,
-     * а не отклоняются (INV-MDL-007, FR-10). Недостающие корневые папки дописываются,
+     * а не отклоняются. Недостающие корневые папки дописываются,
      * как это делает Archi при открытии такого файла.
      */
     public static ArchitectureModel imported(ModelHeader header, List<ModelFolder> folders, List<Element> elements,
@@ -146,7 +145,7 @@ public final class ArchitectureModel {
         }
     }
 
-    /** INV-MDL-001, INV-MDL-004, INV-MDL-009 над всем содержимым разом. */
+    /** Уникальность {@code archiId}, концы связей и дерево папок — над всем содержимым разом. */
     private void verifyStructure() {
         Set<ArchiId> seen = new HashSet<>();
         Stream.of(folders.values().stream().map(ModelFolder::archiId),
@@ -183,7 +182,7 @@ public final class ArchitectureModel {
         }
     }
 
-    // ── Жизненный цикл (INV-MDL-002) ────────────────────────────────
+    // ── Жизненный цикл ──────────────────────────────────────────────
 
     public void delete(EditorIdentity by, Instant now) {
         transition(ModelStatus.ACTIVE, ModelStatus.DELETED, "DeleteModel", now);
@@ -236,7 +235,7 @@ public final class ArchitectureModel {
         touch(now);
     }
 
-    // ── Папки (UC-MDL-006, INV-MDL-009) ─────────────────────────────
+    // ── Папки ───────────────────────────────────────────────────────
 
     public ModelFolder createFolder(FolderId parentId, String folderName, FolderId newId, ArchiId newArchiId,
                                     Instant now) {
@@ -277,8 +276,8 @@ public final class ArchitectureModel {
     /**
      * Перенос в папку. Объекты остаются в поддереве своего корня — элементы своего слоя,
      * связи в {@code relations}, представления в {@code diagrams}; папка не переносится
-     * в собственного потомка. Соседи в новой папке не перенумеровываются (INV-MDL-005).
-     * Нарушение у любого из объектов отклоняет перенос целиком (UC-MDL-006).
+     * в собственного потомка. Соседи в новой папке не перенумеровываются.
+     * Нарушение у любого из объектов отклоняет перенос целиком.
      *
      * @return новое место перенесённых представлений — их агрегаты правит вызывающий
      */
@@ -338,11 +337,11 @@ public final class ArchitectureModel {
         }
     }
 
-    // ── Элементы (UC-MDL-002, UC-MDL-006) ───────────────────────────
+    // ── Элементы ────────────────────────────────────────────────────
 
     /**
-     * Новый элемент в папке своего слоя. Тип — поддержанный фазой 1 (FR-07): тип фазы 2
-     * и 3 создать нельзя, импортированный остаётся opaque (FR-03, UI-020).
+     * Новый элемент в папке своего слоя. Тип — поддержанный фазой 1: тип фазы 2
+     * и 3 создать нельзя, импортированный остаётся opaque.
      */
     public Element addElement(ArchiType archiType, String elementName, FolderId folderId, ElementId newId,
                               ArchiId newArchiId, Instant now) {
@@ -376,8 +375,8 @@ public final class ArchitectureModel {
     }
 
     /**
-     * Элемент со связями не удаляется: сначала удаляются связи, явно, как в Archi
-     * (INV-MDL-004). Размещения на представлениях снимает вызывающий.
+     * Элемент со связями не удаляется: сначала удаляются связи, явно, как в Archi.
+     * Размещения на представлениях снимает вызывающий.
      */
     public Element removeElement(ElementId elementId, Instant now) {
         requireActive();
@@ -388,11 +387,11 @@ public final class ArchitectureModel {
         return element;
     }
 
-    // ── Связи (UC-MDL-003) ──────────────────────────────────────────
+    // ── Связи ───────────────────────────────────────────────────────
 
     /**
-     * Новая связь в папке {@code Relations}. Тип проверяется по матрице ArchiMate 3.2
-     * (INV-MDL-007); дубль того же типа между той же парой не создаётся — возвращается
+     * Новая связь в папке {@code Relations}. Тип проверяется по матрице ArchiMate 3.2;
+     * дубль того же типа между той же парой не создаётся — возвращается
      * существующая связь.
      */
     public Created<Relationship> addRelationship(ArchiType archiType, ConceptRef source, ConceptRef target,
@@ -433,7 +432,7 @@ public final class ArchitectureModel {
         return edited;
     }
 
-    /** Связь, к которой примыкает другая связь, не удаляется (INV-MDL-004). */
+    /** Связь, к которой примыкает другая связь, не удаляется. */
     public Relationship removeRelationship(RelationshipId relationshipId, Instant now) {
         requireActive();
         Relationship relationship = requireRelationship(relationshipId);
@@ -498,7 +497,7 @@ public final class ArchitectureModel {
                 .orElseThrow(() -> ModelingException.notFound("связь " + relationshipId));
     }
 
-    /** Конец связи обязан принадлежать этой модели (INV-MDL-004). */
+    /** Конец связи обязан принадлежать этой модели. */
     public ArchiType conceptType(ConceptRef concept) {
         requireConcept(concept);
         return switch (concept) {
@@ -525,7 +524,7 @@ public final class ArchitectureModel {
         }
     }
 
-    /** INV-MDL-001: {@code archiId} не повторяется в модели. */
+    /** {@code archiId} не повторяется в модели. */
     public void requireFreeArchiId(ArchiId candidate) {
         if (archiIdTaken(candidate)) {
             throw new ModelingException("INV-MDL-001", Failure.CONFLICT,
@@ -548,7 +547,7 @@ public final class ArchitectureModel {
         return roots;
     }
 
-    /** Корень поддерева, в котором лежит папка; цикл в дереве — нарушение INV-MDL-009. */
+    /** Корень поддерева, в котором лежит папка; цикл в дереве — нарушение структуры папок. */
     public ModelFolder rootOf(FolderId folderId) {
         return rootOf(requireFolder(folderId));
     }
@@ -590,7 +589,7 @@ public final class ArchitectureModel {
         return orders;
     }
 
-    /** Конец папки: соседи не перенумеровываются (INV-MDL-005). */
+    /** Конец папки: соседи не перенумеровываются. */
     private SortOrder nextOrderIn(FolderId folderId) {
         return SortOrder.afterLast(childOrders(folderId));
     }

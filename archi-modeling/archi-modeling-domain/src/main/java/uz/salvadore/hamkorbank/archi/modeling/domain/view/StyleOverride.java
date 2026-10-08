@@ -5,7 +5,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
- * Собственный стиль объекта — сильнее токена слоя (FR-21). Пустое переопределение
+ * Собственный стиль объекта — сильнее токена слоя. Пустое переопределение
  * и его отсутствие — одно и то же.
  */
 public record StyleOverride(Optional<String> fillColor, Optional<String> font, Optional<String> fontColor,

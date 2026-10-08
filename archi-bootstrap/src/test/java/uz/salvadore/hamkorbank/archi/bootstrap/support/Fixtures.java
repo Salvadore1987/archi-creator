@@ -7,7 +7,7 @@ import java.nio.file.Files;
 import java.util.List;
 import uz.salvadore.hamkorbank.archi.bootstrap.roundtrip.RoundTripGoldenFileTest;
 
-/** Фикстуры §9.1 и эталонная модель для интеграционных тестов. */
+/** Фикстуры round-trip и эталонная модель для интеграционных тестов. */
 public final class Fixtures {
 
     public static final String REFERENCE = "docs/Hamkorbank_AS_IS_strict.archimate";

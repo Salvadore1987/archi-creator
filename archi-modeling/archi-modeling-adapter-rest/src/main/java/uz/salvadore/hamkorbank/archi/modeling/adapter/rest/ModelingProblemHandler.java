@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationNotPermittedException;
 
-/** Отказы modeling — в {@code application/problem+json} (§8.1, §8.2). */
+/** Отказы modeling — в {@code application/problem+json}. */
 @RestControllerAdvice
 public class ModelingProblemHandler {
 
@@ -19,7 +19,7 @@ public class ModelingProblemHandler {
         return ProblemFactory.problem(ProblemFactory.status(e.failure()), e.code(), message(e), e.details(), request);
     }
 
-    /** Недопустимая связь — {@code 422} с причиной и перечнем допустимых (UC-MDL-003, §8.2). */
+    /** Недопустимая связь — {@code 422} с причиной и перечнем допустимых. */
     @ExceptionHandler(RelationNotPermittedException.class)
     ProblemDetail relation(RelationNotPermittedException e, HttpServletRequest request) {
         return ProblemFactory.problem(HttpStatus.UNPROCESSABLE_CONTENT, e.code(),

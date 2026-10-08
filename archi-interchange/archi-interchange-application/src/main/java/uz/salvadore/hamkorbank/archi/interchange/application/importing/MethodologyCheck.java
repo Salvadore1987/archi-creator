@@ -17,9 +17,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationMatrix;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationViolation;
 
 /**
- * Проверка методологии на импорте (UC-IXC-001, п. 3): нарушения матрицы ArchiMate 3.2 —
+ * Проверка методологии на импорте: нарушения матрицы ArchiMate 3.2 —
  * {@code ERROR} с кодом {@code RELATION_NOT_PERMITTED}, неизвестные типы — {@code INFO}.
- * Уровень {@code ERROR} сам по себе не отказ: отклоняет строгий режим (INV-IXC-007).
+ * Уровень {@code ERROR} сам по себе не отказ: отклоняет только строгий режим.
  *
  * <p>Здесь соединяются сессия interchange и матрица modeling — доменные модули друг
  * друга не видят, а application-слой видит оба.

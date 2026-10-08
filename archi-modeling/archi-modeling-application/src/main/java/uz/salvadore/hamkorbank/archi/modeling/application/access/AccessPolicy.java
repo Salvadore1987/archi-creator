@@ -6,7 +6,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 
 /**
- * Проверка роли на границе use case'а (FR-28). Список доступа модели (INV-MDL-011)
+ * Проверка роли на границе use case'а. Список доступа модели
  * проверяется после, над конкретной моделью: роль отвечает «какие операции», список —
  * «над какими моделями».
  */

@@ -38,8 +38,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
 /**
- * Импорт и экспорт {@code .archimate} (UC-IXC-001, UC-IXC-002), строгость импорта
- * пространства (FR-49). docs/backend.md §5, §8.2–§8.3.
+ * Импорт и экспорт {@code .archimate}, строгость импорта пространства.
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -68,7 +67,7 @@ public class InterchangeController {
 
     /**
      * {@code 201} — модель создана; {@code 200} — повтор ключа; {@code 400} — повреждённые
-     * данные (FR-50); {@code 422} — строгий режим и нарушения матрицы (FR-49). Отказ несёт
+     * данные; {@code 422} — строгий режим и нарушения матрицы. Отказ несёт
      * отчёт в поле {@code findings}.
      */
     @PostMapping(value = "/models/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -95,8 +94,8 @@ public class InterchangeController {
     }
 
     /**
-     * Выгрузка зафиксированной версии (INV-IXC-008): {@code version} — номер, без него —
-     * последняя. Форматы {@code archimate} и {@code csv} (§5.2: {@code folder} — archi_id
+     * Выгрузка зафиксированной версии: {@code version} — номер, без него —
+     * последняя. Форматы {@code archimate} и {@code csv} ({@code folder} — archi_id
      * папки, {@code sep} — разделитель); OEF придёт на этапе 6a.
      */
     @GetMapping("/models/{id}/export")

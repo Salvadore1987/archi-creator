@@ -7,7 +7,7 @@ import java.util.function.Supplier;
 
 /**
  * Идентификаторы новых объектов в том виде, в каком их выдаёт Archi:
- * {@code id-} и 32 hex случайного UUID (ADR-0002). Импортированные
+ * {@code id-} и 32 hex случайного UUID. Импортированные
  * идентификаторы этот класс не трогает.
  */
 public final class ArchiIdGenerator {

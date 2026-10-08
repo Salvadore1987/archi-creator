@@ -39,7 +39,7 @@ public sealed interface ResidueItem permits ResidueItem.Slot, ResidueItem.Value,
         }
     }
 
-    /** Непрозрачный фрагмент дословно (FR-03). */
+    /** Непрозрачный фрагмент дословно. */
     record Fragment(long order, String xml) implements ResidueItem {
 
         public Fragment {

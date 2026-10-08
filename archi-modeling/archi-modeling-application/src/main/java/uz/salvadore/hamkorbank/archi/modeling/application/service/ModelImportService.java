@@ -9,8 +9,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 
 /**
  * Входящий порт для interchange: применить импортированный документ как новую модель
- * (UC-IXC-001, п. 5, порт {@code ModelWriter}). Роль проверяет вызывающий — у импорта
- * своя строка в таблице доступа (spec/nfr/interchange.yaml).
+ * (порт {@code ModelWriter}). Роль проверяет вызывающий — у импорта своя строка
+ * в таблице доступа.
  */
 public final class ModelImportService {
 

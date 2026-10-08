@@ -10,7 +10,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 
 /**
- * Направленная связь между концептами одной модели (INV-MDL-004).
+ * Направленная связь между концептами одной модели.
  *
  * @param accessType только у Access; пусто — атрибута в файле нет (Archi читает как WRITE)
  * @param directed   только у Association

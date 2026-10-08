@@ -14,8 +14,7 @@
 
     <name>Archi Creator :: Advisor :: Application</name>
     <description>
-        Сценарии advisor: use case'ы UC-ADV-NNN, входящие и исходящие порты.
-        Спека — spec/application/advisor/usecases/.
+        Сценарии advisor: use case'ы, входящие и исходящие порты.
 
         Зависит только от домена. Реализации портов живут в адаптерах — сюда
         ни Spring, ни JPA не попадают.
@@ -30,7 +29,7 @@
 
     <build>
         <plugins>
-            <!-- ADR-0001: запрет Spring, JPA и Hibernate. Правило — в pluginManagement родителя. -->
+            <!-- Запрет Spring, JPA и Hibernate. Правило — в pluginManagement родителя. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>

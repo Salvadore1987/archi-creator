@@ -14,7 +14,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 
-/** §8.4: метрики из spec/nfr/*.yaml видны в /actuator/prometheus, запрос несёт traceId. */
+/** Метрики use case'ов видны в /actuator/prometheus, запрос несёт traceId. */
 class ObservabilityIT extends ApiTest {
 
     @Test

@@ -22,12 +22,11 @@ import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionSnapsho
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 
 /**
- * UC-IXC-002: экспорт модели в {@code .archimate} по зафиксированной версии (INV-IXC-008).
+ * Экспорт модели в {@code .archimate} по зафиксированной версии.
  *
  * <p>Файл версии — её снимок, собранный из базы при сохранении детерминированным
- * писателем (INV-IXC-004). Выгрузка отдаёт его, а не текущее состояние таблиц: правка,
- * идущая параллельно, в файл не попадает. Формат без потерь — отчёт о потерях пуст
- * (INV-IXC-006).
+ * писателем. Выгрузка отдаёт его, а не текущее состояние таблиц: правка,
+ * идущая параллельно, в файл не попадает. Формат без потерь — отчёт о потерях пуст.
  */
 public final class ExportService {
 
@@ -64,8 +63,8 @@ public final class ExportService {
     }
 
     /**
-     * Каталог в CSV (§5.2, FR-45) — из той же зафиксированной версии, что и файл модели:
-     * таблица и {@code .archimate} одной версии не расходятся (INV-IXC-008). Доступно
+     * Каталог в CSV — из той же зафиксированной версии, что и файл модели:
+     * таблица и {@code .archimate} одной версии не расходятся. Доступно
      * {@code VIEWER}: читатель забирает ландшафт, не получая прав на правку.
      */
     public Export catalogCsv(EditorIdentity actor, UUID modelId, Optional<Long> versionNo, CatalogCsvOptions options) {

@@ -15,7 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Корреляция логов запроса (docs/backend.md §8.4, spec/nfr/*.yaml#observability.logging):
+ * Корреляция логов запроса:
  * {@code traceId} — из заголовка W3C {@code traceparent} ({@code correlation_id:
  * from_traceparent}) или новый, {@code user} — subject токена, {@code modelId} — из пути.
  * В профиле {@code prod} логи — JSON (ECS), и поля MDC выходят отдельными полями.

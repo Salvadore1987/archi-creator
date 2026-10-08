@@ -9,14 +9,13 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ViewId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
 /**
- * Одна выгрузка модели или представления — агрегат
- * (spec/domain/interchange/aggregates.yaml#ExportJob).
+ * Одна выгрузка модели или представления — агрегат.
  *
  * <p>Автомат: {@code REQUESTED → RENDERED → DELIVERED}, сбой — из любого нетерминального.
  * <ul>
- *   <li>INV-IXC-006: в {@code RENDERED} и {@code DELIVERED} отчёт о потерях есть всегда;
+ *   <li>в {@code RENDERED} и {@code DELIVERED} отчёт о потерях есть всегда;
  *       для форматов без потерь он обязан быть пуст.</li>
- *   <li>INV-IXC-008: результат построен по версии, зафиксированной при запросе;
+ *   <li>результат построен по версии, зафиксированной при запросе;
  *       артефакт другой версии не принимается.</li>
  * </ul>
  */
@@ -54,7 +53,7 @@ public final class ExportJob {
         this.sourceVersionNo = sourceVersionNo;
     }
 
-    /** Версия фиксируется здесь, при запросе, а не при рендере (INV-IXC-008). */
+    /** Версия фиксируется здесь, при запросе, а не при рендере. */
     public static ExportJob request(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, Optional<ViewId> viewId,
                                     ExportFormat format, ExportOptions options, long sourceVersionNo,
                                     String requestedBy, Instant requestedAt) {
@@ -66,8 +65,8 @@ public final class ExportJob {
      * {@code REQUESTED → RENDERED}.
      *
      * @param renderedFromVersionNo версия, из которой собран артефакт
-     * @throws ExportRuleViolationException артефакт другой версии (INV-IXC-008), нет отчёта
-     *         или непустой отчёт у формата без потерь (INV-IXC-006)
+     * @throws ExportRuleViolationException артефакт другой версии, нет отчёта
+     *         или непустой отчёт у формата без потерь
      */
     public void render(long renderedFromVersionNo, Artifact artifact, LossReport lossReport) {
         require(ExportStatus.REQUESTED, "render");

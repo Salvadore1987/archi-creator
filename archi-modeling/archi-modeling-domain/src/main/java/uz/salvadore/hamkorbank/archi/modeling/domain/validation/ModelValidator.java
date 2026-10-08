@@ -15,7 +15,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.Relationship;
 
 /**
  * Отчёт валидации метамодели без ИИ ({@code GET /models/{id}/validate}). Здесь видны
- * нарушения, которые импорт принял, а не отклонил (FR-10, INV-MDL-007): рисовать такое
+ * нарушения, которые импорт принял, а не отклонил: рисовать такое
  * заново нельзя, но существующая модель обязана открываться.
  */
 public final class ModelValidator {

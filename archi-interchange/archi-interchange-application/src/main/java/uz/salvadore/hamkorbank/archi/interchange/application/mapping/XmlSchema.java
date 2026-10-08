@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Что из файла Archi типизировано в столбцах (ADR-0017) и в каком порядке Archi пишет
+ * Что из файла Archi типизировано в столбцах, а не в остатке XML, и в каком порядке Archi пишет
  * атрибуты нового объекта. Одно место для обоих направлений: раскладчик и сборщик
  * обязаны знать одно и то же, иначе round-trip расходится молча.
  */
@@ -17,7 +17,7 @@ final class XmlSchema {
     static final String XSI_TYPE = "xsi:type";
     static final String TARGET_CONNECTIONS = "targetConnections";
 
-    /** Атрибуты стиля, типизированные в {@code StyleOverride} (FR-21). */
+    /** Атрибуты стиля, типизированные в {@code StyleOverride}. */
     static final List<String> STYLE = List.of("fillColor", "font", "fontColor", "lineColor", "textAlignment");
 
     static final Set<String> ROOT_TYPED = Set.of("name", "id", "version");

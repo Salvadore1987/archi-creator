@@ -1,11 +1,10 @@
 # ───────────────────────────────────────────────────────────────────
-# Правила алертов Prometheus — исполнимая форма observability.alerts
-# из spec/nfr/modeling.yaml и spec/nfr/interchange.yaml. Выражения
-# переписаны дословно; источник правды — спека, файл — её копия для
-# Prometheus, и правится вслед за ней.
+# Правила алертов Prometheus для контекстов modeling и interchange.
+# Выражения согласованы с требованиями к наблюдаемости и правятся
+# вслед за ними, а не отдельно.
 #
-# Метрики выставляет /actuator/prometheus (роль ADMIN, docs/backend.md §8.4).
-# Алерт GitBindingUnreachable из interchange.yaml появится на этапе 7a,
+# Метрики выставляет /actuator/prometheus (роль ADMIN).
+# Алерт GitBindingUnreachable для interchange появится на этапе 7a,
 # вместе с PushModelToGit.
 # ───────────────────────────────────────────────────────────────────
 groups:

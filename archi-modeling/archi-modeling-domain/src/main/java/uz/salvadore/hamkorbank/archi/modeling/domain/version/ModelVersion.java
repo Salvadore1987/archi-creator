@@ -10,9 +10,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
 /**
- * Запись истории — агрегат (INV-MDL-010). Неизменяема, кроме метки и очистки снимка.
+ * Запись истории — агрегат. Неизменяема, кроме метки и очистки снимка.
  *
- * @param snapshot    сжатый {@code .archimate}; пусто — очищен по ретеншену (docs/database.md §4.4)
+ * @param snapshot    сжатый {@code .archimate}; пусто — очищен по ретеншену
  * @param contentHash SHA-256 несжатого снимка: переживает очистку и отвечает на «есть ли изменения»
  */
 public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String author, Optional<String> comment,
@@ -51,7 +51,7 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
     }
 
     /**
-     * Следующая версия: номер строго больше последнего и не переиспользуется (INV-MDL-010).
+     * Следующая версия: номер строго больше последнего и не переиспользуется.
      *
      * @param last последняя версия модели; пусто — версий ещё не было
      */
@@ -67,7 +67,7 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
                 Optional.of(snapshot), contentHash, Optional.empty());
     }
 
-    /** Метка релиза (FR-48): снимок помеченной версии не удаляется. Пустая метка снимает пометку. */
+    /** Метка релиза: снимок помеченной версии не удаляется. Пустая метка снимает пометку. */
     public ModelVersion labelled(Optional<String> newLabel) {
         Optional<String> normalized = newLabel.map(String::strip).filter(l -> !l.isEmpty());
         normalized.ifPresent(l -> requireLength(l, LABEL_MAX, "метка"));
@@ -77,7 +77,7 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
 
     /**
      * Очистка снимка — только при настроенном и доступном Git и только для коммита,
-     * из которого его можно восстановить (FR-47). Без Git снимок — единственная копия.
+     * из которого его можно восстановить. Без Git снимок — единственная копия.
      */
     public ModelVersion snapshotPurged(boolean gitBound) {
         if (!gitBound || gitSha.isEmpty()) {

@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  *
  * <p>Класс лежит в корневом пакете {@code uz.salvadore.hamkorbank.archi}, чтобы
  * сканирование компонентов накрывало адаптеры всех трёх контекстов без явного
- * {@code basePackages}: модули собираются в один jar (ADR-0001).
+ * {@code basePackages}: модули собираются в один jar.
  */
 @SpringBootApplication
 public class ArchiCreatorApplication {

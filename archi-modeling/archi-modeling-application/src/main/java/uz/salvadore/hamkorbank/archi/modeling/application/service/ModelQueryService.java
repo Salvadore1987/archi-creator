@@ -31,7 +31,7 @@ public final class ModelQueryService {
     }
 
     /**
-     * Модели пространства, которые автор видит (INV-MDL-011). Удалённые — только
+     * Модели пространства, которые автор видит по списку доступа. Удалённые — только
      * администратору: им их и восстанавливать.
      */
     public List<ModelHeader> list(EditorIdentity actor, WorkspaceId workspaceId) {
@@ -45,7 +45,7 @@ public final class ModelQueryService {
         }));
     }
 
-    /** Дерево модели: папки, элементы, связи, список представлений (OpenModel, NFR-01). */
+    /** Дерево модели: папки, элементы, связи, список представлений (OpenModel). */
     public ArchitectureModel open(EditorIdentity actor, ModelId modelId) {
         return kernel.run(Operation.OPEN_MODEL, actor, () -> kernel.unitOfWork.read(() -> {
             ArchitectureModel model = kernel.visibleModel(modelId, actor, AclAccess.READ);
@@ -63,7 +63,7 @@ public final class ModelQueryService {
         }));
     }
 
-    /** Отчёт валидации метамодели без ИИ (FR-10): импортированные нарушения видны здесь. */
+    /** Отчёт валидации метамодели без ИИ: импортированные нарушения видны здесь. */
     public List<ValidationFinding> validate(EditorIdentity actor, ModelId modelId) {
         return kernel.run(Operation.VALIDATE_MODEL, actor, () -> kernel.unitOfWork.read(() -> {
             List<ValidationFinding> findings = validator.validate(kernel.visibleModel(modelId, actor, AclAccess.READ));
@@ -73,7 +73,7 @@ public final class ModelQueryService {
         }));
     }
 
-    /** Действующая блокировка — чтобы остальные видели модель read-only с владельцем (UC-MDL-005). */
+    /** Действующая блокировка — чтобы остальные видели модель read-only с владельцем. */
     public Optional<ModelLock> lock(EditorIdentity actor, ModelId modelId) {
         return kernel.run(Operation.OPEN_MODEL, actor, () -> kernel.unitOfWork.read(() -> {
             kernel.visibleHeader(modelId, actor, AclAccess.READ);

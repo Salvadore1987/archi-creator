@@ -13,9 +13,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
 
 /**
  * Объект ArchiMate. Существует в модели один раз и размещается на любом числе
- * представлений (FR-11).
+ * представлений.
  *
- * @param supported тип редактируется в текущей фазе; {@code false} — opaque (FR-03):
+ * @param supported тип редактируется в текущей фазе; {@code false} — opaque:
  *                  хранится и выгружается, но не правится
  */
 public record Element(ElementId id, FolderId folderId, ArchiId archiId, ArchiType archiType, String name,

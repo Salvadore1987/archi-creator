@@ -9,7 +9,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
-/** UC-MDL-007: список доступа к модели (FR-29, INV-MDL-011). */
+/** Список доступа к модели: кто из авторов её видит и правит. */
 public final class AccessListService {
 
     private final ModelingKernel kernel;

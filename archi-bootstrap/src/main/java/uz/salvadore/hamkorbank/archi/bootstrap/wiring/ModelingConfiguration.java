@@ -71,7 +71,7 @@ public class ModelingConfiguration {
         return new ModelingMicrometerMetrics(registry);
     }
 
-    /** До этапа 7a Git не настроен ни у кого: снимки не чистятся (FR-47). */
+    /** До этапа 7a Git не настроен ни у кого: снимки не чистятся. */
     @Bean
     GitBinding gitBinding() {
         return workspaceId -> false;
@@ -160,7 +160,7 @@ public class ModelingConfiguration {
         return args -> workspaces.ensureDefault(settings.defaultWorkspaceName());
     }
 
-    /** Очистка снимков по расписанию; выключенная настройкой — пустой проход (§4.4). */
+    /** Очистка снимков по расписанию; выключенная настройкой — пустой проход. */
     @Bean
     SchedulingConfigurer snapshotRetention(VersionService versions, ModelingSettings settings) {
         return registrar -> registrar.addCronTask(versions::purgeSnapshots, settings.retentionCron());

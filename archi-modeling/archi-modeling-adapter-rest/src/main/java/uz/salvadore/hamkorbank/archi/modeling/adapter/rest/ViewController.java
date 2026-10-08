@@ -35,7 +35,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 
-/** Представления: payload, геометрия, размещение (UC-MDL-002; FR-11, FR-17). */
+/** Представления: payload, геометрия, размещение. */
 @RestController
 @RequestMapping("/api/v1")
 public class ViewController {

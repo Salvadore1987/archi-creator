@@ -7,7 +7,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * Метрики use case'ов из spec/nfr/&lt;bc&gt;.yaml#observability:
+ * Метрики use case'ов:
  * {@code <bc>_usecase_requests_total{usecase,outcome}},
  * {@code <bc>_usecase_duration_seconds{usecase}},
  * {@code <bc>_usecase_errors_total{usecase,error_code}} — код инварианта в {@code error_code}:

@@ -10,7 +10,7 @@ import java.util.HexFormat;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-/** Сжатие снимка (docs/database.md §4.2: {@code bytea}, gzip) и его отпечаток. */
+/** Сжатие снимка (gzip, хранится в {@code bytea}) и его отпечаток. */
 final class Snapshots {
 
     private Snapshots() {

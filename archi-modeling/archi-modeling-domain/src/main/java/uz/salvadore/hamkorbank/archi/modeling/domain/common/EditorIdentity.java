@@ -5,9 +5,9 @@ import java.util.Set;
 
 /**
  * Автор команды — из JWT Keycloak. Персональных данных нет: {@code subject},
- * а не имя и почта (spec/nfr/modeling.yaml#security.pii_fields).
+ * а не имя и почта.
  *
- * @param groups группы Keycloak; нужны списку доступа модели (INV-MDL-011)
+ * @param groups группы Keycloak; нужны списку доступа модели
  */
 public record EditorIdentity(String subject, Set<Role> roles, Set<String> groups) {
 

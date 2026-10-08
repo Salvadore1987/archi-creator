@@ -7,7 +7,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 
 /**
- * Папка дерева модели (INV-MDL-009). Корневая — с {@code folderType} и без родителя,
+ * Папка дерева модели. Корневая — с {@code folderType} и без родителя,
  * пользовательская — с родителем и без типа.
  */
 public record ModelFolder(FolderId id, Optional<FolderId> parentId, ArchiId archiId, String name,

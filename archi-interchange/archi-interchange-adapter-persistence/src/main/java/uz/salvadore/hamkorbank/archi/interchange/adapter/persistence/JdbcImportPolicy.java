@@ -11,7 +11,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
 /**
- * Строгость импорта (FR-49) — столбец {@code workspace.strict_import}. Строка общая с
+ * Строгость импорта — столбец {@code workspace.strict_import}. Строка общая с
  * modeling, а столбец — interchange: каждый контекст читает и пишет только своё.
  */
 @Repository

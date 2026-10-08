@@ -9,7 +9,7 @@ import org.springframework.http.ProblemDetail;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
 /**
- * Problem Details RFC 7807 с полем {@code code} (docs/backend.md §8.1). Класс отказа
+ * Problem Details RFC 7807 с полем {@code code}. Класс отказа
  * домена определяет HTTP-код одинаково для modeling и interchange.
  */
 public final class ProblemFactory {

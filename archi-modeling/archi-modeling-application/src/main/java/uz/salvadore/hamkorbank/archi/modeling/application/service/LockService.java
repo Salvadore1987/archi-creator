@@ -12,7 +12,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelStatus;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 
-/** UC-MDL-005: захват, продление, освобождение и принудительное снятие блокировки (FR-05). */
+/** Захват, продление, освобождение и принудительное снятие блокировки. */
 public final class LockService {
 
     private final ModelingKernel kernel;

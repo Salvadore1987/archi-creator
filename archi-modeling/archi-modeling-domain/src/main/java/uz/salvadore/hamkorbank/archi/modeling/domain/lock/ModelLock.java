@@ -12,7 +12,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelLockReleased;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
 /**
- * Право единолично редактировать модель — агрегат (INV-MDL-006, UC-MDL-005).
+ * Право единолично редактировать модель — агрегат.
  *
  * <p>Хранится только действующая или просроченная запись: снятая блокировка строки
  * не оставляет. Просроченная прав не даёт, даже если запись ещё существует.
@@ -62,7 +62,7 @@ public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Insta
     }
 
     /**
-     * Снятие. Владелец снимает свою, {@code ADMIN} — любую принудительно (FR-05);
+     * Снятие. Владелец снимает свою, {@code ADMIN} — любую принудительно;
      * архитектору чужую снимать нельзя.
      */
     public ModelLockReleased release(EditorIdentity by, Instant now) {
@@ -80,7 +80,7 @@ public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Insta
     }
 
     /**
-     * Запись требует действующей блокировки автора команды (INV-MDL-006). Иначе — {@code 409}:
+     * Запись требует действующей блокировки автора команды. Иначе — {@code 409}:
      * клиент показывает владельца и предлагает read-only.
      */
     public static void requireWriteAccess(ModelId modelId, Optional<ModelLock> lock, String subject, Instant now) {

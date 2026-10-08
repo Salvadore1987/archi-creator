@@ -1,14 +1,14 @@
 # ───────────────────────────────────────────────────────────────────
-# Конвейер сборки (§10.4).
+# Конвейер сборки.
 #
-# Порядок из спеки: сборка → юнит → golden-file → интеграционные →
+# Порядок: сборка → юнит → golden-file → интеграционные →
 # фронтенд → Playwright → образ. Здесь пока шаги, которым есть что
 # проверять: golden-file round-trip, интеграционные на Testcontainers,
 # юнит-тесты, сборка фронтенда внутрь jar и образ.
 #
 # Отсутствующие шаги не заведены пустыми намеренно: зелёная галочка
 # над ненаписанным тестом хуже отсутствующей. Где они появятся:
-#   Playwright        — этап 4, docs/frontend.md §9.4
+#   Playwright        — этап 4
 # ───────────────────────────────────────────────────────────────────
 name: CI
 
@@ -111,7 +111,7 @@ jobs:
           key: npm-${{ hashFiles('archi-bootstrap/src/main/frontend/package-lock.json') }}
           restore-keys: npm-
 
-      # NFR-05: round-trip — отдельный шаг, а не строка в отчёте verify.
+      # Round-trip — отдельный шаг, а не строка в отчёте verify.
       # Регрессия видна по имени шага и останавливает конвейер до полной
       # сборки; в verify эти тесты пройдут ещё раз, это секунды.
       # Фронтенд не нужен: кодек его не касается.
@@ -122,7 +122,7 @@ jobs:
           -Dtest='RoundTripGoldenFileTest,XmlEquivalenceTest'
           -Dsurefire.failIfNoSpecifiedTests=false
 
-      # Классы *IT (§9.3): контекст целиком на postgres:16 в Testcontainers.
+      # Классы *IT: контекст целиком на postgres:16 в Testcontainers.
       # Отдельным шагом, как golden-file: падение видно по имени шага.
       - name: Интеграционные (Testcontainers, postgres:16)
         run: >-
@@ -130,7 +130,7 @@ jobs:
           -pl archi-bootstrap -am verify -DskipUnitTests
 
       # Профиль frontend включён по умолчанию: jar обязан уехать
-      # со статикой внутри (§10.2), и выключать его в CI нельзя.
+      # со статикой внутри, и выключать его в CI нельзя.
       # Интеграционные уже прошли шагом выше — здесь не повторяются.
       - name: mvn verify
         run: ./mvnw -B --no-transfer-progress clean verify -DskipITs
@@ -172,7 +172,7 @@ jobs:
           name: archi-creator-jar
           path: archi-bootstrap/target
 
-      # Dockerfile упаковывает готовый jar и сам ничего не собирает (§10.2),
+      # Dockerfile упаковывает готовый jar и сам ничего не собирает,
       # поэтому образ строится из артефакта предыдущей работы, а не заново.
       - name: docker build
         run: docker build -t archi-creator:${{ github.sha }} .

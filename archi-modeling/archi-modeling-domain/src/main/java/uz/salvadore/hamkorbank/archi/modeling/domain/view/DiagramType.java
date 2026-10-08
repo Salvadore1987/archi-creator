@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
  * <p>Не {@link uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType}:
  * тот — тип концепта ArchiMate и знает лишь пространство {@code archimate:}, а холст
  * Archi пишет свои узлы в {@code canvas:}. Отказ в таком типе сломал бы round-trip
- * на первом же холсте (FR-03).
+ * на первом же холсте.
  */
 public record DiagramType(String value) {
 

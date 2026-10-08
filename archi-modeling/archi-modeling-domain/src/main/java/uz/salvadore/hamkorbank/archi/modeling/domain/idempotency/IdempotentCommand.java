@@ -10,7 +10,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 
 /**
- * Решение по команде с ключом идемпотентности (INV-MDL-003): тот же ключ и то же тело —
+ * Решение по команде с ключом идемпотентности: тот же ключ и то же тело —
  * результат первого выполнения без нового объекта и новой версии; тот же ключ с другим
  * телом — конфликт, а не новое выполнение.
  */

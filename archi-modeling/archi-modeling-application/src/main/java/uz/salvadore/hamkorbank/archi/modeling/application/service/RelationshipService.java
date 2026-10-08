@@ -23,12 +23,12 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEndpoint;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 
-/** UC-MDL-003: создать связь по матрице, предложить допустимые типы, изменить и удалить (FR-09, FR-10). */
+/** Создать связь по матрице, предложить допустимые типы, изменить и удалить. */
 public final class RelationshipService {
 
     /**
-     * Порядок, в котором типы предлагаются: первый допустимый — выбор по умолчанию
-     * (UC-MDL-003, п. 2). Наиболее частые в ландшафте — впереди.
+     * Порядок, в котором типы предлагаются: первый допустимый — выбор по умолчанию.
+     * Наиболее частые в ландшафте — впереди.
      */
     private static final List<RelationshipType> PREFERENCE = List.of(
             RelationshipType.SERVING, RelationshipType.REALIZATION, RelationshipType.ASSIGNMENT,
@@ -102,7 +102,7 @@ public final class RelationshipService {
         }));
     }
 
-    /** Удаление связи снимает её рёбра на представлениях; примыкающая связь — {@code 409} (INV-MDL-004). */
+    /** Удаление связи снимает её рёбра на представлениях; примыкающая связь — {@code 409}. */
     public void delete(EditorIdentity actor, RelationshipId relationshipId) {
         kernel.run(Operation.DELETE_RELATIONSHIP, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.writableModel(elements.ownerOf(relationshipId.value()), actor);
@@ -122,7 +122,7 @@ public final class RelationshipService {
         }
     }
 
-    /** Допустимые типы для упорядоченной пары; первый — выбор по умолчанию (UC-MDL-003, п. 1–2). */
+    /** Допустимые типы для упорядоченной пары; первый — выбор по умолчанию. */
     public static List<RelationshipType> suggest(ArchiType sourceType, ArchiType targetType) {
         return RelationMatrix.archimate32().permitted(sourceType, targetType).stream()
                 .sorted(Comparator.comparingInt(PREFERENCE::indexOf)).toList();

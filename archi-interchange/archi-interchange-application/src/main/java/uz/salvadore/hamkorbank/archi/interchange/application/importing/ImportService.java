@@ -35,13 +35,12 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 
 /**
- * UC-IXC-001: импорт файла {@code .archimate} новой моделью (FR-01, FR-49, FR-50).
+ * Импорт файла {@code .archimate} новой моделью.
  *
- * <p>Сессия проходит {@code RECEIVED → PARSED → VALIDATED → APPLIED} (INV-IXC-002);
+ * <p>Сессия проходит {@code RECEIVED → PARSED → VALIDATED → APPLIED} без пропуска шагов;
  * повреждённый файл отклоняется на разборе в любом режиме, нарушения методологии —
- * только в строгом (INV-IXC-007). Применение — одна транзакция с записью модели
- * и её первой версии. Повтор с тем же ключом отдаёт результат первой попытки
- * (INV-IXC-003), отклонённой — тоже.
+ * только в строгом. Применение — одна транзакция с записью модели и её первой версии.
+ * Повтор с тем же ключом отдаёт результат первой попытки, принятой или отклонённой.
  */
 public final class ImportService {
 
@@ -88,7 +87,7 @@ public final class ImportService {
         });
     }
 
-    /** Строгость импорта пространства меняет только {@code ADMIN} (FR-49). */
+    /** Строгость импорта пространства меняет только {@code ADMIN}. */
     public void configureStrictImport(EditorIdentity actor, UUID workspaceId, boolean strict) {
         InterchangeOperation operation = InterchangeOperation.CONFIGURE_IMPORT_POLICY;
         metrics.observe(operation.useCase(), () -> {

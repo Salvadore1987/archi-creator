@@ -23,7 +23,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.importing.Severity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
 /**
- * Сессии импорта (INV-IXC-002, INV-IXC-003). Документ не хранится — только статус,
+ * Сессии импорта и их ключи идемпотентности. Документ не хранится — только статус,
  * отчёт и результат: повтор по ключу отдаёт их, а не применяет файл снова.
  */
 @Repository

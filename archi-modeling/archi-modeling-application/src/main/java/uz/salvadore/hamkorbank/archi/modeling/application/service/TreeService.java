@@ -21,8 +21,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 
 /**
- * UC-MDL-006: папки, перенос, переименование и удаление в дереве (FR-34, FR-36). Групповая
- * операция — одна транзакция: часть не проходит — не применяется ничего.
+ * Папки, перенос, переименование и удаление в дереве. Групповая операция — одна
+ * транзакция: часть не проходит — не применяется ничего.
  */
 public final class TreeService {
 
@@ -78,7 +78,7 @@ public final class TreeService {
         }));
     }
 
-    /** Перенос в папку; соседи не перенумеровываются (INV-MDL-005), корни не меняются (INV-MDL-009). */
+    /** Перенос в папку; соседи не перенумеровываются, корни не меняются. */
     public void move(EditorIdentity actor, ModelId modelId, FolderId targetId, List<UUID> itemIds) {
         kernel.run(Operation.REORGANIZE_TREE, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.writableModel(modelId, actor);
@@ -95,7 +95,7 @@ public final class TreeService {
     /**
      * Групповое удаление. Порядок — связи, представления, элементы, папки: так удаление
      * элемента вместе с его связями проходит одной командой, а связь, оставшаяся вне
-     * команды, даёт {@code 409} с перечнем (INV-MDL-004).
+     * команды, даёт {@code 409} с перечнем.
      */
     public void delete(EditorIdentity actor, ModelId modelId, List<UUID> itemIds) {
         kernel.run(Operation.REORGANIZE_TREE, actor, () -> kernel.unitOfWork.write(() -> {

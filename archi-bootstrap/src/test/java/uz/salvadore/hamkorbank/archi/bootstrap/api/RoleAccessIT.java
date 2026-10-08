@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 
-/** FR-28 и §9.3: роль проверяется на границе use case'а, а не матчером URL. */
+/** Роль проверяется на границе use case'а, а не матчером URL. */
 class RoleAccessIT extends ApiTest {
 
     @Test

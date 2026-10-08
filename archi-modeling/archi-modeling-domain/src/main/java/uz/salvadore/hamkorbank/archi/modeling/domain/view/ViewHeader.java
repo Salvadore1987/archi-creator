@@ -31,7 +31,7 @@ public record ViewHeader(ViewId id, ModelId modelId, FolderId folderId, ArchiId 
         properties = List.copyOf(properties);
     }
 
-    /** Редактируется только диаграмма ArchiMate; скетч и холст хранятся как есть (FR-03). */
+    /** Редактируется только диаграмма ArchiMate; скетч и холст хранятся как есть. */
     public boolean editable() {
         return archiType.equals(DiagramType.DIAGRAM_MODEL);
     }

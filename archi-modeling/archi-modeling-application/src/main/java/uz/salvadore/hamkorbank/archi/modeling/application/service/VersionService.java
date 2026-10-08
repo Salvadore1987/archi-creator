@@ -24,12 +24,12 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.version.SnapshotRetention;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.VersionId;
 
 /**
- * UC-MDL-004: сохранить модель как версию, пометить версию, откатиться к версии;
- * снимки для экспорта и их ретеншен (FR-06, FR-46…FR-48, INV-MDL-010).
+ * Сохранить модель как версию, пометить версию, откатиться к версии;
+ * снимки для экспорта и их ретеншен.
  */
 public final class VersionService {
 
-    /** Код отказа выгрузки удалённой модели (UC-IXC-002). */
+    /** Код отказа выгрузки удалённой модели. */
     public static final String MODEL_DELETED = "MODEL_DELETED";
 
     private final ModelingKernel kernel;
@@ -54,7 +54,7 @@ public final class VersionService {
     }
 
     /**
-     * Сохранение (UC-MDL-004). Изменений с последней версии нет — версия не создаётся:
+     * Сохранение. Изменений с последней версии нет — версия не создаётся:
      * журнал версий — не журнал нажатий. Повтор с тем же ключом отдаёт первую версию.
      */
     public SaveResult save(EditorIdentity actor, ModelId modelId, Optional<String> comment,
@@ -78,7 +78,7 @@ public final class VersionService {
     /**
      * Версия из текущего содержимого базы. Тот же отпечаток, что у последней версии, —
      * новая не пишется и возвращается последняя. Снимок собирается из базы, а не из
-     * того, что держит вызывающий: так он проверяет и хранение (UC-IXC-001, п. 5).
+     * того, что держит вызывающий: так он проверяет и хранение.
      */
     ModelVersion commit(ArchitectureModel model, EditorIdentity actor, Optional<String> comment) {
         ModelContent content = new ModelContent(kernel.models.load(model.id()).orElseThrow(),
@@ -106,7 +106,7 @@ public final class VersionService {
         }));
     }
 
-    /** Метка релиза (FR-48). Содержимого модели не меняет, поэтому блокировки не требует. */
+    /** Метка релиза. Содержимого модели не меняет, поэтому блокировки не требует. */
     public ModelVersion label(EditorIdentity actor, ModelId modelId, long versionNo, Optional<String> label) {
         return kernel.run(Operation.LABEL_VERSION, actor, () -> kernel.unitOfWork.write(() -> {
             kernel.visibleHeader(modelId, actor, AclAccess.WRITE);
@@ -118,7 +118,7 @@ public final class VersionService {
 
     /**
      * Откат: содержимое версии становится текущим и фиксируется новой версией — история
-     * не переписывается, а дописывается (FR-06).
+     * не переписывается, а дописывается.
      */
     public ModelVersion rollback(EditorIdentity actor, ModelId modelId, long versionNo, Optional<String> comment) {
         return kernel.run(Operation.RESTORE_VERSION, actor, () -> kernel.unitOfWork.write(() -> {
@@ -132,7 +132,7 @@ public final class VersionService {
     }
 
     /**
-     * Снимок версии для выгрузки (UC-IXC-002, INV-IXC-008): указанной или последней.
+     * Снимок версии для выгрузки: указанной или последней.
      * Удалённая модель не выгружается ({@code 409}), очищенный снимок без Git — {@code 410}.
      */
     public VersionSnapshot snapshot(EditorIdentity actor, ModelId modelId, Optional<Long> versionNo) {
@@ -149,8 +149,8 @@ public final class VersionService {
     }
 
     /**
-     * Очистка снимков по правилу ретеншена (docs/database.md §4.4). Выключена до этапа 7a
-     * настройкой, а и включённая не тронет пространство без доступного Git (FR-47).
+     * Очистка снимков по правилу ретеншена. Выключена до этапа 7a
+     * настройкой, а и включённая не тронет пространство без доступного Git.
      *
      * @return сколько снимков очищено
      */

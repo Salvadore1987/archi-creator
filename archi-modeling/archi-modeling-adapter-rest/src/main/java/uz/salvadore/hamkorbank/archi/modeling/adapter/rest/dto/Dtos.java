@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * DTO modeling — §5.1 и spec/contracts/modeling/rest-api.openapi.yaml. Остаток XML
- * ({@code raw_xml}) наружу не отдаётся: это внутренний формат interchange (ADR-0017).
+ * DTO modeling по контракту OpenAPI. Остаток XML ({@code raw_xml}) наружу
+ * не отдаётся: это внутренний формат interchange.
  * Отсутствующее значение — {@code null}, а не {@code Optional}: так его видит JSON.
  */
 public final class Dtos {

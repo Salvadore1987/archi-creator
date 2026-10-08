@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 
-/** Отказы interchange — в {@code application/problem+json} (§8.1). */
+/** Отказы interchange — в {@code application/problem+json}. */
 @RestControllerAdvice
 public class InterchangeProblemHandler {
 

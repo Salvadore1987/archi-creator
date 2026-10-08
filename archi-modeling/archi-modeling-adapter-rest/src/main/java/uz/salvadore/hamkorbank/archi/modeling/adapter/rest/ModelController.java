@@ -38,8 +38,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
- * Модели: список, дерево, жизненный цикл, блокировка, отчёт валидации, список доступа
- * (UC-MDL-001, UC-MDL-005, UC-MDL-007; docs/backend.md §5).
+ * Модели: список, дерево, жизненный цикл, блокировка, отчёт валидации, список доступа.
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -106,7 +105,7 @@ public class ModelController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── Блокировка (UC-MDL-005) ─────────────────────────────────────
+    // ── Блокировка ──────────────────────────────────────────────────
 
     @GetMapping("/models/{id}/lock")
     public ResponseEntity<LockInfo> lock(EditorIdentity actor, @PathVariable UUID id) {

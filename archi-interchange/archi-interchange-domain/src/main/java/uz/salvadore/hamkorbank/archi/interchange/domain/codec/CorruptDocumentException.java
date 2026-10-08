@@ -3,7 +3,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.codec;
 import java.util.List;
 
 /**
- * Файл повреждён (FR-50): отказ независимо от строгости импорта (INV-IXC-007).
+ * Файл повреждён: отказ независимо от строгости импорта.
  * Несёт все найденные дефекты, а не первый: архитектор чинит файл за один проход.
  */
 public final class CorruptDocumentException extends RuntimeException {

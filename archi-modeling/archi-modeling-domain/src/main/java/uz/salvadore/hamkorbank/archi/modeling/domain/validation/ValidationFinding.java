@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Находка валидатора метамодели — тот же формат, что у находок помощника (§5.1).
+ * Находка валидатора метамодели — тот же формат, что у находок помощника.
  *
  * @param targetKind {@code ELEMENT}, {@code RELATIONSHIP}
  * @param targetId   {@code archi_id} объекта: по нему находка сверяется с файлом и деревом

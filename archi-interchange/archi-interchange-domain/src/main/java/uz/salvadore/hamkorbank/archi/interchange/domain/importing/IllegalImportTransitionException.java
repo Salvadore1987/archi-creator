@@ -1,6 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.importing;
 
-/** Переход, которого автомат сессии не допускает (INV-IXC-002). */
+/** Переход, которого автомат сессии не допускает. */
 public final class IllegalImportTransitionException extends IllegalStateException {
 
     public static final String INVARIANT = "INV-IXC-002";

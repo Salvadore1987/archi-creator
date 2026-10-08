@@ -24,9 +24,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
 
 /**
- * Каталог модели в CSV (docs/backend.md §5.2, FR-45): zip из {@code elements.csv}
+ * Каталог модели в CSV: zip из {@code elements.csv}
  * и {@code relations.csv}. Источник — снимок зафиксированной версии, тот же, что у
- * выгрузки {@code .archimate}: таблица и файл одной версии не расходятся (INV-IXC-008).
+ * выгрузки {@code .archimate}: таблица и файл одной версии не расходятся.
  *
  * <p>Решения по формату — ради того, чтобы файл открылся у получателя: UTF-8 с BOM
  * (иначе русский Excel читает windows-1251), разделитель {@code ;} (в русской локали

@@ -14,7 +14,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
  * Собственные поля модели без её содержимого — то, что лежит в строке {@code model}.
  *
  * @param createdBy subject автора
- * @param version   оптимистичная блокировка строки (NFR-07)
+ * @param version   оптимистичная блокировка строки
  */
 public record ModelHeader(ModelId id, WorkspaceId workspaceId, ArchiId archiId, String name,
                           Optional<String> documentation, String archiVersion, ModelStatus status,

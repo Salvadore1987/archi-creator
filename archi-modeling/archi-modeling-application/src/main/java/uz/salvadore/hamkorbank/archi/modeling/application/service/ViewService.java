@@ -22,7 +22,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 
-/** UC-MDL-002, вторая половина: представления и размещение на них (FR-11, FR-17). */
+/** Представления и размещение на них элементов и связей. */
 public final class ViewService {
 
     private final ModelingKernel kernel;
@@ -49,7 +49,7 @@ public final class ViewService {
                         ref -> kernel.views.load(ViewId.of(ref)).orElseThrow())));
     }
 
-    /** Разместить элемент; уже размещённый не дублируется (UI-002). */
+    /** Разместить элемент; уже размещённый не дублируется. */
     public ViewNode place(EditorIdentity actor, ViewId viewId, ElementId elementId, Bounds bounds,
                           Optional<ViewNodeId> parentId) {
         return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
@@ -74,7 +74,7 @@ public final class ViewService {
         }));
     }
 
-    /** Геометрия после перемещений одной транзакцией (SaveViewLayout, NFR-03). */
+    /** Геометрия после перемещений одной транзакцией (SaveViewLayout). */
     public View saveLayout(EditorIdentity actor, ViewId viewId, Map<ViewNodeId, Bounds> nodeBounds,
                            Map<ViewEdgeId, List<Bendpoint>> edgeBendpoints) {
         return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {

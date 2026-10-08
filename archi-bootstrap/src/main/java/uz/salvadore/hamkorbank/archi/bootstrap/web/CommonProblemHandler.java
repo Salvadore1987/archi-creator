@@ -18,9 +18,9 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 /**
- * Отказы, которые не принадлежат ни одному контексту, — в тот же {@code problem+json}
- * (§8.1). Конфликт версии строки и нарушение ключа на коммите — {@code 409}: для
- * пользователя это «модель правит кто-то ещё» (NFR-07), а не сбой сервера.
+ * Отказы, которые не принадлежат ни одному контексту, — в тот же {@code problem+json}.
+ * Конфликт версии строки и нарушение ключа на коммите — {@code 409}: для
+ * пользователя это «модель правит кто-то ещё», а не сбой сервера.
  */
 @RestControllerAdvice
 @Order(Ordered.LOWEST_PRECEDENCE)
@@ -38,7 +38,7 @@ public class CommonProblemHandler {
                 "Изменение противоречит данным, записанным параллельно: перечитайте и повторите", request);
     }
 
-    /** Файл больше предела — {@code 413} до чтения тела (UC-IXC-001). */
+    /** Файл больше предела — {@code 413} до чтения тела. */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     ProblemDetail tooLarge(MaxUploadSizeExceededException e, HttpServletRequest request) {
         return problem(HttpStatus.CONTENT_TOO_LARGE, "IXC_FILE_TOO_LARGE", "Файл больше допустимого размера", request);

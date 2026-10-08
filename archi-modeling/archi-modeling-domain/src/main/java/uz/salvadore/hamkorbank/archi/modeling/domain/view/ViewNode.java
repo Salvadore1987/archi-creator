@@ -8,7 +8,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 
 /**
- * Размещение объекта на представлении (INV-MDL-008).
+ * Размещение объекта на представлении.
  *
  * @param parentId  узел, в который вложен этот; пусто — корень представления
  * @param sortOrder позиция в содержимом родителя, общем с рёбрами, исходящими из родителя

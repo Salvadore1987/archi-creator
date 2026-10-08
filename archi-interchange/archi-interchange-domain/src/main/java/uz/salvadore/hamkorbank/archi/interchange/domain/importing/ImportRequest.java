@@ -10,7 +10,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
  * Что подано на импорт: откуда, чьё, с каким ключом и в каком режиме.
  *
  * @param targetModelId пусто — импорт новой модели
- * @param strictMode    {@code strict_import} рабочего пространства на момент подачи (FR-49)
+ * @param strictMode    {@code strict_import} рабочего пространства на момент подачи
  */
 public record ImportRequest(WorkspaceId workspaceId, Optional<ModelId> targetModelId, String sourceName,
                             ContentHash sourceHash, long sourceSize, String idempotencyKey,

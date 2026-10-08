@@ -85,7 +85,7 @@ public final class ModelingKernel {
         });
     }
 
-    /** Заголовок модели, видимой автору с данным уровнем (INV-MDL-011). */
+    /** Заголовок модели, видимой автору с данным уровнем доступа. */
     ModelHeader visibleHeader(ModelId modelId, EditorIdentity actor, AclAccess access) {
         ModelHeader header = models.findHeader(modelId)
                 .orElseThrow(() -> ModelingException.notFound("модель " + modelId));
@@ -99,8 +99,8 @@ public final class ModelingKernel {
     }
 
     /**
-     * Модель для записи содержимого: видима на запись, активна (INV-MDL-002),
-     * заблокирована автором команды (INV-MDL-006).
+     * Модель для записи содержимого: видима на запись, активна,
+     * заблокирована автором команды.
      */
     ArchitectureModel writableModel(ModelId modelId, EditorIdentity actor) {
         ArchitectureModel model = visibleModel(modelId, actor, AclAccess.WRITE);
@@ -119,7 +119,7 @@ public final class ModelingKernel {
     }
 
     /**
-     * Команда с необязательным ключом идемпотентности (INV-MDL-003). Ключ есть — повтор
+     * Команда с необязательным ключом идемпотентности. Ключ есть — повтор
      * с тем же телом отдаёт первый результат, перечитанный заново; другое тело — {@code 409}.
      *
      * @param execute выполнить и вернуть ссылку на результат

@@ -3,10 +3,8 @@
  * и его узлы в порядке исходного файла.
  *
  * <p>Published language с BC modeling. Узел однороден, а не типизирован:
- * читатель обязан принять и то, чего метамодель текущей фазы не знает (FR-03),
+ * читатель обязан принять и то, чего метамодель текущей фазы не знает,
  * а типизированная иерархия этого не позволяет. Метамодели здесь нет —
  * она в {@code archi-modeling-domain}, и кодек от неё не зависит.
- *
- * <p>Спецификация: spec/domain/interchange/aggregates.yaml#ModelDocument.
  */
 package uz.salvadore.hamkorbank.archi.interchange.domain.document;

@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
 
-/** Внутренний ключ модели — UUIDv7 (ADR-0002). */
+/** Внутренний ключ модели — UUIDv7. */
 public record ModelId(UUID value) {
 
     public ModelId {

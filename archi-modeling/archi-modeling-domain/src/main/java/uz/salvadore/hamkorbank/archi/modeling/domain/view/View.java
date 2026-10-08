@@ -29,10 +29,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ViewRef;
 
 /**
- * Представление — отдельный агрегат (spec/domain/modeling/aggregates.yaml#View): открывается
+ * Представление — отдельный агрегат: открывается
  * и сохраняется независимо от модели, а на её элементы ссылается по ключу.
  *
- * <p>INV-MDL-008: узел {@code DIAGRAM_OBJECT} ссылается на элемент той же модели, у группы
+ * <p>Узел {@code DIAGRAM_OBJECT} ссылается на элемент той же модели, у группы
  * и заметки элемента нет; ребро соединяет узлы или рёбра этого же представления, а его связь
  * принадлежит той же модели. Геометрия — относительно родителя.
  */
@@ -80,7 +80,7 @@ public final class View {
                 true);
     }
 
-    /** Представление из импортированного документа; ссылки проверяются по модели (INV-MDL-008). */
+    /** Представление из импортированного документа; ссылки проверяются по модели. */
     public static View imported(ViewHeader header, Collection<ViewNode> nodes, Collection<ViewEdge> edges,
                                 ArchitectureModel model) {
         View view = new View(header, true);
@@ -130,11 +130,11 @@ public final class View {
         }
     }
 
-    // ── Размещение (UC-MDL-002) ─────────────────────────────────────
+    // ── Размещение ──────────────────────────────────────────────────
 
     /**
      * Узел над элементом модели. Уже размещённый элемент не дублируется — возвращается
-     * существующий узел (UI-002).
+     * существующий узел.
      */
     public Created<ViewNode> placeElement(ArchitectureModel model, ElementId elementId, Bounds bounds,
                                           Optional<ViewNodeId> parentId, ViewNodeId newId, ArchiId newArchiId) {
@@ -168,7 +168,7 @@ public final class View {
     }
 
     /**
-     * Ребро для связи модели между её отрисовками на этом представлении (UC-MDL-003, п. 5).
+     * Ребро для связи модели между её отрисовками на этом представлении.
      * Концы ребра обязаны изображать концы связи.
      */
     public Created<ViewEdge> connect(ArchitectureModel model, RelationshipId relationshipId, ViewEndpoint source,
@@ -328,7 +328,7 @@ public final class View {
 
     /**
      * Конец содержимого родителя: дети-узлы и исходящие рёбра делят одну нумерацию,
-     * потому что в файле и те и другие лежат внутри родителя (ADR-0017).
+     * потому что в файле и те и другие лежат внутри родителя.
      */
     private SortOrder nextOrderIn(Optional<ViewEndpoint> parent) {
         List<SortOrder> taken = new ArrayList<>();
