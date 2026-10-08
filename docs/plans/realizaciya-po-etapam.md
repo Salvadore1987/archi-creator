@@ -198,13 +198,12 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 
 ### 1.3 Запись (`archi-interchange-domain`)
 
-- ⬜ Порт `ArchiDocumentWriter`, детерминированная реализация (`INV-IXC-004`):
-      фиксированный порядок атрибутов, LF, без метки времени, без зависимости
-      от порядка обхода хеш-таблиц и локали
-- ⬜ Писатель обходит дерево в том же порядке, что читатель
-- ⬜ `RawXmlFragment` возвращается по адресу, без нормализации
-- ⬜ Собственный стиль объекта (`fillColor`, `font`, `lineColor`) сохраняется
-      дословно (FR-21, `INV-IXC-005`)
+- ✅ Порт `ArchiDocumentWriter`, детерминированная реализация `ArchiXmlWriter`
+      (`INV-IXC-004`): порядок атрибутов из документа, LF, без метки времени,
+      без зависимости от хеш-таблиц и локали; обход в порядке читателя;
+      `RawXmlFragment` по адресу без нормализации; собственный стиль объекта
+      (`fillColor`, `font`, `lineColor`) дословно (FR-21, `INV-IXC-005`).
+      Четыре пункта плана — свойства одного класса, закрыты одним таском
 - ⬜ Генератор новых `archi_id` в формате `id-<32 hex>`, как в Archi
       ([`ADR-0002`](../../spec/adr/0002-dual-identity.md))
 
@@ -239,8 +238,8 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 - ✅ `ArchiReaderTest#unknownNodeIsPreservedAsRawFragment` (`INV-IXC-001`)
 - ⬜ `ImportSessionStateMachineTest#applyIsAllowedOnlyFromValidated` (`INV-IXC-002`)
 - ⬜ `ImportIdempotencyTest#sameKeyReturnsExistingSession` (`INV-IXC-003`)
-- ⬜ `ArchiWriterTest#writingTwiceProducesIdenticalBytes` (`INV-IXC-004`)
-- ⬜ `ArchiCodecTest#documentSurvivesWriteReadCycle` (`INV-IXC-005`)
+- ✅ `ArchiWriterTest#writingTwiceProducesIdenticalBytes` (`INV-IXC-004`)
+- ✅ `ArchiCodecTest#documentSurvivesWriteReadCycle` (`INV-IXC-005`)
 - ⬜ `RoundTripGoldenFileTest#hamkorbankAsIsSurvivesRoundTrip` (`INV-IXC-005`, NFR-05)
 - ⬜ `RoundTripGoldenFileTest#opaqueNodesSurvive` (FR-03)
 - ⬜ `StrictImportTest#errorRejectsOnlyInStrictMode`,
@@ -1037,3 +1036,12 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
   Ни одно из этого не меняет смысла документа; Archi комментариев не пишет.
   Текст вне значения (`<element>текст</element>`) не теряется, а отклоняется:
   положить его некуда, и молча выбросить нельзя.
+- **2026-10-08. Писатель совпал с эталоном побайтово почти целиком.**
+  Первый же прогон на `Hamkorbank_AS_IS_strict.archimate` дал файл, который
+  отличается от исходного в двух местах, и оба не смысловые: две пустые папки
+  эталон пишет развёрнуто (`<folder …>`, перевод строки, `</folder>`), а писатель —
+  `<folder …/>`, как Archi; и в конце эталона нет перевода строки. Эталон собран
+  скриптом, не Archi, отсюда расхождение. Хранить в документе «как был записан
+  пустой элемент» и «был ли перевод строки в конце» не стали: это форматирование,
+  а обещание FR-02 — семантическая идентичность. Поэтому golden-file сравнивает
+  через `assertXmlEquivalent`, а не побайтово.
