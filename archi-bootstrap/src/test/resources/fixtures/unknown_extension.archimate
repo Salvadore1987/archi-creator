@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:archimate="http://www.archimatetool.com/archimate" xmlns:canvas="http://www.archimatetool.com/canvas" xmlns:vendor="urn:example:vendor" name="Неизвестные узлы и атрибуты" id="id-054b740bdf40fe499e06add25ef7a09f" version="5.0.0">
+  <folder name="Strategy" id="id-c57798c70371430e4901f52146d8bdd1" type="strategy"/>
+  <folder name="Business" id="id-7fdd5a12f979bb19f1ebd4be0801fd2f" type="business">
+    <element xsi:type="archimate:BusinessActor" name="Клиент" id="id-53f986115270259ff902bf66cf3dca2c" vendor:owner="Розница">
+      <property key="source" value="CRM"/>
+      <vendor:lineage system="CRM" table="clients">
+        <vendor:step order="1">выгрузка</vendor:step>
+        <vendor:step order="2">очистка &amp; дедупликация</vendor:step>
+      </vendor:lineage>
+    </element>
+  </folder>
+  <folder name="Application" id="id-629bcc564eaeb1d162040c57e7b2d6c4" type="application" vendor:color="blue">
+    <element xsi:type="archimate:ApplicationComponent" name="АБС" id="id-7af3a3d4e636b362cf09f15c2d17d627" profiles="id-e298955d2704e1c50f1bb9c63b0f9c8b">
+      <feature name="labelExpression" value="${name}&#xA;${property:owner}"/>
+      <property key="owner" value="ИТ"/>
+    </element>
+    <element xsi:type="archimate:QuantumComponent" name="Тип из будущей версии Archi" id="id-19df3dc10e248cb7b1f4cb91dc5a34af" qubits="128">
+      <documentation>Тип, которого метамодель не знает: хранится и выгружается как есть (FR-03).</documentation>
+    </element>
+  </folder>
+  <folder name="Technology &amp; Physical" id="id-4f0625183dc5ef0a15704a55533f1d27" type="technology"/>
+  <folder name="Motivation" id="id-34db53c548ab506e868ab6f9642742ec" type="motivation"/>
+  <folder name="Implementation &amp; Migration" id="id-833ff64d576a2c1cc2c07827d5c88ef6" type="implementation_migration"/>
+  <folder name="Other" id="id-b6c217eeb63f87d3a9a4949d094573d6" type="other"/>
+  <folder name="Relations" id="id-c914d79e791567767e4382d5600bf4fc" type="relations">
+    <element xsi:type="archimate:ServingRelationship" id="id-4c66996625029f83be8eb65af95cb722" source="id-7af3a3d4e636b362cf09f15c2d17d627" target="id-53f986115270259ff902bf66cf3dca2c"/>
+    <element xsi:type="archimate:EntanglementRelationship" id="id-11d31d1c2772726fdf87845c581a5b0a" source="id-19df3dc10e248cb7b1f4cb91dc5a34af" target="id-7af3a3d4e636b362cf09f15c2d17d627"/>
+  </folder>
+  <folder name="Views" id="id-506aff620d12469054c7c999b9ec4727" type="diagrams">
+    <element xsi:type="archimate:ArchimateDiagramModel" name="Расширения" id="id-63e2975f737bdf3b998d96d4f41fb079">
+      <child xsi:type="archimate:DiagramObject" id="id-0de635f21d7ffde538d3083b8070ed3d" archimateElement="id-7af3a3d4e636b362cf09f15c2d17d627">
+        <bounds x="24" y="24" width="140" height="60"/>
+        <feature name="iconVisible" value="false"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-79bb243fc84a3f37ea1343680047594f" source="id-0de635f21d7ffde538d3083b8070ed3d" target="id-d5152b3117b7a286c001e41d2272709c" archimateRelationship="id-4c66996625029f83be8eb65af95cb722"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-d5152b3117b7a286c001e41d2272709c" targetConnections="id-79bb243fc84a3f37ea1343680047594f" archimateElement="id-53f986115270259ff902bf66cf3dca2c">
+        <bounds x="300" y="24" width="140" height="60"/>
+      </child>
+      <child xsi:type="archimate:DiagramModelReference" id="id-9339b6f33ca58e85115d4f69198f0e72" model="id-3a983a300ab35ca41745f730633ff872">
+        <bounds x="24" y="160" width="140" height="60"/>
+      </child>
+      <child xsi:type="archimate:QuantumShape" id="id-97ca8c3a679cb3760a5e5932f5918a01" archimateElement="id-19df3dc10e248cb7b1f4cb91dc5a34af" spin="up">
+        <bounds x="300" y="160" width="140" height="60"/>
+      </child>
+    </element>
+    <element xsi:type="archimate:SketchModel" name="Набросок" id="id-3a983a300ab35ca41745f730633ff872">
+      <child xsi:type="archimate:SketchModelActor" id="id-190411bdbe3621e4428cf84eef45c637" name="Клиент">
+        <bounds x="24" y="24" width="75" height="100"/>
+        <sourceConnection xsi:type="archimate:SketchModelConnection" id="id-a779b7e44b95a5fb46f90882b09147a9" source="id-190411bdbe3621e4428cf84eef45c637" target="id-31fb94087400ab5ce0fa5d72a81c4e24"/>
+      </child>
+      <child xsi:type="archimate:SketchModelSticky" id="id-31fb94087400ab5ce0fa5d72a81c4e24" targetConnections="id-a779b7e44b95a5fb46f90882b09147a9" name="Идея" fillColor="#fff59d">
+        <bounds x="200" y="24" width="120" height="80"/>
+        <content>Платить по QR</content>
+      </child>
+    </element>
+    <element xsi:type="canvas:CanvasModel" name="Холст" id="id-bc8de74d118ecb853d6c891d4ad0f445">
+      <child xsi:type="canvas:CanvasModelBlock" id="id-3aacc65a2fb76ed2c12c89204e5a4a24" borderColor="#000000">
+        <bounds x="0" y="0" width="200" height="100"/>
+        <content>Проблема</content>
+      </child>
+    </element>
+  </folder>
+  <purpose>Фикстура неизвестных узлов и атрибутов: всё незнакомое переносится дословно.</purpose>
+  <property key="model.owner" value="Архитектурный отдел"/>
+  <profile name="Банковская система" id="id-e298955d2704e1c50f1bb9c63b0f9c8b" conceptType="ApplicationComponent"/>
+  <vendor:metadata generator="vendor-tool 3.1">
+    <!-- комментарий внутри непрозрачного фрагмента сохраняется -->
+    <vendor:entry key="exported" value="2026-10-01"/>
+  </vendor:metadata>
+</archimate:model>

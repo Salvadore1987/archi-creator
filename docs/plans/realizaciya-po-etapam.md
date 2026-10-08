@@ -228,12 +228,22 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
       `docs/Hamkorbank_AS_IS_strict.archimate` напрямую (402 элемента, 368 связей,
       12 представлений, вложенные группы, кириллица). `INV-IXC-005` называет
       эталоном именно этот файл, и копия в фикстурах молча разошлась бы с ним
-- ⬜ `capability_and_location.archimate` — элементы вне фазы 1
-- ⬜ `nested_containment.archimate` — `Group` → `DiagramObject`, относительные
-      координаты
-- ⬜ `all_relationship_types.archimate` — 11 типов связей и `Junction`
-- ⬜ `styled_objects.archimate` — собственные `fillColor`, `font`, `lineColor`
-- ⬜ `unknown_extension.archimate` — неизвестные узлы и атрибуты
+- ✅ Пять синтетических фикстур в `archi-bootstrap/src/test/resources/fixtures/`,
+      один параметризованный round-trip на все (`fixtureSurvivesRoundTrip`) и
+      проверка того, ради чего заведена каждая. Пункты плана слиты: фикстуры
+      пишутся одним приёмом и проверяются одним тестом
+  - `capability_and_location` — элементы фаз 2–3, `Location`, `Grouping`, вложенность
+    элементов на представлении
+  - `nested_containment` — `Group` → `Group` → `DiagramObject`, элемент в элементе,
+    вложенные пользовательские папки, точки перегиба
+  - `all_relationship_types` — 11 типов связей, `Junction` «и»/«или», `accessType`,
+    `directed`, `strength`, связь как конец ассоциации и соединение к соединению
+  - `styled_objects` — `fillColor`, `alpha`, `font`, `fontColor`, `lineColor`,
+    `lineWidth`, `gradient`, `textAlignment` у узлов, групп, заметок и соединений
+  - `unknown_extension` — незнакомые узлы с собственным пространством имён и
+    комментарием внутри, незнакомые атрибуты, `profile`/`profiles`, `feature`,
+    типы из «будущего» Archi, `SketchModel`, `canvas:CanvasModel`,
+    `DiagramModelReference`
 - ✅ Хелпер `assertXmlEquivalent`: нормализация форматирования, строгий
       контроль порядка узлов, id и содержимого
 
@@ -245,7 +255,7 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 - ✅ `ArchiWriterTest#writingTwiceProducesIdenticalBytes` (`INV-IXC-004`)
 - ✅ `ArchiCodecTest#documentSurvivesWriteReadCycle` (`INV-IXC-005`)
 - ✅ `RoundTripGoldenFileTest#hamkorbankAsIsSurvivesRoundTrip` (`INV-IXC-005`, NFR-05)
-- ⬜ `RoundTripGoldenFileTest#opaqueNodesSurvive` (FR-03)
+- ✅ `RoundTripGoldenFileTest#opaqueNodesSurvive` (FR-03)
 - ✅ `StrictImportTest#errorRejectsOnlyInStrictMode`,
       `#corruptedFileIsRejectedInBothModes` (`INV-IXC-007`)
 - ✅ `RelationMatrixTest#forbiddenRelationIsRejectedOnCreate`,
@@ -1071,3 +1081,10 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
   хелпер не различает — кодек это различие хранит, но golden-file его не
   проверяет. Что тест вообще способен упасть, проверено порчей писателя
   (выбрасывать `targetConnections`) — красный.
+- **2026-10-08. Идентификаторы фикстур — 32 hex, как у Archi.** Эталон держит
+  24-hex, и без фикстур с форматом самого Archi формат `archi_id`
+  проверялся бы только юнит-тестом `ArchiId`. Генератор (одноразовый, в
+  репозиторий не положен) подставлял `id-` + MD5 от символического имени:
+  файлы детерминированы, а читаются как настоящие. Первый прогон генератора
+  испортил метку `${name}` в `feature` — подстановка `{имя}` задела `${name}`;
+  поймано глазами до коммита, фикстура перегенерирована.
