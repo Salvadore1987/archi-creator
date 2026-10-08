@@ -10,12 +10,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Состояние репозитория
 
-**Этап 0 закрыт (2026-09-29). Следующий — этап 1, кодек `.archimate`.**
+**Этапы 0 и 1 закрыты (2026-10-08). Следующий — этап 2, БД и REST API.**
 Собирается multi-module Maven по
 [`ADR-0001`](spec/adr/0001-maven-multi-module.md): 17 проектов в реакторе — родитель,
 три агрегатора контекстов, двенадцать модулей-слоёв, `archi-bootstrap` с классом запуска
-и fat jar. **Доменной логики нет ни строки:** в двенадцати модулях только
-`package-info.java`, весь код этапа 0 — в `archi-bootstrap`.
+и fat jar. Код есть в двух доменных модулях — `archi-modeling-domain` (метамодель)
+и `archi-interchange-domain` (кодек); в `application`, адаптерах и всём `advisor` —
+только `package-info.java`.
 
 ```
 archi-<bc>/archi-<bc>-domain              зависимостей нет, кроме junit (test)
@@ -51,13 +52,33 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 | Каркас фронтенда | `archi-bootstrap/src/main/frontend/` — React 19 + TS + Vite ([`ADR-0016`](spec/adr/0016-frontend-location.md)) |
 | Конвейер и гейты | `.github/workflows/ci.yml` |
 
-Тестов семь, все в `archi-bootstrap`: маппинг ролей Keycloak и три правила
-ArchUnit на изоляцию контекстов. Доменных тестов нет — нет и домена.
+Что появилось на этапе 1 и где лежит:
+
+| Что | Где |
+|---|---|
+| Каталог типов ArchiMate 3.2 со слоями и фазами, `ArchiType` | `archi-modeling-domain/.../modeling/domain/metamodel/` |
+| Матрица допустимых связей — таблица Archi без правок | `archi-modeling-domain/src/main/resources/.../metamodel/archimate-3.2-relationships.xml` |
+| Документ `.archimate` как значение (`ModelDocument`, `DocumentNode`, `RawXmlFragment`) | `archi-interchange-domain/.../interchange/domain/document/` |
+| Читатель на StAX и детерминированный писатель | `archi-interchange-domain/.../interchange/domain/codec/` |
+| Сессия импорта, идемпотентность, задание выгрузки | `.../interchange/domain/importing/`, `.../exporting/` |
+| Golden-file round-trip, `assertXmlEquivalent`, фикстуры §9.1 | `archi-bootstrap/src/test/.../bootstrap/roundtrip/`, `archi-bootstrap/src/test/resources/fixtures/` |
+
+Эталон round-trip читается прямо из `docs/Hamkorbank_AS_IS_strict.archimate`, копии
+в фикстурах нет. Писатель пишет в раскладке Archi и совпадает с эталоном побайтово
+везде, кроме двух пустых папок и перевода строки в конце — эталон собран скриптом.
+
+Модули доменов друг от друга **не зависят**: Maven не допускает цикла, а partnership
+в карте контекстов двусторонний. Поэтому у interchange свой `ArchiId`, а проверка
+матрицы при импорте (`RelationMatrix.check`) соединяется с сессией в application-слое
+на этапе 2.
+
+Тестов 169: 78 в метамодели, 63 в кодеке, 28 в `archi-bootstrap` (golden-file,
+ArchUnit, роли Keycloak).
 
 Ещё не заведено: таблицы модели (`element`, `relationship`, `view`, …) — этап 2,
 генерация из `spec/contracts/*.openapi.yaml`, клиент OIDC во фронтенде
 (страницу логина отдаёт Keycloak, но SPA на неё пока не уводит — этап 3),
-шаги CI golden-file, интеграционные и Playwright — этапы 1, 2 и 4.
+шаги CI интеграционные и Playwright — этапы 2 и 4.
 
 Содержательная часть проекта — **спецификация**. Прежде чем писать код, читай её:
 почти каждое решение уже принято и обосновано, и переизобретать его не нужно.
@@ -73,6 +94,8 @@ ArchUnit на изоляцию контекстов. Доменных тесто
 ./mvnw clean package               # 17 модулей + фронтенд; jar в archi-bootstrap/target/
 ./mvnw clean package -P '!frontend' # то же без Node: правка не задевает интерфейс
 ./mvnw test -Dtest=ClassName#method # один тест
+./mvnw -P '!frontend' -pl archi-bootstrap -am test -Dtest=RoundTripGoldenFileTest \
+       -Dsurefire.failIfNoSpecifiedTests=false   # round-trip, как шаг CI (NFR-05)
 ./mvnw -pl archi-modeling/archi-modeling-domain dependency:tree  # чистота модуля
 
 cp .env.example .env               # заполнить пароли, один раз на клон
