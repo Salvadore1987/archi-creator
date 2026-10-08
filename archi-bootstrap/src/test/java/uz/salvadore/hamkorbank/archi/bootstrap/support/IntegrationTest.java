@@ -7,7 +7,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
@@ -19,7 +18,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
  * на прогон: поднимать базу на каждый класс — минуты ни за что.
  *
  * <p>Ресурс-сервер настроен на JWKS, который не запрашивается при старте: токены
- * в тестах кладёт {@code spring-security-test}, Keycloak не нужен.
+ * в тестах кладёт {@code spring-security-test}, Keycloak не нужен. С настоящим
+ * Keycloak — {@code KeycloakIT}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 public abstract class IntegrationTest {
@@ -29,17 +29,11 @@ public abstract class IntegrationTest {
     protected static final EditorIdentity VIEWER = EditorIdentity.of("viewer-it", Role.VIEWER);
     protected static final EditorIdentity ADMIN = new EditorIdentity("admin-it", Set.of(Role.ADMIN), Set.of());
 
-    private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16");
-
-    static {
-        POSTGRES.start();
-    }
-
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("spring.datasource.url", Containers.POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.username", Containers.POSTGRES::getUsername);
+        registry.add("spring.datasource.password", Containers.POSTGRES::getPassword);
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> "");
         registry.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", () -> "http://localhost:1/jwks");
     }

@@ -544,8 +544,12 @@
 - ✅ `ExportJobTest#exportPinsSourceVersion` (`INV-IXC-008`) — с этапа 1
 - ✅ Ролевой доступ: `VIEWER` → `403` на запись, `ARCHITECT` → `200`
       (`RoleAccessIT`), список доступа — `ModelAclIT#hiddenModelAnswers404`
-- ⬜ Testcontainers `postgres:16` ✅ и `keycloak:26`
-      ([§9.3](../backend.md#93-интеграционные-тесты-testcontainers))
+- ✅ Testcontainers `postgres:16` и `keycloak:26`
+      ([§9.3](../backend.md#93-интеграционные-тесты-testcontainers)): Keycloak
+      с realm проекта поднимает `KeycloakIT` — токены парольным грантом клиента
+      SPA, подпись проверяет настоящий ресурс-сервер, роли — из `realm_access`.
+      Остальные тесты REST кладут токен через `spring-security-test`: Keycloak
+      на каждый класс — полминуты ни за что
 - ⬜ Нагрузочный профиль NFR-03: p95 ≤ 300 мс на операциях кроме ИИ и импорта
       (у требования нет якоря намеренно — проверяет профиль)
 
