@@ -3,11 +3,11 @@
 #
 # Порядок из спеки: сборка → юнит → golden-file → интеграционные →
 # фронтенд → Playwright → образ. Здесь пока шаги, которым есть что
-# проверять: юнит-тесты, сборка фронтенда внутрь jar и образ.
+# проверять: golden-file round-trip, юнит-тесты, сборка фронтенда
+# внутрь jar и образ.
 #
 # Отсутствующие шаги не заведены пустыми намеренно: зелёная галочка
 # над ненаписанным тестом хуже отсутствующей. Где они появятся:
-#   golden-file       — этап 1, вместе с кодеком (NFR-05)
 #   интеграционные    — этап 2, Testcontainers на postgres:16
 #   Playwright        — этап 4, docs/frontend.md §9.4
 # ───────────────────────────────────────────────────────────────────
@@ -111,6 +111,17 @@ jobs:
           path: ~/.npm
           key: npm-${{ hashFiles('archi-bootstrap/src/main/frontend/package-lock.json') }}
           restore-keys: npm-
+
+      # NFR-05: round-trip — отдельный шаг, а не строка в отчёте verify.
+      # Регрессия видна по имени шага и останавливает конвейер до полной
+      # сборки; в verify эти тесты пройдут ещё раз, это секунды.
+      # Фронтенд не нужен: кодек его не касается.
+      - name: Golden-file round-trip (NFR-05)
+        run: >-
+          ./mvnw -B --no-transfer-progress -P '!frontend'
+          -pl archi-bootstrap -am test
+          -Dtest='RoundTripGoldenFileTest,XmlEquivalenceTest'
+          -Dsurefire.failIfNoSpecifiedTests=false
 
       # Профиль frontend включён по умолчанию: jar обязан уехать
       # со статикой внутри (§10.2), и выключать его в CI нельзя.
