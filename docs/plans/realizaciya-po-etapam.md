@@ -150,7 +150,7 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 
 ### 1.1 Метамодель (`archi-modeling-domain`)
 
-- ⬜ `ArchiType` как VO со шаблоном `^archimate:[A-Za-z]+$` — **не enum**:
+- ✅ `ArchiType` как VO со шаблоном `^archimate:[A-Za-z]+$` — **не enum**:
       типы вне текущей фазы обязаны сохраняться (FR-03,
       [aggregates.yaml#ArchiType](../../spec/domain/modeling/aggregates.yaml))
 - ⬜ Каталог типов фазы 1: Business, Application, Technology (FR-07)
