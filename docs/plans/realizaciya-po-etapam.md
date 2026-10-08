@@ -311,16 +311,16 @@
 - ✅ Имя модели — до 500 символов, как у всех имён (журнал, п. 1);
       UC-IXC-001 проходит `PARSED` (журнал, п. 2); §4.3 относит Git к 7a (п. 3)
 - ✅ ACL модели: `INV-MDL-011` и `UC-MDL-007` заведены, §2.6 разблокирован
-- ⬜ **Слои и зависимости.** `interchange-application → modeling-application`:
+- ✅ **Слои и зависимости.** `interchange-application → modeling-application`:
       импорт пишет модель командой modeling, экспорт читает её запросом modeling,
       а снимок версии modeling получает через свой порт `SnapshotWriter`,
       реализованный в interchange. modeling об interchange не знает — Maven
       не допускает цикла, и направление выбрано по тому, кто переводит язык
-- ⬜ **Транзакции и события вне Spring:** application-слой вызывает порт
+- ✅ **Транзакции и события вне Spring:** application-слой вызывает порт
       `UnitOfWork`, реализация — `TransactionTemplate` в `archi-bootstrap`;
       события уходят после коммита через `TransactionSynchronization` (`ADR-0003`,
       `direct`)
-- ⬜ **Роли проверяются на границе use case'а** по таблице
+- ✅ **Роли проверяются на границе use case'а** по таблице
       `security.authorization` из `spec/nfr/<bc>.yaml`, а не матчерами URL —
       так решено ещё на этапе 0 (`SecurityConfig`, javadoc)
 
@@ -1329,3 +1329,10 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
   (ADR-0001: родитель свой). Флаг добавлен в `maven-compiler-plugin` родителя.
   Ловушка: инкрементальная сборка не перекомпилирует классы после смены флага —
   нужен `clean`.
+- **2026-10-08. Граф зависимостей по закрытии этапа 2 перерисован.** Новое
+  ребро между контекстами — `interchange-application → modeling-application`
+  (§2.0) — и тестовые зависимости `archi-bootstrap` (Testcontainers 2.0.5,
+  `spring-security-test`, MockMvc). Дублей и конфликтов версий нет. Скрипт
+  `tools/render-depgraph.py` для цели `graph` модуля ищет SNAPSHOT-зависимости
+  в `~/.m2`: перед ним нужен `./mvnw install -DskipTests`, иначе отказ
+  разрешения зависимостей.

@@ -123,11 +123,8 @@ rectangle "prometheus-metrics-config\n1.7.0" as io_prometheus_prometheus_metrics
 rectangle "prometheus-metrics-tracer-common\n1.7.0" as io_prometheus_prometheus_metrics_tracer_common_jar_runtime<<runtime>>
 rectangle "prometheus-metrics-exposition-formats\n1.7.0" as io_prometheus_prometheus_metrics_exposition_formats_jar_runtime<<runtime>>
 rectangle "prometheus-metrics-exposition-textformats\n1.7.0" as io_prometheus_prometheus_metrics_exposition_textformats_jar_runtime<<runtime>>
-rectangle "spring-security-core\n7.1.1" as org_springframework_security_spring_security_core_jar_compile
-rectangle "spring-security-crypto\n7.1.1" as org_springframework_security_spring_security_crypto_jar_compile
-rectangle "spring-security-config\n7.1.1" as org_springframework_security_spring_security_config_jar_compile
 rectangle "spring-boot-security\n4.1.1" as org_springframework_boot_spring_boot_security_jar_compile
-rectangle "spring-security-web\n7.1.1" as org_springframework_security_spring_security_web_jar_compile
+rectangle "spring-security-config\n7.1.1" as org_springframework_security_spring_security_config_jar_compile
 rectangle "spring-boot-starter-security\n4.1.1" as org_springframework_boot_spring_boot_starter_security_jar_compile
 rectangle "spring-security-oauth2-jose\n7.1.1" as org_springframework_security_spring_security_oauth2_jose_jar_compile
 rectangle "spring-security-oauth2-core\n7.1.1" as org_springframework_security_spring_security_oauth2_core_jar_compile
@@ -140,11 +137,52 @@ rectangle "flyway-core\n12.4.0" as org_flywaydb_flyway_core_jar_compile
 rectangle "flyway-database-postgresql\n12.4.0" as org_flywaydb_flyway_database_postgresql_jar_compile
 rectangle "postgresql\n42.7.13" as org_postgresql_postgresql_jar_runtime<<runtime>>
 rectangle "checker-qual\n3.55.1" as org_checkerframework_checker_qual_jar_runtime<<runtime>>
-rectangle "archunit\n1.5.1" as com_tngtech_archunit_archunit_jar_test<<test>>
 rectangle "archunit-junit5-api\n1.5.1" as com_tngtech_archunit_archunit_junit5_api_jar_test<<test>>
+rectangle "archunit\n1.5.1" as com_tngtech_archunit_archunit_jar_test<<test>>
 rectangle "archunit-junit5\n1.5.1" as com_tngtech_archunit_archunit_junit5_jar_test<<test>>
 rectangle "archunit-junit5-engine\n1.5.1" as com_tngtech_archunit_archunit_junit5_engine_jar_test<<test>>
 rectangle "archunit-junit5-engine-api\n1.5.1" as com_tngtech_archunit_archunit_junit5_engine_api_jar_test<<test>>
+rectangle "spring-boot-starter-test\n4.1.1" as org_springframework_boot_spring_boot_starter_test_jar_test<<test>>
+rectangle "spring-boot-test\n4.1.1" as org_springframework_boot_spring_boot_test_jar_test<<test>>
+rectangle "spring-boot-test-autoconfigure\n4.1.1" as org_springframework_boot_spring_boot_test_autoconfigure_jar_test<<test>>
+rectangle "json-path\n2.10.0" as com_jayway_jsonpath_json_path_jar_test<<test>>
+rectangle "accessors-smart\n2.6.0" as net_minidev_accessors_smart_jar_test<<test>>
+rectangle "asm\n9.7.1" as org_ow2_asm_asm_jar_test<<test>>
+rectangle "json-smart\n2.6.0" as net_minidev_json_smart_jar_test<<test>>
+rectangle "assertj-core\n3.27.7" as org_assertj_assertj_core_jar_test<<test>>
+rectangle "awaitility\n4.3.0" as org_awaitility_awaitility_jar_test<<test>>
+rectangle "hamcrest\n3.0" as org_hamcrest_hamcrest_jar_test<<test>>
+rectangle "mockito-core\n5.23.0" as org_mockito_mockito_core_jar_test<<test>>
+rectangle "byte-buddy-agent\n1.18.11" as net_bytebuddy_byte_buddy_agent_jar_test<<test>>
+rectangle "objenesis\n3.3" as org_objenesis_objenesis_jar_test<<test>>
+rectangle "mockito-junit-jupiter\n5.23.0" as org_mockito_mockito_junit_jupiter_jar_test<<test>>
+rectangle "jsonassert\n1.5.3" as org_skyscreamer_jsonassert_jar_test<<test>>
+rectangle "android-json\n0.0.20131108.vaadin1" as com_vaadin_external_google_android_json_jar_test<<test>>
+rectangle "spring-test\n7.0.9" as org_springframework_spring_test_jar_test<<test>>
+rectangle "xmlunit-core\n2.11.0" as org_xmlunit_xmlunit_core_jar_test<<test>>
+rectangle "spring-boot-starter-webmvc-test\n4.1.1" as org_springframework_boot_spring_boot_starter_webmvc_test_jar_test<<test>>
+rectangle "spring-boot-starter-jackson-test\n4.1.1" as org_springframework_boot_spring_boot_starter_jackson_test_jar_test<<test>>
+rectangle "spring-boot-starter-webmvc\n4.1.1" as org_springframework_boot_spring_boot_starter_webmvc_jar_test<<test>>
+rectangle "spring-boot-webmvc-test\n4.1.1" as org_springframework_boot_spring_boot_webmvc_test_jar_test<<test>>
+rectangle "spring-boot-resttestclient\n4.1.1" as org_springframework_boot_spring_boot_resttestclient_jar_test<<test>>
+rectangle "spring-security-core\n7.1.1" as org_springframework_security_spring_security_core_jar_compile
+rectangle "spring-security-crypto\n7.1.1" as org_springframework_security_spring_security_crypto_jar_compile
+rectangle "spring-security-test\n7.1.1" as org_springframework_security_spring_security_test_jar_test<<test>>
+rectangle "spring-security-web\n7.1.1" as org_springframework_security_spring_security_web_jar_compile
+rectangle "commons-compress\n1.28.0" as org_apache_commons_commons_compress_jar_test<<test>>
+rectangle "commons-codec\n1.21.0" as commons_codec_commons_codec_jar_test<<test>>
+rectangle "commons-io\n2.20.0" as commons_io_commons_io_jar_test<<test>>
+rectangle "commons-lang3\n3.20.0" as org_apache_commons_commons_lang3_jar_test<<test>>
+rectangle "testcontainers\n2.0.5" as org_testcontainers_testcontainers_jar_test<<test>>
+rectangle "duct-tape\n1.0.8" as org_rnorth_duct_tape_duct_tape_jar_test<<test>>
+rectangle "annotations\n17.0.0" as org_jetbrains_annotations_jar_test<<test>>
+rectangle "docker-java-api\n3.7.1" as com_github_docker_java_docker_java_api_jar_test<<test>>
+rectangle "docker-java-transport-zerodep\n3.7.1" as com_github_docker_java_docker_java_transport_zerodep_jar_test<<test>>
+rectangle "docker-java-transport\n3.7.1" as com_github_docker_java_docker_java_transport_jar_test<<test>>
+rectangle "jna\n5.18.1" as net_java_dev_jna_jna_jar_test<<test>>
+rectangle "testcontainers-database-commons\n2.0.5" as org_testcontainers_testcontainers_database_commons_jar_test<<test>>
+rectangle "testcontainers-jdbc\n2.0.5" as org_testcontainers_testcontainers_jdbc_jar_test<<test>>
+rectangle "testcontainers-postgresql\n2.0.5" as org_testcontainers_testcontainers_postgresql_jar_test<<test>>
 org_junit_jupiter_junit_jupiter_api_jar_test -[#000000]-> org_opentest4j_opentest4j_jar_test
 org_junit_jupiter_junit_jupiter_api_jar_test -[#000000]-> org_junit_platform_junit_platform_commons_jar_test
 org_junit_jupiter_junit_jupiter_api_jar_test -[#000000]-> org_apiguardian_apiguardian_api_jar_test
@@ -249,6 +287,7 @@ uz_salvadore_hamkorbank_archi_modeling_adapter_persistence_jar_compile -[#000000
 uz_salvadore_hamkorbank_archi_modeling_adapter_persistence_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_interchange_domain_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_interchange_application_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_domain_jar_compile
+uz_salvadore_hamkorbank_archi_interchange_application_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_modeling_application_jar_compile
 uz_salvadore_hamkorbank_archi_interchange_application_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_application_jar_compile
 uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_web_jar_compile
@@ -293,14 +332,9 @@ io_micrometer_micrometer_registry_prometheus_jar_runtime -[#000000]-> io_prometh
 io_prometheus_prometheus_metrics_exposition_formats_jar_runtime -[#000000]-> io_prometheus_prometheus_metrics_exposition_textformats_jar_runtime
 io_micrometer_micrometer_registry_prometheus_jar_runtime -[#000000]-> io_prometheus_prometheus_metrics_exposition_formats_jar_runtime
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> io_micrometer_micrometer_registry_prometheus_jar_runtime
-org_springframework_security_spring_security_core_jar_compile -[#000000]-> org_springframework_security_spring_security_crypto_jar_compile
-org_springframework_security_spring_security_config_jar_compile -[#000000]-> org_springframework_security_spring_security_core_jar_compile
 org_springframework_boot_spring_boot_security_jar_compile -[#000000]-> org_springframework_security_spring_security_config_jar_compile
-org_springframework_security_spring_security_web_jar_compile -[#000000]-> org_springframework_spring_expression_jar_compile
-org_springframework_boot_spring_boot_security_jar_compile -[#000000]-> org_springframework_security_spring_security_web_jar_compile
 org_springframework_boot_spring_boot_starter_security_jar_compile -[#000000]-> org_springframework_boot_spring_boot_security_jar_compile
 org_springframework_spring_aop_jar_compile -[#000000]-> org_springframework_spring_beans_jar_compile
-org_springframework_spring_aop_jar_compile -[#000000]-> org_springframework_spring_core_jar_compile
 org_springframework_boot_spring_boot_starter_security_jar_compile -[#000000]-> org_springframework_spring_aop_jar_compile
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_security_jar_compile
 org_springframework_security_spring_security_oauth2_jose_jar_compile -[#000000]-> org_springframework_security_spring_security_oauth2_core_jar_compile
@@ -318,11 +352,58 @@ uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_flywaydb_fl
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_flywaydb_flyway_database_postgresql_jar_compile
 org_postgresql_postgresql_jar_runtime -[#000000]-> org_checkerframework_checker_qual_jar_runtime
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_postgresql_postgresql_jar_runtime
-com_tngtech_archunit_archunit_jar_test -[#000000]-> org_slf4j_slf4j_api_jar_compile
 com_tngtech_archunit_archunit_junit5_api_jar_test -[#000000]-> com_tngtech_archunit_archunit_jar_test
 com_tngtech_archunit_archunit_junit5_jar_test -[#000000]-> com_tngtech_archunit_archunit_junit5_api_jar_test
 com_tngtech_archunit_archunit_junit5_engine_jar_test -[#000000]-> com_tngtech_archunit_archunit_junit5_engine_api_jar_test
 com_tngtech_archunit_archunit_junit5_jar_test -[#000000]-> com_tngtech_archunit_archunit_junit5_engine_jar_test
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> com_tngtech_archunit_archunit_junit5_jar_test
+org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_springframework_boot_spring_boot_test_jar_test
+org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_springframework_boot_spring_boot_test_autoconfigure_jar_test
+com_jayway_jsonpath_json_path_jar_test -[#000000]-> org_slf4j_slf4j_api_jar_compile
+org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> com_jayway_jsonpath_json_path_jar_test
+org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> jakarta_xml_bind_jakarta_xml_bind_api_jar_runtime
+net_minidev_accessors_smart_jar_test -[#000000]-> org_ow2_asm_asm_jar_test
+net_minidev_json_smart_jar_test -[#000000]-> net_minidev_accessors_smart_jar_test
+org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> net_minidev_json_smart_jar_test
+org_assertj_assertj_core_jar_test -[#000000]-> net_bytebuddy_byte_buddy_jar_runtime
+org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_assertj_assertj_core_jar_test
+org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_awaitility_awaitility_jar_test
+org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_hamcrest_hamcrest_jar_test
+org_mockito_mockito_core_jar_test -[#000000]-> net_bytebuddy_byte_buddy_agent_jar_test
+org_mockito_mockito_core_jar_test -[#000000]-> org_objenesis_objenesis_jar_test
+org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_mockito_mockito_core_jar_test
+org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_mockito_mockito_junit_jupiter_jar_test
+org_skyscreamer_jsonassert_jar_test -[#000000]-> com_vaadin_external_google_android_json_jar_test
+org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_skyscreamer_jsonassert_jar_test
+org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_springframework_spring_core_jar_compile
+org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_springframework_spring_test_jar_test
+org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_xmlunit_xmlunit_core_jar_test
+uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_test_jar_test
+org_springframework_boot_spring_boot_starter_webmvc_test_jar_test -[#000000]-> org_springframework_boot_spring_boot_starter_jackson_test_jar_test
+org_springframework_boot_spring_boot_starter_webmvc_test_jar_test -[#000000]-> org_springframework_boot_spring_boot_starter_webmvc_jar_test
+org_springframework_boot_spring_boot_webmvc_test_jar_test -[#000000]-> org_springframework_boot_spring_boot_web_server_jar_compile
+org_springframework_boot_spring_boot_starter_webmvc_test_jar_test -[#000000]-> org_springframework_boot_spring_boot_webmvc_test_jar_test
+org_springframework_boot_spring_boot_resttestclient_jar_test -[#000000]-> org_springframework_spring_web_jar_compile
+org_springframework_boot_spring_boot_starter_webmvc_test_jar_test -[#000000]-> org_springframework_boot_spring_boot_resttestclient_jar_test
+uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_webmvc_test_jar_test
+org_springframework_security_spring_security_core_jar_compile -[#000000]-> org_springframework_security_spring_security_crypto_jar_compile
+org_springframework_security_spring_security_core_jar_compile -[#000000]-> org_springframework_spring_expression_jar_compile
+org_springframework_security_spring_security_test_jar_test -[#000000]-> org_springframework_security_spring_security_core_jar_compile
+org_springframework_security_spring_security_test_jar_test -[#000000]-> org_springframework_security_spring_security_web_jar_compile
+uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_springframework_security_spring_security_test_jar_test
+org_apache_commons_commons_compress_jar_test -[#000000]-> commons_codec_commons_codec_jar_test
+org_apache_commons_commons_compress_jar_test -[#000000]-> commons_io_commons_io_jar_test
+org_apache_commons_commons_compress_jar_test -[#000000]-> org_apache_commons_commons_lang3_jar_test
+org_testcontainers_testcontainers_jar_test -[#000000]-> org_apache_commons_commons_compress_jar_test
+org_rnorth_duct_tape_duct_tape_jar_test -[#000000]-> org_jetbrains_annotations_jar_test
+org_testcontainers_testcontainers_jar_test -[#000000]-> org_rnorth_duct_tape_duct_tape_jar_test
+org_testcontainers_testcontainers_jar_test -[#000000]-> com_github_docker_java_docker_java_api_jar_test
+com_github_docker_java_docker_java_transport_zerodep_jar_test -[#000000]-> com_github_docker_java_docker_java_transport_jar_test
+com_github_docker_java_docker_java_transport_zerodep_jar_test -[#000000]-> net_java_dev_jna_jna_jar_test
+org_testcontainers_testcontainers_jar_test -[#000000]-> com_github_docker_java_docker_java_transport_zerodep_jar_test
+org_testcontainers_testcontainers_database_commons_jar_test -[#000000]-> org_testcontainers_testcontainers_jar_test
+org_testcontainers_testcontainers_jdbc_jar_test -[#000000]-> org_testcontainers_testcontainers_database_commons_jar_test
+org_testcontainers_testcontainers_postgresql_jar_test -[#000000]-> org_testcontainers_testcontainers_jdbc_jar_test
+uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_testcontainers_testcontainers_postgresql_jar_test
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 @enduml
