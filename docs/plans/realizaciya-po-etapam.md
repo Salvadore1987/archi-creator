@@ -224,8 +224,10 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 
 Набор из [§9.1](../backend.md#91-golden-file-тесты-round-trip--критический-контур):
 
-- ⬜ `hamkorbank_as_is.archimate` — копия `docs/Hamkorbank_AS_IS_strict.archimate`
-      (~400 элементов, 12 представлений, вложенные группы, кириллица)
+- ✅ `hamkorbank_as_is.archimate` — **не копия**: тест читает
+      `docs/Hamkorbank_AS_IS_strict.archimate` напрямую (402 элемента, 368 связей,
+      12 представлений, вложенные группы, кириллица). `INV-IXC-005` называет
+      эталоном именно этот файл, и копия в фикстурах молча разошлась бы с ним
 - ⬜ `capability_and_location.archimate` — элементы вне фазы 1
 - ⬜ `nested_containment.archimate` — `Group` → `DiagramObject`, относительные
       координаты
@@ -242,7 +244,7 @@ ArchUnit на изоляцию контекстов и конвейер CI с т
 - ✅ `ImportIdempotencyTest#sameKeyReturnsExistingSession` (`INV-IXC-003`)
 - ✅ `ArchiWriterTest#writingTwiceProducesIdenticalBytes` (`INV-IXC-004`)
 - ✅ `ArchiCodecTest#documentSurvivesWriteReadCycle` (`INV-IXC-005`)
-- ⬜ `RoundTripGoldenFileTest#hamkorbankAsIsSurvivesRoundTrip` (`INV-IXC-005`, NFR-05)
+- ✅ `RoundTripGoldenFileTest#hamkorbankAsIsSurvivesRoundTrip` (`INV-IXC-005`, NFR-05)
 - ⬜ `RoundTripGoldenFileTest#opaqueNodesSurvive` (FR-03)
 - ✅ `StrictImportTest#errorRejectsOnlyInStrictMode`,
       `#corruptedFileIsRejectedInBothModes` (`INV-IXC-007`)
@@ -1060,3 +1062,12 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
   не придётся. Хелпер проверен собственным тестом (`XmlEquivalenceTest`):
   сравнение, которое прощает лишнее, сделало бы golden-file зелёным над
   сломанным round-trip.
+- **2026-10-08. Первая версия `assertXmlEquivalent` считала значимыми пробелы
+  в пустой папке.** Эталон пишет две пустые папки развёрнуто, и хелпер, для
+  которого «у элемента без детей текст значим целиком», упал на
+  `<folder …>⏎  </folder>` против `<folder …/>`. Правило поправлено: пробельный
+  текст — форматирование везде, непробельный сравнивается дословно, с краевыми
+  пробелами. Цена: `<documentation> </documentation>` и `<documentation/>`
+  хелпер не различает — кодек это различие хранит, но golden-file его не
+  проверяет. Что тест вообще способен упасть, проверено порчей писателя
+  (выбрасывать `targetConnections`) — красный.

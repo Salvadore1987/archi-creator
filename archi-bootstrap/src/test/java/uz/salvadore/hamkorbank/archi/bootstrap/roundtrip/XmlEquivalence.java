@@ -21,9 +21,11 @@ import org.w3c.dom.NodeList;
  *
  * <p>Прощает только форматирование: отступы между элементами, порядок атрибутов
  * (в XML он смысла не несёт), {@code <a/>} против {@code <a></a>}, префиксы при
- * тех же пространствах имён, комментарии. Строго проверяет всё остальное:
- * порядок дочерних узлов, имена, значения атрибутов, включая {@code id}, и текст —
- * вплоть до пробелов внутри элемента, у которого нет детей-элементов.
+ * тех же пространствах имён, комментарии и текст из одних пробелов — он везде
+ * форматирование, в том числе в пустой папке, записанной как {@code <folder>},
+ * перевод строки, {@code </folder>}. Строго проверяет всё остальное: порядок
+ * дочерних узлов, имена, значения атрибутов, включая {@code id}, и непробельный
+ * текст — дословно, с краевыми пробелами.
  *
  * <p>Расхождение сообщается путём до места и обеими версиями: «где-то не сошлось»
  * на файле в 4 000 строк не помогает.
@@ -71,16 +73,9 @@ final class XmlEquivalence {
         }
     }
 
-    /**
-     * Значимое содержимое: элементы и текст. Пробельный текст между элементами —
-     * форматирование и отбрасывается; у элемента без детей-элементов текст значим целиком.
-     */
+    /** Значимое содержимое: элементы и непробельный текст, в порядке документа. */
     private static List<Object> content(Element element) {
         NodeList nodes = element.getChildNodes();
-        boolean hasElements = false;
-        for (int i = 0; i < nodes.getLength(); i++) {
-            hasElements |= nodes.item(i).getNodeType() == Node.ELEMENT_NODE;
-        }
         List<Object> content = new ArrayList<>();
         StringBuilder text = new StringBuilder();
         for (int i = 0; i < nodes.getLength(); i++) {
@@ -88,7 +83,7 @@ final class XmlEquivalence {
             switch (node.getNodeType()) {
                 case Node.TEXT_NODE, Node.CDATA_SECTION_NODE -> text.append(node.getNodeValue());
                 case Node.ELEMENT_NODE -> {
-                    flush(text, hasElements, content);
+                    flush(text, content);
                     content.add(node);
                 }
                 default -> {
@@ -96,12 +91,12 @@ final class XmlEquivalence {
                 }
             }
         }
-        flush(text, hasElements, content);
+        flush(text, content);
         return content;
     }
 
-    private static void flush(StringBuilder text, boolean hasElements, List<Object> content) {
-        if (!text.isEmpty() && !(hasElements && text.toString().isBlank())) {
+    private static void flush(StringBuilder text, List<Object> content) {
+        if (!text.toString().isBlank()) {
             content.add(text.toString());
         }
         text.setLength(0);

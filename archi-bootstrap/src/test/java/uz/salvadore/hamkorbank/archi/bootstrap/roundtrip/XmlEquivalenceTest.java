@@ -32,6 +32,15 @@ class XmlEquivalenceTest {
             <element xsi:type="m:X" id="id-3" name="x">
                 <documentation>текст</documentation>
             </element><element xsi:type="m:Y" id="id-4" name="y"></element></folder></m:model>""",
+            // пустой элемент развёрнут, внутри только перевод строки и отступ
+            """
+            <m:model xmlns:m="urn:m" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="id-1" name="М">
+              <folder id="id-2" name="A">
+                <element xsi:type="m:X" id="id-3" name="x"><documentation>текст</documentation></element>
+                <element xsi:type="m:Y" id="id-4" name="y">
+                </element>
+              </folder>
+            </m:model>""",
             // другой порядок атрибутов и другой префикс того же пространства
             """
             <a:model xmlns:a="urn:m" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="М" id="id-1">
