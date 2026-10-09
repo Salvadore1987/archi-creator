@@ -27,7 +27,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  * отчёт и результат: повтор по ключу отдаёт их, а не применяет файл снова.
  */
 @Repository
-public class JpaImportSessionStore implements ImportSessionRepository {
+public class JpaImportSessionRepository implements ImportSessionRepository {
 
     @PersistenceContext
     private EntityManager em;
