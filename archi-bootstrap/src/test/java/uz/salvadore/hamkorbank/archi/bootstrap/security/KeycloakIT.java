@@ -88,6 +88,26 @@ class KeycloakIT {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    @DisplayName("FR-28, UI-015: /me по токену Keycloak — sub, имя из name, роль из realm_access; /ui-config без токена")
+    void meFromKeycloakToken() throws Exception {
+        String architect = token("architect");
+        String subject = JsonPath.read(new String(java.util.Base64.getUrlDecoder().decode(architect.split("\\.")[1]),
+                StandardCharsets.UTF_8), "$.sub");
+
+        mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + architect))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.subject").value(subject))
+                .andExpect(jsonPath("$.displayName").value("Архитектор Демо"))
+                .andExpect(jsonPath("$.roles.length()").value(1))
+                .andExpect(jsonPath("$.roles[0]").value("ARCHITECT"));
+        mvc.perform(get("/api/v1/me")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/ui-config"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.oidc.authority").value(issuer()))
+                .andExpect(jsonPath("$.oidc.clientId").value("archi-creator-ui"));
+    }
+
     private static String issuer() {
         return "http://" + KEYCLOAK.getHost() + ":" + KEYCLOAK.getMappedPort(8080) + "/realms/archi";
     }

@@ -11,11 +11,22 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
  * Размещение объекта на представлении.
  *
  * @param parentId  узел, в который вложен этот; пусто — корень представления
+ * @param label     собственная подпись узла — у группы, объектов скетча и холста; у узла
+ *                  над элементом подписью служит имя элемента, и своей обычно нет
+ * @param content   текст заметки как есть, с переводами строк
  * @param sortOrder позиция в содержимом родителя, общем с рёбрами, исходящими из родителя
  */
 public record ViewNode(ViewNodeId id, Optional<ViewNodeId> parentId, ArchiId archiId, DiagramType archiType,
-                       Optional<ElementId> elementId, Bounds bounds, StyleOverride style, SortOrder sortOrder,
-                       Optional<RawXml> rawXml) {
+                       Optional<ElementId> elementId, Bounds bounds, StyleOverride style, Optional<String> label,
+                       Optional<String> content, SortOrder sortOrder, Optional<RawXml> rawXml) {
+
+    /** Узел без собственного текста — так размещается элемент. */
+    public ViewNode(ViewNodeId id, Optional<ViewNodeId> parentId, ArchiId archiId, DiagramType archiType,
+                    Optional<ElementId> elementId, Bounds bounds, StyleOverride style, SortOrder sortOrder,
+                    Optional<RawXml> rawXml) {
+        this(id, parentId, archiId, archiType, elementId, bounds, style, Optional.empty(), Optional.empty(),
+                sortOrder, rawXml);
+    }
 
     public ViewNode {
         Objects.requireNonNull(id, "id");
@@ -25,6 +36,8 @@ public record ViewNode(ViewNodeId id, Optional<ViewNodeId> parentId, ArchiId arc
         Objects.requireNonNull(elementId, "elementId");
         Objects.requireNonNull(bounds, "bounds");
         Objects.requireNonNull(style, "style");
+        Objects.requireNonNull(label, "label");
+        Objects.requireNonNull(content, "content");
         Objects.requireNonNull(sortOrder, "sortOrder");
         Objects.requireNonNull(rawXml, "rawXml");
         ViewNodeKind kind = ViewNodeKind.of(archiType);
@@ -44,6 +57,7 @@ public record ViewNode(ViewNodeId id, Optional<ViewNodeId> parentId, ArchiId arc
     }
 
     public ViewNode withBounds(Bounds newBounds) {
-        return new ViewNode(id, parentId, archiId, archiType, elementId, newBounds, style, sortOrder, rawXml);
+        return new ViewNode(id, parentId, archiId, archiType, elementId, newBounds, style, label, content, sortOrder,
+                rawXml);
     }
 }

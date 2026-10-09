@@ -17,6 +17,13 @@ public interface ViewRepository {
 
     Optional<ViewId> viewOfNode(ViewNodeId nodeId);
 
+    /**
+     * Размещения элементов и связей на представлениях модели — без загрузки самих
+     * представлений, числом запросов, не зависящим от размера модели. Представления без
+     * единого узла над элементом и ребра связи в ответ могут не попасть.
+     */
+    List<ViewPlacements> placements(ModelId modelId);
+
     void save(View view);
 
     void delete(ViewId id);

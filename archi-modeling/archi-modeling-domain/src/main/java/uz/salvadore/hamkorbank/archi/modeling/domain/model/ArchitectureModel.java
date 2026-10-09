@@ -397,9 +397,28 @@ public final class ArchitectureModel {
     public Created<Relationship> addRelationship(ArchiType archiType, ConceptRef source, ConceptRef target,
                                                  Optional<String> relationshipName, RelationshipId newId,
                                                  ArchiId newArchiId, Instant now) {
+        return addRelationship(archiType, source, target, relationshipName, Optional.empty(), Optional.empty(),
+                Optional.empty(), newId, newArchiId, now);
+    }
+
+    /**
+     * То же с местом в дереве и атрибутами типа. Папка — в поддереве {@code Relations},
+     * без неё связь ложится в корень; вид доступа бывает только у Access, направленность —
+     * только у Association.
+     */
+    public Created<Relationship> addRelationship(ArchiType archiType, ConceptRef source, ConceptRef target,
+                                                 Optional<String> relationshipName, Optional<FolderId> folderId,
+                                                 Optional<AccessType> accessType, Optional<Boolean> directed,
+                                                 RelationshipId newId, ArchiId newArchiId, Instant now) {
         requireActive();
         RelationshipType type = RelationshipType.fromArchiType(archiType)
                 .orElseThrow(() -> ModelingException.invalid(archiType + " — не тип связи ArchiMate 3.2"));
+        if (accessType.isPresent() && type != RelationshipType.ACCESS) {
+            throw ModelingException.invalid("accessType бывает только у связи Access, а не у " + archiType);
+        }
+        if (directed.isPresent() && type != RelationshipType.ASSOCIATION) {
+            throw ModelingException.invalid("directed бывает только у связи Association, а не у " + archiType);
+        }
         ArchiType sourceType = conceptType(source);
         ArchiType targetType = conceptType(target);
         Optional<Relationship> duplicate = relationships.values().stream()
@@ -409,11 +428,12 @@ public final class ArchitectureModel {
             return new Created<>(duplicate.get(), false);
         }
         RelationMatrix.archimate32().requirePermitted(sourceType, targetType, type);
+        FolderId folder = folderId.orElseGet(() -> roots().get(FolderType.RELATIONS).id());
+        requireSameRoot(folder, FolderType.RELATIONS, "связь типа " + archiType.simpleName());
         requireFreeArchiId(newArchiId);
-        FolderId relationsRoot = roots().get(FolderType.RELATIONS).id();
-        Relationship relationship = new Relationship(newId, relationsRoot, newArchiId, archiType, source, target,
-                relationshipName.filter(n -> !n.isEmpty()), Optional.empty(), Optional.empty(), Optional.empty(),
-                List.of(), nextOrderIn(relationsRoot), true, Optional.empty());
+        Relationship relationship = new Relationship(newId, folder, newArchiId, archiType, source, target,
+                relationshipName.filter(n -> !n.isEmpty()), Optional.empty(), accessType, directed,
+                List.of(), nextOrderIn(folder), true, Optional.empty());
         relationships.put(relationship.id(), relationship);
         touch(now);
         return new Created<>(relationship, true);

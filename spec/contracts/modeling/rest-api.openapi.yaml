@@ -11,6 +11,9 @@ info:
     проверяется на границе use case'а, а не матчером URL. Наполнено на этапе 2
     (2026-10-08) по одному endpoint'у на экспонированный сценарий; до этого
     `paths` был пуст намеренно — endpoint без `UC-*` нарушал бы трассируемость.
+    Исключение — тег `session` (2026-10-09): `/me` и `/ui-config` — инфраструктура
+    входа, а не сценарий модели; у них нет ни `x-use-case`, ни `x-operation`, роль
+    не проверяется, реализация живёт в `archi-bootstrap`.
 
     Ошибки — `application/problem+json` (§8.1) с полем `code`: код инварианта
     (`INV-MDL-NNN`) или бизнес-ошибки (`RELATION_NOT_PERMITTED`, `MDL_*`).
@@ -37,6 +40,10 @@ tags:
     description: Представления и геометрия.
   - name: metamodel
     description: Каталог типов и матрица связей.
+  - name: session
+    description: |
+      Кто вошёл и как входить (FR-28, UI-015). Не сценарий модели: интерфейс строит
+      себя по роли и узнаёт адрес входа до того, как у него появится токен.
 
 paths:
 
@@ -101,7 +108,7 @@ paths:
     get:
       tags: [models]
       operationId: openModel
-      summary: Дерево модели — папки, элементы, связи, список представлений
+      summary: Дерево модели — папки, элементы, связи, представления и размещения на них
       x-use-case: UC-MDL-001
       x-operation: OpenModel
       responses:
@@ -364,6 +371,8 @@ paths:
                 archiType: { type: string, examples: ["archimate:ApplicationComponent"] }
                 name:      { type: string, maxLength: 500 }
                 folderId:  { type: string, format: uuid, description: "Без него — корень слоя." }
+                id:        { $ref: '#/components/schemas/ClientId' }
+                archiId:   { $ref: '#/components/schemas/ClientArchiId' }
       responses:
         '201':
           description: Создан.
@@ -421,25 +430,46 @@ paths:
                 sourceId:  { type: string, format: uuid, description: "Элемент или связь." }
                 targetId:  { type: string, format: uuid }
                 name:      { type: string }
+                id:        { $ref: '#/components/schemas/ClientId' }
+                archiId:   { $ref: '#/components/schemas/ClientArchiId' }
+                folderId:
+                  type: string
+                  format: uuid
+                  description: Папка в поддереве Relations; без него — корень Relations. Иная папка — 422 (INV-MDL-009).
+                accessType:
+                  type: string
+                  enum: [WRITE, READ, ACCESS, READ_WRITE]
+                  description: Только у AccessRelationship, иначе 422 `MDL_INVALID_INPUT`. Без него — атрибута в файле нет (Archi читает как WRITE).
+                directed:
+                  type: boolean
+                  description: Только у AssociationRelationship, иначе 422 `MDL_INVALID_INPUT`.
                 view:
                   type: object
+                  description: Сразу и ребро на представлении; концы — узлы или рёбра этого представления.
+                  required: [viewId, sourceNodeId, targetNodeId]
                   properties:
                     viewId:       { type: string, format: uuid }
-                    sourceNodeId: { type: string, format: uuid }
+                    sourceNodeId: { type: string, format: uuid, description: "Узел или ребро." }
                     targetNodeId: { type: string, format: uuid }
+                    edgeId:       { $ref: '#/components/schemas/ClientId' }
+                    edgeArchiId:  { $ref: '#/components/schemas/ClientArchiId' }
       responses:
         '201':
           description: Создана.
           content:
             application/json: { schema: { $ref: '#/components/schemas/Relationship' } }
         '200':
-          description: Дубль того же типа между той же парой — существующая связь.
+          description: |
+            Дубль того же типа между той же парой — существующая связь; `id`, `archiId`,
+            `folderId`, `accessType`, `directed` из запроса к ней не применяются.
           content:
             application/json: { schema: { $ref: '#/components/schemas/Relationship' } }
+        '409': { $ref: '#/components/responses/Conflict409' }
         '422':
           description: |
-            `RELATION_NOT_PERMITTED` с перечнем допустимых в `permitted` (INV-MDL-007)
-            либо конец из другой модели (INV-MDL-004).
+            `RELATION_NOT_PERMITTED` с перечнем допустимых в `permitted` (INV-MDL-007),
+            конец из другой модели (INV-MDL-004), папка не из поддерева Relations
+            (INV-MDL-009), атрибут не своего типа или недопустимый `archiId` (`MDL_INVALID_INPUT`).
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 
@@ -490,11 +520,15 @@ paths:
               properties:
                 parentId: { type: string, format: uuid }
                 name:     { type: string, maxLength: 500 }
+                id:        { $ref: '#/components/schemas/ClientId' }
+                archiId:   { $ref: '#/components/schemas/ClientArchiId' }
       responses:
         '201':
           description: Создана в конце родителя (INV-MDL-005).
           content:
             application/json: { schema: { $ref: '#/components/schemas/Folder' } }
+        '409': { $ref: '#/components/responses/Conflict409' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity422' }
 
   /models/{id}/tree/{itemId}:
     parameters:
@@ -578,11 +612,15 @@ paths:
               properties:
                 name:     { type: string, maxLength: 500 }
                 folderId: { type: string, format: uuid }
+                id:        { $ref: '#/components/schemas/ClientId' }
+                archiId:   { $ref: '#/components/schemas/ClientArchiId' }
       responses:
         '201':
           description: Создано.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ViewSummary' } }
+        '409': { $ref: '#/components/responses/Conflict409' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity422' }
 
   /views/{id}:
     parameters: [ { in: path, name: id, required: true, schema: { type: string, format: uuid } } ]
@@ -635,11 +673,66 @@ paths:
                 width:     { type: integer, description: "По умолчанию 120, как у Archi." }
                 height:    { type: integer, description: "По умолчанию 55." }
                 parentId:  { type: string, format: uuid, description: "Узел-контейнер; bounds — относительно него." }
+                id:        { $ref: '#/components/schemas/ClientId' }
+                archiId:
+                  $ref: '#/components/schemas/ClientArchiId'
+                  description: Свободен и в модели, и на представлении. У уже размещённого элемента не применяется.
       responses:
         '201':
           description: Узел.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ViewNode' } }
+        '200':
+          description: Элемент уже размещён на представлении — его узел, без изменений.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ViewNode' } }
+        '409': { $ref: '#/components/responses/Conflict409' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity422' }
+
+  /views/{id}/edges:
+    parameters: [ { in: path, name: id, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [views]
+      operationId: placeEdge
+      summary: Ребро уже существующей связи на представлении — отмена удаления узла возвращает его рёбра (ADR-0018)
+      x-use-case: UC-MDL-002
+      x-operation: SaveViewLayout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [relationshipId, sourceId, targetId]
+              properties:
+                id:             { $ref: '#/components/schemas/ClientId' }
+                archiId:        { $ref: '#/components/schemas/ClientArchiId' }
+                relationshipId: { type: string, format: uuid }
+                sourceId:
+                  type: string
+                  format: uuid
+                  description: |
+                    Узел или ребро этого представления, изображающее источник связи: узел —
+                    над элементом-источником, ребро — той связи, что служит источником.
+                targetId:       { type: string, format: uuid, description: "То же для цели связи." }
+                bendpoints:     { type: array, items: { $ref: '#/components/schemas/Bendpoint' } }
+      responses:
+        '201':
+          description: Ребро в конце содержимого источника (INV-MDL-005).
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ViewEdge' } }
+        '200':
+          description: Ребро этой связи между теми же концами уже есть — оно, без изменений.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ViewEdge' } }
+        '404': { $ref: '#/components/responses/NotFound404' }
+        '409': { $ref: '#/components/responses/Conflict409' }
+        '422':
+          description: |
+            Конец не на этом представлении или не изображает конец связи (INV-MDL-008),
+            представление не редактируется (`MDL_TYPE_NOT_EDITABLE`), недопустимый `archiId`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 
   /view-nodes/{id}:
     parameters: [ { in: path, name: id, required: true, schema: { type: string, format: uuid } } ]
@@ -680,6 +773,36 @@ paths:
           content:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/RelationType' } }
+
+  /me:
+    get:
+      tags: [session]
+      operationId: currentUser
+      summary: Текущий пользователь — субъект, имя для показа, роли
+      description: |
+        Роли — из полномочий `ROLE_*` текущей аутентификации: в `prod` — из
+        `realm_access.roles` токена Keycloak, в `dev` — заглушка `dev-architect` с ролью
+        `ARCHITECT`. `displayName` — claim `name`, иначе `preferred_username`, иначе `subject`.
+      responses:
+        '200':
+          description: Пользователь.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/CurrentUser' } }
+        '401': { description: Нет токена или он недействителен. }
+
+  /ui-config:
+    get:
+      tags: [session]
+      operationId: uiConfig
+      summary: Как входить — адрес Keycloak и клиент SPA; открыт без токена
+      security: []
+      responses:
+        '200':
+          description: |
+            В `prod` — объект `oidc`. В `dev` — `{}`: входа нет, запросы идут без токена
+            и приходят от заглушки `ARCHITECT`.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/UiConfig' } }
 
 # Ещё не здесь: POST /views/{id}/auto-layout — этап 4 (docs/backend.md §5).
 # Импорт и экспорт принадлежат BC interchange: contracts/interchange/rest-api.openapi.yaml.
@@ -727,10 +850,28 @@ components:
         code:
           type: string
           description: Код инварианта (`INV-MDL-NNN`, domain/modeling/invariants.md) или иной бизнес-ошибки.
-          examples: ["INV-MDL-004", "INV-MDL-006", "RELATION_NOT_PERMITTED"]
+          examples: ["INV-MDL-004", "INV-MDL-006", "RELATION_NOT_PERMITTED", "MDL_ID_TAKEN"]
         lockOwner:     { type: string }
         relationships: { type: array, items: { type: string, format: uuid } }
         permitted:     { type: array, items: { type: string } }
+
+    ClientId:
+      type: string
+      format: uuid
+      description: |
+        Ключ нового объекта, выбранный клиентом (ADR-0018): правки копятся в браузере
+        и ссылаются на объект до ответа сервера. Без него ключ выдаёт сервер. Занят
+        любой строкой содержимого — `409` с `code: MDL_ID_TAKEN`.
+
+    ClientArchiId:
+      type: string
+      pattern: "^[A-Za-z0-9_][A-Za-z0-9_.-]{0,254}$"
+      examples: ["id-0f3c2a9b8e7d4c6b9a1e2f3d4c5b6a79"]
+      description: |
+        `archi_id` нового объекта, выбранный клиентом; новые — `id-<32 hex>`. Проверяется
+        тем же правилом, что при импорте: недопустимый — `422` `MDL_INVALID_INPUT`. Занят
+        в модели — концептом, папкой, представлением, узлом или ребром — `409` `MDL_ID_TAKEN`
+        (INV-MDL-001). Без него сервер выдаёт свободный.
 
     Workspace:
       type: object
@@ -826,6 +967,27 @@ components:
         elements:      { type: array, items: { $ref: '#/components/schemas/Element' } }
         relationships: { type: array, items: { $ref: '#/components/schemas/Relationship' } }
         views:         { type: array, items: { $ref: '#/components/schemas/ViewSummary' } }
+        placements:
+          type: array
+          description: |
+            Что где размещено — для маркеров «не размещён» и «×N» в дереве, его фильтров
+            и списка представлений в «Описании» элемента. По записи на каждое представление
+            из `views`, в том же порядке; пустое представление — с пустыми списками.
+          items: { $ref: '#/components/schemas/Placement' }
+
+    Placement:
+      type: object
+      required: [viewId, elementIds, relationshipIds]
+      properties:
+        viewId:          { type: string, format: uuid }
+        elementIds:
+          type: array
+          description: Элементы, у которых есть узел на представлении; каждый один раз, сколько бы узлов ни было.
+          items: { type: string, format: uuid }
+        relationshipIds:
+          type: array
+          description: Связи, у которых есть ребро на представлении; каждая один раз.
+          items: { type: string, format: uuid }
 
     Style:
       type: object
@@ -851,6 +1013,15 @@ components:
         width:     { type: integer, description: "-1 — размер по умолчанию Archi." }
         height:    { type: integer }
         style:     { $ref: '#/components/schemas/Style' }
+        label:
+          type: string
+          description: |
+            Собственная подпись узла — атрибут `name` в файле: у группы, объектов скетча
+            и холста. У DIAGRAM_OBJECT подписью служит имя элемента, здесь null. Только
+            чтение: команды правки подписи пока нет.
+        content:
+          type: string
+          description: Текст заметки (`<content>` в файле) как есть, с переводами строк; null — текста нет. Только чтение.
         sortOrder: { type: integer, format: int64 }
 
     Bendpoint:
@@ -957,6 +1128,37 @@ components:
         principal:     { type: string, maxLength: 200 }
         access:        { type: string, enum: [READ, WRITE] }
 
+    CurrentUser:
+      type: object
+      required: [subject, displayName, roles]
+      properties:
+        subject:     { type: string, description: "`sub` токена; в dev — `dev-architect`." }
+        displayName: { type: string }
+        roles:
+          type: array
+          description: Порядок — VIEWER, ARCHITECT, ADMIN; только роли модели доступа.
+          items: { type: string, enum: [VIEWER, ARCHITECT, ADMIN] }
+
+    UiConfig:
+      type: object
+      properties:
+        oidc:
+          type: object
+          description: Нет поля — входа нет (профиль dev).
+          required: [authority, clientId]
+          properties:
+            authority:
+              type: string
+              format: uri
+              description: |
+                Адрес realm'а, видимый из браузера (`archi.ui.oidc.authority`, по умолчанию
+                `ARCHI_OIDC_PUBLIC_ISSUER_URI`, иначе issuer ресурс-сервера).
+              examples: ["http://localhost:8081/realms/archi"]
+            clientId:
+              type: string
+              description: Публичный клиент SPA (`archi.ui.oidc.client-id`).
+              examples: ["archi-creator-ui"]
+
     ElementType:
       type: object
       properties:
@@ -989,7 +1191,8 @@ components:
       description: |
         Блокировки нет или она чужая, конкурентное сохранение (INV-MDL-006), повтор
         Idempotency-Key с другим телом (INV-MDL-003), удаление связанного элемента
-        (INV-MDL-004), команда к удалённой модели (INV-MDL-002).
+        (INV-MDL-004), команда к удалённой модели (INV-MDL-002), заданный клиентом
+        `id` или `archiId` уже занят (`MDL_ID_TAKEN`).
       content:
         application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 

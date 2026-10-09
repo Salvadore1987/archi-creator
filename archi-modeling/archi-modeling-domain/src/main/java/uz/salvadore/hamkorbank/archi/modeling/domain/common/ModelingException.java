@@ -57,6 +57,8 @@ public class ModelingException extends RuntimeException {
         public static final String FOLDER_NOT_EMPTY = "MDL_FOLDER_NOT_EMPTY";
         public static final String SNAPSHOT_PURGED = "MDL_SNAPSHOT_PURGED";
         public static final String IDEMPOTENCY_CONFLICT = "MDL_IDEMPOTENCY_KEY_REUSED";
+        /** Идентификатор, заданный клиентом для нового объекта, уже занят. */
+        public static final String ID_TAKEN = "MDL_ID_TAKEN";
 
         private Codes() {
         }

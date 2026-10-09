@@ -133,6 +133,23 @@ class ModelingScenariosTest {
     }
 
     @Test
+    @DisplayName("FR-31: дерево модели с размещениями — запись на каждое представление, пустое тоже")
+    void treeWithPlacementsCoversEveryView() {
+        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", Optional.empty()).id();
+        ports.lockService.acquire(ALICE, model);
+        Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(), Optional.empty());
+        View placed = ports.viewService.create(ALICE, model, "Контекст", Optional.empty(), Optional.empty());
+        View empty = ports.viewService.create(ALICE, model, "Пустое", Optional.empty(), Optional.empty());
+        ports.viewService.place(ALICE, placed.id(), component.id(), new Bounds(10, 10, 120, 55), Optional.empty());
+
+        var opened = ports.queries.openWithPlacements(READER, model);
+
+        assertEquals(List.of(placed.id(), empty.id()), opened.placements().stream().map(p -> p.viewId()).toList());
+        assertEquals(List.of(component.id()), opened.placements().getFirst().elementIds());
+        assertTrue(opened.placements().getLast().elementIds().isEmpty());
+    }
+
+    @Test
     @DisplayName("INV-MDL-004: удаление элемента со связью — 409; групповое вместе со связью проходит")
     void deleteWithRelationshipsTogether() {
         ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", Optional.empty()).id();

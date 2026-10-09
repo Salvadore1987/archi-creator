@@ -53,6 +53,10 @@ public class ViewNodeEntity {
     @Column(name = "text_alignment")
     public Integer textAlignment;
 
+    public String label;
+
+    public String content;
+
     @Column(name = "sort_order", nullable = false)
     public long sortOrder;
 

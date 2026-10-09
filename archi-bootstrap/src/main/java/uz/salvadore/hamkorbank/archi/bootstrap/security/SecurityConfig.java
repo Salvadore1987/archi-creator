@@ -49,6 +49,8 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
                         // Преполётные запросы браузера уходят без Authorization.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Адрес входа фронтенд узнаёт до того, как у него появится токен.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/ui-config").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         // Статика фронтенда: сам SPA открыт, данные за ним — нет.
                         .anyRequest().permitAll())

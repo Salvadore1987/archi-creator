@@ -34,14 +34,20 @@ public final class ElementService {
     /** Новый элемент в папке своего слоя; повтор с тем же ключом — тот же элемент. */
     public Element create(EditorIdentity actor, ModelId modelId, ArchiType archiType, String name,
                           Optional<FolderId> folderId, Optional<String> idempotencyKey) {
+        return create(actor, modelId, archiType, name, folderId, RequestedIds.NONE, idempotencyKey);
+    }
+
+    /** То же с идентификаторами, которые выбрал клиент; занятые — {@code 409}. */
+    public Element create(EditorIdentity actor, ModelId modelId, ArchiType archiType, String name,
+                          Optional<FolderId> folderId, RequestedIds ids, Optional<String> idempotencyKey) {
         return kernel.run(Operation.CREATE_ELEMENT, actor, () -> kernel.unitOfWork.write(() ->
                 kernel.idempotent("CreateElement", actor, idempotencyKey,
-                        IdempotentCommand.fingerprint(modelId, archiType, name, folderId),
+                        IdempotentCommand.fingerprint(modelId, archiType, name, folderId, ids.id(), ids.archiId()),
                         () -> {
                             ArchitectureModel model = kernel.writableModel(modelId, actor);
                             FolderId folder = folderId.orElseGet(() -> defaultFolder(model, archiType));
-                            Element element = model.addElement(archiType, name, folder, ElementId.next(kernel.uuids),
-                                    kernel.newArchiId(model), kernel.now());
+                            Element element = model.addElement(archiType, name, folder,
+                                    ElementId.of(kernel.newId(ids)), kernel.newArchiId(model, ids), kernel.now());
                             kernel.save(model);
                             return element.id().toString();
                         },

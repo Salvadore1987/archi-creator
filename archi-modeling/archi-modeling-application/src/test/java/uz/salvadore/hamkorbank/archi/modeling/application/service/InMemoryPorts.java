@@ -27,19 +27,23 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelVersionRepos
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotWriter;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.ModelAccessList;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotencyRecord;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.Workspace;
@@ -116,6 +120,22 @@ final class InMemoryPorts {
         }
 
         @Override
+        public boolean idTaken(UUID id) {
+            return models.values().stream().anyMatch(m -> m.folders().contains(FolderId.of(id))
+                    || m.elements().contains(ElementId.of(id)) || m.relationships().contains(RelationshipId.of(id)))
+                    || views.containsKey(ViewId.of(id))
+                    || views.values().stream().anyMatch(v -> v.nodes().contains(ViewNodeId.of(id))
+                    || v.edges().contains(ViewEdgeId.of(id)));
+        }
+
+        @Override
+        public boolean diagramArchiIdTaken(ModelId modelId, ArchiId archiId) {
+            return views.values().stream().filter(v -> v.modelId().equals(modelId))
+                    .anyMatch(v -> v.nodes().values().stream().anyMatch(n -> n.archiId().equals(archiId))
+                            || v.edges().values().stream().anyMatch(e -> e.archiId().equals(archiId)));
+        }
+
+        @Override
         public List<ViewId> viewsReferencing(ElementId elementId) {
             return views.values().stream().filter(v -> v.nodes().values().stream()
                     .anyMatch(n -> n.elementId().equals(Optional.of(elementId)))).map(View::id).toList();
@@ -143,6 +163,17 @@ final class InMemoryPorts {
         @Override
         public Optional<ViewId> viewOfNode(ViewNodeId nodeId) {
             return views.values().stream().filter(v -> v.nodes().contains(nodeId)).map(View::id).findFirst();
+        }
+
+        @Override
+        public List<ViewPlacements> placements(ModelId modelId) {
+            return views.values().stream().filter(v -> v.modelId().equals(modelId))
+                    .map(v -> new ViewPlacements(v.id(),
+                            v.nodes().values().stream().flatMap(n -> n.elementId().stream()).distinct().toList(),
+                            v.edges().values().stream().flatMap(e -> e.relationshipId().stream()).distinct()
+                                    .toList()))
+                    .filter(p -> !p.elementIds().isEmpty() || !p.relationshipIds().isEmpty())
+                    .toList();
         }
 
         @Override

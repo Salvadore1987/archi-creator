@@ -24,7 +24,9 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ViewNod
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentModificationException;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelRepository;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedMap;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
@@ -165,6 +167,30 @@ public class JpaModelStore implements ModelRepository, ViewRepository {
     }
 
     @Override
+    public boolean idTaken(UUID id) {
+        return !em.createNativeQuery("""
+                        select 1 from model_folder where id = :id
+                        union all select 1 from element where id = :id
+                        union all select 1 from relationship where id = :id
+                        union all select 1 from view where id = :id
+                        union all select 1 from view_node where id = :id
+                        union all select 1 from view_edge where id = :id
+                        limit 1
+                        """)
+                .setParameter("id", id).getResultList().isEmpty();
+    }
+
+    @Override
+    public boolean diagramArchiIdTaken(ModelId modelId, ArchiId archiId) {
+        return !em.createNativeQuery("""
+                        select 1 from view_node where model_id = :m and archi_id = :a
+                        union all select 1 from view_edge where model_id = :m and archi_id = :a
+                        limit 1
+                        """)
+                .setParameter("m", modelId.value()).setParameter("a", archiId.value()).getResultList().isEmpty();
+    }
+
+    @Override
     public List<ViewId> viewsReferencing(ElementId elementId) {
         return em.createQuery("select distinct n.viewId from ViewNodeEntity n where n.elementId = :e", UUID.class)
                 .setParameter("e", elementId.value()).getResultList().stream().map(ViewId::of).toList();
@@ -215,6 +241,33 @@ public class JpaModelStore implements ModelRepository, ViewRepository {
     @Override
     public Optional<ViewId> viewOfNode(ViewNodeId nodeId) {
         return Optional.ofNullable(em.find(ViewNodeEntity.class, nodeId.value())).map(n -> ViewId.of(n.viewId));
+    }
+
+    /** Два запроса — пары «представление — элемент» и «представление — связь» без повторов. */
+    @Override
+    public List<ViewPlacements> placements(ModelId modelId) {
+        Map<UUID, List<ElementId>> elements = new LinkedHashMap<>();
+        em.createQuery("""
+                        select distinct n.viewId, n.elementId from ViewNodeEntity n
+                        where n.modelId = :m and n.elementId is not null
+                        order by n.viewId, n.elementId
+                        """, Object[].class)
+                .setParameter("m", modelId.value()).getResultList()
+                .forEach(row -> elements.computeIfAbsent((UUID) row[0], k -> new ArrayList<>())
+                        .add(ElementId.of((UUID) row[1])));
+        Map<UUID, List<RelationshipId>> relationships = new LinkedHashMap<>();
+        em.createQuery("""
+                        select distinct x.viewId, x.relationshipId from ViewEdgeEntity x
+                        where x.modelId = :m and x.relationshipId is not null
+                        order by x.viewId, x.relationshipId
+                        """, Object[].class)
+                .setParameter("m", modelId.value()).getResultList()
+                .forEach(row -> relationships.computeIfAbsent((UUID) row[0], k -> new ArrayList<>())
+                        .add(RelationshipId.of((UUID) row[1])));
+        java.util.Set<UUID> viewIds = new java.util.LinkedHashSet<>(elements.keySet());
+        viewIds.addAll(relationships.keySet());
+        return viewIds.stream().map(v -> new ViewPlacements(ViewId.of(v), elements.getOrDefault(v, List.of()),
+                relationships.getOrDefault(v, List.of()))).toList();
     }
 
     @Override
