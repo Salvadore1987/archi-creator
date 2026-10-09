@@ -624,11 +624,18 @@ UC-MDL-001…007 и UC-IXC-001…002 работают через REST, импо�
 
 ### 3.3 Общая геометрия фигур (`UI-019`, FR-42)
 
-- ⬜ `shapes.json` по контракту [`spec/ui/shapes-contract.yaml`](../../spec/ui/shapes-contract.yaml):
-      `outline`, `corner_icon`, `label_box`, `radius_token`, `layer`
-- ⬜ SVG-спрайт иконок, один для канвы и сервера
-- ⬜ Запись для каждого `ArchiType` фазы 1 обязательна; типы фаз 2 и 3 —
-      силуэт-заглушка (`UI-020`, FR-03)
+- ✅ `shapes.json` по контракту [`spec/ui/shapes-contract.yaml`](../../spec/ui/shapes-contract.yaml):
+      `outline`, `corner_icon`, `label_box`, `radius_token`, `layer`. Лежит
+      в `archi-bootstrap/src/main/resources/ui/` — classpath сервера; фронтенд
+      берёт его алиасом `@shared-ui`. Контур — имя примитива (`rect`, `stadium`,
+      `circle`, `tab`, `dog-ear`, `stub`), а не путь: путь в нормализованном
+      боксе искажал бы скругления при растяжении; смысл примитивов описан в самом
+      файле, серверный писатель 5a реализует те же шесть
+- ✅ SVG-спрайт иконок, один для канвы и сервера (`ui/icons.svg`)
+- ✅ Запись для каждого `ArchiType` фазы 1 обязательна; типы фаз 2 и 3 —
+      силуэт-заглушка (`UI-020`, FR-03): запись `fallback`. Полноту против
+      реестра типов сервера проверяет `SharedShapesTest`, совпадение иконок
+      со спрайтом — он же и `canvas/shapes.test.ts`
 - ⬜ Фигуры рисуются **инлайн-SVG внутри узла React Flow**, не CSS
       (`ADR-0007`: CSS-силуэт серверный писатель воспроизвести не может)
 

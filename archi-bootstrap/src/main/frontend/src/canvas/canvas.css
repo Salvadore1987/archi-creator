@@ -1,0 +1,50 @@
+/* Узел канвы. Цвета — только переменные токенов. */
+.shape {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 1px 1.5px var(--shape-shadow, transparent));
+}
+.shape__label {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  font: var(--node-font);
+  font-weight: var(--node-font-weight);
+  overflow: hidden;
+  word-break: break-word;
+}
+.shape__label--tab,
+.shape__label--dog-ear {
+  justify-content: flex-start;
+}
+.shape__label--dog-ear {
+  font-weight: 400;
+  white-space: pre-wrap;
+}
+.shape__label--dog-ear .shape__name {
+  -webkit-line-clamp: unset;
+}
+.shape__name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.shape__subtitle {
+  font: var(--node-subtitle);
+  color: var(--node-subtitle-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.shape__label--tab .shape__name {
+  -webkit-line-clamp: 1;
+  font: var(--node-subtitle);
+  font-weight: 600;
+  color: var(--node-subtitle-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
