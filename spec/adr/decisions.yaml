@@ -238,3 +238,13 @@ decisions:
     requirements: [FR-02, FR-03, NFR-05]
     anchors: [INV-IXC-001, INV-IXC-005, INV-MDL-005]
     implemented: 2026-10-08
+
+  - id: ADR-0018
+    title: Сессия правки живёт в браузере, на сервер уходит при сохранении
+    status: accepted
+    date: 2026-10-09
+    kind: architecture
+    adr_file: 0018-local-edit-session.md
+    affects: [ui, modeling]
+    requirements: [FR-35, FR-05, FR-06, NFR-05]
+    anchors: [UI-017, INV-MDL-006]
