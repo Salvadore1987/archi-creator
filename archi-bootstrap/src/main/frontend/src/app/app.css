@@ -479,3 +479,11 @@ textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+.btn:focus {
+  outline: none;
+}
+.btn:focus-visible {
+  outline: 1px solid var(--signal);
+  outline-offset: 1px;
+}
