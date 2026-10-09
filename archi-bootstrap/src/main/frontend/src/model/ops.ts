@@ -214,3 +214,106 @@ function deletionOrder<T extends { id: Uuid; sourceId: Uuid; targetId: Uuid }>(i
   }
   return ordered;
 }
+
+/** Корневая папка, в поддереве которой лежит объект: структуру корней задаёт формат Archi. */
+export function rootOf(doc: ModelDoc, id: Uuid): Uuid | undefined {
+  let folderId: Uuid | undefined =
+    doc.elements[id]?.folderId ?? doc.relationships[id]?.folderId ?? doc.views[id]?.folderId ?? (doc.folders[id] ? id : undefined);
+  while (folderId && doc.folders[folderId]?.parentId) {
+    folderId = doc.folders[folderId]!.parentId;
+  }
+  return folderId;
+}
+
+export function isSystemFolder(doc: ModelDoc, id: Uuid): boolean {
+  const folder = doc.folders[id];
+  return !!folder && !folder.parentId;
+}
+
+/** Имя папки, элемента или представления; связи в дереве не переименовываются. */
+export function renameItem(doc: ModelDoc, id: Uuid, name: string): Edit {
+  const folder = doc.folders[id];
+  if (folder) return { changes: [{ entity: 'folder', id, before: folder, after: { ...folder, name } }], affected: [id] };
+  const view = doc.views[id];
+  if (view) return { changes: [{ entity: 'view', id, before: view, after: { ...view, name } }], affected: [id] };
+  return updateContent(doc, id, { name });
+}
+
+/** Папка не может переехать в себя или в своё поддерево. */
+function insideOf(doc: ModelDoc, folderId: Uuid, ancestor: Uuid): boolean {
+  let current: Uuid | undefined = folderId;
+  while (current) {
+    if (current === ancestor) return true;
+    current = doc.folders[current]?.parentId;
+  }
+  return false;
+}
+
+/**
+ * Перенос в папку. Меняется только папка: позиция — в конце новой, соседи
+ * не перенумеровываются, порядок в старой не трогается. Объект остаётся
+ * в поддереве своего корня — иначе Archi переложит его сам при открытии.
+ */
+export function moveItems(doc: ModelDoc, ids: Uuid[], targetFolderId: Uuid): Edit | null {
+  const targetRoot = rootOf(doc, targetFolderId);
+  const movable = ids.filter((id) => !isSystemFolder(doc, id));
+  if (movable.length === 0 || movable.some((id) => rootOf(doc, id) !== targetRoot)) return null;
+  if (movable.some((id) => doc.folders[id] && insideOf(doc, targetFolderId, id))) return null;
+  const siblings = [
+    ...Object.values(doc.folders).filter((f) => f.parentId === targetFolderId),
+    ...[...Object.values(doc.elements), ...Object.values(doc.relationships), ...Object.values(doc.views)].filter(
+      (item) => item.folderId === targetFolderId,
+    ),
+  ].map((item) => item.sortOrder);
+  let order = nextSortOrder(siblings);
+  const changes: Change[] = [];
+  for (const id of movable) {
+    const sortOrder = order;
+    const folder = doc.folders[id];
+    if (folder) {
+      if (folder.parentId === targetFolderId) continue;
+      changes.push({ entity: 'folder', id, before: folder, after: { ...folder, parentId: targetFolderId, sortOrder } });
+    } else if (doc.elements[id]) {
+      const e = doc.elements[id]!;
+      if (e.folderId === targetFolderId) continue;
+      changes.push({ entity: 'element', id, before: e, after: { ...e, folderId: targetFolderId, sortOrder } });
+    } else if (doc.relationships[id]) {
+      const r = doc.relationships[id]!;
+      if (r.folderId === targetFolderId) continue;
+      changes.push({ entity: 'relationship', id, before: r, after: { ...r, folderId: targetFolderId, sortOrder } });
+    } else if (doc.views[id]) {
+      const v = doc.views[id]!;
+      if (v.folderId === targetFolderId) continue;
+      changes.push({ entity: 'view', id, before: v, after: { ...v, folderId: targetFolderId, sortOrder } });
+    }
+    order += 1000;
+  }
+  return { changes, affected: changes.map((c) => c.id) };
+}
+
+export function createFolder(doc: ModelDoc, parentId: Uuid, name: string): Edit & { folderId: Uuid } {
+  const id = uuidv7();
+  const siblings = [
+    ...Object.values(doc.folders).filter((f) => f.parentId === parentId),
+    ...[...Object.values(doc.elements), ...Object.values(doc.relationships), ...Object.values(doc.views)].filter(
+      (item) => item.folderId === parentId,
+    ),
+  ].map((item) => item.sortOrder);
+  const folder: Folder = { id, parentId, archiId: newArchiId(), name, sortOrder: nextSortOrder(siblings) };
+  return { folderId: id, changes: [{ entity: 'folder', id, before: null, after: folder }], affected: [id] };
+}
+
+/** Пустые папки удаляются; с содержимым — нет, это каскад, от которого модель отказывается. */
+export function deleteFolders(doc: ModelDoc, ids: Uuid[]): Edit {
+  const changes: Change[] = ids.map((id) => ({ entity: 'folder' as const, id, before: doc.folders[id]!, after: null }));
+  return { changes, affected: ids };
+}
+
+export function folderIsEmpty(doc: ModelDoc, id: Uuid): boolean {
+  return (
+    !Object.values(doc.folders).some((f) => f.parentId === id) &&
+    ![...Object.values(doc.elements), ...Object.values(doc.relationships), ...Object.values(doc.views)].some(
+      (item) => item.folderId === id,
+    )
+  );
+}

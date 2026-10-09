@@ -107,6 +107,16 @@ export function TreePanel() {
     });
   }, [selection, index, mode, expanded]);
 
+  // Новая папка сразу переименовывается — строка должна быть видна, даже если
+  // поиск или фильтр её скрывают.
+  useEffect(() => {
+    if (editing.renaming && !rows.some((r) => r.id === editing.renaming)) {
+      setQuery('');
+      setFilter('all');
+      setMode('folders');
+    }
+  }, [editing.renaming, rows]);
+
   const visibleIds = useMemo(() => rows.filter((r) => r.kind !== 'more').map((r) => r.id), [rows]);
   const selected = useMemo(() => new Set(selection.ids), [selection.ids]);
 

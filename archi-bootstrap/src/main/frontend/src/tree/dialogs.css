@@ -1,0 +1,125 @@
+.ctx-backdrop,
+.pop-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+.pop-backdrop {
+  background: rgba(0, 0, 0, 0.25);
+  display: grid;
+  place-items: center;
+}
+.ctx {
+  position: fixed;
+  min-width: 222px;
+  padding: 5px;
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+}
+.ctx__head {
+  padding: 6px 9px 7px;
+  font-family: var(--f-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-low);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+.ctx__i {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-mid);
+  white-space: nowrap;
+  text-align: left;
+}
+.ctx__i:hover {
+  background: var(--ink-750);
+  color: var(--text-hi);
+}
+.ctx__i .icon {
+  width: 13px;
+  height: 13px;
+  color: var(--text-low);
+}
+.ctx__i--danger {
+  color: #d98a87;
+}
+.ctx__i--danger:hover {
+  background: rgba(217, 83, 79, 0.14);
+  color: #f0a7a4;
+}
+.pop {
+  width: 360px;
+  padding: 14px;
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pop h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.pop p {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-mid);
+}
+.pop__note {
+  color: var(--text-low) !important;
+}
+.pop__acts {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.pop__list {
+  max-height: 240px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 4px;
+}
+.pop__fi {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--text-mid);
+  white-space: nowrap;
+  text-align: left;
+}
+.pop__fi:hover {
+  background: var(--ink-750);
+  color: var(--text-hi);
+}
+.pop__fi span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pop__fi .icon {
+  width: 12px;
+  height: 12px;
+}

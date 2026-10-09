@@ -3,7 +3,7 @@ import { referenceTree, referenceViews } from '../tree/fixture';
 import { commandsFor } from './commands';
 import { applyChanges, fromTree, viewDocOf } from './doc';
 import { invert } from './history';
-import { deleteObjects, placeElement, removeFromView } from './ops';
+import { createFolder, deleteObjects, isSystemFolder, moveItems, placeElement, removeFromView, rootOf } from './ops';
 
 function docWithViews() {
   const doc = fromTree(referenceTree);
@@ -63,5 +63,40 @@ describe('UI-001: узел — размещение, а не копия элем
     const node = edit.changes[0]!.after as { archiId: string; x: number };
     expect(node.archiId).toMatch(/^id-[0-9a-f]{32}$/);
     expect(node.x).toBe(10);
+  });
+});
+
+describe('UI-016: правка дерева', () => {
+  it('перенос меняет папку, но не порядок соседей', () => {
+    const doc = docWithViews();
+    const element = Object.values(doc.elements).find((e) => doc.folders[e.folderId]?.parentId)!;
+    const root = rootOf(doc, element.id)!;
+    const others = Object.values(doc.elements).filter((e) => e.folderId === element.folderId && e.id !== element.id);
+    const edit = moveItems(doc, [element.id], root)!;
+    const after = applyChanges(doc, edit.changes);
+    expect(after.elements[element.id]!.folderId).toBe(root);
+    for (const sibling of others) expect(after.elements[sibling.id]!.sortOrder).toBe(sibling.sortOrder);
+  });
+
+  it('INV-MDL-009: элемент не переносится в чужой корень', () => {
+    const doc = docWithViews();
+    const element = Object.values(doc.elements).find((e) => e.layer === 'APPLICATION')!;
+    const business = Object.values(doc.folders).find((f) => f.folderType === 'BUSINESS')!;
+    expect(moveItems(doc, [element.id], business.id)).toBeNull();
+  });
+
+  it('INV-MDL-009: системную папку не перенести', () => {
+    const doc = docWithViews();
+    const roots = Object.values(doc.folders).filter((f) => !f.parentId);
+    expect(isSystemFolder(doc, roots[0]!.id)).toBe(true);
+    expect(moveItems(doc, [roots[0]!.id], roots[1]!.id)).toBeNull();
+  });
+
+  it('новая папка — в конце родителя, на сервер с идентификаторами клиента', () => {
+    const doc = docWithViews();
+    const root = Object.values(doc.folders).find((f) => f.folderType === 'APPLICATION')!;
+    const edit = createFolder(doc, root.id, 'Новая');
+    const [command] = edit.changes.flatMap((c) => commandsFor(doc.model.id, c));
+    expect(command!.describe).toBe(`create folder ${edit.folderId}`);
   });
 });

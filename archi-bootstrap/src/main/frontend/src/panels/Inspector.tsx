@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useCanEdit } from '../app/session';
+import { useUi } from '../app/uiState';
 import { layerToken } from '../canvas/style';
 import { layerName, t } from '../i18n';
 import { useEditor } from '../model/store';
@@ -20,6 +21,10 @@ export function Inspector({ defaultTab }: { defaultTab: InspectorTab }) {
   const doc = useEditor((s) => s.doc!);
   const canEdit = useCanEdit();
   useEffect(() => setTab(defaultTab), [defaultTab]);
+  const request = useUi((s) => s.inspectorRequest);
+  useEffect(() => {
+    if (request) setTab(request.tab);
+  }, [request]);
 
   const single = ids.length === 1 ? ids[0]! : undefined;
   const element = single ? doc.elements[single] : undefined;
