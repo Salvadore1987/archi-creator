@@ -1,0 +1,64 @@
+.palette-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+}
+.palette__hint {
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+.layer-switch {
+  display: flex;
+  gap: 3px;
+  padding: 8px 8px 0;
+}
+.palette {
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  height: 170px;
+  overflow: auto;
+  align-content: start;
+}
+.pal {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 7px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  color: var(--text-mid);
+  cursor: grab;
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pal:hover {
+  background: var(--ink-750);
+  border-color: var(--line);
+  color: var(--text-hi);
+}
+.pal--off {
+  cursor: default;
+  opacity: 0.5;
+}
+.pal__dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  border: 1px solid var(--bd);
+  color: var(--bd);
+  --icon-cutout: var(--bg);
+}
+.pal__dot .icon {
+  width: 11px;
+  height: 11px;
+}
