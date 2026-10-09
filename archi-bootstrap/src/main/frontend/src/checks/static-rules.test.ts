@@ -44,8 +44,12 @@ describe('UI-021: пользовательский текст — в ресур�
   const components = files(SRC, ['.tsx']);
 
   it('в JSX нет текста между тегами', () => {
-    // Текст узла JSX — буквы вне фигурных скобок между > и <.
-    expect(violations(components, />[^<>{}]*[A-Za-zА-Яа-яЁё][^<>{}]*</, isComment)).toEqual([]);
+    // Текст узла JSX — буквы между открывающим тегом и закрывающим.
+    const inline = /<[A-Za-z][\w.]*(\s[^<>]*)?>[^<>{}]*[A-Za-zА-Яа-яЁё][^<>{}]*<\//;
+    // Текст на отдельной строке внутри разметки — кириллица без синтаксиса кода.
+    const standalone = /^\s*[А-Яа-яЁё][^{}<>;=()'"`]*$/;
+    expect(violations(components, inline, isComment)).toEqual([]);
+    expect(violations(components, standalone, isComment)).toEqual([]);
   });
 
   it('подсказки и подписи атрибутов — тоже из ресурсов', () => {

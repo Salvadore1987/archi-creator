@@ -40,15 +40,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-collaboration",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "application"
@@ -57,15 +57,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-component",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "application"
@@ -74,15 +74,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-event",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "application"
@@ -91,15 +91,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-function",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "application"
@@ -108,15 +108,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-interaction",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "application"
@@ -125,15 +125,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-interface",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "application"
@@ -142,15 +142,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-process",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "application"
@@ -159,15 +159,15 @@
       "outline": "stadium",
       "corner_icon": {
         "sprite_id": "i-service",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 16,
-        "y": 6,
-        "width": -40,
-        "height": -12
+        "x": 14,
+        "y": 5,
+        "width": -24,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "application"
@@ -176,15 +176,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-artifact",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "technology"
@@ -193,15 +193,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-actor",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "business"
@@ -210,15 +210,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-collaboration",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "business"
@@ -227,15 +227,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-event",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "business"
@@ -244,15 +244,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-function",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "business"
@@ -261,15 +261,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-interaction",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "business"
@@ -278,15 +278,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-interface",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "business"
@@ -295,15 +295,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-object",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "business"
@@ -312,15 +312,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-process",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "business"
@@ -329,15 +329,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-role",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "business"
@@ -346,15 +346,15 @@
       "outline": "stadium",
       "corner_icon": {
         "sprite_id": "i-service",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 16,
-        "y": 6,
-        "width": -40,
-        "height": -12
+        "x": 14,
+        "y": 5,
+        "width": -24,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "business"
@@ -363,15 +363,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-network",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "technology"
@@ -380,15 +380,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-contract",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "business"
@@ -397,15 +397,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-object",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "application"
@@ -414,15 +414,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-device",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "technology"
@@ -431,15 +431,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-view-ref",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "other"
@@ -460,8 +460,8 @@
       "outline": "tab",
       "corner_icon": {
         "sprite_id": "i-grouping",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
@@ -485,15 +485,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-location",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "other"
@@ -502,15 +502,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-node",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "technology"
@@ -531,15 +531,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-path",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "technology"
@@ -548,15 +548,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-product",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "business"
@@ -565,15 +565,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-representation",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "business"
@@ -582,15 +582,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-system-software",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "technology"
@@ -599,15 +599,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-collaboration",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "technology"
@@ -616,15 +616,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-event",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "technology"
@@ -633,15 +633,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-function",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "technology"
@@ -650,15 +650,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-interaction",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "technology"
@@ -667,15 +667,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-interface",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius",
       "layer": "technology"
@@ -684,15 +684,15 @@
       "outline": "rect",
       "corner_icon": {
         "sprite_id": "i-process",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 10,
-        "y": 6,
-        "width": -36,
-        "height": -12
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "technology"
@@ -701,15 +701,15 @@
       "outline": "stadium",
       "corner_icon": {
         "sprite_id": "i-service",
-        "x": -23,
-        "y": 7,
+        "x": -21,
+        "y": 6,
         "size": 14
       },
       "label_box": {
-        "x": 16,
-        "y": 6,
-        "width": -40,
-        "height": -12
+        "x": 14,
+        "y": 5,
+        "width": -24,
+        "height": -10
       },
       "radius_token": "node_radius_round",
       "layer": "technology"
@@ -719,15 +719,15 @@
     "outline": "stub",
     "corner_icon": {
       "sprite_id": "i-stub",
-      "x": -23,
-      "y": 7,
+      "x": -21,
+      "y": 6,
       "size": 14
     },
     "label_box": {
-      "x": 10,
-      "y": 6,
-      "width": -36,
-      "height": -12
+      "x": 8,
+      "y": 5,
+      "width": -22,
+      "height": -10
     },
     "radius_token": "node_radius",
     "layer": null,

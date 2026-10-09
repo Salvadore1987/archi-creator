@@ -8,6 +8,7 @@ import './canvas/canvas.css';
 import { App } from './app/App';
 import { initAuth } from './auth/session';
 import { t } from './i18n';
+import { useEditor } from './model/store';
 
 const root = document.getElementById('root');
 if (!root) {
@@ -31,6 +32,12 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// В разработке документ сессии виден из консоли и из E2E — состояние
+// проверяется напрямую, а не по пикселям.
+if (import.meta.env.DEV) {
+  (window as unknown as { __archiEditor: typeof useEditor }).__archiEditor = useEditor;
+}
 
 const reactRoot = createRoot(root);
 
