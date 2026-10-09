@@ -103,21 +103,24 @@ public final class Dtos {
     public record LabelRequest(String label) {
     }
 
-    public record CreateElementRequest(String archiType, String name, UUID folderId) {
+    /** {@code id} и {@code archiId} задаёт клиент, который ссылается на объект до ответа; без них — сервер. */
+    public record CreateElementRequest(String archiType, String name, UUID folderId, UUID id, String archiId) {
     }
 
     /** {@code properties}: {@code null} — не менять, пустой список — снять все. */
     public record ElementPatch(String name, String documentation, List<PropertyDto> properties) {
     }
 
-    public record EdgePlacementRequest(UUID viewId, UUID sourceNodeId, UUID targetNodeId) {
+    public record EdgePlacementRequest(UUID viewId, UUID sourceNodeId, UUID targetNodeId, UUID edgeId,
+                                       String edgeArchiId) {
     }
 
     public record CreateRelationshipRequest(String archiType, UUID sourceId, UUID targetId, String name,
-                                            EdgePlacementRequest view) {
+                                            EdgePlacementRequest view, UUID id, String archiId, UUID folderId,
+                                            String accessType, Boolean directed) {
     }
 
-    public record CreateFolderRequest(UUID parentId, String name) {
+    public record CreateFolderRequest(UUID parentId, String name, UUID id, String archiId) {
     }
 
     public record RenameRequest(String name) {
@@ -129,10 +132,16 @@ public final class Dtos {
     public record ItemsRequest(List<UUID> itemIds) {
     }
 
-    public record CreateViewRequest(String name, UUID folderId) {
+    public record CreateViewRequest(String name, UUID folderId, UUID id, String archiId) {
     }
 
-    public record PlaceNodeRequest(UUID elementId, int x, int y, Integer width, Integer height, UUID parentId) {
+    public record PlaceNodeRequest(UUID elementId, int x, int y, Integer width, Integer height, UUID parentId,
+                                   UUID id, String archiId) {
+    }
+
+    /** Ребро уже существующей связи: концы — узлы или рёбра того же представления. */
+    public record PlaceEdgeRequest(UUID id, String archiId, UUID relationshipId, UUID sourceId, UUID targetId,
+                                   List<BendpointDto> bendpoints) {
     }
 
     public record NodeBounds(UUID id, int x, int y, int width, int height) {

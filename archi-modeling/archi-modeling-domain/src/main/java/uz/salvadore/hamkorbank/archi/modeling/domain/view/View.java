@@ -173,6 +173,16 @@ public final class View {
      */
     public Created<ViewEdge> connect(ArchitectureModel model, RelationshipId relationshipId, ViewEndpoint source,
                                      ViewEndpoint target, ViewEdgeId newId, ArchiId newArchiId) {
+        return connect(model, relationshipId, source, target, List.of(), newId, newArchiId);
+    }
+
+    /**
+     * То же с точками перегиба нового ребра. Ребро встаёт в конец содержимого источника;
+     * такое же ребро между теми же концами уже есть — возвращается оно, точки не меняются.
+     */
+    public Created<ViewEdge> connect(ArchitectureModel model, RelationshipId relationshipId, ViewEndpoint source,
+                                     ViewEndpoint target, List<Bendpoint> bendpoints, ViewEdgeId newId,
+                                     ArchiId newArchiId) {
         requireEditable();
         Relationship relationship = model.requireRelationship(relationshipId);
         requireEndpoint(source, newArchiId);
@@ -189,7 +199,7 @@ public final class View {
         }
         requireFreeArchiId(newArchiId);
         ViewEdge edge = new ViewEdge(newId, newArchiId, DiagramType.CONNECTION, Optional.of(relationshipId), source,
-                target, List.of(), StyleOverride.NONE, nextOrderIn(Optional.of(source)), Optional.empty());
+                target, bendpoints, StyleOverride.NONE, nextOrderIn(Optional.of(source)), Optional.empty());
         edges.put(edge.id(), edge);
         return new Created<>(edge, true);
     }
@@ -303,12 +313,17 @@ public final class View {
     }
 
     private void requireFreeArchiId(ArchiId candidate) {
-        if (candidate.equals(archiId)
-                || nodes.values().stream().anyMatch(n -> n.archiId().equals(candidate))
-                || edges.values().stream().anyMatch(e -> e.archiId().equals(candidate))) {
+        if (archiIdTaken(candidate)) {
             throw new ModelingException("INV-MDL-001", Failure.CONFLICT,
                     "archi_id " + candidate + " уже занят на представлении " + archiId);
         }
+    }
+
+    /** Занят ли {@code archiId} самим представлением, его узлом или ребром. */
+    public boolean archiIdTaken(ArchiId candidate) {
+        return candidate.equals(archiId)
+                || nodes.values().stream().anyMatch(n -> n.archiId().equals(candidate))
+                || edges.values().stream().anyMatch(e -> e.archiId().equals(candidate));
     }
 
     /** Глубина вложенности; цикл в родителях — нарушение целостности. */

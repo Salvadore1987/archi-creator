@@ -30,16 +30,19 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.ModelAccessList;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotencyRecord;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.Workspace;
@@ -113,6 +116,22 @@ final class InMemoryPorts {
         public Optional<ModelId> ownerOf(UUID objectId) {
             return models.values().stream().filter(m -> m.elements().contains(ElementId.of(objectId))
                     || m.relationships().contains(RelationshipId.of(objectId))).map(ArchitectureModel::id).findFirst();
+        }
+
+        @Override
+        public boolean idTaken(UUID id) {
+            return models.values().stream().anyMatch(m -> m.folders().contains(FolderId.of(id))
+                    || m.elements().contains(ElementId.of(id)) || m.relationships().contains(RelationshipId.of(id)))
+                    || views.containsKey(ViewId.of(id))
+                    || views.values().stream().anyMatch(v -> v.nodes().contains(ViewNodeId.of(id))
+                    || v.edges().contains(ViewEdgeId.of(id)));
+        }
+
+        @Override
+        public boolean diagramArchiIdTaken(ModelId modelId, ArchiId archiId) {
+            return views.values().stream().filter(v -> v.modelId().equals(modelId))
+                    .anyMatch(v -> v.nodes().values().stream().anyMatch(n -> n.archiId().equals(archiId))
+                            || v.edges().values().stream().anyMatch(e -> e.archiId().equals(archiId)));
         }
 
         @Override

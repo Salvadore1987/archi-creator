@@ -1,6 +1,6 @@
 ---
-version: 1.0
-last_modified: 2026-09-28
+version: 1.1
+last_modified: 2026-10-09
 bounded_context: modeling
 use_case: UC-MDL-006
 requirements: [FR-34, FR-36]
@@ -53,7 +53,8 @@ stages: ["2", "3"]
 ## Порты
 
 **Входящие:** `MoveToFolder(modelId, targetFolderId, itemIds)`,
-`RenameItem(itemId, name)`, `CreateFolder(parentFolderId, name)`,
+`RenameItem(itemId, name)`, `CreateFolder(parentFolderId, name, id?, archiId?)` — ключ
+и `archi_id` папки может задать клиент, проверка — как в `UC-MDL-002`,
 `DeleteItems(itemIds)`
 
 **Исходящие:** `FolderRepository`, `ElementRepository`,

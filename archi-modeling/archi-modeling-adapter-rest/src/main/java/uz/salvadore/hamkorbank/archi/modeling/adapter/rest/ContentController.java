@@ -31,6 +31,7 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.Relationship
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.RenameRequest;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.RequestedIds;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.TreeService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
@@ -38,6 +39,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ConceptKind;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationshipType;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.AccessType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
@@ -68,7 +70,8 @@ public class ContentController {
                                                     @RequestBody CreateElementRequest request,
                                                     @RequestHeader("Idempotency-Key") Optional<String> key) {
         var element = elements.create(actor, ModelId.of(id), archiType(request.archiType()), request.name(),
-                Optional.ofNullable(request.folderId()).map(FolderId::of), key);
+                Optional.ofNullable(request.folderId()).map(FolderId::of),
+                RequestedIds.of(request.id(), request.archiId()), key);
         return ResponseEntity.created(URI.create("/api/v1/elements/" + element.id())).body(DtoMapper.element(element));
     }
 
@@ -93,10 +96,14 @@ public class ContentController {
                                                               @RequestBody CreateRelationshipRequest request,
                                                               @RequestHeader("Idempotency-Key") Optional<String> key) {
         var placement = Optional.ofNullable(request.view()).map(v -> new RelationshipService.EdgePlacement(
-                ViewId.of(v.viewId()), v.sourceNodeId(), v.targetNodeId()));
+                ViewId.of(require(v.viewId(), "view.viewId")), require(v.sourceNodeId(), "view.sourceNodeId"),
+                require(v.targetNodeId(), "view.targetNodeId"), RequestedIds.of(v.edgeId(), v.edgeArchiId())));
+        var details = new RelationshipService.Details(Optional.ofNullable(request.name()),
+                Optional.ofNullable(request.folderId()).map(FolderId::of), accessType(request.accessType()),
+                Optional.ofNullable(request.directed()), RequestedIds.of(request.id(), request.archiId()));
         var result = relationships.create(actor, ModelId.of(id), archiType(request.archiType()),
-                require(request.sourceId(), "sourceId"), require(request.targetId(), "targetId"),
-                Optional.ofNullable(request.name()), placement, key);
+                require(request.sourceId(), "sourceId"), require(request.targetId(), "targetId"), details,
+                placement, key);
         RelationshipDto body = DtoMapper.relationship(result.relationship(),
                 result.edge().map(e -> e.value()).orElse(null));
         return result.created()
@@ -125,7 +132,7 @@ public class ContentController {
                                                   @RequestBody CreateFolderRequest request,
                                                   @RequestHeader("Idempotency-Key") Optional<String> key) {
         var folder = tree.createFolder(actor, ModelId.of(id), FolderId.of(require(request.parentId(), "parentId")),
-                request.name(), key);
+                request.name(), RequestedIds.of(request.id(), request.archiId()), key);
         return ResponseEntity.status(HttpStatus.CREATED).body(DtoMapper.folder(folder));
     }
 
@@ -179,6 +186,17 @@ public class ContentController {
             return ArchiType.of(value);
         } catch (IllegalArgumentException | NullPointerException invalid) {
             throw ModelingException.invalid("archiType вида archimate:<Имя>, получено: " + value);
+        }
+    }
+
+    private static Optional<AccessType> accessType(String value) {
+        if (value == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(AccessType.valueOf(value));
+        } catch (IllegalArgumentException invalid) {
+            throw ModelingException.invalid("accessType — WRITE, READ, ACCESS или READ_WRITE, получено: " + value);
         }
     }
 

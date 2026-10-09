@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.AccessPolicy;
@@ -22,6 +23,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiIdGenerator;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotencyRecord;
@@ -30,6 +32,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 
 /**
  * Общее у всех сценариев modeling: зависимости и порядок проверок записи.
@@ -116,6 +119,47 @@ public final class ModelingKernel {
 
     ArchiId newArchiId(ArchitectureModel model) {
         return archiIds.nextUnique(model::archiIdTaken);
+    }
+
+    /** Ключ нового объекта: заданный клиентом — если свободен, иначе следующий UUIDv7. */
+    UUID newId(RequestedIds requested) {
+        requested.id().ifPresent(id -> {
+            if (models.idTaken(id)) {
+                throw new ModelingException(ModelingException.Codes.ID_TAKEN, Failure.CONFLICT,
+                        "ключ " + id + " уже занят");
+            }
+        });
+        return requested.id().orElseGet(uuids::next);
+    }
+
+    /**
+     * {@code archiId} нового объекта модели. Заданный клиентом проверяется по формату
+     * и по всему, что попадёт в тот же файл: концептам, папкам, представлениям, их узлам и рёбрам.
+     */
+    ArchiId newArchiId(ArchitectureModel model, RequestedIds requested) {
+        return requested.archiId().map(value -> requireFree(model, Optional.empty(), value))
+                .orElseGet(() -> newArchiId(model));
+    }
+
+    /** {@code archiId} нового узла или ребра: свободен и в модели, и на представлении. */
+    ArchiId newArchiId(ArchitectureModel model, View view, RequestedIds requested) {
+        return requested.archiId().map(value -> requireFree(model, Optional.of(view), value))
+                .orElseGet(() -> archiIds.nextUnique(id -> model.archiIdTaken(id) || view.archiIdTaken(id)));
+    }
+
+    private ArchiId requireFree(ArchitectureModel model, Optional<View> view, String value) {
+        ArchiId candidate;
+        try {
+            candidate = ArchiId.of(value);
+        } catch (IllegalArgumentException invalid) {
+            throw ModelingException.invalid("archiId '" + value + "' недопустим как идентификатор Archi");
+        }
+        if (model.archiIdTaken(candidate) || view.filter(v -> v.archiIdTaken(candidate)).isPresent()
+                || models.diagramArchiIdTaken(model.id(), candidate)) {
+            throw new ModelingException(ModelingException.Codes.ID_TAKEN, Failure.CONFLICT,
+                    "archiId " + candidate + " уже занят в модели " + model.id());
+        }
+        return candidate;
     }
 
     /**

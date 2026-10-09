@@ -25,6 +25,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentModific
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedMap;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
@@ -162,6 +163,30 @@ public class JpaModelStore implements ModelRepository, ViewRepository {
                         """)
                 .setParameter("id", objectId).getResultList();
         return owners.stream().findFirst().map(o -> ModelId.of((UUID) o));
+    }
+
+    @Override
+    public boolean idTaken(UUID id) {
+        return !em.createNativeQuery("""
+                        select 1 from model_folder where id = :id
+                        union all select 1 from element where id = :id
+                        union all select 1 from relationship where id = :id
+                        union all select 1 from view where id = :id
+                        union all select 1 from view_node where id = :id
+                        union all select 1 from view_edge where id = :id
+                        limit 1
+                        """)
+                .setParameter("id", id).getResultList().isEmpty();
+    }
+
+    @Override
+    public boolean diagramArchiIdTaken(ModelId modelId, ArchiId archiId) {
+        return !em.createNativeQuery("""
+                        select 1 from view_node where model_id = :m and archi_id = :a
+                        union all select 1 from view_edge where model_id = :m and archi_id = :a
+                        limit 1
+                        """)
+                .setParameter("m", modelId.value()).setParameter("a", archiId.value()).getResultList().isEmpty();
     }
 
     @Override

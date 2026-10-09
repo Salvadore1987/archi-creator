@@ -38,13 +38,19 @@ public final class TreeService {
 
     public ModelFolder createFolder(EditorIdentity actor, ModelId modelId, FolderId parentId, String name,
                                     Optional<String> idempotencyKey) {
+        return createFolder(actor, modelId, parentId, name, RequestedIds.NONE, idempotencyKey);
+    }
+
+    /** То же с идентификаторами, которые выбрал клиент; занятые — {@code 409}. */
+    public ModelFolder createFolder(EditorIdentity actor, ModelId modelId, FolderId parentId, String name,
+                                    RequestedIds ids, Optional<String> idempotencyKey) {
         return kernel.run(Operation.REORGANIZE_TREE, actor, () -> kernel.unitOfWork.write(() ->
                 kernel.idempotent("CreateFolder", actor, idempotencyKey,
-                        IdempotentCommand.fingerprint(modelId, parentId, name),
+                        IdempotentCommand.fingerprint(modelId, parentId, name, ids.id(), ids.archiId()),
                         () -> {
                             ArchitectureModel model = kernel.writableModel(modelId, actor);
-                            ModelFolder folder = model.createFolder(parentId, name, FolderId.next(kernel.uuids),
-                                    kernel.newArchiId(model), kernel.now());
+                            ModelFolder folder = model.createFolder(parentId, name, FolderId.of(kernel.newId(ids)),
+                                    kernel.newArchiId(model, ids), kernel.now());
                             kernel.save(model);
                             return folder.id().toString();
                         },
