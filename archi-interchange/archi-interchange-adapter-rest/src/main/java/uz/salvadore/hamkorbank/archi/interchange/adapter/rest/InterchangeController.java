@@ -28,7 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.FindingDto;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportResult;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportSettings;
-import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
+import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportReport;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportService;
@@ -38,10 +38,11 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessag
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
+import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
  * Импорт и экспорт {@code .archimate}, строгость импорта пространства.
@@ -74,7 +75,7 @@ public class InterchangeController {
                                         @RequestHeader("Idempotency-Key") Optional<String> key,
                                         HttpServletRequest request) {
         ImportReport report = imports.importFile(actor, workspace(workspaceId),
-                Optional.ofNullable(file.getOriginalFilename()).filter(n -> !n.isBlank()).orElse("model.archimate"),
+                ImportRequest.sourceNameOrDefault(Optional.ofNullable(file.getOriginalFilename())),
                 bytes(file), key);
         ImportResult body = result(report, text);
         if (report.status() == ImportStatus.APPLIED) {
@@ -93,25 +94,17 @@ public class InterchangeController {
 
     /**
      * Выгрузка зафиксированной версии: {@code version} — номер, без него —
-     * последняя. Форматы {@code archimate} и {@code csv} ({@code folder} — archi_id
-     * папки, {@code sep} — разделитель); OEF придёт на этапе 6a.
+     * последняя; {@code folder} и {@code sep} — параметры каталога CSV. Какие форматы
+     * доступны и чем обслуживаются, решает сервис выгрузки — адаптер только
+     * собирает запрос.
      */
     @GetMapping("/models/{id}/export")
     public ResponseEntity<byte[]> export(EditorIdentity actor, @PathVariable UUID id,
-                                         @RequestParam(defaultValue = "archimate") String fmt,
+                                         @RequestParam(defaultValue = ExportService.FORMAT_ARCHIMATE) String fmt,
                                          @RequestParam Optional<Long> version,
                                          @RequestParam Optional<String> folder,
                                          @RequestParam Optional<String> sep) {
-        ExportService.Export export = switch (fmt) {
-            case "archimate" -> exports.archimate(actor, id, version);
-            case "csv" -> exports.catalogCsv(actor, id, version,
-                    uz.salvadore.hamkorbank.archi.interchange.application.exporting.CatalogCsvOptions.of(sep, folder));
-            case "oef" -> throw new InterchangeException(InterchangeCodes.FORMAT_NOT_AVAILABLE, Failure.UNPROCESSABLE,
-                    Message.of(InterchangeMessages.FORMAT_NOT_AVAILABLE), Map.of("format", fmt));
-            default -> throw new InterchangeException(InterchangeCodes.UNKNOWN_FORMAT, Failure.UNPROCESSABLE,
-                    Message.of(InterchangeMessages.UNKNOWN_FORMAT, fmt), Map.of("format", fmt));
-        };
-        return artifact(export);
+        return artifact(exports.export(actor, id, new ExportRequest(fmt, version, sep, folder)));
     }
 
     @GetMapping("/workspaces/{id}/import-settings")
@@ -138,7 +131,7 @@ public class InterchangeController {
     }
 
     private UUID workspace(Optional<UUID> requested) {
-        return requested.orElseGet(() -> workspaces.list().getFirst().id().value());
+        return workspaces.resolve(requested.map(WorkspaceId::of)).value();
     }
 
     private static byte[] bytes(MultipartFile file) {

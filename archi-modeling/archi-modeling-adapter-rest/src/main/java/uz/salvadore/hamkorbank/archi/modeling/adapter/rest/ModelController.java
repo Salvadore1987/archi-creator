@@ -160,7 +160,6 @@ public class ModelController {
     }
 
     private WorkspaceId workspace(Optional<UUID> requested) {
-        return requested.map(WorkspaceId::of).orElseGet(() -> workspaces.list().stream().findFirst()
-                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.ANY_WORKSPACE))).id());
+        return workspaces.resolve(requested.map(WorkspaceId::of));
     }
 }

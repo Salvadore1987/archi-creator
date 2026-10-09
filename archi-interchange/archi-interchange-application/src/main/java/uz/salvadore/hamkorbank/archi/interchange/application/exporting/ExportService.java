@@ -2,12 +2,17 @@ package uz.salvadore.hamkorbank.archi.interchange.application.exporting;
 
 import java.time.Clock;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeOperation;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeEvents;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMetrics;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportCompleted;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportFormat;
@@ -21,6 +26,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionSnapshot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
 /**
  * Экспорт модели в {@code .archimate} по зафиксированной версии.
@@ -32,6 +38,16 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 public final class ExportService {
 
     public static final String ARCHIMATE_MEDIA_TYPE = "application/xml";
+
+    /** Имена форматов в запросе — как в контракте API; формат по умолчанию — файл модели. */
+    public static final String FORMAT_ARCHIMATE = "archimate";
+    public static final String FORMAT_CSV = "csv";
+    public static final String FORMAT_OEF = "oef";
+
+    private static final Map<String, ExportFormat> FORMATS = Map.of(
+            FORMAT_ARCHIMATE, ExportFormat.ARCHIMATE,
+            FORMAT_CSV, ExportFormat.CSV_CATALOG,
+            FORMAT_OEF, ExportFormat.OPEN_EXCHANGE);
 
     private final VersionService versions;
     private final InterchangeEvents events;
@@ -52,6 +68,25 @@ public final class ExportService {
 
     /** Результат выгрузки: файл и версия, из которой он собран. */
     public record Export(Artifact artifact, long versionNo) {
+    }
+
+    /**
+     * Выгрузка по запросу клиента. Здесь решается, какой формат поддержан и чем он
+     * обслуживается: неизвестное имя — отказ {@code IXC_UNKNOWN_FORMAT}, известный, но ещё
+     * не реализованный формат — {@code IXC_FORMAT_NOT_AVAILABLE}. Оба — до чтения модели.
+     */
+    public Export export(EditorIdentity actor, UUID modelId, ExportRequest request) {
+        ExportFormat format = Optional.ofNullable(FORMATS.get(request.format()))
+                .orElseThrow(() -> new InterchangeException(InterchangeCodes.UNKNOWN_FORMAT, Failure.UNPROCESSABLE,
+                        Message.of(InterchangeMessages.UNKNOWN_FORMAT, request.format()),
+                        Map.of("format", request.format())));
+        return switch (format) {
+            case ARCHIMATE -> archimate(actor, modelId, request.versionNo());
+            case CSV_CATALOG -> catalogCsv(actor, modelId, request.versionNo(),
+                    CatalogCsvOptions.of(request.separator(), request.folderArchiId()));
+            default -> throw new InterchangeException(InterchangeCodes.FORMAT_NOT_AVAILABLE, Failure.UNPROCESSABLE,
+                    Message.of(InterchangeMessages.FORMAT_NOT_AVAILABLE), Map.of("format", request.format()));
+        };
     }
 
     public Export archimate(EditorIdentity actor, UUID modelId, Optional<Long> versionNo) {

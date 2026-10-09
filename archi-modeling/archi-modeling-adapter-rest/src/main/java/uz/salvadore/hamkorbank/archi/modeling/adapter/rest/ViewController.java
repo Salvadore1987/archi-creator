@@ -48,9 +48,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 @RequestMapping("/api/v1")
 public class ViewController {
 
-    /** Размер нового узла по умолчанию — как у Archi. */
-    private static final int DEFAULT_WIDTH = 120;
-    private static final int DEFAULT_HEIGHT = 55;
     /** Поля запроса по их именам в JSON — в сообщении о том, чего не хватает. */
     private static final String ELEMENT_ID = "elementId";
     private static final String EDGE_FIELDS = "relationshipId, sourceId, targetId";
@@ -98,8 +95,8 @@ public class ViewController {
             throw ModelingException.invalid(Message.of(ModelingMessages.FIELD_MISSING, ELEMENT_ID));
         }
         var node = views.place(actor, ViewId.of(id), ElementId.of(request.elementId()),
-                bounds(request.x(), request.y(), Optional.ofNullable(request.width()).orElse(DEFAULT_WIDTH),
-                        Optional.ofNullable(request.height()).orElse(DEFAULT_HEIGHT)),
+                newElementBounds(request.x(), request.y(), Optional.ofNullable(request.width()),
+                        Optional.ofNullable(request.height())),
                 Optional.ofNullable(request.parentId()).map(ViewNodeId::of),
                 RequestedIds.of(request.id(), request.archiId()));
         ViewNodeDto body = DtoMapper.node(node.value());
@@ -131,6 +128,14 @@ public class ViewController {
     private static List<Bendpoint> bendpoints(List<BendpointDto> points) {
         return Optional.ofNullable(points).orElse(List.of()).stream()
                 .map(b -> new Bendpoint(b.startX(), b.startY(), b.endX(), b.endY())).toList();
+    }
+
+    private static Bounds newElementBounds(int x, int y, Optional<Integer> width, Optional<Integer> height) {
+        try {
+            return Bounds.ofNewElement(x, y, width, height);
+        } catch (IllegalArgumentException invalid) {
+            throw ModelingException.invalid(invalid);
+        }
     }
 
     private static Bounds bounds(int x, int y, int width, int height) {
