@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,6 +25,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.FindingDto;
+import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportResult;
+import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportSettings;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportReport;
@@ -52,17 +54,6 @@ public class InterchangeController {
         this.imports = imports;
         this.exports = exports;
         this.workspaces = workspaces;
-    }
-
-    /** Итог импорта: сессия, модель и отчёт — у принятого и у отклонённого. */
-    public record FindingDto(String severity, String code, String message, String archiId, Integer xmlLine) {
-    }
-
-    public record ImportResult(UUID sessionId, String status, UUID modelId, Long versionNo, boolean replayed,
-                               List<FindingDto> findings) {
-    }
-
-    public record ImportSettings(boolean strictImport) {
     }
 
     /**

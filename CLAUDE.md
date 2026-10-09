@@ -88,6 +88,11 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 Выгрузка отдаёт **снимок зафиксированной версии** (INV-IXC-008), собранный из базы при
 сохранении; правки без сохранения в файл не попадают.
 
+**DTO — в пакете `dto`, не внутри контроллера.** Формы запросов и ответов лежат
+в `…adapter.rest.dto` (в `archi-bootstrap` — `…bootstrap.<часть>.dto`); вложенный тип
+в `@RestController` или `@RestControllerAdvice` роняет сборку
+(`RestLayerConventionsTest`, ArchUnit).
+
 Application-слои без Spring: транзакция — порт `UnitOfWork`, события — после коммита,
 роль проверяется на границе use case'а по таблице `spec/nfr/<bc>.yaml`, а не URL.
 

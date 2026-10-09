@@ -13,6 +13,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import uz.salvadore.hamkorbank.archi.bootstrap.security.dto.SessionDtos.Me;
+import uz.salvadore.hamkorbank.archi.bootstrap.security.dto.SessionDtos.OidcConfig;
+import uz.salvadore.hamkorbank.archi.bootstrap.security.dto.SessionDtos.UiConfig;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 
 /**
@@ -30,17 +33,6 @@ public class SessionController {
 
     public SessionController(UiSettings settings) {
         this.settings = settings;
-    }
-
-    /** Текущий пользователь; роли — из полномочий {@code ROLE_*}, в порядке VIEWER, ARCHITECT, ADMIN. */
-    public record Me(String subject, String displayName, List<String> roles) {
-    }
-
-    /** Без поля {@code oidc} — входа нет, запросы идут без токена. */
-    public record UiConfig(OidcConfig oidc) {
-    }
-
-    public record OidcConfig(String authority, String clientId) {
     }
 
     @GetMapping("/me")
