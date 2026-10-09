@@ -41,9 +41,14 @@ public final class Dtos {
     public record ViewSummary(UUID id, UUID folderId, String archiId, String archiType, String name, long sortOrder) {
     }
 
-    /** Дерево модели: папки, элементы, связи, список представлений (OpenModel). */
+    /** Дерево модели: папки, элементы, связи, список представлений и что на них размещено (OpenModel). */
     public record ModelTree(ModelSummary model, List<FolderDto> folders, List<ElementDto> elements,
-                            List<RelationshipDto> relationships, List<ViewSummary> views) {
+                            List<RelationshipDto> relationships, List<ViewSummary> views,
+                            List<PlacementDto> placements) {
+    }
+
+    /** Элементы с узлом и связи с ребром на одном представлении, без повторов. */
+    public record PlacementDto(UUID viewId, List<UUID> elementIds, List<UUID> relationshipIds) {
     }
 
     public record StyleDto(String fillColor, String font, String fontColor, String lineColor, Integer textAlignment) {

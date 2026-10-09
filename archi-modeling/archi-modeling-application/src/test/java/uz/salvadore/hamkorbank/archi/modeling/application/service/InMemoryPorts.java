@@ -27,6 +27,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelVersionRepos
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotWriter;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.ModelAccessList;
@@ -162,6 +163,17 @@ final class InMemoryPorts {
         @Override
         public Optional<ViewId> viewOfNode(ViewNodeId nodeId) {
             return views.values().stream().filter(v -> v.nodes().contains(nodeId)).map(View::id).findFirst();
+        }
+
+        @Override
+        public List<ViewPlacements> placements(ModelId modelId) {
+            return views.values().stream().filter(v -> v.modelId().equals(modelId))
+                    .map(v -> new ViewPlacements(v.id(),
+                            v.nodes().values().stream().flatMap(n -> n.elementId().stream()).distinct().toList(),
+                            v.edges().values().stream().flatMap(e -> e.relationshipId().stream()).distinct()
+                                    .toList()))
+                    .filter(p -> !p.elementIds().isEmpty() || !p.relationshipIds().isEmpty())
+                    .toList();
         }
 
         @Override

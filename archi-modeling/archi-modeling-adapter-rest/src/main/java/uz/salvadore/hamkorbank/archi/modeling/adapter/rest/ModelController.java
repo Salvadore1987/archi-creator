@@ -79,7 +79,7 @@ public class ModelController {
 
     @GetMapping("/models/{id}")
     public ModelTree open(EditorIdentity actor, @PathVariable UUID id) {
-        return DtoMapper.tree(queries.open(actor, ModelId.of(id)));
+        return DtoMapper.tree(queries.openWithPlacements(actor, ModelId.of(id)));
     }
 
     @PatchMapping("/models/{id}")

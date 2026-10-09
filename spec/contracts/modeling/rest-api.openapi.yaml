@@ -101,7 +101,7 @@ paths:
     get:
       tags: [models]
       operationId: openModel
-      summary: Дерево модели — папки, элементы, связи, список представлений
+      summary: Дерево модели — папки, элементы, связи, представления и размещения на них
       x-use-case: UC-MDL-001
       x-operation: OpenModel
       responses:
@@ -930,6 +930,27 @@ components:
         elements:      { type: array, items: { $ref: '#/components/schemas/Element' } }
         relationships: { type: array, items: { $ref: '#/components/schemas/Relationship' } }
         views:         { type: array, items: { $ref: '#/components/schemas/ViewSummary' } }
+        placements:
+          type: array
+          description: |
+            Что где размещено — для маркеров «не размещён» и «×N» в дереве, его фильтров
+            и списка представлений в «Описании» элемента. По записи на каждое представление
+            из `views`, в том же порядке; пустое представление — с пустыми списками.
+          items: { $ref: '#/components/schemas/Placement' }
+
+    Placement:
+      type: object
+      required: [viewId, elementIds, relationshipIds]
+      properties:
+        viewId:          { type: string, format: uuid }
+        elementIds:
+          type: array
+          description: Элементы, у которых есть узел на представлении; каждый один раз, сколько бы узлов ни было.
+          items: { type: string, format: uuid }
+        relationshipIds:
+          type: array
+          description: Связи, у которых есть ребро на представлении; каждая один раз.
+          items: { type: string, format: uuid }
 
     Style:
       type: object
