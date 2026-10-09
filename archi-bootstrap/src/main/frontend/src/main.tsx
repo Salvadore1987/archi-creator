@@ -1,9 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { App } from './App';
 import 'virtual:design-tokens.css';
-import './index.css';
+import '@xyflow/react/dist/base.css';
+import './app/app.css';
+import './canvas/canvas.css';
+import { App } from './app/App';
+import { initAuth } from './auth/session';
+import { t } from './i18n';
 
 const root = document.getElementById('root');
 if (!root) {
@@ -23,14 +27,24 @@ const queryClient = new QueryClient({
       // а не свежесть.
       refetchOnWindowFocus: false,
       staleTime: 30_000,
+      retry: 1,
     },
   },
 });
 
-createRoot(root).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
-  </StrictMode>,
-);
+const reactRoot = createRoot(root);
+
+initAuth()
+  .then((mode) =>
+    reactRoot.render(
+      <StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <App auth={mode} />
+        </QueryClientProvider>
+      </StrictMode>,
+    ),
+  )
+  .catch((error: unknown) => {
+    const reason = error instanceof Error ? error.message : String(error);
+    reactRoot.render(<div className="notice notice--error">{t('app.signInFailed', { reason })}</div>);
+  });

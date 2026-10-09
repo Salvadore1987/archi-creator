@@ -40,3 +40,17 @@ describe('UI-010: в компонентах канвы нет литералов
     expect(violations(canvas, /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/, isComment)).toEqual([]);
   });
 });
+describe('UI-021: пользовательский текст — в ресурсах, а не в разметке', () => {
+  const components = files(SRC, ['.tsx']);
+
+  it('в JSX нет текста между тегами', () => {
+    // Текст узла JSX — буквы вне фигурных скобок между > и <.
+    expect(violations(components, />[^<>{}]*[A-Za-zА-Яа-яЁё][^<>{}]*</, isComment)).toEqual([]);
+  });
+
+  it('подсказки и подписи атрибутов — тоже из ресурсов', () => {
+    expect(
+      violations(components, /\b(title|placeholder|aria-label|alt)="[^"]*[A-Za-zА-Яа-яЁё]/, isComment),
+    ).toEqual([]);
+  });
+});
