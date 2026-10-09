@@ -11,6 +11,9 @@ info:
     проверяется на границе use case'а, а не матчером URL. Наполнено на этапе 2
     (2026-10-08) по одному endpoint'у на экспонированный сценарий; до этого
     `paths` был пуст намеренно — endpoint без `UC-*` нарушал бы трассируемость.
+    Исключение — тег `session` (2026-10-09): `/me` и `/ui-config` — инфраструктура
+    входа, а не сценарий модели; у них нет ни `x-use-case`, ни `x-operation`, роль
+    не проверяется, реализация живёт в `archi-bootstrap`.
 
     Ошибки — `application/problem+json` (§8.1) с полем `code`: код инварианта
     (`INV-MDL-NNN`) или бизнес-ошибки (`RELATION_NOT_PERMITTED`, `MDL_*`).
@@ -37,6 +40,10 @@ tags:
     description: Представления и геометрия.
   - name: metamodel
     description: Каталог типов и матрица связей.
+  - name: session
+    description: |
+      Кто вошёл и как входить (FR-28, UI-015). Не сценарий модели: интерфейс строит
+      себя по роли и узнаёт адрес входа до того, как у него появится токен.
 
 paths:
 
@@ -767,6 +774,36 @@ paths:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/RelationType' } }
 
+  /me:
+    get:
+      tags: [session]
+      operationId: currentUser
+      summary: Текущий пользователь — субъект, имя для показа, роли
+      description: |
+        Роли — из полномочий `ROLE_*` текущей аутентификации: в `prod` — из
+        `realm_access.roles` токена Keycloak, в `dev` — заглушка `dev-architect` с ролью
+        `ARCHITECT`. `displayName` — claim `name`, иначе `preferred_username`, иначе `subject`.
+      responses:
+        '200':
+          description: Пользователь.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/CurrentUser' } }
+        '401': { description: Нет токена или он недействителен. }
+
+  /ui-config:
+    get:
+      tags: [session]
+      operationId: uiConfig
+      summary: Как входить — адрес Keycloak и клиент SPA; открыт без токена
+      security: []
+      responses:
+        '200':
+          description: |
+            В `prod` — объект `oidc`. В `dev` — `{}`: входа нет, запросы идут без токена
+            и приходят от заглушки `ARCHITECT`.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/UiConfig' } }
+
 # Ещё не здесь: POST /views/{id}/auto-layout — этап 4 (docs/backend.md §5).
 # Импорт и экспорт принадлежат BC interchange: contracts/interchange/rest-api.openapi.yaml.
 
@@ -1090,6 +1127,37 @@ components:
         principalType: { type: string, enum: [USER, GROUP] }
         principal:     { type: string, maxLength: 200 }
         access:        { type: string, enum: [READ, WRITE] }
+
+    CurrentUser:
+      type: object
+      required: [subject, displayName, roles]
+      properties:
+        subject:     { type: string, description: "`sub` токена; в dev — `dev-architect`." }
+        displayName: { type: string }
+        roles:
+          type: array
+          description: Порядок — VIEWER, ARCHITECT, ADMIN; только роли модели доступа.
+          items: { type: string, enum: [VIEWER, ARCHITECT, ADMIN] }
+
+    UiConfig:
+      type: object
+      properties:
+        oidc:
+          type: object
+          description: Нет поля — входа нет (профиль dev).
+          required: [authority, clientId]
+          properties:
+            authority:
+              type: string
+              format: uri
+              description: |
+                Адрес realm'а, видимый из браузера (`archi.ui.oidc.authority`, по умолчанию
+                `ARCHI_OIDC_PUBLIC_ISSUER_URI`, иначе issuer ресурс-сервера).
+              examples: ["http://localhost:8081/realms/archi"]
+            clientId:
+              type: string
+              description: Публичный клиент SPA (`archi.ui.oidc.client-id`).
+              examples: ["archi-creator-ui"]
 
     ElementType:
       type: object

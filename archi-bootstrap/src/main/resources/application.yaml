@@ -112,6 +112,15 @@ archi:
       # Пустой список = CORS закрыт. В dev список расширяется
       # адресом Vite dev-сервера.
       allowed-origins: []
+  ui:
+    oidc:
+      # Отдаётся фронтенду открытым GET /api/v1/ui-config: куда вести на вход.
+      enabled: true
+      # Адрес realm'а глазами браузера. Внутри сети приложение может ходить
+      # к Keycloak иначе, поэтому публичный адрес задаётся отдельно.
+      authority: ${ARCHI_OIDC_PUBLIC_ISSUER_URI:${spring.security.oauth2.resourceserver.jwt.issuer-uri}}
+      # Публичный клиент SPA из realm'а Keycloak.
+      client-id: archi-creator-ui
 
 logging:
   level:

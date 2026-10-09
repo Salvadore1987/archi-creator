@@ -21,6 +21,11 @@ spring:
     baseline-on-migrate: true
 
 archi:
+  ui:
+    oidc:
+      # Входа в dev нет: каждый запрос приходит от заглушки ARCHITECT,
+      # и фронтенд не уводит на Keycloak, которого не поднимали.
+      enabled: false
   web:
     cors:
       # Vite dev-сервер ходит на :8080 через прокси, но прямые запросы
