@@ -7,11 +7,11 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.UuidV7;
 
 /**
- * Приём файла на импорт с учётом идемпотентности (INV-IXC-003).
+ * Приём файла на импорт с учётом идемпотентности.
  *
  * <p>Тот же ключ и тот же файл — существующая сессия и её результат; новая модель не
  * создаётся, новая версия не пишется. Тот же ключ с другим отпечатком — конфликт.
- * Ретрай прокси на трёхсекундном импорте (NFR-02) иначе создал бы модель-двойник.
+ * Ретрай прокси на трёхсекундном импорте иначе создал бы модель-двойник.
  */
 public final class ImportIntake {
 

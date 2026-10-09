@@ -4,7 +4,7 @@ import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
-/** Не более одной блокировки на модель: первичный ключ — {@code model_id} (INV-MDL-006). */
+/** Не более одной блокировки на модель: первичный ключ — {@code model_id}. */
 public interface ModelLockRepository {
 
     Optional<ModelLock> find(ModelId modelId);

@@ -2,8 +2,12 @@ package uz.salvadore.hamkorbank.archi.modeling.application.service;
 
 import java.time.Clock;
 import java.util.List;
+import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.Workspace;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
@@ -26,6 +30,15 @@ public final class WorkspaceService {
 
     public List<Workspace> list() {
         return unitOfWork.read(workspaces::findAll);
+    }
+
+    /**
+     * Пространство команды: заданное клиентом — или первое, если клиент его не назвал.
+     * Пространств нет вовсе — отказ «не найдено», а не сбой.
+     */
+    public WorkspaceId resolve(Optional<WorkspaceId> requested) {
+        return requested.orElseGet(() -> list().stream().findFirst()
+                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.ANY_WORKSPACE))).id());
     }
 
     public Workspace ensureDefault(String name) {

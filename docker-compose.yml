@@ -1,14 +1,14 @@
 # ───────────────────────────────────────────────────────────────────
-# Состав — §10.1: app, postgres:16, keycloak:26.
+# Состав: app, postgres:16, keycloak:26.
 #
 # Порядок запуска: mvn clean package → docker compose build → up -d.
 # Образ приложения только упаковывает готовый jar (см. Dockerfile).
 #
-# Порты вынесены в переменные со значениями по умолчанию из §10.1:
+# Порты вынесены в переменные со значениями по умолчанию:
 # на машине разработчика 8080 и 5432 часто заняты соседним проектом,
 # и это не повод менять состав. Переопределяются через .env.
 #
-# Секреты — из .env (образец: .env.example), NFR-06.
+# Секреты — из .env (образец: .env.example).
 # ───────────────────────────────────────────────────────────────────
 name: archi-creator
 
@@ -82,6 +82,10 @@ services:
       # который видит браузер: ключи и доверие берутся из разных мест
       # намеренно — см. комментарий к KC_HOSTNAME выше.
       ARCHI_OIDC_ISSUER_URI: http://localhost:${ARCHI_KEYCLOAK_PORT:-8081}/realms/archi
+      # Куда фронтенд ведёт браузер на вход (GET /api/v1/ui-config). Здесь совпадает
+      # с issuer; отдельная переменная — на случай, когда браузер видит Keycloak
+      # по другому адресу, чем тот, что записан в iss.
+      ARCHI_OIDC_PUBLIC_ISSUER_URI: ${ARCHI_OIDC_PUBLIC_ISSUER_URI:-http://localhost:${ARCHI_KEYCLOAK_PORT:-8081}/realms/archi}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8081/realms/archi/protocol/openid-connect/certs
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:

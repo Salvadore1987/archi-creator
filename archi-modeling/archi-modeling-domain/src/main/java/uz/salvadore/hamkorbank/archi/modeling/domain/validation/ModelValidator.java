@@ -5,6 +5,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationMatrix;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationViolation;
@@ -15,12 +18,12 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.Relationship;
 
 /**
  * Отчёт валидации метамодели без ИИ ({@code GET /models/{id}/validate}). Здесь видны
- * нарушения, которые импорт принял, а не отклонил (FR-10, INV-MDL-007): рисовать такое
+ * нарушения, которые импорт принял, а не отклонил: рисовать такое
  * заново нельзя, но существующая модель обязана открываться.
  */
 public final class ModelValidator {
 
-    public static final String OPAQUE_CODE = "MDL_OPAQUE_OBJECT";
+    public static final String OPAQUE_CODE = ModelingCodes.OPAQUE_OBJECT;
 
     private final RelationMatrix matrix;
     private final ArchiTypeRegistry registry;
@@ -40,22 +43,22 @@ public final class ModelValidator {
             Optional<RelationViolation> violation = matrix.check(model.conceptType(relationship.source()),
                     model.conceptType(relationship.target()), relationship.archiType());
             violation.ifPresent(v -> findings.add(new ValidationFinding(Severity.ERROR, RelationViolation.CODE,
-                    "Связь " + v.relationship() + " от " + v.source().simpleName() + " к " + v.target().simpleName()
-                            + " не разрешена в ArchiMate 3.2",
+                    Message.of(ModelingMessages.VALIDATION_RELATION_NOT_PERMITTED, v.relationship(),
+                            v.source().simpleName(), v.target().simpleName()),
                     "RELATIONSHIP", relationship.archiId().value(), suggestion(v))));
         }
         for (Element element : model.elements().values()) {
             if (!element.supported()) {
                 findings.add(new ValidationFinding(Severity.INFO, OPAQUE_CODE,
-                        "Тип " + element.archiType().simpleName() + " хранится как есть и не редактируется "
-                                + "в текущей фазе метамодели",
+                        Message.of(ModelingMessages.VALIDATION_OPAQUE_ELEMENT, element.archiType().simpleName()),
                         "ELEMENT", element.archiId().value(), Optional.empty()));
             }
         }
         for (Relationship relationship : model.relationships().values()) {
             if (!relationship.supported() && registry.find(relationship.archiType()).isEmpty()) {
                 findings.add(new ValidationFinding(Severity.INFO, OPAQUE_CODE,
-                        "Тип связи " + relationship.archiType().simpleName() + " метамодели неизвестен",
+                        Message.of(ModelingMessages.VALIDATION_UNKNOWN_RELATIONSHIP,
+                                relationship.archiType().simpleName()),
                         "RELATIONSHIP", relationship.archiId().value(), Optional.empty()));
             }
         }
@@ -63,11 +66,11 @@ public final class ModelValidator {
         return findings;
     }
 
-    private static Optional<String> suggestion(RelationViolation violation) {
+    private static Optional<Message> suggestion(RelationViolation violation) {
         if (violation.permitted().isEmpty()) {
-            return Optional.of("Для этой пары типов матрица не допускает ни одной связи");
+            return Optional.of(Message.of(ModelingMessages.VALIDATION_NONE_PERMITTED));
         }
-        return Optional.of("Допустимы: " + violation.permitted().stream().sorted()
-                .map(RelationshipType::name).collect(Collectors.joining(", ")));
+        return Optional.of(Message.of(ModelingMessages.VALIDATION_PERMITTED, violation.permitted().stream().sorted()
+                .map(RelationshipType::name).collect(Collectors.joining(", "))));
     }
 }

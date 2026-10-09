@@ -1,13 +1,12 @@
 # ───────────────────────────────────────────────────────────────────
 # Общая конфигурация. Здесь только то, что одинаково в dev и prod;
-# различия — в application-dev.yaml и application-prod.yaml (§10.3).
+# различия — в application-dev.yaml и application-prod.yaml.
 #
-# Числа не выдуманы: пул соединений, таймауты и доля трассировки взяты
-# из spec/nfr/modeling.yaml (секции storage, upstream_calls,
-# observability). Спека — источник, файл — её исполнимая форма.
+# Числа не выдуманы: пул соединений, таймауты и доля трассировки —
+# согласованные требования к хранению, внешним вызовам и наблюдаемости.
 #
 # Секретов в файле нет: пароль БД, ключ Anthropic и client secret
-# приходят переменными окружения (NFR-06). Значения по умолчанию
+# приходят переменными окружения. Значения по умолчанию
 # заданы только там, где это не секрет.
 # ───────────────────────────────────────────────────────────────────
 spring:
@@ -19,7 +18,7 @@ spring:
     username: ${ARCHI_DB_USER:archi}
     password: ${ARCHI_DB_PASSWORD}
     hikari:
-      # spec/nfr/modeling.yaml#storage.connection_pool. Пул небольшой:
+      # Пул небольшой:
       # масштаб — архитектурная практика банка, десятки пользователей.
       maximum-pool-size: 20
       minimum-idle: 5
@@ -34,10 +33,10 @@ spring:
       # два источника правды о схеме.
       ddl-auto: none
     properties:
-      # spec/nfr/modeling.yaml#storage.query_timeout — выше типового:
-      # дерево модели читается одним запросом на тысячи строк (§4.3).
+      # Таймаут запроса выше типового: дерево модели читается одним
+      # запросом на тысячи строк.
       jakarta.persistence.query.timeout: 15000
-      # Импорт пишет тысячи строк одной транзакцией (UC-IXC-001, п. 5): без пакетов
+      # Импорт пишет тысячи строк одной транзакцией: без пакетов
       # это тысячи обращений к базе. Ключи — UUIDv7 от приложения, поэтому пакетная
       # вставка не упирается в последовательности.
       hibernate.jdbc.batch_size: 200
@@ -52,18 +51,30 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          # Keycloak 26, realm archi (§10.1). Проверка подписи идёт по
-          # кэшированному JWKS, вызова на запрос нет
-          # (spec/nfr/modeling.yaml#upstream_calls.keycloak_jwks).
+          # Keycloak 26, realm archi. Проверка подписи идёт по
+          # кэшированному JWKS, вызова на запрос нет.
           issuer-uri: ${ARCHI_OIDC_ISSUER_URI:http://localhost:8081/realms/archi}
 
   jackson:
     default-property-inclusion: non_null
 
+  # Сообщения сервера — i18n/messages*.properties. Язык — из Accept-Language,
+  # без него и для неизвестного языка — русский: интерфейс продукта русский.
+  # Системная локаль сервера на выбор языка не влияет.
+  messages:
+    basename: i18n/messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
+    always-use-message-format: true
+
+  web:
+    locale: ru
+    locale-resolver: accept-header
+
   servlet:
     multipart:
-      # Импорт .archimate идёт файлом; предел — spec/nfr/interchange.yaml
-      # #security.upload_limits (50 МБ). Больше — 413 до чтения тела.
+      # Импорт .archimate идёт файлом; предел — 50 МБ.
+      # Больше — 413 до чтения тела.
       max-file-size: 50MB
       max-request-size: 51MB
 
@@ -78,7 +89,7 @@ management:
   endpoints:
     web:
       exposure:
-        # docs/backend.md §8.4. Список закрытый: всё остальное наружу
+        # Список закрытый: всё остальное наружу
         # не выставляется даже в dev.
         include: health,info,metrics,prometheus
   endpoint:
@@ -91,20 +102,20 @@ management:
       application: ${spring.application.name}
   tracing:
     sampling:
-      # spec/nfr/modeling.yaml#observability.tracing.ratio
+      # Доля запросов, попадающих в трассировку.
       probability: 0.1
 
 # ── Настройки приложения ───────────────────────────────────────────
 archi:
   modeling:
-    # Срок блокировки (UC-MDL-005); клиент продлевает её повторным захватом.
+    # Срок блокировки; клиент продлевает её повторным захватом.
     lock-ttl: 30m
     default-workspace-name: Основное рабочее пространство
-    # Очистка снимков версий (docs/database.md §4.4) выключена до этапа 7a:
-    # без Git снимок — единственная копия содержимого (FR-47).
+    # Очистка снимков версий выключена до этапа 7a:
+    # без Git снимок — единственная копия содержимого.
     retention-enabled: false
   ai:
-    # NFR-06: ключ живёт только на сервере и в браузер не попадает.
+    # Ключ живёт только на сервере и в браузер не попадает.
     # Пустой ключ = ИИ выключен, приложение стартует без него.
     api-key: ${ANTHROPIC_API_KEY:}
     model: claude-sonnet-5
@@ -112,8 +123,17 @@ archi:
   web:
     cors:
       # Пустой список = CORS закрыт. В dev список расширяется
-      # адресом Vite dev-сервера (§10.3).
+      # адресом Vite dev-сервера.
       allowed-origins: []
+  ui:
+    oidc:
+      # Отдаётся фронтенду открытым GET /api/v1/ui-config: куда вести на вход.
+      enabled: true
+      # Адрес realm'а глазами браузера. Внутри сети приложение может ходить
+      # к Keycloak иначе, поэтому публичный адрес задаётся отдельно.
+      authority: ${ARCHI_OIDC_PUBLIC_ISSUER_URI:${spring.security.oauth2.resourceserver.jwt.issuer-uri}}
+      # Публичный клиент SPA из realm'а Keycloak.
+      client-id: archi-creator-ui
 
 logging:
   level:

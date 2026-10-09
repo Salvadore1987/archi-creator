@@ -5,7 +5,9 @@ import java.util.Optional;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
@@ -18,7 +20,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 
-/** UC-MDL-002 и UC-MDL-006 для элементов: создать, изменить, удалить (FR-07, FR-11). */
+/** Элементы модели: создать, изменить, удалить. */
 public final class ElementService {
 
     private final ModelingKernel kernel;
@@ -31,17 +33,23 @@ public final class ElementService {
     public record PropertyValue(String key, String value) {
     }
 
-    /** Новый элемент в папке своего слоя; повтор с тем же ключом — тот же элемент (INV-MDL-003). */
+    /** Новый элемент в папке своего слоя; повтор с тем же ключом — тот же элемент. */
     public Element create(EditorIdentity actor, ModelId modelId, ArchiType archiType, String name,
                           Optional<FolderId> folderId, Optional<String> idempotencyKey) {
+        return create(actor, modelId, archiType, name, folderId, RequestedIds.NONE, idempotencyKey);
+    }
+
+    /** То же с идентификаторами, которые выбрал клиент; занятые — {@code 409}. */
+    public Element create(EditorIdentity actor, ModelId modelId, ArchiType archiType, String name,
+                          Optional<FolderId> folderId, RequestedIds ids, Optional<String> idempotencyKey) {
         return kernel.run(Operation.CREATE_ELEMENT, actor, () -> kernel.unitOfWork.write(() ->
                 kernel.idempotent("CreateElement", actor, idempotencyKey,
-                        IdempotentCommand.fingerprint(modelId, archiType, name, folderId),
+                        IdempotentCommand.fingerprint(modelId, archiType, name, folderId, ids.id(), ids.archiId()),
                         () -> {
                             ArchitectureModel model = kernel.writableModel(modelId, actor);
                             FolderId folder = folderId.orElseGet(() -> defaultFolder(model, archiType));
-                            Element element = model.addElement(archiType, name, folder, ElementId.next(kernel.uuids),
-                                    kernel.newArchiId(model), kernel.now());
+                            Element element = model.addElement(archiType, name, folder,
+                                    ElementId.of(kernel.newId(ids)), kernel.newArchiId(model, ids), kernel.now());
                             kernel.save(model);
                             return element.id().toString();
                         },
@@ -50,7 +58,7 @@ public final class ElementService {
 
     /**
      * PATCH элемента. Переименование видно на всех представлениях сразу: узел ссылается
-     * на элемент, а не копирует его имя (FR-11).
+     * на элемент, а не копирует его имя.
      */
     public Element update(EditorIdentity actor, ElementId elementId, Optional<String> name,
                           Optional<String> documentation, Optional<List<PropertyValue>> properties) {
@@ -65,7 +73,7 @@ public final class ElementService {
         }));
     }
 
-    /** Удаление; со связями — {@code 409} (INV-MDL-004). Размещения на представлениях уходят вместе с ним. */
+    /** Удаление; со связями — {@code 409}. Размещения на представлениях уходят вместе с ним. */
     public void delete(EditorIdentity actor, ElementId elementId) {
         kernel.run(Operation.DELETE_ELEMENT, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.writableModel(ownerOf(elementId.value()), actor);
@@ -86,10 +94,11 @@ public final class ElementService {
     }
 
     ModelId ownerOf(UUID objectId) {
-        return kernel.models.ownerOf(objectId).orElseThrow(() -> ModelingException.notFound("объект " + objectId));
+        return kernel.models.ownerOf(objectId).orElseThrow(
+                () -> ModelingException.notFound(Message.of(ModelingMessages.OBJECT, objectId)));
     }
 
-    /** Свойства получают разреженный порядок по месту в списке (INV-MDL-005). */
+    /** Свойства получают разреженный порядок по месту в списке. */
     static List<PropertyEntry> numbered(List<PropertyValue> values) {
         java.util.ArrayList<PropertyEntry> entries = new java.util.ArrayList<>();
         for (int i = 0; i < values.size(); i++) {

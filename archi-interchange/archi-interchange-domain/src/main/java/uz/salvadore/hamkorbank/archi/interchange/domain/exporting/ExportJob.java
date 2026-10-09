@@ -3,24 +3,30 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ExportJobId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ViewId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
 /**
- * Одна выгрузка модели или представления — агрегат
- * (spec/domain/interchange/aggregates.yaml#ExportJob).
+ * Одна выгрузка модели или представления — агрегат.
  *
  * <p>Автомат: {@code REQUESTED → RENDERED → DELIVERED}, сбой — из любого нетерминального.
  * <ul>
- *   <li>INV-IXC-006: в {@code RENDERED} и {@code DELIVERED} отчёт о потерях есть всегда;
+ *   <li>в {@code RENDERED} и {@code DELIVERED} отчёт о потерях есть всегда;
  *       для форматов без потерь он обязан быть пуст.</li>
- *   <li>INV-IXC-008: результат построен по версии, зафиксированной при запросе;
+ *   <li>результат построен по версии, зафиксированной при запросе;
  *       артефакт другой версии не принимается.</li>
  * </ul>
  */
 public final class ExportJob {
+
+    /** Имя команды сбоя — в сообщении о недопустимом переходе. */
+    private static final String FAIL = "fail";
 
     private final ExportJobId id;
     private final WorkspaceId workspaceId;
@@ -49,12 +55,12 @@ public final class ExportJob {
         this.requestedBy = Objects.requireNonNull(requestedBy, "requestedBy");
         this.requestedAt = Objects.requireNonNull(requestedAt, "requestedAt");
         if (sourceVersionNo <= 0) {
-            throw new IllegalArgumentException("номер версии обязан быть положительным");
+            throw new InvalidValueException(InterchangeMessages.EXPORT_VERSION_POSITIVE);
         }
         this.sourceVersionNo = sourceVersionNo;
     }
 
-    /** Версия фиксируется здесь, при запросе, а не при рендере (INV-IXC-008). */
+    /** Версия фиксируется здесь, при запросе, а не при рендере. */
     public static ExportJob request(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, Optional<ViewId> viewId,
                                     ExportFormat format, ExportOptions options, long sourceVersionNo,
                                     String requestedBy, Instant requestedAt) {
@@ -66,22 +72,23 @@ public final class ExportJob {
      * {@code REQUESTED → RENDERED}.
      *
      * @param renderedFromVersionNo версия, из которой собран артефакт
-     * @throws ExportRuleViolationException артефакт другой версии (INV-IXC-008), нет отчёта
-     *         или непустой отчёт у формата без потерь (INV-IXC-006)
+     * @throws ExportRuleViolationException артефакт другой версии, нет отчёта
+     *         или непустой отчёт у формата без потерь
      */
     public void render(long renderedFromVersionNo, Artifact artifact, LossReport lossReport) {
         require(ExportStatus.REQUESTED, "render");
         Objects.requireNonNull(artifact, "artifact");
         if (renderedFromVersionNo != sourceVersionNo) {
-            throw new ExportRuleViolationException("INV-IXC-008", "задание зафиксировало версию "
-                    + sourceVersionNo + ", а артефакт собран из версии " + renderedFromVersionNo);
+            throw new ExportRuleViolationException(InterchangeCodes.EXPORT_VERSION,
+                    Message.of(InterchangeMessages.EXPORT_VERSION_MISMATCH, sourceVersionNo, renderedFromVersionNo));
         }
         if (lossReport == null) {
-            throw new ExportRuleViolationException("INV-IXC-006", "выгрузка без отчёта о потерях — тихая потеря данных");
+            throw new ExportRuleViolationException(InterchangeCodes.LOSS_REPORT,
+                    Message.of(InterchangeMessages.EXPORT_LOSS_REPORT_MISSING));
         }
         if (format.lossless() && !lossReport.empty()) {
-            throw new ExportRuleViolationException("INV-IXC-006", format + " обещает round-trip без потерь, а отчёт "
-                    + "перечисляет " + lossReport.entries().size() + " потерь");
+            throw new ExportRuleViolationException(InterchangeCodes.LOSS_REPORT,
+                    Message.of(InterchangeMessages.EXPORT_LOSSLESS_WITH_LOSSES, format, lossReport.entries().size()));
         }
         this.artifact = artifact;
         this.lossReport = lossReport;
@@ -97,7 +104,7 @@ public final class ExportJob {
     /** Сбой из любого нетерминального состояния. */
     public void fail(String reason) {
         if (status == ExportStatus.DELIVERED || status == ExportStatus.FAILED) {
-            throw new IllegalStateException("fail недопустим из состояния " + status);
+            throw new IllegalStateException(Message.of(InterchangeMessages.EXPORT_TRANSITION, FAIL, status).toString());
         }
         failureReason = Objects.requireNonNull(reason, "reason");
         status = ExportStatus.FAILED;
@@ -105,7 +112,7 @@ public final class ExportJob {
 
     private void require(ExportStatus expected, String command) {
         if (status != expected) {
-            throw new IllegalStateException(command + " недопустим из состояния " + status);
+            throw new IllegalStateException(Message.of(InterchangeMessages.EXPORT_TRANSITION, command, status).toString());
         }
     }
 

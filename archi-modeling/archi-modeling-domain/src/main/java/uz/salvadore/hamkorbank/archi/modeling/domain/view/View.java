@@ -12,7 +12,10 @@ import java.util.Optional;
 import java.util.Set;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
@@ -29,10 +32,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ViewRef;
 
 /**
- * Представление — отдельный агрегат (spec/domain/modeling/aggregates.yaml#View): открывается
+ * Представление — отдельный агрегат: открывается
  * и сохраняется независимо от модели, а на её элементы ссылается по ключу.
  *
- * <p>INV-MDL-008: узел {@code DIAGRAM_OBJECT} ссылается на элемент той же модели, у группы
+ * <p>Узел {@code DIAGRAM_OBJECT} ссылается на элемент той же модели, у группы
  * и заметки элемента нет; ребро соединяет узлы или рёбра этого же представления, а его связь
  * принадлежит той же модели. Геометрия — относительно родителя.
  */
@@ -80,7 +83,7 @@ public final class View {
                 true);
     }
 
-    /** Представление из импортированного документа; ссылки проверяются по модели (INV-MDL-008). */
+    /** Представление из импортированного документа; ссылки проверяются по модели. */
     public static View imported(ViewHeader header, Collection<ViewNode> nodes, Collection<ViewEdge> edges,
                                 ArchitectureModel model) {
         View view = new View(header, true);
@@ -99,42 +102,42 @@ public final class View {
 
     private void verifyIntegrity(ArchitectureModel model) {
         if (!model.id().equals(modelId)) {
-            throw integrity("представление " + archiId + " принадлежит другой модели");
+            throw integrity(Message.of(ModelingMessages.VIEW_OF_OTHER_MODEL, archiId));
         }
         Set<ArchiId> seen = new HashSet<>();
         for (ViewNode node : nodes.values()) {
             if (!seen.add(node.archiId())) {
-                throw new ModelingException("INV-MDL-001", Failure.UNPROCESSABLE,
-                        "archi_id " + node.archiId() + " повторяется на представлении " + archiId);
+                throw new ModelingException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.UNPROCESSABLE,
+                        Message.of(ModelingMessages.ARCHI_ID_REPEATED_ON_VIEW, node.archiId(), archiId));
             }
             node.elementId().ifPresent(element -> requireElementOf(model, element, node.archiId()));
             node.parentId().ifPresent(parent -> {
                 if (!nodes.contains(parent)) {
-                    throw integrity("родитель узла " + node.archiId() + " не на этом представлении");
+                    throw integrity(Message.of(ModelingMessages.NODE_PARENT_ELSEWHERE, node.archiId()));
                 }
             });
             depth(node);
         }
         for (ViewEdge edge : edges.values()) {
             if (!seen.add(edge.archiId())) {
-                throw new ModelingException("INV-MDL-001", Failure.UNPROCESSABLE,
-                        "archi_id " + edge.archiId() + " повторяется на представлении " + archiId);
+                throw new ModelingException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.UNPROCESSABLE,
+                        Message.of(ModelingMessages.ARCHI_ID_REPEATED_ON_VIEW, edge.archiId(), archiId));
             }
             requireEndpoint(edge.source(), edge.archiId());
             requireEndpoint(edge.target(), edge.archiId());
             edge.relationshipId().ifPresent(r -> {
                 if (!model.relationships().contains(r)) {
-                    throw integrity("связь ребра " + edge.archiId() + " не принадлежит модели");
+                    throw integrity(Message.of(ModelingMessages.EDGE_RELATIONSHIP_ELSEWHERE, edge.archiId()));
                 }
             });
         }
     }
 
-    // ── Размещение (UC-MDL-002) ─────────────────────────────────────
+    // ── Размещение ──────────────────────────────────────────────────
 
     /**
      * Узел над элементом модели. Уже размещённый элемент не дублируется — возвращается
-     * существующий узел (UI-002).
+     * существующий узел.
      */
     public Created<ViewNode> placeElement(ArchitectureModel model, ElementId elementId, Bounds bounds,
                                           Optional<ViewNodeId> parentId, ViewNodeId newId, ArchiId newArchiId) {
@@ -168,17 +171,27 @@ public final class View {
     }
 
     /**
-     * Ребро для связи модели между её отрисовками на этом представлении (UC-MDL-003, п. 5).
+     * Ребро для связи модели между её отрисовками на этом представлении.
      * Концы ребра обязаны изображать концы связи.
      */
     public Created<ViewEdge> connect(ArchitectureModel model, RelationshipId relationshipId, ViewEndpoint source,
                                      ViewEndpoint target, ViewEdgeId newId, ArchiId newArchiId) {
+        return connect(model, relationshipId, source, target, List.of(), newId, newArchiId);
+    }
+
+    /**
+     * То же с точками перегиба нового ребра. Ребро встаёт в конец содержимого источника;
+     * такое же ребро между теми же концами уже есть — возвращается оно, точки не меняются.
+     */
+    public Created<ViewEdge> connect(ArchitectureModel model, RelationshipId relationshipId, ViewEndpoint source,
+                                     ViewEndpoint target, List<Bendpoint> bendpoints, ViewEdgeId newId,
+                                     ArchiId newArchiId) {
         requireEditable();
         Relationship relationship = model.requireRelationship(relationshipId);
         requireEndpoint(source, newArchiId);
         requireEndpoint(target, newArchiId);
         if (!depicts(source, relationship.source()) || !depicts(target, relationship.target())) {
-            throw integrity("концы ребра не изображают концы связи " + relationship.archiId());
+            throw integrity(Message.of(ModelingMessages.EDGE_ENDS_MISMATCH, relationship.archiId()));
         }
         Optional<ViewEdge> existing = edges.values().stream()
                 .filter(e -> e.relationshipId().equals(Optional.of(relationshipId))
@@ -189,7 +202,7 @@ public final class View {
         }
         requireFreeArchiId(newArchiId);
         ViewEdge edge = new ViewEdge(newId, newArchiId, DiagramType.CONNECTION, Optional.of(relationshipId), source,
-                target, List.of(), StyleOverride.NONE, nextOrderIn(Optional.of(source)), Optional.empty());
+                target, bendpoints, StyleOverride.NONE, nextOrderIn(Optional.of(source)), Optional.empty());
         edges.put(edge.id(), edge);
         return new Created<>(edge, true);
     }
@@ -240,13 +253,13 @@ public final class View {
     // ── Собственные поля ────────────────────────────────────────────
 
     public void rename(String newName) {
-        name = Names.limited(newName, "представления");
+        name = Names.limited(newName, Names.VIEW);
         headerChanged = true;
     }
 
     public void edit(String newName, Optional<String> newDocumentation, Optional<String> newViewpoint,
                      List<PropertyEntry> newProperties) {
-        name = Names.limited(newName, "представления");
+        name = Names.limited(newName, Names.VIEW);
         documentation = newDocumentation.filter(d -> !d.isEmpty());
         viewpoint = newViewpoint.filter(v -> !v.isEmpty());
         properties = List.copyOf(newProperties);
@@ -263,14 +276,14 @@ public final class View {
 
     private void requireEditable() {
         if (!archiType.equals(DiagramType.DIAGRAM_MODEL)) {
-            throw new ModelingException(ModelingException.Codes.TYPE_NOT_EDITABLE, Failure.UNPROCESSABLE,
-                    "представление " + archiType + " хранится как есть и не редактируется (FR-03)");
+            throw new ModelingException(ModelingCodes.TYPE_NOT_EDITABLE, Failure.UNPROCESSABLE,
+                    Message.of(ModelingMessages.VIEW_NOT_EDITABLE, archiType));
         }
     }
 
     private void requireElementOf(ArchitectureModel model, ElementId elementId, ArchiId nodeArchiId) {
         if (!model.id().equals(modelId) || !model.elements().contains(elementId)) {
-            throw integrity("элемент узла " + nodeArchiId + " не принадлежит модели представления");
+            throw integrity(Message.of(ModelingMessages.NODE_ELEMENT_ELSEWHERE, nodeArchiId));
         }
     }
 
@@ -280,7 +293,7 @@ public final class View {
             case ViewEdgeId edge -> edges.contains(edge);
         };
         if (!present) {
-            throw integrity("конец ребра " + edgeArchiId + " не на этом представлении");
+            throw integrity(Message.of(ModelingMessages.EDGE_END_ELSEWHERE, edgeArchiId));
         }
     }
 
@@ -295,20 +308,27 @@ public final class View {
     }
 
     public ViewNode requireNode(ViewNodeId nodeId) {
-        return nodes.get(nodeId).orElseThrow(() -> ModelingException.notFound("узел представления " + nodeId));
+        return nodes.get(nodeId)
+                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW_NODE, nodeId)));
     }
 
     public ViewEdge requireEdge(ViewEdgeId edgeId) {
-        return edges.get(edgeId).orElseThrow(() -> ModelingException.notFound("ребро представления " + edgeId));
+        return edges.get(edgeId)
+                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW_EDGE, edgeId)));
     }
 
     private void requireFreeArchiId(ArchiId candidate) {
-        if (candidate.equals(archiId)
-                || nodes.values().stream().anyMatch(n -> n.archiId().equals(candidate))
-                || edges.values().stream().anyMatch(e -> e.archiId().equals(candidate))) {
-            throw new ModelingException("INV-MDL-001", Failure.CONFLICT,
-                    "archi_id " + candidate + " уже занят на представлении " + archiId);
+        if (archiIdTaken(candidate)) {
+            throw new ModelingException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.CONFLICT,
+                    Message.of(ModelingMessages.ARCHI_ID_TAKEN_ON_VIEW, candidate, archiId));
         }
+    }
+
+    /** Занят ли {@code archiId} самим представлением, его узлом или ребром. */
+    public boolean archiIdTaken(ArchiId candidate) {
+        return candidate.equals(archiId)
+                || nodes.values().stream().anyMatch(n -> n.archiId().equals(candidate))
+                || edges.values().stream().anyMatch(e -> e.archiId().equals(candidate));
     }
 
     /** Глубина вложенности; цикл в родителях — нарушение целостности. */
@@ -318,7 +338,7 @@ public final class View {
         Optional<ViewNodeId> current = node.parentId();
         while (current.isPresent()) {
             if (!visited.add(current.get())) {
-                throw integrity("цикл во вложенности узлов через " + node.archiId());
+                throw integrity(Message.of(ModelingMessages.NODE_NESTING_CYCLE, node.archiId()));
             }
             depth++;
             current = nodes.get(current.get()).flatMap(ViewNode::parentId);
@@ -328,7 +348,7 @@ public final class View {
 
     /**
      * Конец содержимого родителя: дети-узлы и исходящие рёбра делят одну нумерацию,
-     * потому что в файле и те и другие лежат внутри родителя (ADR-0017).
+     * потому что в файле и те и другие лежат внутри родителя.
      */
     private SortOrder nextOrderIn(Optional<ViewEndpoint> parent) {
         List<SortOrder> taken = new ArrayList<>();
@@ -341,8 +361,8 @@ public final class View {
         return SortOrder.afterLast(taken);
     }
 
-    private static ModelingException integrity(String message) {
-        return new ModelingException("INV-MDL-008", Failure.UNPROCESSABLE, message);
+    private static ModelingException integrity(Message reason) {
+        return new ModelingException(ModelingCodes.VIEW_REFERENCE, Failure.UNPROCESSABLE, reason);
     }
 
     // ── Состояние ───────────────────────────────────────────────────

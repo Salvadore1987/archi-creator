@@ -6,7 +6,7 @@ import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
 /**
- * Метрики modeling из spec/nfr/modeling.yaml#observability: use case'ы — счётчик запросов
+ * Метрики modeling: use case'ы — счётчик запросов
  * с исходом, длительность и ошибки с {@code error_code} (кодом инварианта); плюс время
  * ожидания блокировки, размер модели и находки валидации.
  */
@@ -17,12 +17,12 @@ public interface UseCaseMetrics {
     /**
      * {@code modeling_lock_wait_seconds}: сколько пришлось бы ждать захватившему —
      * остаток срока чужой блокировки в момент отказа. Сервер не ждёт сам: второй
-     * редактор получает {@code 409} сразу (INV-MDL-006).
+     * редактор получает {@code 409} сразу.
      */
     default void lockWait(ModelId modelId, Duration remaining) {
     }
 
-    /** {@code modeling_model_elements}: размер модели при открытии (NFR-01 — до 2 000). */
+    /** {@code modeling_model_elements}: размер модели при открытии (рассчитано до 2 000). */
     default void modelSize(ModelId modelId, int elements) {
     }
 

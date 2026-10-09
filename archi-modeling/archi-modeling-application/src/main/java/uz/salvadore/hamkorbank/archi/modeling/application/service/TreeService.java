@@ -6,7 +6,9 @@ import java.util.Optional;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
@@ -21,8 +23,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 
 /**
- * UC-MDL-006: папки, перенос, переименование и удаление в дереве (FR-34, FR-36). Групповая
- * операция — одна транзакция: часть не проходит — не применяется ничего.
+ * Папки, перенос, переименование и удаление в дереве. Групповая операция — одна
+ * транзакция: часть не проходит — не применяется ничего.
  */
 public final class TreeService {
 
@@ -38,13 +40,19 @@ public final class TreeService {
 
     public ModelFolder createFolder(EditorIdentity actor, ModelId modelId, FolderId parentId, String name,
                                     Optional<String> idempotencyKey) {
+        return createFolder(actor, modelId, parentId, name, RequestedIds.NONE, idempotencyKey);
+    }
+
+    /** То же с идентификаторами, которые выбрал клиент; занятые — {@code 409}. */
+    public ModelFolder createFolder(EditorIdentity actor, ModelId modelId, FolderId parentId, String name,
+                                    RequestedIds ids, Optional<String> idempotencyKey) {
         return kernel.run(Operation.REORGANIZE_TREE, actor, () -> kernel.unitOfWork.write(() ->
                 kernel.idempotent("CreateFolder", actor, idempotencyKey,
-                        IdempotentCommand.fingerprint(modelId, parentId, name),
+                        IdempotentCommand.fingerprint(modelId, parentId, name, ids.id(), ids.archiId()),
                         () -> {
                             ArchitectureModel model = kernel.writableModel(modelId, actor);
-                            ModelFolder folder = model.createFolder(parentId, name, FolderId.next(kernel.uuids),
-                                    kernel.newArchiId(model), kernel.now());
+                            ModelFolder folder = model.createFolder(parentId, name, FolderId.of(kernel.newId(ids)),
+                                    kernel.newArchiId(model, ids), kernel.now());
                             kernel.save(model);
                             return folder.id().toString();
                         },
@@ -71,14 +79,14 @@ public final class TreeService {
                 model.touch(kernel.now());
                 kernel.views.save(view);
             } else {
-                throw ModelingException.notFound("объект " + itemId + " в модели");
+                throw ModelingException.notFound(Message.of(ModelingMessages.OBJECT_IN_MODEL, itemId));
             }
             kernel.save(model);
             return null;
         }));
     }
 
-    /** Перенос в папку; соседи не перенумеровываются (INV-MDL-005), корни не меняются (INV-MDL-009). */
+    /** Перенос в папку; соседи не перенумеровываются, корни не меняются. */
     public void move(EditorIdentity actor, ModelId modelId, FolderId targetId, List<UUID> itemIds) {
         kernel.run(Operation.REORGANIZE_TREE, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.writableModel(modelId, actor);
@@ -95,7 +103,7 @@ public final class TreeService {
     /**
      * Групповое удаление. Порядок — связи, представления, элементы, папки: так удаление
      * элемента вместе с его связями проходит одной командой, а связь, оставшаяся вне
-     * команды, даёт {@code 409} с перечнем (INV-MDL-004).
+     * команды, даёт {@code 409} с перечнем.
      */
     public void delete(EditorIdentity actor, ModelId modelId, List<UUID> itemIds) {
         kernel.run(Operation.REORGANIZE_TREE, actor, () -> kernel.unitOfWork.write(() -> {
@@ -113,7 +121,7 @@ public final class TreeService {
                 } else if (model.folders().contains(FolderId.of(id))) {
                     folders.add(id);
                 } else {
-                    throw ModelingException.notFound("объект " + id + " в модели");
+                    throw ModelingException.notFound(Message.of(ModelingMessages.OBJECT_IN_MODEL, id));
                 }
             }
             elementIds.forEach(id -> elements.deleteIn(model, ElementId.of(id)));

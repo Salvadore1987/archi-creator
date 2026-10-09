@@ -19,13 +19,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 /**
  * Правила доступа для всех профилей, кроме {@code dev}.
  *
- * <p>Аутентификация — {@code Authorization: Bearer <JWT>} от Keycloak (§5, FR-28).
+ * <p>Аутентификация — {@code Authorization: Bearer <JWT>} от Keycloak.
  * Сессии нет и быть не должно: токен приходит с каждым запросом, состояние
  * на сервере не хранится, поэтому CSRF-защита выключена — красть нечего.
  *
  * <p>Правила здесь грубые: «кто-то вошёл» против «никто не входил». Разрешение
  * на конкретную операцию даёт не этот класс, а проверка роли на границе use
- * case'а — перечень «операция → роли» живёт в {@code spec/nfr/<bc>.yaml}.
+ * case'а — перечень «операция → роли» живёт в application-слое контекста.
  * Дублировать его в матчерах URL значило бы завести второй источник правды,
  * который разойдётся с первым.
  */
@@ -45,10 +45,12 @@ public class SecurityConfig {
                         // Пробы живучести нужны оркестратору до всякого токена.
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         // Остальной actuator — метрики и prometheus — административный,
-                        // и наружу без роли не выставляется (docs/backend.md §8.4).
+                        // и наружу без роли не выставляется.
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
                         // Преполётные запросы браузера уходят без Authorization.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Адрес входа фронтенд узнаёт до того, как у него появится токен.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/ui-config").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         // Статика фронтенда: сам SPA открыт, данные за ним — нет.
                         .anyRequest().permitAll())

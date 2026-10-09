@@ -1,0 +1,217 @@
+/* Узел канвы. Цвета — только переменные токенов. */
+.shape {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 1px 1.5px var(--shape-shadow, transparent));
+}
+.shape__label {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  font: var(--node-font);
+  font-weight: var(--node-font-weight);
+  overflow: hidden;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.shape__label--tab,
+.shape__label--dog-ear {
+  justify-content: flex-start;
+}
+.shape__label--dog-ear {
+  font-weight: 400;
+  white-space: pre-wrap;
+}
+.shape__label--dog-ear .shape__name {
+  -webkit-line-clamp: unset;
+}
+.shape__name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.shape__subtitle {
+  font: var(--node-subtitle);
+  color: var(--node-subtitle-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.shape__label--tab .shape__name {
+  -webkit-line-clamp: 1;
+  font: var(--node-subtitle);
+  font-weight: 600;
+  color: var(--node-subtitle-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Холст и вкладки ---------- */
+.edge-markers {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+.tabbar {
+  display: flex;
+  align-items: flex-end;
+  height: 34px;
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--paper);
+}
+.tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 0 8px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 6px 0 12px;
+  border-radius: 8px 8px 0 0;
+  font-size: 12px;
+  max-width: 240px;
+  white-space: nowrap;
+  position: relative;
+  top: 1px;
+  cursor: default;
+  opacity: 0.7;
+}
+.tab span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tab .icon {
+  width: 12px;
+  height: 12px;
+}
+.tab:hover {
+  opacity: 1;
+}
+.tab.is-on {
+  background: var(--paper);
+  color: var(--paper-text);
+  font-weight: 600;
+  opacity: 1;
+}
+.tab.is-on::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px 2px 0 0;
+}
+.tab__close {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  opacity: 0.6;
+}
+.tab__close .icon {
+  width: 9px;
+  height: 9px;
+}
+.tab__close:hover {
+  opacity: 1;
+}
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.canvas {
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  color: var(--paper-text);
+}
+.canvas:focus-within {
+  outline: none;
+}
+.canvas .react-flow__background {
+  opacity: 0.6;
+}
+.canvas .react-flow__node {
+  cursor: default;
+}
+.canvas .react-flow__node.draggable {
+  cursor: grab;
+}
+.archi-node {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.archi-node--opaque .shape__outline {
+  stroke: var(--opaque-border);
+}
+.archi-node__anchor {
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+}
+.archi-node__handle {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--paper);
+  border: 1.5px solid var(--accent);
+}
+.archi-node__line {
+  border-color: transparent;
+}
+.archi-edge__label {
+  font: var(--edge-label-font);
+  fill: var(--edge-label-color);
+  paint-order: stroke;
+  stroke: var(--paper);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.zoomer {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--paper);
+  border: 1px solid var(--paper-line-major);
+  border-radius: 9px;
+  color: var(--edge-color);
+}
+.zoomer .btn {
+  color: var(--edge-color);
+  height: 24px;
+  width: 24px;
+}
+.zoomer__val {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  padding: 0 6px;
+  min-width: 42px;
+  text-align: center;
+}

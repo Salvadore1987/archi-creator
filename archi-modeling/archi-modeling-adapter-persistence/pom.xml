@@ -15,8 +15,7 @@
     <name>Archi Creator :: Modeling :: Adapter Persistence</name>
     <description>
         Исходящий адаптер хранения для modeling: JPA-сущности и репозитории,
-        реализующие порты слоя application. Схема — spec/domain/modeling/aggregates.yaml
-        и docs/database.md §4.
+        реализующие порты слоя application.
     </description>
 
     <dependencies>

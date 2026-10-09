@@ -27,11 +27,11 @@ public record ViewHeader(ViewId id, ModelId modelId, FolderId folderId, ArchiId 
         Objects.requireNonNull(viewpoint, "viewpoint");
         Objects.requireNonNull(sortOrder, "sortOrder");
         Objects.requireNonNull(rawXml, "rawXml");
-        Names.limited(name, "представления");
+        Names.limited(name, Names.VIEW);
         properties = List.copyOf(properties);
     }
 
-    /** Редактируется только диаграмма ArchiMate; скетч и холст хранятся как есть (FR-03). */
+    /** Редактируется только диаграмма ArchiMate; скетч и холст хранятся как есть. */
     public boolean editable() {
         return archiType.equals(DiagramType.DIAGRAM_MODEL);
     }

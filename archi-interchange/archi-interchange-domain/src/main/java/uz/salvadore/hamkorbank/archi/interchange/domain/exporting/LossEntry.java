@@ -2,6 +2,8 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 
 import java.util.Objects;
 import java.util.Set;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.LossEntryId;
 
@@ -20,10 +22,10 @@ public record LossEntry(LossEntryId id, ArchiId archiId, String objectKind, Stri
         Objects.requireNonNull(lostAspect, "lostAspect");
         Objects.requireNonNull(reason, "reason");
         if (!KINDS.contains(objectKind)) {
-            throw new IllegalArgumentException("неизвестный вид объекта: " + objectKind);
+            throw new InvalidValueException(InterchangeMessages.LOSS_UNKNOWN_KIND, objectKind);
         }
         if (lostAspect.isBlank() || reason.isBlank()) {
-            throw new IllegalArgumentException("потеря без описания или без причины ничего не объясняет");
+            throw new InvalidValueException(InterchangeMessages.LOSS_WITHOUT_REASON);
         }
     }
 }

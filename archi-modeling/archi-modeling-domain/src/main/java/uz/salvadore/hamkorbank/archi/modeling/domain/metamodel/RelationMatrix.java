@@ -13,14 +13,16 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
- * Матрица допустимых связей ArchiMate 3.2 (INV-MDL-007, FR-10).
+ * Матрица допустимых связей ArchiMate 3.2.
  *
  * <p>Правило действует на <em>создание</em> связи: {@link #requirePermitted}
  * отклоняет недопустимый тип. Импорт ему не подчиняется — {@link #check}
- * только сообщает о нарушении, и решение о нём принимает строгость импорта
- * (INV-IXC-007). Реальные модели содержат исторические нарушения, и продукт,
+ * только сообщает о нарушении, и решение о нём принимает строгость импорта.
+ * Реальные модели содержат исторические нарушения, и продукт,
  * который отказывается их открыть, бесполезен.
  *
  * <p>Таблица — ресурс {@code archimate-3.2-relationships.xml}, перенесённый
@@ -63,7 +65,7 @@ public final class RelationMatrix {
     }
 
     /**
-     * Проверка при создании связи: недопустимый тип отклоняется (INV-MDL-007).
+     * Проверка при создании связи: недопустимый тип отклоняется.
      *
      * @throws RelationNotPermittedException с перечнем допустимых для этой пары
      */
@@ -74,8 +76,8 @@ public final class RelationMatrix {
     }
 
     /**
-     * Проверка импортированной связи: нарушение сообщается, а не отклоняется
-     * (FR-10). Связь вне матрицы — неизвестного типа или между неизвестными
+     * Проверка импортированной связи: нарушение сообщается, а не отклоняется.
+     * Связь вне матрицы — неизвестного типа или между неизвестными
      * типами — нарушением не считается: правила для неё нет.
      */
     public Optional<RelationViolation> check(ArchiType source, ArchiType target, ArchiType relationship) {
@@ -93,13 +95,13 @@ public final class RelationMatrix {
     private static RelationMatrix load() {
         try (InputStream in = RelationMatrix.class.getResourceAsStream(RESOURCE)) {
             if (in == null) {
-                throw new IllegalStateException("нет ресурса матрицы связей: " + RESOURCE);
+                throw new IllegalStateException(Message.of(ModelingMessages.MATRIX_RESOURCE_MISSING, RESOURCE).toString());
             }
             return new RelationMatrix(parse(in));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } catch (XMLStreamException e) {
-            throw new IllegalStateException("матрица связей не разбирается: " + RESOURCE, e);
+            throw new IllegalStateException(Message.of(ModelingMessages.MATRIX_UNREADABLE, RESOURCE).toString(), e);
         }
     }
 
@@ -120,7 +122,7 @@ public final class RelationMatrix {
                 }
                 case "target" -> {
                     if (targets == null) {
-                        throw new IllegalStateException("target вне source в " + RESOURCE);
+                        throw new IllegalStateException(Message.of(ModelingMessages.MATRIX_TARGET_OUTSIDE_SOURCE, RESOURCE).toString());
                     }
                     targets.put(xml.getAttributeValue(null, "concept"),
                             relations(xml.getAttributeValue(null, "relations")));
@@ -136,7 +138,8 @@ public final class RelationMatrix {
         EnumSet<RelationshipType> set = EnumSet.noneOf(RelationshipType.class);
         for (char key : keys.toCharArray()) {
             set.add(RelationshipType.fromKey(Character.toLowerCase(key))
-                    .orElseThrow(() -> new IllegalStateException("неизвестная буква связи '" + key + "'")));
+                    .orElseThrow(() -> new IllegalStateException(
+                            Message.of(ModelingMessages.MATRIX_UNKNOWN_LETTER, key).toString())));
         }
         return Collections.unmodifiableSet(set);
     }

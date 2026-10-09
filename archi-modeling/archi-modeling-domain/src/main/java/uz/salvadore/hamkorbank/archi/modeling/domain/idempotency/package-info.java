@@ -1,2 +1,2 @@
-/** Идемпотентность команд изменения (INV-MDL-003). */
+/** Идемпотентность команд изменения. */
 package uz.salvadore.hamkorbank.archi.modeling.domain.idempotency;

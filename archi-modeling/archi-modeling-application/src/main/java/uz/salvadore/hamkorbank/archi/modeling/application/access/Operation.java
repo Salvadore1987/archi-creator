@@ -5,9 +5,8 @@ import java.util.Set;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 
 /**
- * Операции modeling и роли, которым они доступны — исполнимая форма таблицы
- * {@code security.authorization} из spec/nfr/modeling.yaml (FR-28). Имя константы —
- * имя use case'а оттуда же: по нему же метрики и аудит.
+ * Операции modeling и роли, которым они доступны. Имя в скобках — имя use case'а:
+ * по нему же метрики и аудит.
  *
  * <p>Таблица одна, и это она: матчеры URL роли не проверяют (SecurityConfig, этап 0).
  */

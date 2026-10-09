@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Что из файла Archi типизировано в столбцах (ADR-0017) и в каком порядке Archi пишет
+ * Что из файла Archi типизировано в столбцах, а не в остатке XML, и в каком порядке Archi пишет
  * атрибуты нового объекта. Одно место для обоих направлений: раскладчик и сборщик
  * обязаны знать одно и то же, иначе round-trip расходится молча.
  */
@@ -17,7 +17,7 @@ final class XmlSchema {
     static final String XSI_TYPE = "xsi:type";
     static final String TARGET_CONNECTIONS = "targetConnections";
 
-    /** Атрибуты стиля, типизированные в {@code StyleOverride} (FR-21). */
+    /** Атрибуты стиля, типизированные в {@code StyleOverride}. */
     static final List<String> STYLE = List.of("fillColor", "font", "fontColor", "lineColor", "textAlignment");
 
     static final Set<String> ROOT_TYPED = Set.of("name", "id", "version");
@@ -26,8 +26,8 @@ final class XmlSchema {
     static final Set<String> RELATIONSHIP_TYPED = Set.of(XSI_TYPE, "name", "id", "source", "target", "accessType",
             "directed");
     static final Set<String> VIEW_TYPED = Set.of(XSI_TYPE, "name", "id", "viewpoint");
-    static final Set<String> NODE_TYPED = Set.of(XSI_TYPE, "id", "archimateElement", "fillColor", "font", "fontColor",
-            "lineColor", "textAlignment");
+    static final Set<String> NODE_TYPED = Set.of(XSI_TYPE, "id", "name", "archimateElement", "fillColor", "font",
+            "fontColor", "lineColor", "textAlignment");
     static final Set<String> EDGE_TYPED = Set.of(XSI_TYPE, "id", "source", "target", "archimateRelationship",
             "fillColor", "font", "fontColor", "lineColor", "textAlignment");
 
@@ -38,7 +38,8 @@ final class XmlSchema {
     static final List<String> RELATIONSHIP_ORDER = List.of(XSI_TYPE, "name", "id", "source", "target", "accessType",
             "directed");
     static final List<String> VIEW_ORDER = List.of(XSI_TYPE, "name", "id", "viewpoint");
-    static final List<String> NODE_ORDER = List.of(XSI_TYPE, "id", TARGET_CONNECTIONS, "fillColor", "font",
+    /** У Archi {@code name} узла идёт после {@code targetConnections}, перед стилем. */
+    static final List<String> NODE_ORDER = List.of(XSI_TYPE, "id", TARGET_CONNECTIONS, "name", "fillColor", "font",
             "fontColor", "lineColor", "textAlignment", "archimateElement");
     static final List<String> EDGE_ORDER = List.of(XSI_TYPE, "id", TARGET_CONNECTIONS, "fillColor", "font",
             "fontColor", "lineColor", "textAlignment", "source", "target", "archimateRelationship");
@@ -56,6 +57,8 @@ final class XmlSchema {
     static final long DOCUMENTATION_FIRST = -3;
     static final long PROPERTIES_FIRST = -2;
     static final long BOUNDS_FIRST = -1;
+    /** Текст заметки нового узла — сразу за геометрией, как у Archi. */
+    static final long CONTENT_AFTER_BOUNDS = 0;
     /** Позиция «после всего» — для описания и свойств корня, которые Archi пишет за папками. */
     static final long AFTER_ALL = Long.MAX_VALUE - 1;
 

@@ -2,6 +2,8 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 
 import java.util.Objects;
 import java.util.regex.Pattern;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
  * {@code xsi:type} представления, узла или ребра: {@code archimate:DiagramObject},
@@ -10,7 +12,7 @@ import java.util.regex.Pattern;
  * <p>Не {@link uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType}:
  * тот — тип концепта ArchiMate и знает лишь пространство {@code archimate:}, а холст
  * Archi пишет свои узлы в {@code canvas:}. Отказ в таком типе сломал бы round-trip
- * на первом же холсте (FR-03).
+ * на первом же холсте.
  */
 public record DiagramType(String value) {
 
@@ -25,7 +27,7 @@ public record DiagramType(String value) {
     public DiagramType {
         Objects.requireNonNull(value, "diagramType");
         if (!FORMAT.matcher(value).matches()) {
-            throw new IllegalArgumentException("xsi:type вида префикс:Имя, получено: " + value);
+            throw new InvalidValueException(ModelingMessages.DIAGRAM_TYPE_FORMAT, value);
         }
     }
 

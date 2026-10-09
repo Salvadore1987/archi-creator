@@ -9,9 +9,13 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
-/** Сжатие снимка (docs/database.md §4.2: {@code bytea}, gzip) и его отпечаток. */
+/** Сжатие снимка (gzip, хранится в {@code bytea}) и его отпечаток. */
 final class Snapshots {
+
+    private static final String DIGEST = "SHA-256";
 
     private Snapshots() {
     }
@@ -30,15 +34,15 @@ final class Snapshots {
         try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(compressed))) {
             return gzip.readAllBytes();
         } catch (IOException e) {
-            throw new UncheckedIOException("снимок версии повреждён", e);
+            throw new UncheckedIOException(Message.of(ModelingMessages.SNAPSHOT_CORRUPTED).toString(), e);
         }
     }
 
     static String sha256(byte[] content) {
         try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
+            return HexFormat.of().formatHex(MessageDigest.getInstance(DIGEST).digest(content));
         } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 обязан быть в любой JDK", e);
+            throw new IllegalStateException(Message.of(ModelingMessages.DIGEST_UNAVAILABLE, DIGEST).toString(), e);
         }
     }
 }

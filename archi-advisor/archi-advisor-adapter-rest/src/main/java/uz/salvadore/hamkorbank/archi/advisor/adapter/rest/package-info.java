@@ -1,8 +1,6 @@
 /**
  * Входящий адаптер HTTP bounded context'а advisor (ADV).
  *
- * <p>Контроллеры и DTO. Коды ошибок и статусы — по контракту и docs/backend.md §8.
- *
- * <p>Спецификация: spec/contracts/advisor/rest-api.openapi.yaml
+ * <p>Контроллеры и DTO. Коды ошибок и статусы — по контракту REST API.
  */
 package uz.salvadore.hamkorbank.archi.advisor.adapter.rest;

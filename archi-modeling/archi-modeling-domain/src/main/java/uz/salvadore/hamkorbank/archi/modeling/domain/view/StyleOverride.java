@@ -3,9 +3,11 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
- * Собственный стиль объекта — сильнее токена слоя (FR-21). Пустое переопределение
+ * Собственный стиль объекта — сильнее токена слоя. Пустое переопределение
  * и его отсутствие — одно и то же.
  */
 public record StyleOverride(Optional<String> fillColor, Optional<String> font, Optional<String> fontColor,
@@ -33,7 +35,7 @@ public record StyleOverride(Optional<String> fillColor, Optional<String> font, O
 
     private static void requireColor(String value, String name) {
         if (!validColor(value)) {
-            throw new IllegalArgumentException(name + " вида #rrggbb, получено: " + value);
+            throw new InvalidValueException(ModelingMessages.COLOR_FORMAT, name, value);
         }
     }
 

@@ -14,7 +14,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 /**
- * Роли FR-28 в токене Keycloak лежат в {@code realm_access.roles}.
+ * Роли модели доступа в токене Keycloak лежат в {@code realm_access.roles}.
  * Тест держит два обещания разом: известные роли доходят до контекста
  * безопасности, неизвестные в него не попадают.
  */

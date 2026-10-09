@@ -9,10 +9,10 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
 
 /**
  * Отчёт об импорте — и у принятого, и у отклонённого: отказ без объяснения превращает
- * строгий импорт в чёрный ящик (aggregates.yaml#ImportSession).
+ * строгий импорт в чёрный ящик.
  *
- * @param replayed повтор по ключу идемпотентности: отдан результат первой попытки (INV-IXC-003)
- * @param rejectedAsCorrupt отказ на разборе — повреждённые данные (FR-50), а не методология
+ * @param replayed повтор по ключу идемпотентности: отдан результат первой попытки
+ * @param rejectedAsCorrupt отказ на разборе — повреждённые данные, а не методология
  */
 public record ImportReport(ImportSessionId sessionId, ImportStatus status, Optional<java.util.UUID> modelId,
                            long versionNo, List<ImportFinding> findings, boolean replayed,

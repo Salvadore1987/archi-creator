@@ -40,7 +40,7 @@ class StrictImportTest {
         ImportSession strict = Sessions.received(VALID, true);
         Sessions.parse(strict, VALID);
         ImportFinding error = Sessions.matrixViolation();
-        strict.validate(List.of(new ImportFinding(error.id(), Severity.WARNING, "IXC_SOMETHING", "мелочь",
+        strict.validate(List.of(new ImportFinding(error.id(), Severity.WARNING, "IXC_SOMETHING", ImportFinding.storedText("мелочь"),
                 Optional.empty(), Optional.empty())), NOW);
 
         assertEquals(ImportStatus.VALIDATED, strict.status());

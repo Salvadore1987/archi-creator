@@ -19,8 +19,7 @@
         держит конфигурацию Spring Boot, безопасность (Keycloak/OIDC), миграции
         Flyway и — когда появится фронтенд — собранную статику.
 
-        Здесь же живёт то, что по §3.3 называлось пакетом security.
-        NFR по контекстам — spec/nfr/.
+        Здесь же живёт пакет security: ресурс-сервер и роли из токена.
     </description>
 
     <dependencies>
@@ -75,7 +74,7 @@
 
         <!--
             Actuator и реестр Prometheus: /actuator/health, /actuator/metrics,
-            /actuator/prometheus (docs/backend.md §8.4). Список выставленных
+            /actuator/prometheus. Список выставленных
             наружу точек закрыт в application.yaml.
         -->
         <dependency>
@@ -133,8 +132,8 @@
         </dependency>
 
         <!--
-            Интеграционные тесты (§9.3): контекст целиком на настоящем postgres:16
-            в Testcontainers — тот же образ, что в docker-compose.yml (§10.1).
+            Интеграционные тесты: контекст целиком на настоящем postgres:16
+            в Testcontainers — тот же образ, что в docker-compose.yml.
             Классы *IT гоняет failsafe на фазе verify; Docker обязателен.
         -->
         <dependency>
@@ -161,11 +160,28 @@
 
     <build>
         <!--
-            §10.2 обещает имя archi-creator-<версия>.jar. Имя сохранено,
+            Jar называется archi-creator-<версия>.jar. Имя сохранено,
             каталог стал archi-bootstrap/target/ — это учитывается
             в docker-compose.yml и в CI, когда они появятся.
         -->
         <finalName>archi-creator-${project.version}</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!--
+                Токены стиля живут в спецификации, и серверный писатель SVG
+                читает тот же файл, что и сборка фронтенда: копия в ресурсах
+                разошлась бы с ним при первой правке.
+            -->
+            <resource>
+                <directory>${project.basedir}/../spec/ui</directory>
+                <targetPath>ui</targetPath>
+                <includes>
+                    <include>design-tokens.yaml</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -192,8 +208,8 @@
 
     <profiles>
         <!--
-            Сборка фронтенда (ADR-0016): npm ci && npm run build, результат —
-            target/classes/static, откуда его запекает в jar Spring Boot (§10.2).
+            Сборка фронтенда: npm ci && npm run build, результат —
+            target/classes/static, откуда его запекает в jar Spring Boot.
 
             Профиль включён по умолчанию и выключается `-P '!frontend'`: правка,
             не задевающая интерфейс, не должна требовать Node. Выключать его
@@ -235,6 +251,19 @@
                                     <!-- ci, а не install: package-lock.json — закон,
                                          а не пожелание, и сборка его не переписывает. -->
                                     <arguments>ci --no-audit --no-fund</arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <!-- Юнит-тесты интерфейса: история правок, дерево, маршрутизация
+                                     связей и статические проверки токенов и строк. -->
+                                <id>npm-test</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <configuration>
+                                    <arguments>test</arguments>
+                                    <skip>${skipTests}</skip>
                                 </configuration>
                             </execution>
                             <execution>

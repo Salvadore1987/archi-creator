@@ -6,7 +6,9 @@ import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
@@ -14,7 +16,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
-/** UC-MDL-001: создать, переименовать, удалить, восстановить и уничтожить модель (FR-04). */
+/** Создать, переименовать, удалить, восстановить и уничтожить модель. */
 public final class ModelLifecycleService {
 
     private final ModelingKernel kernel;
@@ -29,7 +31,7 @@ public final class ModelLifecycleService {
 
     /**
      * Пустая модель с девятью корневыми папками и версией 1 — точкой отсчёта истории.
-     * Повтор с тем же ключом возвращает ту же модель (INV-MDL-003).
+     * Повтор с тем же ключом возвращает ту же модель.
      */
     public ArchitectureModel create(EditorIdentity actor, WorkspaceId workspaceId, String name,
                                     Optional<String> idempotencyKey) {
@@ -38,12 +40,14 @@ public final class ModelLifecycleService {
                         IdempotentCommand.fingerprint(workspaceId, name),
                         () -> {
                             workspaces.find(workspaceId)
-                                    .orElseThrow(() -> ModelingException.notFound("рабочее пространство " + workspaceId));
+                                    .orElseThrow(() -> ModelingException.notFound(
+                                            Message.of(ModelingMessages.WORKSPACE, workspaceId)));
                             ArchitectureModel model = ArchitectureModel.create(ModelId.next(kernel.uuids), workspaceId,
                                     kernel.archiIds.next(), name, actor, kernel.now(),
                                     () -> FolderId.next(kernel.uuids), kernel.archiIds::next);
                             kernel.save(model);
-                            versions.commit(model, actor, Optional.of("Создание модели"));
+                            versions.commit(model, actor,
+                                    Optional.of(kernel.texts.text(Message.of(ModelingMessages.COMMENT_MODEL_CREATED))));
                             return model.id().toString();
                         },
                         ref -> kernel.models.load(ModelId.of(ref)).orElseThrow())));
@@ -61,7 +65,7 @@ public final class ModelLifecycleService {
         }));
     }
 
-    /** Soft delete (INV-MDL-002): данные и история остаются, блокировка снимается. */
+    /** Soft delete: данные и история остаются, блокировка снимается. */
     public void delete(EditorIdentity actor, ModelId modelId) {
         kernel.run(Operation.DELETE_MODEL, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.visibleModel(modelId, actor, AclAccess.WRITE);
@@ -85,7 +89,7 @@ public final class ModelLifecycleService {
         }));
     }
 
-    /** Физическое уничтожение — только из {@code DELETED} и только {@code ADMIN} (INV-MDL-002). */
+    /** Физическое уничтожение — только из {@code DELETED} и только {@code ADMIN}. */
     public void purge(EditorIdentity actor, ModelId modelId) {
         kernel.run(Operation.PURGE_MODEL, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.visibleModel(modelId, actor, AclAccess.WRITE);

@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 
 /**
- * NFR-02: импорт файла на 5 000 строк XML — не дольше 3 с на сервере.
+ * Импорт файла на 5 000 строк XML — не дольше 3 с на сервере.
  *
  * <p>Замер холодный, первым же чтением в JVM: так приходит реальный импорт.
  * Запас большой намеренно — тест ловит деградацию на порядок (квадратичный

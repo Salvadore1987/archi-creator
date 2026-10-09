@@ -21,6 +21,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelAccessListRe
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelLockRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelVersionRepository;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
@@ -71,7 +72,7 @@ public class ModelingConfiguration {
         return new ModelingMicrometerMetrics(registry);
     }
 
-    /** До этапа 7a Git не настроен ни у кого: снимки не чистятся (FR-47). */
+    /** До этапа 7a Git не настроен ни у кого: снимки не чистятся. */
     @Bean
     GitBinding gitBinding() {
         return workspaceId -> false;
@@ -89,10 +90,10 @@ public class ModelingConfiguration {
     ModelingKernel modelingKernel(ModelRepository models, ViewRepository views, ModelLockRepository locks,
                                   ModelVersionRepository versions, ModelAccessListRepository accessLists,
                                   IdempotencyRepository idempotency, UnitOfWork unitOfWork,
-                                  DomainEventPublisher events, UseCaseMetrics metrics, Clock clock,
+                                  DomainEventPublisher events, UseCaseMetrics metrics, TextCatalog texts, Clock clock,
                                   ModelingSettings settings) {
         return new ModelingKernel(models, views, locks, versions, accessLists, idempotency, unitOfWork, events,
-                metrics, clock, settings.lockTtl());
+                metrics, texts, clock, settings.lockTtl());
     }
 
     @Bean
@@ -160,7 +161,7 @@ public class ModelingConfiguration {
         return args -> workspaces.ensureDefault(settings.defaultWorkspaceName());
     }
 
-    /** Очистка снимков по расписанию; выключенная настройкой — пустой проход (§4.4). */
+    /** Очистка снимков по расписанию; выключенная настройкой — пустой проход. */
     @Bean
     SchedulingConfigurer snapshotRetention(VersionService versions, ModelingSettings settings) {
         return registrar -> registrar.addCronTask(versions::purgeSnapshots, settings.retentionCron());

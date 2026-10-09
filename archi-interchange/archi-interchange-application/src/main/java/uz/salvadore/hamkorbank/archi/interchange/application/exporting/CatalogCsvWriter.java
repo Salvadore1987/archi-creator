@@ -16,7 +16,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentValue;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
@@ -24,9 +27,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
 
 /**
- * Каталог модели в CSV (docs/backend.md §5.2, FR-45): zip из {@code elements.csv}
+ * Каталог модели в CSV: zip из {@code elements.csv}
  * и {@code relations.csv}. Источник — снимок зафиксированной версии, тот же, что у
- * выгрузки {@code .archimate}: таблица и файл одной версии не расходятся (INV-IXC-008).
+ * выгрузки {@code .archimate}: таблица и файл одной версии не расходятся.
  *
  * <p>Решения по формату — ради того, чтобы файл открылся у получателя: UTF-8 с BOM
  * (иначе русский Excel читает windows-1251), разделитель {@code ;} (в русской локали
@@ -36,6 +39,15 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
  * <p>Zip детерминирован: время записей фиксировано, порядок строк — порядок файла.
  */
 public final class CatalogCsvWriter {
+
+    private final String yes;
+    private final String no;
+
+    /** Значения «размещён / не размещён» — на языке запроса, как и прочий текст выгрузки. */
+    public CatalogCsvWriter(TextCatalog texts) {
+        this.yes = texts.text(Message.of(InterchangeMessages.CSV_YES));
+        this.no = texts.text(Message.of(InterchangeMessages.CSV_NO));
+    }
 
     private static final byte[] BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
     private static final long FIXED_ENTRY_TIME = 0L;
@@ -64,7 +76,7 @@ public final class CatalogCsvWriter {
     }
 
     /** Разобранный документ в терминах каталога: пути папок, размещения, свойства. */
-    private static final class Catalog {
+    private final class Catalog {
 
         private final Map<String, String> folderPath = new HashMap<>();
         private final Map<String, Set<String>> viewsOf = new HashMap<>();
@@ -124,7 +136,7 @@ public final class CatalogCsvWriter {
                 int views = viewsOf.getOrDefault(id, Set.of()).size();
                 List<String> row = new ArrayList<>(List.of(id, typeName(xsiType), element.attribute("name").orElse(""),
                         layerName(xsiType), folderPath.getOrDefault(id, ""), element.documentation().orElse(""),
-                        String.valueOf(views), views > 0 ? "да" : "нет"));
+                        String.valueOf(views), views > 0 ? yes : no));
                 Map<String, String> properties = properties(element);
                 keys.forEach(k -> row.add(properties.getOrDefault(k, "")));
                 rows.add(row);

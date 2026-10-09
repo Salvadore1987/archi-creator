@@ -7,7 +7,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.lock.LockReleaseReason;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
 /**
- * Блокировка снята — владельцем, администратором или по истечении срока (UC-MDL-005).
+ * Блокировка снята — владельцем, администратором или по истечении срока.
  *
  * @param releasedBy совпадает с {@code previousOwner} при добровольном снятии
  */

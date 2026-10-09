@@ -13,8 +13,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
- * Основа интеграционных тестов (§9.3): контекст приложения целиком на {@code postgres:16}
- * в Testcontainers — том же образе, что в docker-compose.yml (§10.1). Контейнер один
+ * Основа интеграционных тестов: контекст приложения целиком на {@code postgres:16}
+ * в Testcontainers — том же образе, что в docker-compose.yml. Контейнер один
  * на прогон: поднимать базу на каждый класс — минуты ни за что.
  *
  * <p>Ресурс-сервер настроен на JWKS, который не запрашивается при старте: токены

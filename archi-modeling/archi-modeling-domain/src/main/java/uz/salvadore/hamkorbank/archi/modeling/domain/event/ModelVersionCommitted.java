@@ -9,7 +9,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
  * Сохранение создало версию — единственная точка, после которой изменения считаются
- * зафиксированными (UC-MDL-004).
+ * зафиксированными.
  *
  * @param author subject из JWT, без персональных данных
  */

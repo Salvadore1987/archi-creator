@@ -2,6 +2,8 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.residue;
 
 import java.util.Objects;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 /**
  * Атрибут в остатке на своём месте среди прочих. Без значения — метка типизированного
@@ -13,7 +15,7 @@ public record ResidueAttribute(String name, Optional<String> value) {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(value, "value");
         if (name.isBlank()) {
-            throw new IllegalArgumentException("имя атрибута пусто");
+            throw new InvalidValueException(InterchangeMessages.ATTRIBUTE_NAME_EMPTY);
         }
     }
 

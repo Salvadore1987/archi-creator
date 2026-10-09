@@ -44,13 +44,12 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 
 /**
- * Агрегаты modeling — обратно в документ {@code .archimate} (UC-IXC-002, {@code ModelDocumentAssembler}).
+ * Агрегаты modeling — обратно в документ {@code .archimate} ({@code ModelDocumentAssembler}).
  *
- * <p>Столбцы накладываются на остаток (ADR-0017): метка типизированного атрибута получает
+ * <p>Столбцы накладываются на остаток и сильнее него: метка типизированного атрибута получает
  * значение из столбца, пропавшее значение убирается, новое встаёт туда, куда его поставил
  * бы Archi. Дочерние строки и записи остатка сливаются по общей разреженной нумерации.
- * {@code targetConnections} производен: множество — из рёбер, порядок — из остатка
- * (§3.4, п. 6).
+ * {@code targetConnections} производен: множество — из рёбер, порядок — из остатка.
  */
 public final class DocumentAssembler {
 
@@ -179,10 +178,12 @@ public final class DocumentAssembler {
             typed.put(XmlSchema.XSI_TYPE, Optional.of(node.archiType().value()));
             typed.put("id", Optional.of(node.archiId().value()));
             typed.put(XmlSchema.TARGET_CONNECTIONS, targetConnections(node.id().value(), residue));
+            typed.put("name", node.label());
             style(typed, node.style());
             typed.put("archimateElement", node.elementId().map(e -> archiIds.get(e.value()).value()));
             Content content = new Content(residue);
             content.single("bounds", bounds(node.bounds(), residue), XmlSchema.BOUNDS_FIRST);
+            content.single("content", node.content().map(c -> text("content", c)), XmlSchema.CONTENT_AFTER_BOUNDS);
             ViewNodeId id = node.id();
             view.nodes().values().stream().filter(n -> n.parentId().equals(Optional.of(id)))
                     .forEach(n -> content.child(n.sortOrder().value(), viewNode(view, n)));
@@ -390,7 +391,8 @@ public final class DocumentAssembler {
     /**
      * Содержимое узла: дочерние строки по {@code sort_order}, записи остатка по своим
      * позициям, типизированные значения — на места своих меток. Порядок при равенстве
-     * позиций — порядок добавления: стабильно, без хеш-таблиц (INV-IXC-004).
+     * позиций — порядок добавления: стабильно, без хеш-таблиц: одна модель
+     * всегда даёт один и тот же файл.
      */
     private static final class Content {
 

@@ -2,14 +2,15 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.document;
 
 import java.util.Objects;
 import java.util.regex.Pattern;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 /**
- * Идентификатор объекта в файле Archi. Сохраняется буквально, не перегенерируется
- * (INV-IXC-001, ADR-0002).
+ * Идентификатор объекта в файле Archi. Сохраняется буквально, не перегенерируется.
  *
  * <p>Шаблон широкий намеренно: Archi пишет {@code id-<32 hex>}, эталонная модель —
  * {@code id-<24 hex>}, старые версии и импорт из OEF — иное. Узкий шаблон
- * отклонил бы настоящий файл Archi (FR-01). Проверяется лишь то, что значение
+ * отклонил бы настоящий файл Archi. Проверяется лишь то, что значение
  * пригодно для атрибута {@code id} и не ломает XML.
  */
 public record ArchiId(String value) {
@@ -19,7 +20,7 @@ public record ArchiId(String value) {
     public ArchiId {
         Objects.requireNonNull(value, "archiId");
         if (!FORMAT.matcher(value).matches()) {
-            throw new IllegalArgumentException("недопустимый идентификатор Archi: '" + value + "'");
+            throw new InvalidValueException(InterchangeMessages.ARCHI_ID_INVALID, value);
         }
     }
 

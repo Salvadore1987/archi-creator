@@ -13,7 +13,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMet
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
 
 /**
- * Метрики interchange на Micrometer (spec/nfr/interchange.yaml#observability.metrics).
+ * Метрики interchange на Micrometer.
  * Потери выгрузки считаются и нулём: алерт {@code RoundTripLossDetected} обязан видеть
  * ряд, даже пока потерь нет.
  */

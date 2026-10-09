@@ -13,19 +13,18 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 /**
  * Изоляция bounded context'ов друг от друга.
  *
- * <p>Раскладку по модулям держит сборка (`ADR-0001`), но только внутри одного
+ * <p>Раскладку по модулям держит сборка, но только внутри одного
  * контекста: `archi-modeling-domain` не видит Spring, потому что зависимости
  * нет. Между контекстами так не выходит — все двенадцать модулей встречаются
  * в `archi-bootstrap`, и оттуда любой класс технически виден любому. Поэтому
  * карта контекстов держится правилом, а не зависимостью.
  *
- * <p>Что разрешено, задаёт
- * {@code spec/domain/bounded-contexts.yaml}:
+ * <p>Что разрешено, задаёт карта контекстов:
  *
  * <ul>
  *   <li>{@code modeling ↔ interchange} — partnership, движение в обе стороны;</li>
  *   <li>{@code advisor → modeling} — published language плюс ACL, только чтение;</li>
- *   <li>{@code modeling → advisor} — запрещено: помощник не изменяет модель (FR-22),
+ *   <li>{@code modeling → advisor} — запрещено: помощник не изменяет модель,
  *       и обратной стрелки в карте нет;</li>
  *   <li>{@code advisor ↔ interchange} — связи нет вовсе, ни в какую сторону.</li>
  * </ul>

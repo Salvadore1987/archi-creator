@@ -1,0 +1,736 @@
+{
+  "$comment": [
+    "Общая геометрия фигур: её читают канва и серверный писатель SVG, второй копии нет.",
+    "Ключ — xsi:type объекта. Тип без записи рисуется записью fallback: силуэт заглушки с настоящим именем.",
+    "Координаты — от левого верхнего угла фигуры в единицах SVG (1 = 1 px при 100 %).",
+    "Отрицательные x и y отсчитываются от правого и нижнего края; width и height меньше либо равные нулю — размер фигуры минус модуль значения.",
+    "outline — имя примитива из primitives; радиус берётся из токена radius_token файла design-tokens.yaml.",
+    "layer — ключ слоя токенов; null — слой самого элемента; group, note и junction — токены холста group_*, note_* и цвет связей.",
+    "label_box null — у фигуры нет подписи; corner_icon null — нет иконки."
+  ],
+  "version": 1,
+  "default_size": {
+    "width": 120,
+    "height": 55
+  },
+  "default_size_by_type": {
+    "archimate:Group": {
+      "width": 400,
+      "height": 140
+    },
+    "archimate:Note": {
+      "width": 185,
+      "height": 80
+    },
+    "archimate:Junction": {
+      "width": 15,
+      "height": 15
+    }
+  },
+  "primitives": {
+    "rect": "прямоугольник со скруглением радиус-токена",
+    "stadium": "прямоугольник со скруглением в половину высоты",
+    "circle": "круг, вписанный в фигуру",
+    "tab": "прямоугольник с ярлыком слева сверху: ярлык шириной в треть фигуры, не шире 120, высотой 18",
+    "dog-ear": "прямоугольник с загнутым правым верхним углом 12×12",
+    "stub": "прямоугольник со скруглением радиус-токена и пунктирной обводкой"
+  },
+  "shapes": {
+    "archimate:ApplicationCollaboration": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-collaboration",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "application"
+    },
+    "archimate:ApplicationComponent": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-component",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "application"
+    },
+    "archimate:ApplicationEvent": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-event",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "application"
+    },
+    "archimate:ApplicationFunction": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-function",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "application"
+    },
+    "archimate:ApplicationInteraction": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-interaction",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "application"
+    },
+    "archimate:ApplicationInterface": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-interface",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "application"
+    },
+    "archimate:ApplicationProcess": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-process",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "application"
+    },
+    "archimate:ApplicationService": {
+      "outline": "stadium",
+      "corner_icon": {
+        "sprite_id": "i-service",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 14,
+        "y": 5,
+        "width": -24,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "application"
+    },
+    "archimate:Artifact": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-artifact",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "technology"
+    },
+    "archimate:BusinessActor": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-actor",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "business"
+    },
+    "archimate:BusinessCollaboration": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-collaboration",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "business"
+    },
+    "archimate:BusinessEvent": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-event",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "business"
+    },
+    "archimate:BusinessFunction": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-function",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "business"
+    },
+    "archimate:BusinessInteraction": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-interaction",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "business"
+    },
+    "archimate:BusinessInterface": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-interface",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "business"
+    },
+    "archimate:BusinessObject": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-object",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "business"
+    },
+    "archimate:BusinessProcess": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-process",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "business"
+    },
+    "archimate:BusinessRole": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-role",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "business"
+    },
+    "archimate:BusinessService": {
+      "outline": "stadium",
+      "corner_icon": {
+        "sprite_id": "i-service",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 14,
+        "y": 5,
+        "width": -24,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "business"
+    },
+    "archimate:CommunicationNetwork": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-network",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "technology"
+    },
+    "archimate:Contract": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-contract",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "business"
+    },
+    "archimate:DataObject": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-object",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "application"
+    },
+    "archimate:Device": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-device",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "technology"
+    },
+    "archimate:DiagramModelReference": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-view-ref",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "other"
+    },
+    "archimate:Group": {
+      "outline": "tab",
+      "corner_icon": null,
+      "label_box": {
+        "x": 10,
+        "y": 3,
+        "width": -20,
+        "height": 18
+      },
+      "radius_token": "node_radius",
+      "layer": "group"
+    },
+    "archimate:Grouping": {
+      "outline": "tab",
+      "corner_icon": {
+        "sprite_id": "i-grouping",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 10,
+        "y": 3,
+        "width": -20,
+        "height": 18
+      },
+      "radius_token": "node_radius",
+      "layer": "other",
+      "dash": "6 4"
+    },
+    "archimate:Junction": {
+      "outline": "circle",
+      "corner_icon": null,
+      "label_box": null,
+      "radius_token": "node_radius",
+      "layer": "junction"
+    },
+    "archimate:Location": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-location",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "other"
+    },
+    "archimate:Node": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-node",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "technology"
+    },
+    "archimate:Note": {
+      "outline": "dog-ear",
+      "corner_icon": null,
+      "label_box": {
+        "x": 9,
+        "y": 7,
+        "width": -18,
+        "height": -14
+      },
+      "radius_token": "node_radius",
+      "layer": "note"
+    },
+    "archimate:Path": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-path",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "technology"
+    },
+    "archimate:Product": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-product",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "business"
+    },
+    "archimate:Representation": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-representation",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "business"
+    },
+    "archimate:SystemSoftware": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-system-software",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "technology"
+    },
+    "archimate:TechnologyCollaboration": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-collaboration",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "technology"
+    },
+    "archimate:TechnologyEvent": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-event",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "technology"
+    },
+    "archimate:TechnologyFunction": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-function",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "technology"
+    },
+    "archimate:TechnologyInteraction": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-interaction",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "technology"
+    },
+    "archimate:TechnologyInterface": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-interface",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "technology"
+    },
+    "archimate:TechnologyProcess": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-process",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "technology"
+    },
+    "archimate:TechnologyService": {
+      "outline": "stadium",
+      "corner_icon": {
+        "sprite_id": "i-service",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 14,
+        "y": 5,
+        "width": -24,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "technology"
+    }
+  },
+  "fallback": {
+    "outline": "stub",
+    "corner_icon": {
+      "sprite_id": "i-stub",
+      "x": -21,
+      "y": 6,
+      "size": 14
+    },
+    "label_box": {
+      "x": 8,
+      "y": 5,
+      "width": -22,
+      "height": -10
+    },
+    "radius_token": "node_radius",
+    "layer": null,
+    "dash": "5 3"
+  }
+}

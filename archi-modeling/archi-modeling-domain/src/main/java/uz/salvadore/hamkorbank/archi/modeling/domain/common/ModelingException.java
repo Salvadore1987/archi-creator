@@ -4,9 +4,10 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Отказ домена modeling. {@code code} — код инварианта ({@code INV-MDL-004}) или
- * код ошибки ({@code RELATION_NOT_PERMITTED}): он уходит в поле {@code code}
- * ответа {@code problem+json} и в label {@code error_code} метрик.
+ * Отказ домена modeling. {@code code} — код из {@link ModelingCodes}: он уходит в поле
+ * {@code code} ответа {@code problem+json} и в label {@code error_code} метрик.
+ * Текст для человека не хранится — только сообщение с ключом, которое адаптер
+ * переводит на язык запроса.
  *
  * @param details то, что нужно клиенту для решения: владелец блокировки,
  *                список мешающих связей
@@ -15,25 +16,35 @@ public class ModelingException extends RuntimeException {
 
     private final String code;
     private final Failure failure;
+    private final Message reason;
     private final Map<String, Object> details;
 
-    public ModelingException(String code, Failure failure, String message) {
-        this(code, failure, message, Map.of());
+    public ModelingException(String code, Failure failure, Message reason) {
+        this(code, failure, reason, Map.of());
     }
 
-    public ModelingException(String code, Failure failure, String message, Map<String, Object> details) {
-        super(code + ": " + message);
+    public ModelingException(String code, Failure failure, Message reason, Map<String, Object> details) {
+        super(code + ": " + reason);
         this.code = Objects.requireNonNull(code, "code");
         this.failure = Objects.requireNonNull(failure, "failure");
+        this.reason = Objects.requireNonNull(reason, "reason");
         this.details = Map.copyOf(details);
     }
 
-    public static ModelingException notFound(String what) {
-        return new ModelingException(Codes.NOT_FOUND, Failure.NOT_FOUND, what + " не найден(а)");
+    /** Объекта нет — или он скрыт: {@code what} называет его сообщением, а не строкой. */
+    public static ModelingException notFound(Message what) {
+        return new ModelingException(ModelingCodes.NOT_FOUND, Failure.NOT_FOUND,
+                Message.of(ModelingMessages.NOT_FOUND, what));
     }
 
-    public static ModelingException invalid(String message) {
-        return new ModelingException(Codes.INVALID_INPUT, Failure.UNPROCESSABLE, message);
+    public static ModelingException invalid(Message reason) {
+        return new ModelingException(ModelingCodes.INVALID_INPUT, Failure.UNPROCESSABLE, reason);
+    }
+
+    /** Значение не прошло правило типа — тот же отказ, что и неверный ввод. */
+    public static ModelingException invalid(IllegalArgumentException invalid) {
+        return invalid(invalid instanceof InvalidValueException value ? value.reason()
+                : Message.of(ModelingMessages.INVALID_VALUE));
     }
 
     public String code() {
@@ -44,21 +55,11 @@ public class ModelingException extends RuntimeException {
         return failure;
     }
 
-    public Map<String, Object> details() {
-        return details;
+    public Message reason() {
+        return reason;
     }
 
-    /** Коды отказов, не являющиеся кодами инвариантов. */
-    public static final class Codes {
-        public static final String NOT_FOUND = "MDL_NOT_FOUND";
-        public static final String INVALID_INPUT = "MDL_INVALID_INPUT";
-        public static final String ACCESS_DENIED = "MDL_ACCESS_DENIED";
-        public static final String TYPE_NOT_EDITABLE = "MDL_TYPE_NOT_EDITABLE";
-        public static final String FOLDER_NOT_EMPTY = "MDL_FOLDER_NOT_EMPTY";
-        public static final String SNAPSHOT_PURGED = "MDL_SNAPSHOT_PURGED";
-        public static final String IDEMPOTENCY_CONFLICT = "MDL_IDEMPOTENCY_KEY_REUSED";
-
-        private Codes() {
-        }
+    public Map<String, Object> details() {
+        return details;
     }
 }

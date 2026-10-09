@@ -9,10 +9,22 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 
-/** Отказы interchange — в {@code application/problem+json} (§8.1). */
+/** Отказы interchange — в {@code application/problem+json}, текст — на языке запроса. */
 @RestControllerAdvice
 public class InterchangeProblemHandler {
+
+    private static final String TYPE_BASE = "https://archi-creator/errors/";
+
+    private final TextCatalog text;
+
+    public InterchangeProblemHandler(TextCatalog text) {
+        this.text = text;
+    }
 
     @ExceptionHandler(InterchangeException.class)
     ProblemDetail interchange(InterchangeException e, HttpServletRequest request) {
@@ -23,16 +35,15 @@ public class InterchangeProblemHandler {
             case FORBIDDEN -> HttpStatus.FORBIDDEN;
             case GONE -> HttpStatus.GONE;
         };
-        String message = e.getMessage().startsWith(e.code() + ": ")
-                ? e.getMessage().substring(e.code().length() + 2) : e.getMessage();
-        return problem(status, e.code(), message, e.details(), request);
+        return problem(status, e.code(), text.text(e.reason()), e.details(), request, text);
     }
 
     static ProblemDetail problem(HttpStatus status, String code, String detail, Map<String, Object> details,
-                                 HttpServletRequest request) {
+                                 HttpServletRequest request, TextCatalog text) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
-        problem.setType(URI.create("https://archi-creator/errors/" + code.toLowerCase(Locale.ROOT).replace('_', '-')));
-        problem.setTitle(status == HttpStatus.BAD_REQUEST ? "Некорректный файл" : "Импорт и экспорт");
+        problem.setType(URI.create(TYPE_BASE + code.toLowerCase(Locale.ROOT).replace('_', '-')));
+        problem.setTitle(text.text(Message.of(status == HttpStatus.BAD_REQUEST
+                ? InterchangeMessages.TITLE_BAD_FILE : InterchangeMessages.TITLE_INTERCHANGE)));
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", code);
         details.forEach(problem::setProperty);

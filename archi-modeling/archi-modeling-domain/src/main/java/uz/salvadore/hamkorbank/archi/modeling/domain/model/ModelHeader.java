@@ -6,6 +6,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
@@ -14,7 +16,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
  * Собственные поля модели без её содержимого — то, что лежит в строке {@code model}.
  *
  * @param createdBy subject автора
- * @param version   оптимистичная блокировка строки (NFR-07)
+ * @param version   оптимистичная блокировка строки
  */
 public record ModelHeader(ModelId id, WorkspaceId workspaceId, ArchiId archiId, String name,
                           Optional<String> documentation, String archiVersion, ModelStatus status,
@@ -34,10 +36,10 @@ public record ModelHeader(ModelId id, WorkspaceId workspaceId, ArchiId archiId, 
         Objects.requireNonNull(createdBy, "createdBy");
         Objects.requireNonNull(createdAt, "createdAt");
         Objects.requireNonNull(updatedAt, "updatedAt");
-        Names.limited(name, "модели");
+        Names.limited(name, Names.MODEL);
         properties = List.copyOf(properties);
         if (archiVersion == null || !ARCHI_VERSION.matcher(archiVersion).matches()) {
-            throw new IllegalArgumentException("версия формата Archi вида N.N.N, получено: " + archiVersion);
+            throw new InvalidValueException(ModelingMessages.ARCHI_VERSION_FORMAT, archiVersion);
         }
     }
 

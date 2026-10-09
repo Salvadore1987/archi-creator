@@ -1,6 +1,6 @@
 ---
 version: 1.0
-last_modified: 2026-09-28
+last_modified: 2026-10-09
 layer: ui
 requirements: [FR-19, FR-20, FR-21]
 anchors: [UI-009, UI-010, UI-011]
@@ -59,6 +59,24 @@ edges:
   edge_color:          { value: "#667085", css: "--edge-color" }
   edge_width:          { value: "1.5px",   css: "--edge-width" }
   edge_width_selected: { value: "2.5px",   css: "--edge-width-selected" }
+  edge_corner_radius:  { value: "6px",     css: "--edge-corner-radius" }
+  edge_label_font:     { value: '10px/1.2 "Inter", system-ui, sans-serif', css: "--edge-label-font" }
+  edge_label_color:    { value: "#667085", css: "--edge-label-color" }
+
+# Холст и выделение. На accent ссылается node_shadow_selected; без объявления
+# токен висел бы в воздухе, и канва взяла бы цвет из корпуса — второй источник.
+canvas:
+  accent:          { value: "#FF6A3D", css: "--accent" }
+  paper:           { value: "#FAF9F5", css: "--paper" }
+  paper_line:      { value: "#E5E2D8", css: "--paper-line" }
+  paper_line_major: { value: "#D5D1C3", css: "--paper-line-major" }
+  paper_text:      { value: "#1A1D22", css: "--paper-text" }
+  grid_step:       { value: "20px",    css: "--grid-step" }
+  group_fill:      { value: "rgba(255,255,255,.35)", css: "--group-fill" }
+  group_border:    { value: "#9E9E9E", css: "--group-border" }
+  note_fill:       { value: "#FFFDF2", css: "--note-fill" }
+  note_border:     { value: "#E0D9BE", css: "--note-border" }
+  opaque_border:   { value: "#9E9E9E", css: "--opaque-border" }
 
 # Что относится к семантике нотации и токенами НЕ управляется (UI-009).
 notation_fixed:
