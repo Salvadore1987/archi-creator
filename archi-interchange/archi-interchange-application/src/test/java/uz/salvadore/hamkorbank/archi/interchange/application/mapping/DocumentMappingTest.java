@@ -32,6 +32,13 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.DiagramType;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.StyleOverride;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeKind;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
@@ -75,6 +82,61 @@ class DocumentMappingTest {
         assertTrue(content.model().elements().values().stream().allMatch(e -> e.rawXml().isPresent()),
                 "у импортированного элемента остаток есть всегда — в нём порядок атрибутов");
         assertEquals(9, content.model().roots().size());
+    }
+
+    @Test
+    @DisplayName("ADR-0017: подпись группы и текст заметки — в полях узла, а не в остатке; сборка их возвращает")
+    void groupLabelAndNoteContentAreTyped() throws IOException {
+        ModelContent styled = decompose(read(Files.readAllBytes(
+                ROOT.resolve("archi-bootstrap/src/test/resources/fixtures/styled_objects.archimate"))));
+        ViewNode note = styled.views().stream().flatMap(v -> v.nodes().values().stream())
+                .filter(n -> n.kind() == ViewNodeKind.NOTE).findFirst().orElseThrow();
+        assertEquals(Optional.of("Легенда:\nкрасное — платёжный поток;\nзелёное — обслуживание клиента."),
+                note.content());
+        assertTrue(note.rawXml().orElseThrow().value().indexOf("Легенда") < 0, "текста заметки нет в остатке");
+
+        ModelContent reference = decompose(read(Files.readAllBytes(ROOT.resolve("docs/Hamkorbank_AS_IS_strict.archimate"))));
+        ViewNode group = reference.views().stream().flatMap(v -> v.nodes().values().stream())
+                .filter(n -> n.kind() == ViewNodeKind.GROUP && n.label().equals(Optional.of("Каналы")))
+                .findFirst().orElseThrow();
+        assertTrue(group.rawXml().orElseThrow().value().indexOf("Каналы") < 0, "подписи группы нет в остатке");
+
+        View view = styled.views().stream().filter(v -> v.nodes().contains(note.id())).findFirst().orElseThrow();
+        view.nodes().put(note.id(), new ViewNode(note.id(), note.parentId(), note.archiId(), note.archiType(),
+                note.elementId(), note.bounds(), note.style(), note.label(), Optional.of("Первая\r\nвторая"),
+                note.sortOrder(), note.rawXml()));
+        String xml = new String(write(new DocumentAssembler().assemble(styled)), StandardCharsets.UTF_8);
+        assertTrue(xml.contains("<content>Первая&#xD;\nвторая</content>"), "столбец сильнее остатка, CR не теряется");
+        ModelContent again = decompose(read(xml.getBytes(StandardCharsets.UTF_8)));
+        assertEquals(Optional.of("Первая\r\nвторая"), again.views().stream()
+                .flatMap(v -> v.nodes().values().stream()).filter(n -> n.archiId().equals(note.archiId()))
+                .findFirst().orElseThrow().content());
+    }
+
+    @Test
+    @DisplayName("ADR-0017: новая группа и заметка пишутся в порядке Archi — name после id, content после bounds")
+    void newGroupAndNoteFollowArchiLayout() throws IOException {
+        ModelContent content = decompose(read(Files.readAllBytes(
+                ROOT.resolve("archi-bootstrap/src/test/resources/fixtures/styled_objects.archimate"))));
+        View view = content.views().getFirst();
+        ArchiIdGenerator archiIds = new ArchiIdGenerator();
+        ViewNode group = new ViewNode(ViewNodeId.of(UUID.randomUUID()), Optional.empty(), archiIds.next(),
+                DiagramType.of("archimate:Group"), Optional.empty(), new Bounds(0, 0, 400, 300), StyleOverride.NONE,
+                Optional.of("Каналы"), Optional.empty(), SortOrder.of(900_000), Optional.empty());
+        ViewNode note = new ViewNode(ViewNodeId.of(UUID.randomUUID()), Optional.empty(), archiIds.next(),
+                DiagramType.of("archimate:Note"), Optional.empty(), new Bounds(10, 10, 185, 80), StyleOverride.NONE,
+                Optional.empty(), Optional.of("строка 1\nстрока 2"), SortOrder.of(901_000), Optional.empty());
+        view.nodes().put(group.id(), group);
+        view.nodes().put(note.id(), note);
+
+        String xml = new String(write(new DocumentAssembler().assemble(content)), StandardCharsets.UTF_8);
+
+        assertTrue(xml.contains("<child xsi:type=\"archimate:Group\" id=\"" + group.archiId() + "\" name=\"Каналы\">"),
+                xml);
+        assertTrue(xml.contains("<child xsi:type=\"archimate:Note\" id=\"" + note.archiId() + "\">\n"), xml);
+        int bounds = xml.indexOf("<bounds x=\"10\" y=\"10\" width=\"185\" height=\"80\"/>");
+        int text = xml.indexOf("<content>строка 1\nстрока 2</content>");
+        assertTrue(bounds > 0 && text > bounds, "текст заметки — после геометрии");
     }
 
     static ModelContent decompose(ModelDocument document) {

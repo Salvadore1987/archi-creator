@@ -178,10 +178,12 @@ public final class DocumentAssembler {
             typed.put(XmlSchema.XSI_TYPE, Optional.of(node.archiType().value()));
             typed.put("id", Optional.of(node.archiId().value()));
             typed.put(XmlSchema.TARGET_CONNECTIONS, targetConnections(node.id().value(), residue));
+            typed.put("name", node.label());
             style(typed, node.style());
             typed.put("archimateElement", node.elementId().map(e -> archiIds.get(e.value()).value()));
             Content content = new Content(residue);
             content.single("bounds", bounds(node.bounds(), residue), XmlSchema.BOUNDS_FIRST);
+            content.single("content", node.content().map(c -> text("content", c)), XmlSchema.CONTENT_AFTER_BOUNDS);
             ViewNodeId id = node.id();
             view.nodes().values().stream().filter(n -> n.parentId().equals(Optional.of(id)))
                     .forEach(n -> content.child(n.sortOrder().value(), viewNode(view, n)));

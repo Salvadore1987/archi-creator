@@ -49,8 +49,13 @@ public final class Dtos {
     public record StyleDto(String fillColor, String font, String fontColor, String lineColor, Integer textAlignment) {
     }
 
+    /**
+     * @param label   собственная подпись узла — у группы, объектов скетча и холста
+     * @param content текст заметки с переводами строк
+     */
     public record ViewNodeDto(UUID id, UUID parentId, String archiId, String archiType, String kind, UUID elementId,
-                              int x, int y, int width, int height, StyleDto style, long sortOrder) {
+                              int x, int y, int width, int height, StyleDto style, String label, String content,
+                              long sortOrder) {
     }
 
     public record BendpointDto(int startX, int startY, int endX, int endY) {

@@ -305,6 +305,7 @@ public final class DocumentDecomposer {
                 }
             };
             Bounds[] bounds = {null};
+            String[] text = {null};
             List<DocumentContent> content = node.content();
             for (int i = 0; i < content.size(); i++) {
                 long childOrder = SortOrder.ofPosition(i).value();
@@ -318,6 +319,10 @@ public final class DocumentDecomposer {
                         bounds[0] = parseBounds(value).get();
                         residue.slot(childOrder, value);
                     }
+                    case DocumentValue value when text[0] == null && isDocumentation(value, "content") -> {
+                        text[0] = value.text().orElse("");
+                        residue.slot(childOrder, value);
+                    }
                     case DocumentValue value -> residue.value(childOrder, value);
                     case RawXmlFragment raw -> residue.fragment(childOrder, raw);
                 }
@@ -325,7 +330,8 @@ public final class DocumentDecomposer {
             view.nodes.add(new ViewNode(id, parent, archiId(node), DiagramType.of(node.archiType().orElseThrow()),
                     element, Optional.ofNullable(bounds[0])
                             .orElse(new Bounds(0, 0, Bounds.DEFAULT_SIZE, Bounds.DEFAULT_SIZE)),
-                    style.style(), SortOrder.of(order), residue.encode()));
+                    style.style(), node.attribute("name"), Optional.ofNullable(text[0]), SortOrder.of(order),
+                    residue.encode()));
         }
 
         private void viewEdge(DocumentNode node, long order, ViewParts view) {

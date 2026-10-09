@@ -101,7 +101,7 @@ public final class DtoMapper {
         return new ViewNodeDto(n.id().value(), n.parentId().map(p -> p.value()).orElse(null), n.archiId().value(),
                 n.archiType().value(), n.kind().name(), n.elementId().map(e -> e.value()).orElse(null),
                 n.bounds().x(), n.bounds().y(), n.bounds().width(), n.bounds().height(), style(n.style()),
-                n.sortOrder().value());
+                n.label().orElse(null), n.content().orElse(null), n.sortOrder().value());
     }
 
     public static ViewEdgeDto edge(ViewEdge e) {

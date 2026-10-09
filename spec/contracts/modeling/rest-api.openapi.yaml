@@ -955,6 +955,15 @@ components:
         width:     { type: integer, description: "-1 — размер по умолчанию Archi." }
         height:    { type: integer }
         style:     { $ref: '#/components/schemas/Style' }
+        label:
+          type: string
+          description: |
+            Собственная подпись узла — атрибут `name` в файле: у группы, объектов скетча
+            и холста. У DIAGRAM_OBJECT подписью служит имя элемента, здесь null. Только
+            чтение: команды правки подписи пока нет.
+        content:
+          type: string
+          description: Текст заметки (`<content>` в файле) как есть, с переводами строк; null — текста нет. Только чтение.
         sortOrder: { type: integer, format: int64 }
 
     Bendpoint:

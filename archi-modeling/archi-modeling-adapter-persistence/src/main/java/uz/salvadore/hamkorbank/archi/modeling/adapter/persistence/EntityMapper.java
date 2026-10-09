@@ -180,7 +180,8 @@ final class EntityMapper {
         return new ViewNode(ViewNodeId.of(e.id), Optional.ofNullable(e.parentId).map(ViewNodeId::of),
                 ArchiId.of(e.archiId), DiagramType.of(e.archiType), Optional.ofNullable(e.elementId).map(ElementId::of),
                 new Bounds(e.x, e.y, e.width, e.height),
-                style(e.fillColor, e.font, e.fontColor, e.lineColor, e.textAlignment), SortOrder.of(e.sortOrder),
+                style(e.fillColor, e.font, e.fontColor, e.lineColor, e.textAlignment),
+                Optional.ofNullable(e.label), Optional.ofNullable(e.content), SortOrder.of(e.sortOrder),
                 raw(e.rawXml));
     }
 
@@ -202,6 +203,8 @@ final class EntityMapper {
         e.fontColor = n.style().fontColor().orElse(null);
         e.lineColor = n.style().lineColor().orElse(null);
         e.textAlignment = n.style().textAlignment().orElse(null);
+        e.label = n.label().orElse(null);
+        e.content = n.content().orElse(null);
         e.sortOrder = n.sortOrder().value();
         e.rawXml = n.rawXml().map(RawXml::value).orElse(null);
     }
