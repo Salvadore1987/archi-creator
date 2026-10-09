@@ -13,7 +13,13 @@
     ссылка на документ разработки уходила бы пользователю;
   - исключение, построенное из строки-литерала: ``new …Exception("…")``,
     ``ModelingException.invalid("…")``. Причина отказа — ключ сообщения
-    (``Message.of(…)``), иначе её не перевести.
+    (``Message.of(…)``), иначе её не перевести;
+  - ветвление контроллера по строковому значению запроса: ``case "csv" ->``
+    в классе с ``@RestController``/``@Controller``. Выбор ветки по значению
+    из запроса — решение сценария; контроллер передаёт значение в запросе
+    сценария, а сценарий решает. Остальные признаки того же — отказ с бизнес-кодом,
+    поиск объекта, обращение к порту из контроллера — ловит ArchUnit
+    (``RestLayerConventionsTest``).
 
 В файлах локали (``src/main/resources/i18n/*.properties``) отказ вызывают
 якорь спецификации в тексте и апостроф: при ``always-use-message-format``
@@ -50,6 +56,9 @@ EXCEPTION_FROM_LITERAL = re.compile(
     r"new\s+[\w.]*(?:Exception|Error)\s*\(\s*\"\""
     r"|\.(?:invalid|notFound)\s*\(\s*\"\""
 )
+
+CONTROLLER = re.compile(r"@(?:RestController|Controller)\b")
+STRING_CASE = re.compile(r"\bcase\s+\"\"")
 
 # Путь относительно корня → причина. Пусто: исключений пока нет.
 EXEMPT: dict[str, str] = {}
@@ -124,6 +133,11 @@ def check_java(rel: str) -> list[str]:
     for match in EXCEPTION_FROM_LITERAL.finditer(code):
         line = code.count("\n", 0, match.start()) + 1
         found.append(f"{rel}:{line}: исключение из строки-литерала — причина ключом: Message.of(…)")
+    if CONTROLLER.search(code):
+        for match in STRING_CASE.finditer(code):
+            line = code.count("\n", 0, match.start()) + 1
+            found.append(f"{rel}:{line}: контроллер ветвится по строковому значению запроса — решение сценария, "
+                         "передайте значение в сервис")
     return found
 
 
@@ -151,7 +165,7 @@ def main() -> int:
         violations += check_bundle(rel)
     if violations:
         print("\n".join(violations))
-        print(f"\nНарушений: {len(violations)}. Правило — CLAUDE.md, раздел «Тексты и локализация».")
+        print(f"\nНарушений: {len(violations)}. Правила — CLAUDE.md, разделы «Тексты и локализация» и «Контроллер и сценарий».")
         return 1
     print(f"Проверено файлов Java: {len(java)}, файлов локали: {len(bundles)}. Нарушений нет.")
     return 0

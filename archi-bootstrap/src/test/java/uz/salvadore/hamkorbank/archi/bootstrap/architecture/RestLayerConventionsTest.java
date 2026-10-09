@@ -1,5 +1,9 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.architecture;
 
+import static com.tngtech.archunit.core.domain.JavaAccess.Predicates.target;
+import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
+import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.type;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
@@ -13,6 +17,7 @@ import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import java.util.List;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,6 +43,24 @@ class RestLayerConventionsTest {
             "контроллер или обработчик ошибок Spring MVC",
             c -> List.of(RestController.class, Controller.class, RestControllerAdvice.class, ControllerAdvice.class)
                     .stream().anyMatch(c::isAnnotatedWith));
+
+    /** Обработчик запроса — без обработчиков ошибок: те переводят отказ в ответ и только. */
+    private static final DescribedPredicate<JavaClass> CONTROLLER = DescribedPredicate.describe(
+            "контроллер Spring MVC",
+            c -> c.isAnnotatedWith(RestController.class) || c.isAnnotatedWith(Controller.class));
+
+    /** Отказ домена или сценария — исключение из пакетов контекстов. */
+    private static final DescribedPredicate<JavaClass> CONTEXT_FAILURE = DescribedPredicate.describe(
+            "исключение домена или сценария",
+            c -> c.isAssignableTo(RuntimeException.class)
+                    && (c.getPackageName().startsWith(ROOT + ".modeling")
+                    || c.getPackageName().startsWith(ROOT + ".interchange")
+                    || c.getPackageName().startsWith(ROOT + ".advisor")));
+
+    /** Порт сценария, кроме каталога текстов: перевод сообщения — работа адаптера. */
+    private static final DescribedPredicate<JavaClass> PORT_BUT_TEXTS = DescribedPredicate.describe(
+            "порт application-слоя, кроме TextCatalog",
+            c -> c.getPackageName().contains(".application.port") && !c.getSimpleName().equals("TextCatalog"));
 
     private static JavaClasses classes;
 
@@ -73,6 +96,42 @@ class RestLayerConventionsTest {
     void endpointsAreOutsideDtoPackage() {
         ArchRule rule = noClasses().that(WEB_ENDPOINT).should().resideInAPackage("..dto..")
                 .because("пакет dto содержит только формы данных, без поведения");
+
+        rule.check(classes);
+    }
+
+    @Test
+    @DisplayName("контроллер не отказывает с бизнес-кодом сам: отказы правил — в сценарии и домене")
+    void controllersDoNotRaiseContextFailures() {
+        ArchRule rule = noClasses().that(CONTROLLER)
+                .should().callConstructorWhere(target(owner(CONTEXT_FAILURE)))
+                .because("какой формат поддержан, что недоступно, какое правило нарушено — решения сценария; "
+                        + "контроллер разбирает запрос и вызывает один сценарий. Для неразборчивого ввода "
+                        + "есть ModelingException.invalid(...)");
+
+        rule.check(classes);
+    }
+
+    @Test
+    @DisplayName("контроллер не ищет объекты сам: «не найдено» отвечает сценарий")
+    void controllersDoNotResolveObjects() {
+        ArchRule rule = noClasses().that(CONTROLLER)
+                .should().callMethodWhere(target(owner(type(ModelingException.class)))
+                        .and(target(name("notFound"))))
+                .because("выбор объекта по умолчанию и отказ «не найдено» — решение сценария, "
+                        + "а не HTTP-адаптера");
+
+        rule.check(classes);
+    }
+
+    @Test
+    @DisplayName("контроллер вызывает сценарии, а не порты и хранение")
+    void controllersCallUseCasesOnly() {
+        ArchRule rule = noClasses().that(CONTROLLER)
+                .should().dependOnClassesThat(PORT_BUT_TEXTS)
+                .orShould().dependOnClassesThat().resideInAPackage("..adapter.persistence..")
+                .because("порядок проверок, транзакция и роль живут в сценарии; обход его из контроллера "
+                        + "их теряет");
 
         rule.check(classes);
     }
