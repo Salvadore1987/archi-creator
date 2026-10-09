@@ -6,6 +6,7 @@ import type { AuthMode } from '../auth/session';
 import { CanvasArea } from '../canvas/CanvasArea';
 import { t } from '../i18n';
 import { useEditor } from '../model/store';
+import { HistoryPanel } from '../history/HistoryPanel';
 import { Palette } from '../palette/Palette';
 import { Inspector } from '../panels/Inspector';
 import { TreePanel } from '../tree/TreePanel';
@@ -74,6 +75,7 @@ export function Editor({ modelId, me, auth }: { modelId: string; me?: Me; auth: 
         </aside>
       </div>
       <StatusBar />
+      <HistoryPanel />
     </div>
   );
 }
