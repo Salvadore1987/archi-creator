@@ -19,7 +19,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
 /** Списки доступа модели: запись заменяет список целиком. */
 @Repository
-public class JpaAccessListStore implements ModelAccessListRepository {
+public class JpaModelAccessListRepository implements ModelAccessListRepository {
 
     @PersistenceContext
     private EntityManager em;

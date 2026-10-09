@@ -19,7 +19,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.version.VersionId;
  * маркером «снимок есть, но не загружен»; запись такого маркера столбец не трогает.
  */
 @Repository
-public class JpaVersionStore implements ModelVersionRepository {
+public class JpaModelVersionRepository implements ModelVersionRepository {
 
     private static final byte[] NOT_LOADED = new byte[0];
 
@@ -31,7 +31,7 @@ public class JpaVersionStore implements ModelVersionRepository {
         return em.createQuery("select v from ModelVersionEntity v where v.modelId = :m and v.versionNo = :n",
                         ModelVersionEntity.class)
                 .setParameter("m", modelId.value()).setParameter("n", versionNo)
-                .getResultStream().findFirst().map(JpaVersionStore::toDomain);
+                .getResultStream().findFirst().map(JpaModelVersionRepository::toDomain);
     }
 
     @Override
@@ -39,7 +39,7 @@ public class JpaVersionStore implements ModelVersionRepository {
         return em.createQuery("select v from ModelVersionEntity v where v.modelId = :m order by v.versionNo desc",
                         ModelVersionEntity.class)
                 .setParameter("m", modelId.value()).setMaxResults(1)
-                .getResultStream().findFirst().map(JpaVersionStore::toDomain);
+                .getResultStream().findFirst().map(JpaModelVersionRepository::toDomain);
     }
 
     @Override

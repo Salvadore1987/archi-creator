@@ -16,7 +16,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
  * свободной модели сходятся на вставке, второй получает нарушение ключа, то есть {@code 409}.
  */
 @Repository
-public class JpaLockStore implements ModelLockRepository {
+public class JpaModelLockRepository implements ModelLockRepository {
 
     @PersistenceContext
     private EntityManager em;

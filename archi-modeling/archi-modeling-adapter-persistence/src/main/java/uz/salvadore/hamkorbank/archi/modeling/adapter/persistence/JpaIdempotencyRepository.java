@@ -14,7 +14,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentComma
 
 /** Ключи идемпотентности. Гонка двух запросов с одним ключом — конфликт ключа, {@code 409}. */
 @Repository
-public class JpaIdempotencyStore implements IdempotencyRepository {
+public class JpaIdempotencyRepository implements IdempotencyRepository {
 
     @PersistenceContext
     private EntityManager em;

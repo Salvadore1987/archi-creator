@@ -11,7 +11,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.Workspace;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 @Repository
-public class JpaWorkspaceStore implements WorkspaceRepository {
+public class JpaWorkspaceRepository implements WorkspaceRepository {
 
     @PersistenceContext
     private EntityManager em;
@@ -19,12 +19,12 @@ public class JpaWorkspaceStore implements WorkspaceRepository {
     @Override
     public List<Workspace> findAll() {
         return em.createQuery("select w from WorkspaceEntity w order by w.createdAt, w.id", WorkspaceEntity.class)
-                .getResultList().stream().map(JpaWorkspaceStore::toDomain).toList();
+                .getResultList().stream().map(JpaWorkspaceRepository::toDomain).toList();
     }
 
     @Override
     public Optional<Workspace> find(WorkspaceId id) {
-        return Optional.ofNullable(em.find(WorkspaceEntity.class, id.value())).map(JpaWorkspaceStore::toDomain);
+        return Optional.ofNullable(em.find(WorkspaceEntity.class, id.value())).map(JpaWorkspaceRepository::toDomain);
     }
 
     @Override
