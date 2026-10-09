@@ -50,8 +50,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['src/**/*.test.ts', 'build/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'build/**/*.test.ts', 'perf/**/*.bench.ts'],
     environment: 'node',
-    benchmark: { include: ['perf/**/*.bench.ts'] },
   },
 });

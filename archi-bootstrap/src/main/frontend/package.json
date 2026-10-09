@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "bench": "vitest bench --run",
+    "bench": "vitest run perf",
     "e2e": "playwright test"
   },
   "dependencies": {
