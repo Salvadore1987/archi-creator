@@ -8,12 +8,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attribute;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentContent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentValue;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
-import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attribute;
 import uz.salvadore.hamkorbank.archi.interchange.domain.residue.NodeResidue;
 import uz.salvadore.hamkorbank.archi.interchange.domain.residue.ResidueAttribute;
 import uz.salvadore.hamkorbank.archi.interchange.domain.residue.ResidueItem;
@@ -119,7 +122,7 @@ public final class DocumentDecomposer {
                 long order = SortOrder.ofPosition(i).value();
                 switch (content.get(i)) {
                     case DocumentNode node when node.tag().equals("folder") -> folder(node, Optional.empty(), order);
-                    case DocumentNode node -> throw unexpected(node, "в корне модели");
+                    case DocumentNode node -> throw unexpected(node, Message.of(InterchangeMessages.WHERE_MODEL_ROOT));
                     case DocumentValue value when documentation[0] == null && isDocumentation(value, "purpose") -> {
                         documentation[0] = value.text().orElse("");
                         root.slot(order, value);
@@ -152,7 +155,7 @@ public final class DocumentDecomposer {
             Optional<FolderType> type = parent.isPresent() ? Optional.empty()
                     : node.attribute("type").flatMap(FolderType::fromFileValue);
             if (parent.isEmpty() && type.isEmpty()) {
-                throw new IllegalArgumentException("корневая папка " + node.archiId() + " без типа Archi");
+                throw new InvalidValueException(InterchangeMessages.ROOT_FOLDER_UNTYPED, node.archiId());
             }
             Residue residue = new Residue(node.attributes().list(),
                     type.isPresent() ? XmlSchema.FOLDER_TYPED : java.util.Set.of("name", "id"));
@@ -162,7 +165,7 @@ public final class DocumentDecomposer {
                 switch (content.get(i)) {
                     case DocumentNode child when child.tag().equals("folder") -> folder(child, Optional.of(id), childOrder);
                     case DocumentNode child when child.tag().equals("element") -> modelObject(child, id, childOrder);
-                    case DocumentNode child -> throw unexpected(child, "в папке");
+                    case DocumentNode child -> throw unexpected(child, Message.of(InterchangeMessages.WHERE_FOLDER));
                     case DocumentValue value -> residue.value(childOrder, value);
                     case RawXmlFragment raw -> residue.fragment(childOrder, raw);
                 }
@@ -172,7 +175,8 @@ public final class DocumentDecomposer {
         }
 
         private void modelObject(DocumentNode node, FolderId folder, long order) {
-            String xsiType = node.archiType().orElseThrow(() -> unexpected(node, "без xsi:type"));
+            String xsiType = node.archiType()
+                    .orElseThrow(() -> unexpected(node, Message.of(InterchangeMessages.WHERE_WITHOUT, XmlSchema.XSI_TYPE)));
             if (xsiType.endsWith("Relationship")) {
                 relationship(node, folder, order);
             } else if (xsiType.endsWith("Model")) {
@@ -218,10 +222,11 @@ public final class DocumentDecomposer {
         }
 
         private ConceptRef concept(DocumentNode node, String attribute) {
-            String target = node.attribute(attribute).orElseThrow(() -> unexpected(node, "без " + attribute));
+            String target = node.attribute(attribute)
+                    .orElseThrow(() -> unexpected(node, Message.of(InterchangeMessages.WHERE_WITHOUT, attribute)));
             DocumentNode end = byArchiId.get(target);
             if (end == null) {
-                throw new IllegalArgumentException("связь " + node.archiId() + " ссылается на " + target + " вне модели");
+                throw new InvalidValueException(InterchangeMessages.RELATIONSHIP_OUTSIDE, node.archiId(), target);
             }
             UUID id = keys.get(target);
             return end.archiType().filter(t -> t.endsWith("Relationship")).isPresent()
@@ -246,7 +251,8 @@ public final class DocumentDecomposer {
                     }
                     case DocumentValue value -> residue.value(order, value);
                     case RawXmlFragment raw -> residue.fragment(order, raw);
-                    case DocumentNode child -> throw unexpected(child, "внутри " + node.archiId());
+                    case DocumentNode child -> throw unexpected(child,
+                            Message.of(InterchangeMessages.WHERE_INSIDE, node.archiId()));
                 }
             }
             return new Described(Optional.ofNullable(documentation[0]), properties);
@@ -266,7 +272,7 @@ public final class DocumentDecomposer {
                 switch (content.get(i)) {
                     case DocumentNode child when child.tag().equals("child") ->
                             viewNode(child, Optional.empty(), childOrder, parts);
-                    case DocumentNode child -> throw unexpected(child, "в представлении");
+                    case DocumentNode child -> throw unexpected(child, Message.of(InterchangeMessages.WHERE_VIEW));
                     case DocumentValue value when documentation[0] == null && isDocumentation(value, "documentation") -> {
                         documentation[0] = value.text().orElse("");
                         residue.slot(childOrder, value);
@@ -314,7 +320,7 @@ public final class DocumentDecomposer {
                             viewNode(child, Optional.of(id), childOrder, view);
                     case DocumentNode child when child.tag().equals("sourceConnection") ->
                             viewEdge(child, childOrder, view);
-                    case DocumentNode child -> throw unexpected(child, "в узле представления");
+                    case DocumentNode child -> throw unexpected(child, Message.of(InterchangeMessages.WHERE_VIEW_NODE));
                     case DocumentValue value when bounds[0] == null && parseBounds(value).isPresent() -> {
                         bounds[0] = parseBounds(value).get();
                         residue.slot(childOrder, value);
@@ -357,7 +363,7 @@ public final class DocumentDecomposer {
                 switch (content.get(i)) {
                     case DocumentNode child when child.tag().equals("sourceConnection") ->
                             viewEdge(child, childOrder, view);
-                    case DocumentNode child -> throw unexpected(child, "в ребре представления");
+                    case DocumentNode child -> throw unexpected(child, Message.of(InterchangeMessages.WHERE_VIEW_EDGE));
                     case DocumentValue value when parseBendpoint(value).isPresent() -> {
                         bendpoints.add(parseBendpoint(value).get());
                         residue.slot(childOrder, value);
@@ -372,10 +378,11 @@ public final class DocumentDecomposer {
         }
 
         private ViewEndpoint endpoint(DocumentNode edge, String attribute) {
-            String ref = edge.attribute(attribute).orElseThrow(() -> unexpected(edge, "без " + attribute));
+            String ref = edge.attribute(attribute)
+                    .orElseThrow(() -> unexpected(edge, Message.of(InterchangeMessages.WHERE_WITHOUT, attribute)));
             DocumentNode end = byArchiId.get(ref);
             if (end == null) {
-                throw new IllegalArgumentException("ребро " + edge.archiId() + " ссылается на " + ref + " вне модели");
+                throw new InvalidValueException(InterchangeMessages.EDGE_OUTSIDE, edge.archiId(), ref);
             }
             UUID id = keys.get(ref);
             return end.tag().equals("sourceConnection") ? ViewEdgeId.of(id) : ViewNodeId.of(id);
@@ -567,7 +574,7 @@ public final class DocumentDecomposer {
         return ArchiId.of(node.archiId().value());
     }
 
-    private static IllegalArgumentException unexpected(DocumentNode node, String where) {
-        return new IllegalArgumentException("неожиданный узел <" + node.tag() + " id=" + node.archiId() + "> " + where);
+    private static IllegalArgumentException unexpected(DocumentNode node, Message where) {
+        return new InvalidValueException(InterchangeMessages.UNEXPECTED_NODE, node.tag(), node.archiId(), where);
     }
 }

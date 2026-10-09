@@ -17,6 +17,8 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ViewNod
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentModificationException;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
@@ -115,7 +117,7 @@ public class JpaViewRepository implements ViewRepository {
         } else {
             ViewEntity entity = em.find(ViewEntity.class, viewId);
             if (entity == null) {
-                throw new ConcurrentModificationException("представление " + view.id());
+                throw new ConcurrentModificationException(Message.of(ModelingMessages.VIEW, view.id()));
             }
             if (view.headerChanged()) {
                 EntityMapper.apply(view.header(), entity);
@@ -128,7 +130,7 @@ public class JpaViewRepository implements ViewRepository {
                 (d, e) -> EntityMapper.apply(d, modelId, viewId, e));
         AggregateWrites.sync(em, view.edges(), ViewEdgeEntity.class, ViewEdgeEntity::new,
                 (d, e) -> EntityMapper.apply(d, modelId, viewId, e));
-        AggregateWrites.flush(em, "представление " + view.id());
+        AggregateWrites.flush(em, Message.of(ModelingMessages.VIEW, view.id()));
     }
 
     @Override

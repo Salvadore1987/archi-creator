@@ -6,15 +6,17 @@ import java.util.Optional;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel.Created;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ViewRef;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bendpoint;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
@@ -123,7 +125,7 @@ public final class ViewService {
     public void removeNode(EditorIdentity actor, ViewNodeId nodeId) {
         kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
             View view = loadView(kernel.views.viewOfNode(nodeId)
-                    .orElseThrow(() -> ModelingException.notFound("узел представления " + nodeId)));
+                    .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW_NODE, nodeId))));
             kernel.writableModel(view.modelId(), actor);
             view.removeNode(nodeId);
             kernel.views.save(view);
@@ -144,6 +146,7 @@ public final class ViewService {
     }
 
     private View loadView(ViewId viewId) {
-        return kernel.views.load(viewId).orElseThrow(() -> ModelingException.notFound("представление " + viewId));
+        return kernel.views.load(viewId)
+                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW, viewId)));
     }
 }

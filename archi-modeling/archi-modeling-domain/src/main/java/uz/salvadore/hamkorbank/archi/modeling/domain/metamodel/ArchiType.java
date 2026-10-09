@@ -2,6 +2,8 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.metamodel;
 
 import java.util.Objects;
 import java.util.regex.Pattern;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
  * Тип объекта ArchiMate в нотации файла Archi: {@code archimate:ApplicationComponent}.
@@ -19,8 +21,7 @@ public record ArchiType(String value) {
     public ArchiType {
         Objects.requireNonNull(value, "archiType");
         if (!FORMAT.matcher(value).matches()) {
-            throw new IllegalArgumentException(
-                    "archiType должен иметь вид archimate:<Имя>, получено: " + value);
+            throw new InvalidValueException(ModelingMessages.ARCHI_TYPE_FORMAT, value);
         }
     }
 

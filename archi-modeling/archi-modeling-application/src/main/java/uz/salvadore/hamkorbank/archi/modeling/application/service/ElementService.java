@@ -5,7 +5,9 @@ import java.util.Optional;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
@@ -92,7 +94,8 @@ public final class ElementService {
     }
 
     ModelId ownerOf(UUID objectId) {
-        return kernel.models.ownerOf(objectId).orElseThrow(() -> ModelingException.notFound("объект " + objectId));
+        return kernel.models.ownerOf(objectId).orElseThrow(
+                () -> ModelingException.notFound(Message.of(ModelingMessages.OBJECT, objectId)));
     }
 
     /** Свойства получают разреженный порядок по месту в списке. */

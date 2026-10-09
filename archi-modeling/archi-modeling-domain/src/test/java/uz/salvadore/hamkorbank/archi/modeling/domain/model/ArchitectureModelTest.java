@@ -11,6 +11,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationNotPermittedException;
@@ -64,7 +65,7 @@ class ArchitectureModelTest {
         ModelingException phase2 = assertThrows(ModelingException.class,
                 () -> Models.element(model, "Capability", FolderType.STRATEGY, "Платежи"));
 
-        assertEquals(ModelingException.Codes.TYPE_NOT_EDITABLE, phase2.code());
+        assertEquals(ModelingCodes.TYPE_NOT_EDITABLE, phase2.code());
         assertEquals(Failure.UNPROCESSABLE, phase2.failure());
     }
 

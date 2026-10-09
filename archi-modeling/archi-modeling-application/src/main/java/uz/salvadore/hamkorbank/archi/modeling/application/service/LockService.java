@@ -5,12 +5,15 @@ import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelStatus;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 
 /** Захват, продление, освобождение и принудительное снятие блокировки. */
 public final class LockService {
@@ -26,7 +29,8 @@ public final class LockService {
         return kernel.run(Operation.ACQUIRE_LOCK, actor, () -> kernel.unitOfWork.write(() -> {
             ModelHeader header = kernel.visibleHeader(modelId, actor, AclAccess.WRITE);
             if (header.status() != ModelStatus.ACTIVE) {
-                throw new ModelingException("INV-MDL-002", Failure.CONFLICT, "удалённая модель не редактируется");
+                throw new ModelingException(ModelingCodes.LIFECYCLE, Failure.CONFLICT,
+                        Message.of(ModelingMessages.DELETED_NOT_EDITABLE));
             }
             var current = kernel.locks.find(modelId);
             current.filter(l -> !l.heldBy(actor.subject(), kernel.now()) && l.status(kernel.now())

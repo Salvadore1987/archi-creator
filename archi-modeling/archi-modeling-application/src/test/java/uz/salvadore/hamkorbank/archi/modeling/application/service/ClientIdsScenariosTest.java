@@ -13,6 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
@@ -118,7 +119,7 @@ class ClientIdsScenariosTest {
 
         ModelingException invalid = assertThrows(ModelingException.class, () -> ports.elements.create(ALICE, model,
                 COMPONENT, "CRM", Optional.empty(), RequestedIds.of(null, "не id"), Optional.empty()));
-        assertEquals(ModelingException.Codes.INVALID_INPUT, invalid.code());
+        assertEquals(ModelingCodes.INVALID_INPUT, invalid.code());
         assertEquals(Failure.UNPROCESSABLE, invalid.failure());
         assertEquals(1, ports.models.get(model).elements().size(), "отказ ничего не создал");
     }

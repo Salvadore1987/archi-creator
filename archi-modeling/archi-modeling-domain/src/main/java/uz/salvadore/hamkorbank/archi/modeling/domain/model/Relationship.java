@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
@@ -34,13 +36,13 @@ public record Relationship(RelationshipId id, FolderId folderId, ArchiId archiId
         Objects.requireNonNull(directed, "directed");
         Objects.requireNonNull(sortOrder, "sortOrder");
         Objects.requireNonNull(rawXml, "rawXml");
-        name.ifPresent(n -> Names.limited(n, "связи"));
+        name.ifPresent(n -> Names.limited(n, Names.RELATIONSHIP));
         properties = List.copyOf(properties);
         if (!supported && rawXml.isEmpty()) {
-            throw new IllegalArgumentException("FR-03: у opaque-связи " + archiId + " нет raw_xml");
+            throw new InvalidValueException(ModelingMessages.OPAQUE_WITHOUT_RESIDUE, archiId);
         }
         if (source.value().equals(id.value()) || target.value().equals(id.value())) {
-            throw new IllegalArgumentException("INV-MDL-004: связь " + archiId + " не может быть своим концом");
+            throw new InvalidValueException(ModelingMessages.RELATIONSHIP_SELF_END, archiId);
         }
     }
 

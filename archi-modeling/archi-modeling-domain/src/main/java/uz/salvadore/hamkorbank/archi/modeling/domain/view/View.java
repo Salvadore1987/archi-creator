@@ -12,7 +12,10 @@ import java.util.Optional;
 import java.util.Set;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
@@ -99,32 +102,32 @@ public final class View {
 
     private void verifyIntegrity(ArchitectureModel model) {
         if (!model.id().equals(modelId)) {
-            throw integrity("представление " + archiId + " принадлежит другой модели");
+            throw integrity(Message.of(ModelingMessages.VIEW_OF_OTHER_MODEL, archiId));
         }
         Set<ArchiId> seen = new HashSet<>();
         for (ViewNode node : nodes.values()) {
             if (!seen.add(node.archiId())) {
-                throw new ModelingException("INV-MDL-001", Failure.UNPROCESSABLE,
-                        "archi_id " + node.archiId() + " повторяется на представлении " + archiId);
+                throw new ModelingException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.UNPROCESSABLE,
+                        Message.of(ModelingMessages.ARCHI_ID_REPEATED_ON_VIEW, node.archiId(), archiId));
             }
             node.elementId().ifPresent(element -> requireElementOf(model, element, node.archiId()));
             node.parentId().ifPresent(parent -> {
                 if (!nodes.contains(parent)) {
-                    throw integrity("родитель узла " + node.archiId() + " не на этом представлении");
+                    throw integrity(Message.of(ModelingMessages.NODE_PARENT_ELSEWHERE, node.archiId()));
                 }
             });
             depth(node);
         }
         for (ViewEdge edge : edges.values()) {
             if (!seen.add(edge.archiId())) {
-                throw new ModelingException("INV-MDL-001", Failure.UNPROCESSABLE,
-                        "archi_id " + edge.archiId() + " повторяется на представлении " + archiId);
+                throw new ModelingException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.UNPROCESSABLE,
+                        Message.of(ModelingMessages.ARCHI_ID_REPEATED_ON_VIEW, edge.archiId(), archiId));
             }
             requireEndpoint(edge.source(), edge.archiId());
             requireEndpoint(edge.target(), edge.archiId());
             edge.relationshipId().ifPresent(r -> {
                 if (!model.relationships().contains(r)) {
-                    throw integrity("связь ребра " + edge.archiId() + " не принадлежит модели");
+                    throw integrity(Message.of(ModelingMessages.EDGE_RELATIONSHIP_ELSEWHERE, edge.archiId()));
                 }
             });
         }
@@ -188,7 +191,7 @@ public final class View {
         requireEndpoint(source, newArchiId);
         requireEndpoint(target, newArchiId);
         if (!depicts(source, relationship.source()) || !depicts(target, relationship.target())) {
-            throw integrity("концы ребра не изображают концы связи " + relationship.archiId());
+            throw integrity(Message.of(ModelingMessages.EDGE_ENDS_MISMATCH, relationship.archiId()));
         }
         Optional<ViewEdge> existing = edges.values().stream()
                 .filter(e -> e.relationshipId().equals(Optional.of(relationshipId))
@@ -250,13 +253,13 @@ public final class View {
     // ── Собственные поля ────────────────────────────────────────────
 
     public void rename(String newName) {
-        name = Names.limited(newName, "представления");
+        name = Names.limited(newName, Names.VIEW);
         headerChanged = true;
     }
 
     public void edit(String newName, Optional<String> newDocumentation, Optional<String> newViewpoint,
                      List<PropertyEntry> newProperties) {
-        name = Names.limited(newName, "представления");
+        name = Names.limited(newName, Names.VIEW);
         documentation = newDocumentation.filter(d -> !d.isEmpty());
         viewpoint = newViewpoint.filter(v -> !v.isEmpty());
         properties = List.copyOf(newProperties);
@@ -273,14 +276,14 @@ public final class View {
 
     private void requireEditable() {
         if (!archiType.equals(DiagramType.DIAGRAM_MODEL)) {
-            throw new ModelingException(ModelingException.Codes.TYPE_NOT_EDITABLE, Failure.UNPROCESSABLE,
-                    "представление " + archiType + " хранится как есть и не редактируется (FR-03)");
+            throw new ModelingException(ModelingCodes.TYPE_NOT_EDITABLE, Failure.UNPROCESSABLE,
+                    Message.of(ModelingMessages.VIEW_NOT_EDITABLE, archiType));
         }
     }
 
     private void requireElementOf(ArchitectureModel model, ElementId elementId, ArchiId nodeArchiId) {
         if (!model.id().equals(modelId) || !model.elements().contains(elementId)) {
-            throw integrity("элемент узла " + nodeArchiId + " не принадлежит модели представления");
+            throw integrity(Message.of(ModelingMessages.NODE_ELEMENT_ELSEWHERE, nodeArchiId));
         }
     }
 
@@ -290,7 +293,7 @@ public final class View {
             case ViewEdgeId edge -> edges.contains(edge);
         };
         if (!present) {
-            throw integrity("конец ребра " + edgeArchiId + " не на этом представлении");
+            throw integrity(Message.of(ModelingMessages.EDGE_END_ELSEWHERE, edgeArchiId));
         }
     }
 
@@ -305,17 +308,19 @@ public final class View {
     }
 
     public ViewNode requireNode(ViewNodeId nodeId) {
-        return nodes.get(nodeId).orElseThrow(() -> ModelingException.notFound("узел представления " + nodeId));
+        return nodes.get(nodeId)
+                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW_NODE, nodeId)));
     }
 
     public ViewEdge requireEdge(ViewEdgeId edgeId) {
-        return edges.get(edgeId).orElseThrow(() -> ModelingException.notFound("ребро представления " + edgeId));
+        return edges.get(edgeId)
+                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW_EDGE, edgeId)));
     }
 
     private void requireFreeArchiId(ArchiId candidate) {
         if (archiIdTaken(candidate)) {
-            throw new ModelingException("INV-MDL-001", Failure.CONFLICT,
-                    "archi_id " + candidate + " уже занят на представлении " + archiId);
+            throw new ModelingException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.CONFLICT,
+                    Message.of(ModelingMessages.ARCHI_ID_TAKEN_ON_VIEW, candidate, archiId));
         }
     }
 
@@ -333,7 +338,7 @@ public final class View {
         Optional<ViewNodeId> current = node.parentId();
         while (current.isPresent()) {
             if (!visited.add(current.get())) {
-                throw integrity("цикл во вложенности узлов через " + node.archiId());
+                throw integrity(Message.of(ModelingMessages.NODE_NESTING_CYCLE, node.archiId()));
             }
             depth++;
             current = nodes.get(current.get()).flatMap(ViewNode::parentId);
@@ -356,8 +361,8 @@ public final class View {
         return SortOrder.afterLast(taken);
     }
 
-    private static ModelingException integrity(String message) {
-        return new ModelingException("INV-MDL-008", Failure.UNPROCESSABLE, message);
+    private static ModelingException integrity(Message reason) {
+        return new ModelingException(ModelingCodes.VIEW_REFERENCE, Failure.UNPROCESSABLE, reason);
     }
 
     // ── Состояние ───────────────────────────────────────────────────

@@ -6,6 +6,8 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attribute;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attributes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentContent;
@@ -101,6 +103,6 @@ public final class ArchiXmlWriter implements ArchiDocumentWriter {
                 }
             }
         }
-        throw new IllegalArgumentException("у модели не объявлено пространство " + ModelDocument.NAMESPACE);
+        throw new InvalidValueException(InterchangeMessages.NAMESPACE_MISSING, ModelDocument.NAMESPACE);
     }
 }

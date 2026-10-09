@@ -12,7 +12,7 @@ public record PropertyEntry(String key, String value, SortOrder sortOrder) {
         Objects.requireNonNull(value, "value");
         Objects.requireNonNull(sortOrder, "sortOrder");
         if (key.length() > KEY_MAX) {
-            throw new IllegalArgumentException("ключ свойства длиннее " + KEY_MAX + " символов");
+            throw new InvalidValueException(ModelingMessages.PROPERTY_KEY_TOO_LONG, KEY_MAX);
         }
     }
 }

@@ -13,6 +13,8 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
  * Матрица допустимых связей ArchiMate 3.2.
@@ -93,13 +95,13 @@ public final class RelationMatrix {
     private static RelationMatrix load() {
         try (InputStream in = RelationMatrix.class.getResourceAsStream(RESOURCE)) {
             if (in == null) {
-                throw new IllegalStateException("нет ресурса матрицы связей: " + RESOURCE);
+                throw new IllegalStateException(Message.of(ModelingMessages.MATRIX_RESOURCE_MISSING, RESOURCE).toString());
             }
             return new RelationMatrix(parse(in));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } catch (XMLStreamException e) {
-            throw new IllegalStateException("матрица связей не разбирается: " + RESOURCE, e);
+            throw new IllegalStateException(Message.of(ModelingMessages.MATRIX_UNREADABLE, RESOURCE).toString(), e);
         }
     }
 
@@ -120,7 +122,7 @@ public final class RelationMatrix {
                 }
                 case "target" -> {
                     if (targets == null) {
-                        throw new IllegalStateException("target вне source в " + RESOURCE);
+                        throw new IllegalStateException(Message.of(ModelingMessages.MATRIX_TARGET_OUTSIDE_SOURCE, RESOURCE).toString());
                     }
                     targets.put(xml.getAttributeValue(null, "concept"),
                             relations(xml.getAttributeValue(null, "relations")));
@@ -136,7 +138,8 @@ public final class RelationMatrix {
         EnumSet<RelationshipType> set = EnumSet.noneOf(RelationshipType.class);
         for (char key : keys.toCharArray()) {
             set.add(RelationshipType.fromKey(Character.toLowerCase(key))
-                    .orElseThrow(() -> new IllegalStateException("неизвестная буква связи '" + key + "'")));
+                    .orElseThrow(() -> new IllegalStateException(
+                            Message.of(ModelingMessages.MATRIX_UNKNOWN_LETTER, key).toString())));
         }
         return Collections.unmodifiableSet(set);
     }

@@ -21,6 +21,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelAccessListRe
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelLockRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelVersionRepository;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
@@ -89,10 +90,10 @@ public class ModelingConfiguration {
     ModelingKernel modelingKernel(ModelRepository models, ViewRepository views, ModelLockRepository locks,
                                   ModelVersionRepository versions, ModelAccessListRepository accessLists,
                                   IdempotencyRepository idempotency, UnitOfWork unitOfWork,
-                                  DomainEventPublisher events, UseCaseMetrics metrics, Clock clock,
+                                  DomainEventPublisher events, UseCaseMetrics metrics, TextCatalog texts, Clock clock,
                                   ModelingSettings settings) {
         return new ModelingKernel(models, views, locks, versions, accessLists, idempotency, unitOfWork, events,
-                metrics, clock, settings.lockTtl());
+                metrics, texts, clock, settings.lockTtl());
     }
 
     @Bean

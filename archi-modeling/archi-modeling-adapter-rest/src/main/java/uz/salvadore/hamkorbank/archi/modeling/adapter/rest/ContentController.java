@@ -34,7 +34,9 @@ import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipSe
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RequestedIds;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.TreeService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ConceptKind;
@@ -185,7 +187,7 @@ public class ContentController {
         try {
             return ArchiType.of(value);
         } catch (IllegalArgumentException | NullPointerException invalid) {
-            throw ModelingException.invalid("archiType вида archimate:<Имя>, получено: " + value);
+            throw ModelingException.invalid(Message.of(ModelingMessages.ARCHI_TYPE_REQUESTED, value));
         }
     }
 
@@ -196,7 +198,7 @@ public class ContentController {
         try {
             return Optional.of(AccessType.valueOf(value));
         } catch (IllegalArgumentException invalid) {
-            throw ModelingException.invalid("accessType — WRITE, READ, ACCESS или READ_WRITE, получено: " + value);
+            throw ModelingException.invalid(Message.of(ModelingMessages.ACCESS_TYPE_REQUESTED, value));
         }
     }
 
@@ -207,14 +209,14 @@ public class ContentController {
 
     private static List<UUID> items(List<UUID> ids) {
         if (ids == null || ids.isEmpty()) {
-            throw ModelingException.invalid("пустой список объектов");
+            throw ModelingException.invalid(Message.of(ModelingMessages.ITEMS_EMPTY));
         }
         return ids;
     }
 
     private static <T> T require(T value, String name) {
         if (value == null) {
-            throw ModelingException.invalid("не задано поле " + name);
+            throw ModelingException.invalid(Message.of(ModelingMessages.FIELD_MISSING, name));
         }
         return value;
     }

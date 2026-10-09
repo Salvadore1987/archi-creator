@@ -3,6 +3,9 @@ package uz.salvadore.hamkorbank.archi.interchange.application;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
@@ -31,8 +34,8 @@ public enum InterchangeOperation {
 
     public void require(EditorIdentity actor) {
         if (actor.roles().stream().noneMatch(roles::contains)) {
-            throw new InterchangeException("IXC_ACCESS_DENIED", Failure.FORBIDDEN,
-                    useCase + " доступна ролям " + roles, Map.of("operation", useCase));
+            throw new InterchangeException(InterchangeCodes.ACCESS_DENIED, Failure.FORBIDDEN,
+                    Message.of(InterchangeMessages.OPERATION_DENIED, useCase, roles), Map.of("operation", useCase));
         }
     }
 }

@@ -1,5 +1,8 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.importing;
 
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 
 /**
@@ -8,15 +11,25 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
  */
 public final class IdempotencyConflictException extends RuntimeException {
 
-    public static final String CODE = "IXC_IDEMPOTENCY_CONFLICT";
-    public static final String INVARIANT = "INV-IXC-003";
+    public static final String CODE = InterchangeCodes.IDEMPOTENCY_CONFLICT;
+    public static final String INVARIANT = InterchangeCodes.IMPORT_IDEMPOTENCY;
 
     private final transient ImportSession existing;
+    private final transient ContentHash submitted;
 
     IdempotencyConflictException(ImportSession existing, ContentHash submitted) {
-        super(INVARIANT + ": ключ " + existing.idempotencyKey() + " уже использован для файла "
-                + existing.sourceHash() + ", подан " + submitted);
+        super(INVARIANT + ": " + reason(existing, submitted));
         this.existing = existing;
+        this.submitted = submitted;
+    }
+
+    public Message reason() {
+        return reason(existing, submitted);
+    }
+
+    private static Message reason(ImportSession existing, ContentHash submitted) {
+        return Message.of(InterchangeMessages.IDEMPOTENCY_KEY_REUSED, existing.idempotencyKey(), existing.sourceHash(),
+                submitted);
     }
 
     public ImportSession existing() {

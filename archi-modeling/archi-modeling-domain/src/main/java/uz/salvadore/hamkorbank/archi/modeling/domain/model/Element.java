@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
@@ -30,10 +32,10 @@ public record Element(ElementId id, FolderId folderId, ArchiId archiId, ArchiTyp
         Objects.requireNonNull(documentation, "documentation");
         Objects.requireNonNull(sortOrder, "sortOrder");
         Objects.requireNonNull(rawXml, "rawXml");
-        Names.limited(name, "элемента");
+        Names.limited(name, Names.ELEMENT);
         properties = List.copyOf(properties);
         if (!supported && rawXml.isEmpty()) {
-            throw new IllegalArgumentException("FR-03: у opaque-элемента " + archiId + " нет raw_xml");
+            throw new InvalidValueException(ModelingMessages.OPAQUE_WITHOUT_RESIDUE, archiId);
         }
     }
 

@@ -3,6 +3,8 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 import java.util.Objects;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
@@ -42,13 +44,13 @@ public record ViewNode(ViewNodeId id, Optional<ViewNodeId> parentId, ArchiId arc
         Objects.requireNonNull(rawXml, "rawXml");
         ViewNodeKind kind = ViewNodeKind.of(archiType);
         if (kind == ViewNodeKind.DIAGRAM_OBJECT && elementId.isEmpty()) {
-            throw new IllegalArgumentException("INV-MDL-008: узел " + archiId + " вида DIAGRAM_OBJECT без элемента");
+            throw new InvalidValueException(ModelingMessages.NODE_WITHOUT_ELEMENT, archiId);
         }
         if ((kind == ViewNodeKind.GROUP || kind == ViewNodeKind.NOTE) && elementId.isPresent()) {
-            throw new IllegalArgumentException("INV-MDL-008: у узла " + archiId + " вида " + kind + " элемента нет");
+            throw new InvalidValueException(ModelingMessages.NODE_WITH_ELEMENT, archiId, kind);
         }
         if (parentId.filter(p -> p.equals(id)).isPresent()) {
-            throw new IllegalArgumentException("узел " + archiId + " не может быть своим родителем");
+            throw new InvalidValueException(ModelingMessages.NODE_SELF_PARENT, archiId);
         }
     }
 

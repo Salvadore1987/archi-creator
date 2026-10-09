@@ -58,6 +58,19 @@ spring:
   jackson:
     default-property-inclusion: non_null
 
+  # Сообщения сервера — i18n/messages*.properties. Язык — из Accept-Language,
+  # без него и для неизвестного языка — русский: интерфейс продукта русский.
+  # Системная локаль сервера на выбор языка не влияет.
+  messages:
+    basename: i18n/messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
+    always-use-message-format: true
+
+  web:
+    locale: ru
+    locale-resolver: accept-header
+
   servlet:
     multipart:
       # Импорт .archimate идёт файлом; предел — 50 МБ.

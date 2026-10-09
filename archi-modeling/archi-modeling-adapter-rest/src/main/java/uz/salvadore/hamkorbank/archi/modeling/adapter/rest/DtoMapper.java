@@ -18,6 +18,7 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewEdgeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewNodeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewPayload;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewSummary;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
@@ -126,9 +127,10 @@ public final class DtoMapper {
         return new LockInfo(l.modelId().value(), l.owner(), l.acquiredAt(), l.expiresAt());
     }
 
-    public static Finding finding(ValidationFinding f) {
-        return new Finding(f.severity().name(), f.code(), f.message(), f.targetKind(), f.targetId(),
-                f.suggestion().orElse(null));
+    /** Находка с текстом на языке запроса: сообщение и подсказка хранятся ключами. */
+    public static Finding finding(ValidationFinding f, TextCatalog text) {
+        return new Finding(f.severity().name(), f.code(), text.text(f.message()), f.targetKind(), f.targetId(),
+                f.suggestion().map(text::text).orElse(null));
     }
 
     private static StyleDto style(StyleOverride s) {

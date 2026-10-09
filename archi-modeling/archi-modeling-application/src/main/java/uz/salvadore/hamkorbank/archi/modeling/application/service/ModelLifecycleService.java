@@ -6,7 +6,9 @@ import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
@@ -38,12 +40,14 @@ public final class ModelLifecycleService {
                         IdempotentCommand.fingerprint(workspaceId, name),
                         () -> {
                             workspaces.find(workspaceId)
-                                    .orElseThrow(() -> ModelingException.notFound("рабочее пространство " + workspaceId));
+                                    .orElseThrow(() -> ModelingException.notFound(
+                                            Message.of(ModelingMessages.WORKSPACE, workspaceId)));
                             ArchitectureModel model = ArchitectureModel.create(ModelId.next(kernel.uuids), workspaceId,
                                     kernel.archiIds.next(), name, actor, kernel.now(),
                                     () -> FolderId.next(kernel.uuids), kernel.archiIds::next);
                             kernel.save(model);
-                            versions.commit(model, actor, Optional.of("Создание модели"));
+                            versions.commit(model, actor,
+                                    Optional.of(kernel.texts.text(Message.of(ModelingMessages.COMMENT_MODEL_CREATED))));
                             return model.id().toString();
                         },
                         ref -> kernel.models.load(ModelId.of(ref)).orElseThrow())));

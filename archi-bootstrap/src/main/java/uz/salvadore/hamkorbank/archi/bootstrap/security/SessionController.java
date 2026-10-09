@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import uz.salvadore.hamkorbank.archi.bootstrap.security.dto.SessionDtos.Me;
 import uz.salvadore.hamkorbank.archi.bootstrap.security.dto.SessionDtos.OidcConfig;
 import uz.salvadore.hamkorbank.archi.bootstrap.security.dto.SessionDtos.UiConfig;
+import uz.salvadore.hamkorbank.archi.bootstrap.web.BootstrapMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 
 /**
@@ -38,7 +39,7 @@ public class SessionController {
     @GetMapping("/me")
     public Me me(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new InsufficientAuthenticationException("запрос без аутентификации");
+            throw new InsufficientAuthenticationException(BootstrapMessages.NOT_AUTHENTICATED);
         }
         String subject = authentication.getName();
         String displayName = subject;

@@ -3,7 +3,10 @@ package uz.salvadore.hamkorbank.archi.modeling.application.access;
 import java.util.Map;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
  * Проверка роли на границе use case'а. Список доступа модели
@@ -17,8 +20,8 @@ public final class AccessPolicy {
 
     public static void require(EditorIdentity actor, Operation operation) {
         if (actor.roles().stream().noneMatch(operation.roles()::contains)) {
-            throw new ModelingException(ModelingException.Codes.ACCESS_DENIED, Failure.FORBIDDEN,
-                    operation.useCase() + " доступна ролям " + operation.roles(),
+            throw new ModelingException(ModelingCodes.ACCESS_DENIED, Failure.FORBIDDEN,
+                    Message.of(ModelingMessages.OPERATION_DENIED, operation.useCase(), operation.roles()),
                     Map.of("operation", operation.useCase()));
         }
     }

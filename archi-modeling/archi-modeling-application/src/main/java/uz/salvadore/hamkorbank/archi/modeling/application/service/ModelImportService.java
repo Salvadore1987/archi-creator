@@ -4,7 +4,9 @@ import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 
 /**
@@ -28,7 +30,8 @@ public final class ModelImportService {
     public ModelVersion store(ModelContent content, EditorIdentity actor, String comment) {
         return kernel.unitOfWork.write(() -> {
             workspaces.find(content.model().workspaceId()).orElseThrow(
-                    () -> ModelingException.notFound("рабочее пространство " + content.model().workspaceId()));
+                    () -> ModelingException.notFound(
+                            Message.of(ModelingMessages.WORKSPACE, content.model().workspaceId())));
             kernel.save(content.model());
             content.views().forEach(kernel.views::save);
             return versions.commit(content.model(), actor, Optional.of(comment));

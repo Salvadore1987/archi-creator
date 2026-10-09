@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
@@ -30,7 +32,7 @@ public record ViewEdge(ViewEdgeId id, ArchiId archiId, DiagramType archiType, Op
         Objects.requireNonNull(rawXml, "rawXml");
         bendpoints = List.copyOf(bendpoints);
         if (source.equals(id) || target.equals(id)) {
-            throw new IllegalArgumentException("ребро " + archiId + " не может быть своим концом");
+            throw new InvalidValueException(ModelingMessages.EDGE_SELF_END, archiId);
         }
     }
 

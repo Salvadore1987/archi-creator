@@ -6,7 +6,9 @@ import java.util.Optional;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationMatrix;
@@ -121,7 +123,7 @@ public final class RelationshipService {
     private ViewEdgeId drawEdge(ArchitectureModel model, Relationship relationship, EdgePlacement placement) {
         View view = kernel.views.load(placement.viewId())
                 .filter(v -> v.modelId().equals(model.id()))
-                .orElseThrow(() -> ModelingException.notFound("представление " + placement.viewId()));
+                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW, placement.viewId())));
         ViewEndpoint source = ViewService.endpoint(view, placement.sourceEndpoint());
         ViewEndpoint target = ViewService.endpoint(view, placement.targetEndpoint());
         Optional<ViewEdge> drawn = view.edges().values().stream()

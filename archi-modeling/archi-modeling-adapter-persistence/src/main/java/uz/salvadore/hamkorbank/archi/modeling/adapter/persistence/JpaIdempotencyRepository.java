@@ -8,7 +8,9 @@ import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.IdempotencyEntity;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.IdempotencyRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotencyRecord;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 
@@ -43,7 +45,7 @@ public class JpaIdempotencyRepository implements IdempotencyRepository {
             em.flush();
         } catch (PersistenceException e) {
             throw new ModelingException(IdempotentCommand.INVARIANT, Failure.CONFLICT,
-                    "запрос с тем же ключом идемпотентности выполняется параллельно");
+                    Message.of(ModelingMessages.IDEMPOTENT_IN_PROGRESS));
         }
     }
 }

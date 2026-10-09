@@ -16,7 +16,7 @@ public record EditorIdentity(String subject, Set<Role> roles, Set<String> groups
         roles = Set.copyOf(roles);
         groups = Set.copyOf(groups);
         if (subject.isBlank()) {
-            throw new IllegalArgumentException("автор команды без subject");
+            throw new InvalidValueException(ModelingMessages.EDITOR_WITHOUT_SUBJECT);
         }
     }
 

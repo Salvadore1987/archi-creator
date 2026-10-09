@@ -2,6 +2,8 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 
 import java.util.Objects;
 import java.util.regex.Pattern;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
  * {@code xsi:type} представления, узла или ребра: {@code archimate:DiagramObject},
@@ -25,7 +27,7 @@ public record DiagramType(String value) {
     public DiagramType {
         Objects.requireNonNull(value, "diagramType");
         if (!FORMAT.matcher(value).matches()) {
-            throw new IllegalArgumentException("xsi:type вида префикс:Имя, получено: " + value);
+            throw new InvalidValueException(ModelingMessages.DIAGRAM_TYPE_FORMAT, value);
         }
     }
 

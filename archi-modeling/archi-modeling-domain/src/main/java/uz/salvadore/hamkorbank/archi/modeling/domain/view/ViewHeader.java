@@ -27,7 +27,7 @@ public record ViewHeader(ViewId id, ModelId modelId, FolderId folderId, ArchiId 
         Objects.requireNonNull(viewpoint, "viewpoint");
         Objects.requireNonNull(sortOrder, "sortOrder");
         Objects.requireNonNull(rawXml, "rawXml");
-        Names.limited(name, "представления");
+        Names.limited(name, Names.VIEW);
         properties = List.copyOf(properties);
     }
 

@@ -31,6 +31,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.ModelAccessList;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotencyRecord;
@@ -290,8 +291,8 @@ final class InMemoryPorts {
     final GitBinding noGit = workspaceId -> false;
 
     final ModelingKernel kernel = new ModelingKernel(modelRepository, viewRepository, lockRepository,
-            versionRepository, aclRepository, idempotencyRepository, unitOfWork, events, UseCaseMetrics.NONE, clock,
-            Duration.ofMinutes(30));
+            versionRepository, aclRepository, idempotencyRepository, unitOfWork, events, UseCaseMetrics.NONE,
+            Message::toString, clock, Duration.ofMinutes(30));
     final VersionService versionService = new VersionService(kernel, snapshotWriter, (xml, current, now) -> {
         throw new UnsupportedOperationException();
     }, noGit, ZoneOffset.UTC, false);

@@ -1,5 +1,8 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
+
 /**
  * Геометрия узла относительно родителя: у корневых — относительно представления,
  * у детей группы — относительно группы. {@code -1} в размере — «по
@@ -11,7 +14,7 @@ public record Bounds(int x, int y, int width, int height) {
 
     public Bounds {
         if (!validSize(width) || !validSize(height)) {
-            throw new IllegalArgumentException("размер узла положителен или -1: " + width + "×" + height);
+            throw new InvalidValueException(ModelingMessages.NODE_SIZE, width, height);
         }
     }
 

@@ -17,7 +17,7 @@ public record SortOrder(long value) implements Comparable<SortOrder> {
 
     public SortOrder {
         if (value <= 0) {
-            throw new IllegalArgumentException("INV-MDL-005: sort_order обязан быть положительным: " + value);
+            throw new InvalidValueException(ModelingMessages.SORT_ORDER_POSITIVE, value);
         }
     }
 

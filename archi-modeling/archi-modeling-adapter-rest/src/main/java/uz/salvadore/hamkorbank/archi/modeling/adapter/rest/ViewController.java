@@ -30,7 +30,9 @@ import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryServ
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RequestedIds;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
@@ -49,6 +51,9 @@ public class ViewController {
     /** Размер нового узла по умолчанию — как у Archi. */
     private static final int DEFAULT_WIDTH = 120;
     private static final int DEFAULT_HEIGHT = 55;
+    /** Поля запроса по их именам в JSON — в сообщении о том, чего не хватает. */
+    private static final String ELEMENT_ID = "elementId";
+    private static final String EDGE_FIELDS = "relationshipId, sourceId, targetId";
 
     private final ModelQueryService queries;
     private final ViewService views;
@@ -90,7 +95,7 @@ public class ViewController {
     public ResponseEntity<ViewNodeDto> place(EditorIdentity actor, @PathVariable UUID id,
                                              @RequestBody PlaceNodeRequest request) {
         if (request.elementId() == null) {
-            throw ModelingException.invalid("не задан elementId");
+            throw ModelingException.invalid(Message.of(ModelingMessages.FIELD_MISSING, ELEMENT_ID));
         }
         var node = views.place(actor, ViewId.of(id), ElementId.of(request.elementId()),
                 bounds(request.x(), request.y(), Optional.ofNullable(request.width()).orElse(DEFAULT_WIDTH),
@@ -108,7 +113,7 @@ public class ViewController {
     public ResponseEntity<ViewEdgeDto> placeEdge(EditorIdentity actor, @PathVariable UUID id,
                                                  @RequestBody PlaceEdgeRequest request) {
         if (request.relationshipId() == null || request.sourceId() == null || request.targetId() == null) {
-            throw ModelingException.invalid("не заданы relationshipId, sourceId или targetId");
+            throw ModelingException.invalid(Message.of(ModelingMessages.FIELDS_MISSING, EDGE_FIELDS));
         }
         var edge = views.placeEdge(actor, ViewId.of(id), RelationshipId.of(request.relationshipId()),
                 request.sourceId(), request.targetId(), bendpoints(request.bendpoints()),
@@ -132,7 +137,7 @@ public class ViewController {
         try {
             return new Bounds(x, y, width, height);
         } catch (IllegalArgumentException invalid) {
-            throw ModelingException.invalid(invalid.getMessage());
+            throw ModelingException.invalid(invalid);
         }
     }
 }

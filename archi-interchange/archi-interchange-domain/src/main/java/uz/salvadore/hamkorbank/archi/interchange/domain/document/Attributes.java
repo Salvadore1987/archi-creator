@@ -6,6 +6,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 /**
  * Атрибуты узла в порядке файла. Все — и те, что метамодель знает, и те, что нет:
@@ -20,7 +22,7 @@ public record Attributes(List<Attribute> list) implements Iterable<Attribute> {
         Set<String> names = new HashSet<>();
         for (Attribute attribute : list) {
             if (!names.add(attribute.name())) {
-                throw new IllegalArgumentException("атрибут повторяется: " + attribute.name());
+                throw new InvalidValueException(InterchangeMessages.ATTRIBUTE_REPEATED, attribute.name());
             }
         }
     }
@@ -28,7 +30,7 @@ public record Attributes(List<Attribute> list) implements Iterable<Attribute> {
     /** {@code of("name", "Каналы", "id", "id-…")} — пары имя–значение по порядку. */
     public static Attributes of(String... namesAndValues) {
         if (namesAndValues.length % 2 != 0) {
-            throw new IllegalArgumentException("ожидались пары имя–значение");
+            throw new InvalidValueException(InterchangeMessages.ATTRIBUTE_PAIRS_EXPECTED);
         }
         List<Attribute> list = new ArrayList<>();
         for (int i = 0; i < namesAndValues.length; i += 2) {

@@ -17,7 +17,7 @@ public record ArchiId(String value) {
     public ArchiId {
         Objects.requireNonNull(value, "archiId");
         if (!FORMAT.matcher(value).matches()) {
-            throw new IllegalArgumentException("INV-MDL-001: недопустимый идентификатор Archi: '" + value + "'");
+            throw new InvalidValueException(ModelingMessages.ARCHI_ID_INVALID, value);
         }
     }
 

@@ -32,6 +32,10 @@ import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeExceptio
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportReport;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
@@ -49,8 +53,11 @@ public class InterchangeController {
     private final ImportService imports;
     private final ExportService exports;
     private final WorkspaceService workspaces;
+    private final TextCatalog text;
 
-    public InterchangeController(ImportService imports, ExportService exports, WorkspaceService workspaces) {
+    public InterchangeController(ImportService imports, ExportService exports, WorkspaceService workspaces,
+                                 TextCatalog text) {
+        this.text = text;
         this.imports = imports;
         this.exports = exports;
         this.workspaces = workspaces;
@@ -69,18 +76,18 @@ public class InterchangeController {
         ImportReport report = imports.importFile(actor, workspace(workspaceId),
                 Optional.ofNullable(file.getOriginalFilename()).filter(n -> !n.isBlank()).orElse("model.archimate"),
                 bytes(file), key);
-        ImportResult body = result(report);
+        ImportResult body = result(report, text);
         if (report.status() == ImportStatus.APPLIED) {
             return report.replayed() ? ResponseEntity.ok(body)
                     : ResponseEntity.created(URI.create("/api/v1/models/" + body.modelId())).body(body);
         }
         HttpStatus status = report.rejectedAsCorrupt() ? HttpStatus.BAD_REQUEST : HttpStatus.UNPROCESSABLE_CONTENT;
-        String code = report.rejectedAsCorrupt() ? "IXC_CORRUPT_DOCUMENT" : "IXC_STRICT_IMPORT_REJECTED";
-        String detail = report.rejectedAsCorrupt()
-                ? "Файл повреждён: импорт отклонён независимо от режима (FR-50)"
-                : "Строгий импорт: нарушения матрицы ArchiMate 3.2, модель не создана (FR-49)";
+        String code = report.rejectedAsCorrupt() ? InterchangeCodes.CORRUPT_DOCUMENT
+                : InterchangeCodes.STRICT_IMPORT_REJECTED;
+        String detail = text.text(Message.of(report.rejectedAsCorrupt()
+                ? InterchangeMessages.REJECTED_CORRUPT : InterchangeMessages.REJECTED_STRICT));
         ProblemDetail problem = InterchangeProblemHandler.problem(status, code, detail,
-                Map.of("sessionId", body.sessionId(), "findings", body.findings()), request);
+                Map.of("sessionId", body.sessionId(), "findings", body.findings()), request, text);
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_PROBLEM_JSON).body(problem);
     }
 
@@ -99,10 +106,10 @@ public class InterchangeController {
             case "archimate" -> exports.archimate(actor, id, version);
             case "csv" -> exports.catalogCsv(actor, id, version,
                     uz.salvadore.hamkorbank.archi.interchange.application.exporting.CatalogCsvOptions.of(sep, folder));
-            case "oef" -> throw new InterchangeException("IXC_FORMAT_NOT_AVAILABLE", Failure.UNPROCESSABLE,
-                    "выгрузка в Open Exchange Format появится на этапе 6a", Map.of("format", fmt));
-            default -> throw new InterchangeException("IXC_UNKNOWN_FORMAT", Failure.UNPROCESSABLE,
-                    "неизвестный формат выгрузки: " + fmt, Map.of("format", fmt));
+            case "oef" -> throw new InterchangeException(InterchangeCodes.FORMAT_NOT_AVAILABLE, Failure.UNPROCESSABLE,
+                    Message.of(InterchangeMessages.FORMAT_NOT_AVAILABLE), Map.of("format", fmt));
+            default -> throw new InterchangeException(InterchangeCodes.UNKNOWN_FORMAT, Failure.UNPROCESSABLE,
+                    Message.of(InterchangeMessages.UNKNOWN_FORMAT, fmt), Map.of("format", fmt));
         };
         return artifact(export);
     }
@@ -142,14 +149,15 @@ public class InterchangeController {
         }
     }
 
-    private static ImportResult result(ImportReport report) {
+    private static ImportResult result(ImportReport report, TextCatalog text) {
         return new ImportResult(report.sessionId().value(), report.status().name(), report.modelId().orElse(null),
                 report.versionNo() > 0 ? report.versionNo() : null, report.replayed(),
-                report.findings().stream().map(InterchangeController::finding).toList());
+                report.findings().stream().map(f -> finding(f, text)).toList());
     }
 
-    private static FindingDto finding(ImportFinding f) {
-        return new FindingDto(f.severity().name(), f.code(), f.message(), f.archiId().map(a -> a.value()).orElse(null),
+    private static FindingDto finding(ImportFinding f, TextCatalog text) {
+        return new FindingDto(f.severity().name(), f.code(), text.text(f.message()),
+                f.archiId().map(a -> a.value()).orElse(null),
                 f.xmlLine().orElse(null));
     }
 }

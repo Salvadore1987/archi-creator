@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.codec;
 
 import java.util.Objects;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 
 /**
  * Повреждение данных в файле с местом: что не так, у какого объекта, на какой строке.
@@ -10,7 +11,7 @@ import java.util.Optional;
  * @param archiId идентификатор объекта как он записан в файле — строкой, потому что
  *                дефект бывает именно в нём
  */
-public record DocumentDefect(String code, String message, Optional<String> archiId,
+public record DocumentDefect(String code, Message message, Optional<String> archiId,
                              Optional<Integer> line, Optional<Integer> column) {
 
     /** Файл не разбирается как XML. */
@@ -40,7 +41,7 @@ public record DocumentDefect(String code, String message, Optional<String> archi
         Objects.requireNonNull(column, "column");
     }
 
-    static DocumentDefect at(String code, String message, String archiId, int line) {
+    static DocumentDefect at(String code, Message message, String archiId, int line) {
         return new DocumentDefect(code, message, Optional.ofNullable(archiId), lineOf(line), Optional.empty());
     }
 

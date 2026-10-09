@@ -4,9 +4,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
  * Problem Details RFC 7807 с полем {@code code}. Класс отказа
@@ -30,25 +34,26 @@ public final class ProblemFactory {
     }
 
     public static ProblemDetail problem(HttpStatus status, String code, String detail, Map<String, Object> details,
-                                        HttpServletRequest request) {
+                                        HttpServletRequest request, TextCatalog text) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setType(URI.create(TYPE_BASE + code.toLowerCase(Locale.ROOT).replace('_', '-')));
-        problem.setTitle(title(status));
+        problem.setTitle(title(status).map(key -> text.text(Message.of(key))).orElse(status.getReasonPhrase()));
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", code);
         details.forEach(problem::setProperty);
         return problem;
     }
 
-    private static String title(HttpStatus status) {
-        return switch (status) {
-            case NOT_FOUND -> "Не найдено";
-            case CONFLICT -> "Конфликт";
-            case UNPROCESSABLE_CONTENT -> "Нарушено правило";
-            case FORBIDDEN -> "Нет доступа";
-            case GONE -> "Больше недоступно";
-            case BAD_REQUEST -> "Некорректный запрос";
-            default -> status.getReasonPhrase();
-        };
+    /** Ключ заголовка по статусу; для прочих статусов — стандартная фраза HTTP. */
+    private static Optional<String> title(HttpStatus status) {
+        return Optional.ofNullable(switch (status) {
+            case NOT_FOUND -> ModelingMessages.TITLE_NOT_FOUND;
+            case CONFLICT -> ModelingMessages.TITLE_CONFLICT;
+            case UNPROCESSABLE_CONTENT -> ModelingMessages.TITLE_UNPROCESSABLE;
+            case FORBIDDEN -> ModelingMessages.TITLE_FORBIDDEN;
+            case GONE -> ModelingMessages.TITLE_GONE;
+            case BAD_REQUEST -> ModelingMessages.TITLE_BAD_REQUEST;
+            default -> null;
+        });
     }
 }

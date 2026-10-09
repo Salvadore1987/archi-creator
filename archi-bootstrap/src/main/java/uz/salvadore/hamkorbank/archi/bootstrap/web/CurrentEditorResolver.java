@@ -41,7 +41,7 @@ public final class CurrentEditorResolver implements HandlerMethodArgumentResolve
                                           NativeWebRequest request, WebDataBinderFactory binders) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new InsufficientAuthenticationException("запрос без аутентификации");
+            throw new InsufficientAuthenticationException(BootstrapMessages.NOT_AUTHENTICATED);
         }
         return of(authentication);
     }

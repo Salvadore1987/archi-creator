@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 /**
  * Узел документа с собственным идентификатором: папка, элемент, связь,
@@ -29,14 +31,14 @@ public record DocumentNode(String tag, DocumentOrder order, Attributes attribute
         Objects.requireNonNull(attributes, "attributes");
         content = List.copyOf(content);
         if (!TAGS.contains(tag)) {
-            throw new IllegalArgumentException("не узел документа: " + tag);
+            throw new InvalidValueException(InterchangeMessages.NOT_DOCUMENT_NODE, tag);
         }
         ArchiId id = ArchiId.of(attributes.get("id")
-                .orElseThrow(() -> new IllegalArgumentException("INV-IXC-001: у узла <" + tag + "> нет id")));
+                .orElseThrow(() -> new InvalidValueException(InterchangeMessages.NODE_ID_MISSING, tag)));
         ContentOrder.requireDense(content);
         for (DocumentContent item : content) {
             if (item instanceof RawXmlFragment raw && !raw.parentArchiId().equals(Optional.of(id))) {
-                throw new IllegalArgumentException("фрагмент внутри " + id + " адресован " + raw.parentArchiId());
+                throw new InvalidValueException(InterchangeMessages.FRAGMENT_MISADDRESSED, id, raw.parentArchiId());
             }
         }
     }

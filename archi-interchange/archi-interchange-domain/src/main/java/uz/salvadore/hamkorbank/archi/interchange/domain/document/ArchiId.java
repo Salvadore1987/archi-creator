@@ -2,6 +2,8 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.document;
 
 import java.util.Objects;
 import java.util.regex.Pattern;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 /**
  * Идентификатор объекта в файле Archi. Сохраняется буквально, не перегенерируется.
@@ -18,7 +20,7 @@ public record ArchiId(String value) {
     public ArchiId {
         Objects.requireNonNull(value, "archiId");
         if (!FORMAT.matcher(value).matches()) {
-            throw new IllegalArgumentException("недопустимый идентификатор Archi: '" + value + "'");
+            throw new InvalidValueException(InterchangeMessages.ARCHI_ID_INVALID, value);
         }
     }
 

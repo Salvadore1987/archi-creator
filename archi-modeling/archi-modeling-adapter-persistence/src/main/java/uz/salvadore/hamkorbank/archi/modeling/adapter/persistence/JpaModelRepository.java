@@ -17,6 +17,8 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
@@ -106,7 +108,7 @@ public class JpaModelRepository implements ModelRepository {
         AggregateWrites.sync(em, model.elements(), ElementEntity.class, ElementEntity::new, (d, e) -> EntityMapper.apply(d, modelId, e));
         AggregateWrites.sync(em, model.relationships(), RelationshipEntity.class, RelationshipEntity::new,
                 (d, e) -> EntityMapper.apply(d, modelId, e));
-        AggregateWrites.flush(em, "модель " + model.id());
+        AggregateWrites.flush(em, Message.of(ModelingMessages.MODEL, model.id()));
     }
 
     @Override
@@ -114,7 +116,7 @@ public class JpaModelRepository implements ModelRepository {
         ModelId id = content.model().id();
         ModelEntity entity = requireModel(id);
         if (entity.version != content.model().version()) {
-            throw new ConcurrentModificationException("модель " + id);
+            throw new ConcurrentModificationException(Message.of(ModelingMessages.MODEL, id));
         }
         em.flush();
         for (String table : List.of("ViewEdgeEntity", "ViewNodeEntity", "ViewEntity", "RelationshipEntity",
@@ -135,7 +137,7 @@ public class JpaModelRepository implements ModelRepository {
         content.model().elements().markPersisted();
         content.model().relationships().markPersisted();
         content.views().forEach(views::save);
-        AggregateWrites.flush(em, "модель " + id);
+        AggregateWrites.flush(em, Message.of(ModelingMessages.MODEL, id));
     }
 
     @Override
@@ -197,7 +199,7 @@ public class JpaModelRepository implements ModelRepository {
     private ModelEntity requireModel(ModelId id) {
         ModelEntity entity = em.find(ModelEntity.class, id.value());
         if (entity == null) {
-            throw new ConcurrentModificationException("модель " + id);
+            throw new ConcurrentModificationException(Message.of(ModelingMessages.MODEL, id));
         }
         return entity;
     }

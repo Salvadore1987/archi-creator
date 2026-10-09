@@ -7,6 +7,9 @@ import java.util.Map;
 import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportPolicy;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
@@ -40,7 +43,7 @@ public class NativeQueryImportPolicy implements ImportPolicy {
     }
 
     private static InterchangeException notFound(WorkspaceId workspaceId) {
-        return new InterchangeException("IXC_NOT_FOUND", Failure.NOT_FOUND,
-                "рабочее пространство " + workspaceId + " не найдено", Map.of());
+        return new InterchangeException(InterchangeCodes.NOT_FOUND, Failure.NOT_FOUND,
+                Message.of(InterchangeMessages.WORKSPACE_NOT_FOUND, workspaceId), Map.of());
     }
 }

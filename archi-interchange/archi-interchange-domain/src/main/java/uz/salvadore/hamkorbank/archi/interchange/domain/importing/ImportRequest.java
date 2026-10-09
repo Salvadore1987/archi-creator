@@ -2,6 +2,8 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.importing;
 
 import java.util.Objects;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
@@ -16,6 +18,9 @@ public record ImportRequest(WorkspaceId workspaceId, Optional<ModelId> targetMod
                             ContentHash sourceHash, long sourceSize, String idempotencyKey,
                             boolean strictMode, String startedBy) {
 
+    public static final int SOURCE_NAME_MAX = 500;
+    public static final int IDEMPOTENCY_KEY_MAX = 64;
+
     public ImportRequest {
         Objects.requireNonNull(workspaceId, "workspaceId");
         Objects.requireNonNull(targetModelId, "targetModelId");
@@ -23,14 +28,14 @@ public record ImportRequest(WorkspaceId workspaceId, Optional<ModelId> targetMod
         Objects.requireNonNull(sourceHash, "sourceHash");
         Objects.requireNonNull(idempotencyKey, "idempotencyKey");
         Objects.requireNonNull(startedBy, "startedBy");
-        if (sourceName.isBlank() || sourceName.length() > 500) {
-            throw new IllegalArgumentException("имя файла пусто или длиннее 500 символов");
+        if (sourceName.isBlank() || sourceName.length() > SOURCE_NAME_MAX) {
+            throw new InvalidValueException(InterchangeMessages.SOURCE_NAME_INVALID, SOURCE_NAME_MAX);
         }
         if (sourceSize <= 0) {
-            throw new IllegalArgumentException("пустой файл не импортируется");
+            throw new InvalidValueException(InterchangeMessages.SOURCE_EMPTY);
         }
-        if (idempotencyKey.isBlank() || idempotencyKey.length() > 64) {
-            throw new IllegalArgumentException("ключ идемпотентности пуст или длиннее 64 символов");
+        if (idempotencyKey.isBlank() || idempotencyKey.length() > IDEMPOTENCY_KEY_MAX) {
+            throw new InvalidValueException(InterchangeMessages.IDEMPOTENCY_KEY_INVALID, IDEMPOTENCY_KEY_MAX);
         }
     }
 

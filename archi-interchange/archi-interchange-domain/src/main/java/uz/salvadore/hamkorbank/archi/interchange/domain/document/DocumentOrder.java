@@ -1,5 +1,8 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.document;
 
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+
 /**
  * Позиция среди соседей в исходном файле: читатель фиксирует, писатель воспроизводит.
  *
@@ -10,7 +13,7 @@ public record DocumentOrder(int value) {
 
     public DocumentOrder {
         if (value < 0) {
-            throw new IllegalArgumentException("позиция не может быть отрицательной: " + value);
+            throw new InvalidValueException(InterchangeMessages.ORDER_NEGATIVE, value);
         }
     }
 

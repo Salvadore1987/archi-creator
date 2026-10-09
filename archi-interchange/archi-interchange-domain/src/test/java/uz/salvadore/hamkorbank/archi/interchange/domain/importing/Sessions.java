@@ -57,7 +57,7 @@ final class Sessions {
     /** Нарушение матрицы, каким его отдаст проверка методологии: ERROR, RELATION_NOT_PERMITTED. */
     static ImportFinding matrixViolation() {
         return new ImportFinding(FindingId.next(UUIDS), Severity.ERROR, "RELATION_NOT_PERMITTED",
-                "Composition от BusinessActor к ApplicationComponent не допускается",
+                ImportFinding.storedText("Composition от BusinessActor к ApplicationComponent не допускается"),
                 Optional.of(ArchiId.of("id-r1")), Optional.of(8));
     }
 }

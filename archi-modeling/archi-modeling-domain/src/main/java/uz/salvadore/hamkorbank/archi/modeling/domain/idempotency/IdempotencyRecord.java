@@ -3,6 +3,8 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.idempotency;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
  * Результат команды, выполненной с ключом идемпотентности. Хранит отпечаток
@@ -23,7 +25,7 @@ public record IdempotencyRecord(String scope, String actor, String key, String f
         Objects.requireNonNull(createdAt, "createdAt");
         IdempotentCommand.requireValidKey(key);
         if (fingerprint == null || !SHA256.matcher(fingerprint).matches()) {
-            throw new IllegalArgumentException("отпечаток — SHA-256 в hex");
+            throw new InvalidValueException(ModelingMessages.FINGERPRINT_NOT_SHA256);
         }
     }
 }

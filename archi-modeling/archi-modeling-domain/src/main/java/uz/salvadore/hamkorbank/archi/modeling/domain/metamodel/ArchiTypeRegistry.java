@@ -9,12 +9,13 @@ import static uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ConceptKin
 import static uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.MetamodelPhase.PHASE_1;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.MetamodelPhase.PHASE_2;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.MetamodelPhase.PHASE_3;
-
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
  * Каталог типов ArchiMate 3.2 и реестр {@code xsi:type} ↔ внутренний тип.
@@ -126,7 +127,7 @@ public final class ArchiTypeRegistry {
             ConceptDefinition previous = concepts.put(type,
                     new ConceptDefinition(type, kind, layer, Optional.ofNullable(phase)));
             if (previous != null) {
-                throw new IllegalStateException("тип объявлен в каталоге дважды: " + type);
+                throw new IllegalStateException(Message.of(ModelingMessages.CATALOG_DUPLICATE, type).toString());
             }
         }
     }

@@ -11,7 +11,7 @@ public record RawXml(String value) {
     public RawXml {
         Objects.requireNonNull(value, "rawXml");
         if (value.isEmpty()) {
-            throw new IllegalArgumentException("пустой остаток — это его отсутствие, а не значение");
+            throw new InvalidValueException(ModelingMessages.RESIDUE_EMPTY);
         }
     }
 

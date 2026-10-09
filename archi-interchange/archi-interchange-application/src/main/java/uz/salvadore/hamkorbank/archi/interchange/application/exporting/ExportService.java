@@ -7,6 +7,7 @@ import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeOperation;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeEvents;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMetrics;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportCompleted;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportFormat;
@@ -37,9 +38,11 @@ public final class ExportService {
     private final InterchangeMetrics metrics;
     private final Clock clock;
     private final UuidV7 uuids;
-    private final CatalogCsvWriter csv = new CatalogCsvWriter();
+    private final TextCatalog texts;
 
-    public ExportService(VersionService versions, InterchangeEvents events, InterchangeMetrics metrics, Clock clock) {
+    public ExportService(VersionService versions, InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts,
+                         Clock clock) {
+        this.texts = texts;
         this.versions = versions;
         this.events = events;
         this.metrics = metrics;
@@ -73,7 +76,7 @@ public final class ExportService {
             operation.require(actor);
             VersionSnapshot snapshot = versions.snapshot(actor,
                     uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
-            byte[] zip = csv.write(snapshot.xml(), options);
+            byte[] zip = new CatalogCsvWriter(texts).write(snapshot.xml(), options);
             ExportOptions exportOptions = new ExportOptions(Optional.empty(), Optional.empty(), Optional.empty(),
                     Optional.of(String.valueOf(options.separator())), options.folderArchiId());
             return deliver(actor, snapshot, ExportFormat.CSV_CATALOG, exportOptions,

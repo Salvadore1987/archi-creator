@@ -8,7 +8,9 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.ModelAccessList;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.LockStatus;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
@@ -78,7 +80,8 @@ public final class ModelQueryService {
     /** Payload представления по требованию (OpenView). */
     public View openView(EditorIdentity actor, ViewId viewId) {
         return kernel.run(Operation.OPEN_VIEW, actor, () -> kernel.unitOfWork.read(() -> {
-            View view = kernel.views.load(viewId).orElseThrow(() -> ModelingException.notFound("представление " + viewId));
+            View view = kernel.views.load(viewId)
+                    .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW, viewId)));
             kernel.visibleHeader(view.modelId(), actor, AclAccess.READ);
             return view;
         }));

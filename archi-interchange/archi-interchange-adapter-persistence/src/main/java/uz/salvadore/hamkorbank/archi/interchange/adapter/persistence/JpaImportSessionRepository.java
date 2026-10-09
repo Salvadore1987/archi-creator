@@ -9,6 +9,10 @@ import java.util.Optional;
 import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportSessionRepository;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
@@ -31,6 +35,13 @@ public class JpaImportSessionRepository implements ImportSessionRepository {
 
     @PersistenceContext
     private EntityManager em;
+
+    private final TextCatalog texts;
+
+    /** Находка хранится текстом на языке запроса, в котором прошёл импорт: это отчёт, а не сообщение. */
+    public JpaImportSessionRepository(TextCatalog texts) {
+        this.texts = texts;
+    }
 
     @Override
     public Optional<ImportSession> findByIdempotencyKey(WorkspaceId workspaceId, String idempotencyKey) {
@@ -81,15 +92,15 @@ public class JpaImportSessionRepository implements ImportSessionRepository {
                 row.ordinal = i;
                 row.severity = finding.severity().name();
                 row.code = finding.code();
-                row.message = finding.message();
+                row.message = texts.text(finding.message());
                 row.archiId = finding.archiId().map(ArchiId::value).orElse(null);
                 row.xmlLine = finding.xmlLine().orElse(null);
                 em.persist(row);
             }
             em.flush();
         } catch (PersistenceException e) {
-            throw new InterchangeException("INV-IXC-003", Failure.CONFLICT,
-                    "импорт с тем же ключом идемпотентности выполняется параллельно", Map.of());
+            throw new InterchangeException(InterchangeCodes.IMPORT_IDEMPOTENCY, Failure.CONFLICT,
+                    Message.of(InterchangeMessages.IMPORT_IN_PROGRESS), Map.of());
         }
     }
 
@@ -98,7 +109,8 @@ public class JpaImportSessionRepository implements ImportSessionRepository {
                         "select f from ImportFindingEntity f where f.sessionId = :s order by f.ordinal",
                         ImportFindingEntity.class)
                 .setParameter("s", e.id).getResultList().stream()
-                .map(f -> new ImportFinding(new FindingId(f.id), Severity.valueOf(f.severity), f.code, f.message,
+                .map(f -> new ImportFinding(new FindingId(f.id), Severity.valueOf(f.severity), f.code,
+                        ImportFinding.storedText(f.message),
                         Optional.ofNullable(f.archiId).filter(ArchiId::isValid).map(ArchiId::of),
                         Optional.ofNullable(f.xmlLine)))
                 .toList();
