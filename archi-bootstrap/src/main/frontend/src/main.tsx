@@ -12,7 +12,7 @@ import { useEditor } from './model/store';
 
 const root = document.getElementById('root');
 if (!root) {
-  throw new Error('В index.html нет элемента #root');
+  throw new Error(t('app.rootMissing'));
 }
 
 /**

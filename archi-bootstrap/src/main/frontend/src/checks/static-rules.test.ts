@@ -58,3 +58,17 @@ describe('UI-021: пользовательский текст — в ресур�
     ).toEqual([]);
   });
 });
+
+describe('UI-021: строковые литералы — ключи ресурсов, а не текст', () => {
+  const sources = files(SRC, ['.ts', '.tsx']).filter((path) => !relative(SRC, path).startsWith('i18n'));
+
+  it('русского текста в строках кода нет — он живёт в i18n/', () => {
+    expect(violations(sources, /(['"`])[^'"`]*[А-Яа-яЁё][^'"`]*\1/, isComment)).toEqual([]);
+  });
+
+  it('в строках нет ссылок на требования и якоря спецификации', () => {
+    // Коды отказов сервера — контракт API, их место одно: api/codes.ts.
+    const all = files(SRC, ['.ts', '.tsx']).filter((path) => relative(SRC, path) !== join('api', 'codes.ts'));
+    expect(violations(all, /(['"`])[^'"`]*\b(FR|NFR|INV|UC|UI|ADR)-[A-Z0-9]/, isComment)).toEqual([]);
+  });
+});

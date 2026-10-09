@@ -1,5 +1,7 @@
 import { api } from '../api/endpoints';
+import { ErrorCodes } from '../api/codes';
 import { ApiError } from '../api/http';
+import type { MessageKey } from '../i18n';
 import type { Element, Folder, Property, Relationship, Uuid, ViewEdge, ViewNode, ViewSummary } from '../api/types';
 import type { Change } from './doc';
 import type { Operation } from './history';
@@ -11,7 +13,11 @@ export interface Command {
 }
 
 /** Изменение, которое сервер выполнить не умеет: такой правки интерфейс не должен предлагать. */
-export class UnsupportedChange extends Error {}
+export class UnsupportedChange extends Error {
+  constructor(readonly reason: MessageKey) {
+    super(reason);
+  }
+}
 
 /** Команды одного изменения. Пусто — изменение сервер сделает сам, следствием соседней команды. */
 export function commandsFor(modelId: Uuid, change: Change): Command[] {
@@ -149,7 +155,7 @@ function relationshipCommands(modelId: Uuid, before: Relationship | null, after:
 
 function viewCommands(modelId: Uuid, before: ViewSummary | null, after: ViewSummary | null): Command[] {
   if (!before || !after) {
-    throw new UnsupportedChange('создание и удаление представлений не поддержано');
+    throw new UnsupportedChange('unsupported.viewCreateDelete');
   }
   const result = treeCommands(modelId, before, after);
   if (before.name !== after.name) {
@@ -161,7 +167,7 @@ function viewCommands(modelId: Uuid, before: ViewSummary | null, after: ViewSumm
 function nodeCommands(viewId: Uuid, before: ViewNode | null, after: ViewNode | null): Command[] {
   if (!before && after) {
     if (!after.elementId) {
-      throw new UnsupportedChange('размещение группы и заметки не поддержано');
+      throw new UnsupportedChange('unsupported.groupNotePlacement');
     }
     return [
       command(`place node ${after.id}`, () =>
@@ -182,7 +188,7 @@ function nodeCommands(viewId: Uuid, before: ViewNode | null, after: ViewNode | n
     return [command(`remove node ${before.id}`, () => api.removeNode(before.id))];
   }
   if ((before!.parentId ?? null) !== (after!.parentId ?? null)) {
-    throw new UnsupportedChange('перенос узла в другой контейнер не поддержан');
+    throw new UnsupportedChange('unsupported.nodeReparent');
   }
   const moved =
     before!.x !== after!.x || before!.y !== after!.y || before!.width !== after!.width || before!.height !== after!.height;
@@ -201,7 +207,7 @@ function nodeCommands(viewId: Uuid, before: ViewNode | null, after: ViewNode | n
 function edgeCommands(viewId: Uuid, before: ViewEdge | null, after: ViewEdge | null): Command[] {
   if (!before && after) {
     if (!after.relationshipId) {
-      throw new UnsupportedChange('соединение без связи модели не поддержано');
+      throw new UnsupportedChange('unsupported.edgeWithoutRelationship');
     }
     return [
       command(`place edge ${after.id}`, () =>
@@ -217,7 +223,7 @@ function edgeCommands(viewId: Uuid, before: ViewEdge | null, after: ViewEdge | n
     ];
   }
   if (before && !after) {
-    throw new UnsupportedChange('удаление ребра без его связи или узла не поддержано');
+    throw new UnsupportedChange('unsupported.edgeRemoval');
   }
   return JSON.stringify(before!.bendpoints) !== JSON.stringify(after!.bendpoints)
     ? [
@@ -270,7 +276,7 @@ async function runTolerant(cmd: Command): Promise<void> {
     await cmd.run();
   } catch (error) {
     const replayedCreate =
-      error instanceof ApiError && error.code === 'MDL_ID_TAKEN' && /^(create|place) /.test(cmd.describe);
+      error instanceof ApiError && error.code === ErrorCodes.ID_TAKEN && /^(create|place) /.test(cmd.describe);
     if (!replayedCreate) {
       throw error;
     }

@@ -7,6 +7,9 @@ type Leaves<T, P extends string = ''> = {
 
 export type MessageKey = Leaves<typeof ru>;
 
+/** Язык интерфейса. Его же просим у сервера: отказы и отчёты приходят на языке экрана. */
+export const UI_LOCALE = 'ru';
+
 type Params = Record<string, string | number>;
 
 function lookup(key: string): string | undefined {

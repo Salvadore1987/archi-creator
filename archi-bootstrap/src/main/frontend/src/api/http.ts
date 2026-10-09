@@ -1,3 +1,4 @@
+import { UI_LOCALE } from '../i18n';
 import type { Problem } from './types';
 
 const BASE = '/api/v1';
@@ -38,7 +39,10 @@ export interface RequestOptions {
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const headers: Record<string, string> = { Accept: 'application/json, application/problem+json' };
+  const headers: Record<string, string> = {
+    Accept: 'application/json, application/problem+json',
+    'Accept-Language': UI_LOCALE,
+  };
   const token = await tokenSource();
   if (token) {
     headers.Authorization = `Bearer ${token}`;
