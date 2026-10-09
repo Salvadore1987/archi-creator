@@ -165,6 +165,23 @@
             в docker-compose.yml и в CI, когда они появятся.
         -->
         <finalName>archi-creator-${project.version}</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!--
+                Токены стиля живут в спецификации, и серверный писатель SVG
+                читает тот же файл, что и сборка фронтенда: копия в ресурсах
+                разошлась бы с ним при первой правке.
+            -->
+            <resource>
+                <directory>${project.basedir}/../spec/ui</directory>
+                <targetPath>ui</targetPath>
+                <includes>
+                    <include>design-tokens.yaml</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -234,6 +251,19 @@
                                     <!-- ci, а не install: package-lock.json — закон,
                                          а не пожелание, и сборка его не переписывает. -->
                                     <arguments>ci --no-audit --no-fund</arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <!-- Юнит-тесты интерфейса: история правок, дерево, маршрутизация
+                                     связей и статические проверки токенов и строк. -->
+                                <id>npm-test</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <configuration>
+                                    <arguments>test</arguments>
+                                    <skip>${skipTests}</skip>
                                 </configuration>
                             </execution>
                             <execution>
