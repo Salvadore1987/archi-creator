@@ -15,7 +15,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  * modeling, а столбец — interchange: каждый контекст читает и пишет только своё.
  */
 @Repository
-public class JdbcImportPolicy implements ImportPolicy {
+public class NativeQueryImportPolicy implements ImportPolicy {
 
     @PersistenceContext
     private EntityManager em;
