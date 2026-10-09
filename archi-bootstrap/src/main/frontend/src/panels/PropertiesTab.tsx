@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Property, Uuid } from '../api/types';
 import { Icon } from '../app/Icon';
 import { layerName, t, typeName } from '../i18n';
@@ -162,8 +162,19 @@ function CommitInput(props: {
 }
 
 function PropertiesEditor(props: { properties: Property[]; readOnly: boolean; onCommit(properties: Property[]): void }) {
-  const [rows, setRows] = useState(props.properties);
-  useEffect(() => setRows(props.properties), [props.properties]);
+  const [rows, setRowsState] = useState(props.properties);
+  // Последние строки — в ref, а не только в состоянии: уход фокуса может
+  // прийти раньше перерисовки, и фиксировать надо то, что набрано, а не
+  // то, что было в замыкании прошлого рендера.
+  const latest = useRef(props.properties);
+  const setRows = (next: Property[]) => {
+    latest.current = next;
+    setRowsState(next);
+  };
+  useEffect(() => {
+    latest.current = props.properties;
+    setRowsState(props.properties);
+  }, [props.properties]);
   const commit = (next: Property[]) => {
     if (JSON.stringify(next) !== JSON.stringify(props.properties)) props.onCommit(next);
   };
@@ -183,7 +194,7 @@ function PropertiesEditor(props: { properties: Property[]; readOnly: boolean; on
     <div
       className="kvs"
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node)) commit(rows);
+        if (!event.currentTarget.contains(event.relatedTarget as Node)) commit(latest.current);
       }}
     >
       {rows.map((p, i) => (
@@ -192,20 +203,20 @@ function PropertiesEditor(props: { properties: Property[]; readOnly: boolean; on
             className="kv__input"
             value={p.key}
             placeholder={t('props.key')}
-            onChange={(event) => setRows(rows.map((r, j) => (j === i ? { ...r, key: event.target.value } : r)))}
+            onChange={(event) => setRows(latest.current.map((r, j) => (j === i ? { ...r, key: event.target.value } : r)))}
           />
           <input
             className="kv__input"
             value={p.value}
             placeholder={t('props.value')}
-            onChange={(event) => setRows(rows.map((r, j) => (j === i ? { ...r, value: event.target.value } : r)))}
+            onChange={(event) => setRows(latest.current.map((r, j) => (j === i ? { ...r, value: event.target.value } : r)))}
           />
           <button
             type="button"
             className="btn btn--icon btn--small"
             title={t('props.removeProperty')}
             onClick={() => {
-              const next = rows.filter((_, j) => j !== i);
+              const next = latest.current.filter((_, j) => j !== i);
               setRows(next);
               commit(next);
             }}
@@ -214,7 +225,7 @@ function PropertiesEditor(props: { properties: Property[]; readOnly: boolean; on
           </button>
         </div>
       ))}
-      <button type="button" className="btn btn--small btn--ghost" onClick={() => setRows([...rows, { key: '', value: '' }])}>
+      <button type="button" className="btn btn--small btn--ghost" onClick={() => setRows([...latest.current, { key: '', value: '' }])}>
         <Icon name="plus" />
         {t('props.addProperty')}
       </button>

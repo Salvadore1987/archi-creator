@@ -51,6 +51,7 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts', 'build/**/*.test.ts', 'perf/**/*.bench.ts'],
+    exclude: ['e2e/**', 'visual/**', 'perf/canvas-pan.bench.ts', 'node_modules/**'],
     environment: 'node',
   },
 });

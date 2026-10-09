@@ -54,6 +54,8 @@ export function paintOf(entry: ShapeEntry, elementLayer: string | null | undefin
       ? { fill: 'var(--group-fill)', stroke: 'var(--group-border)' }
       : layer === 'note'
         ? { fill: 'var(--note-fill)', stroke: 'var(--note-border)' }
+        : layer === 'junction'
+          ? { fill: 'var(--edge-color)', stroke: 'var(--edge-color)' }
         : { fill: `var(--layer-${layer})`, stroke: `var(--layer-${layer}-border)` };
   return {
     fill: style?.fillColor || base.fill,

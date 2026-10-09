@@ -6,6 +6,7 @@ import { IconSprite } from '../canvas/IconSprite';
 import { Editor } from './Editor';
 import { UiIconSprite } from './Icon';
 import { ModelList } from './ModelList';
+import { ShapeGallery } from './ShapeGallery';
 import { useModelRoute } from './route';
 import { Toaster } from './Toaster';
 
@@ -14,6 +15,7 @@ const STUB_ME: Me = { subject: 'dev-architect', displayName: 'dev-architect', ro
 
 export function App({ auth }: { auth: AuthMode }) {
   const modelId = useModelRoute();
+  const gallery = new URLSearchParams(window.location.search).has('gallery');
   const me = useQuery({
     queryKey: ['me'],
     queryFn: async () => {
@@ -31,7 +33,9 @@ export function App({ auth }: { auth: AuthMode }) {
     <>
       <UiIconSprite />
       <IconSprite />
-      {modelId ? (
+      {gallery ? (
+        <ShapeGallery />
+      ) : modelId ? (
         <Editor key={modelId} modelId={modelId} me={me.data} auth={auth} />
       ) : (
         <ModelList me={me.data} auth={auth} />

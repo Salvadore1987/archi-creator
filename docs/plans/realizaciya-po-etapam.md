@@ -721,7 +721,7 @@ UC-MDL-001…007 и UC-IXC-001…002 работают через REST, импо�
       несохранённое изменение
 - ✅ Счётчик несохранённых в статус-строке, кнопка «Сохранить» только при
       наличии изменений
-- ⬜ **Регрессионный тест на дефект макета** ([§6.9](../frontend.md#69-история-изменений)):
+- ✅ **Регрессионный тест на дефект макета** ([§6.9](../frontend.md#69-история-изменений)):
       клик внутри дерева не прокручивает строку; прокрутка только когда
       выделение приходит извне. Из кода причина не видна, регрессия вероятна
 
@@ -747,16 +747,25 @@ UC-MDL-001…007 и UC-IXC-001…002 работают через REST, импо�
 
 ### 3.10 Тесты этапа
 
-- ⬜ `e2e/element-identity.spec.ts` (`UI-001`), `e2e/palette-drop.spec.ts`,
+- ✅ `e2e/element-identity.spec.ts` (`UI-001`), `e2e/palette-drop.spec.ts`,
       `e2e/tree-drop.spec.ts` (`UI-002`)
-- ⬜ `e2e/properties-panel.spec.ts` (`UI-007`), `e2e/view-tabs.spec.ts` (`UI-008`)
-- ⬜ `e2e/model-tree.spec.ts` (`UI-012`), `e2e/description-tab.spec.ts` (`UI-014`)
-- ⬜ `e2e/role-viewer.spec.ts`, `e2e/role-architect.spec.ts` (`UI-015`)
-- ⬜ `e2e/tree-editing.spec.ts` (`UI-016`)
-- ⬜ `visual/shape-gallery` против эталона Archi (`UI-009`), `visual/tokens.spec.ts`
+- ✅ `e2e/properties-panel.spec.ts` (`UI-007`), `e2e/view-tabs.spec.ts` (`UI-008`)
+- ✅ `e2e/model-tree.spec.ts` (`UI-012`), `e2e/description-tab.spec.ts` (`UI-014`)
+- ✅ `e2e/role-viewer.spec.ts`, `e2e/role-architect.spec.ts` (`UI-015`)
+- ✅ `e2e/tree-editing.spec.ts` (`UI-016`); сверх плана — `e2e/history.spec.ts`
+      (`UI-017`), `e2e/context-menu.spec.ts` (`UI-018`), `e2e/opaque-node.spec.ts`
+      (`UI-020`), `e2e/i18n-resources.spec.ts` (`UI-021`): их имена есть в маппинге
+      правил, а поведение реализовано на этом этапе
+- ✅ `visual/shape-gallery` против эталона Archi (`UI-009`), `visual/tokens.spec.ts`
       (`UI-010`), `visual/style-override.spec.ts` (`UI-011`)
-- ⬜ `perf/tree-search.bench.ts`, `perf/canvas-pan.bench.ts` на референсной
-      модели (`UI-013`, NFR-01: pan/zoom 60 fps, открытие представления ≤ 1 с)
+- ✅ `perf/tree-search.bench.ts`, `perf/canvas-pan.bench.ts` на референсной
+      модели (`UI-013`, NFR-01: pan/zoom 60 fps, открытие представления ≤ 1 с).
+      E2E герметичны: API подменяется в браузере in-memory сервером на снимке
+      эталонной модели (`e2e/support/mockApi.ts`, `e2e/fixtures/reference-model.json`,
+      снимается скриптом `e2e/fixtures/capture.mjs` с работающего сервера),
+      команды синхронизации проверяются как записанные вызовы. Итог: 43 сценария
+      Playwright и 52 юнит-теста vitest; замеры — открытие 500 объектов 343 мс,
+      медиана кадра панорамирования 16,7 мс, поиск по 2 010 элементам — под 1 мс
 
 ---
 

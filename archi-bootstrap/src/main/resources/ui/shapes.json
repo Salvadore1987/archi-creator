@@ -5,7 +5,7 @@
     "Координаты — от левого верхнего угла фигуры в единицах SVG (1 = 1 px при 100 %).",
     "Отрицательные x и y отсчитываются от правого и нижнего края; width и height меньше либо равные нулю — размер фигуры минус модуль значения.",
     "outline — имя примитива из primitives; радиус берётся из токена radius_token файла design-tokens.yaml.",
-    "layer — ключ слоя токенов; null — слой самого элемента; group и note — токены холста group_* и note_*.",
+    "layer — ключ слоя токенов; null — слой самого элемента; group, note и junction — токены холста group_*, note_* и цвет связей.",
     "label_box null — у фигуры нет подписи; corner_icon null — нет иконки."
   ],
   "version": 1,
@@ -479,7 +479,7 @@
       "corner_icon": null,
       "label_box": null,
       "radius_token": "node_radius",
-      "layer": "other"
+      "layer": "junction"
     },
     "archimate:Location": {
       "outline": "rect",

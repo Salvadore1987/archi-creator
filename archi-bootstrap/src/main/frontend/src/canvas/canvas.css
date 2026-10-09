@@ -14,7 +14,8 @@
   font: var(--node-font);
   font-weight: var(--node-font-weight);
   overflow: hidden;
-  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 .shape__label--tab,
 .shape__label--dog-ear {

@@ -254,7 +254,7 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
         multiSelectionKeyCode={['Meta', 'Control', 'Shift']}
         selectionKeyCode="Shift"
         onlyRenderVisibleElements
-        proOptions={{ hideAttribution: true }}
+        attributionPosition="bottom-left"
         elevateNodesOnSelect={false}
       >
         <Background variant={BackgroundVariant.Lines} gap={GRID} color="var(--paper-line)" />

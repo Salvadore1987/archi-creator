@@ -88,7 +88,9 @@ export function toFlowEdges(view: ViewDoc, selected: ReadonlySet<Uuid>): ArchiFl
       target,
       data: { viewId: view.id },
       selected: edgeSelected(edge, selected),
-      zIndex: 1000,
+      // Над контейнерами, где лежат концы, но не над узлами своего уровня:
+      // иначе полоса захвата ребра перекрывает клик по узлу под линией.
+      zIndex: Math.max(depthOf(view, view.nodes[source]!), depthOf(view, view.nodes[target]!)),
     });
   }
   return result;

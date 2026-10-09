@@ -126,7 +126,8 @@ export function TopBar({ me, auth }: { me?: Me; auth: AuthMode }) {
         <Icon name="download" />
         {t('topbar.export')}
       </button>
-      {canEdit && (unsaved > 0 || versionPending) && (
+      {/* Кнопка остаётся на месте и во время отправки — «Сохранение…», а не исчезновение. */}
+      {editorRole && lock.kind === 'mine' && (unsaved > 0 || versionPending || saving) && (
         <button type="button" className="btn btn--primary" data-testid="save" disabled={saving} onClick={() => void save()}>
           {saving ? t('topbar.saving') : t('topbar.save')}
         </button>
