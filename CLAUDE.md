@@ -10,7 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Состояние репозитория
 
-**Этапы 0, 1 и 2 закрыты (2026-10-08). Следующий — этап 3, канва.**
+**Этапы 0–3 закрыты (этап 3 — 2026-10-09). Следующий — этап 4: умные связи,
+вложенность, авторазметка, паритет с Archi.**
 Собирается multi-module Maven по
 [`ADR-0001`](spec/adr/0001-maven-multi-module.md): 17 проектов в реакторе — родитель,
 три агрегатора контекстов, двенадцать модулей-слоёв, `archi-bootstrap` с классом запуска
@@ -95,11 +96,31 @@ Application-слои без Spring: транзакция — порт `UnitOfWor
 матрицы при импорте (`RelationMatrix.check`) соединяется с сессией в application-слое
 на этапе 2.
 
-Тестов 258: 225 юнит-тестов (`./mvnw test`) и 33 интеграционных `*IT` на
-Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
+Что появилось на этапе 3 и где лежит:
 
-Ещё не заведено: клиент OIDC во фронтенде и канва (этап 3), авторазметка (4), экспорт
-картинок (5a), OEF (6a), Git (7a–7c), Playwright в CI (этап 4).
+| Что | Где |
+|---|---|
+| Редактор: дерево, канва, палитра, свойства и описание, история | `archi-bootstrap/src/main/frontend/src/` (`tree/`, `canvas/`, `panels/`, `history/`) |
+| Документ модели в браузере, обратимые изменения, синхронизация при сохранении ([`ADR-0018`](spec/adr/0018-local-edit-session.md)) | `frontend/src/model/` |
+| Геометрия фигур и спрайт иконок — общие с будущим серверным SVG | `archi-bootstrap/src/main/resources/ui/shapes.json`, `icons.svg` |
+| Токены в CSS из спеки на сборке | `frontend/build/design-tokens.ts`; в classpath — `ui/design-tokens.yaml` |
+| Строки интерфейса и русские названия типов | `frontend/src/i18n/` |
+| Вход: OIDC с PKCE, `/me`, `/ui-config` | `frontend/src/auth/`, `archi-bootstrap/.../bootstrap/security/SessionController.java` |
+| Идентификаторы от клиента, ребро связи, `label`/`content` узла, `placements` | modeling и interchange, миграция `V3__view_node_text.sql` |
+| E2E, визуальные проверки, замеры | `frontend/e2e/`, `frontend/visual/`, `frontend/perf/` |
+
+**Правки живут в браузере до «Сохранить»** ([`ADR-0018`](spec/adr/0018-local-edit-session.md)):
+сохранение переводит сервер от точки сохранения к текущей позиции истории командами
+API и фиксирует версию. Идентификаторы новых объектов (`id`, `archiId`) задаёт клиент.
+Команды API по-прежнему меняют базу сразу — это свойство сервера, а не интерфейса.
+
+Тестов на сервере: 237 юнит-тестов (`./mvnw test`) и 43 интеграционных `*IT` на
+Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
+Во фронтенде: 52 юнит-теста vitest (`npm test`, гоняется фазой `test` Maven)
+и 43 сценария Playwright (`npm run e2e`, API подменяется — сервер не нужен).
+
+Ещё не заведено: умные связи, вложенность и авторазметка (этап 4), Playwright в CI (4),
+правка стиля и групп/заметок (паритет, 4), экспорт картинок (5a), OEF (6a), Git (7a–7c).
 
 Содержательная часть проекта — **спецификация**. Прежде чем писать код, читай её:
 почти каждое решение уже принято и обосновано, и переизобретать его не нужно.
@@ -128,6 +149,8 @@ docker compose logs -f app         # логи приложения (в prod он
 docker compose down                # остановить; -v чтобы снести и данные БД
 
 cd archi-bootstrap/src/main/frontend && npm run dev   # Vite на :5173, прокси на :8080
+npm test                           # (в frontend/) vitest: история, дерево, геометрия, статика
+npm run e2e                        # (в frontend/) Playwright; один раз: npx playwright install chromium
 
 open docs/mockups/index.html       # макеты интерфейса, статика без сборки
 tools/check-links.py               # ссылки между файлами: существование файла и якоря

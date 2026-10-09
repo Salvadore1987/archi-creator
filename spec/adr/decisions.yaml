@@ -248,3 +248,4 @@ decisions:
     affects: [ui, modeling]
     requirements: [FR-35, FR-05, FR-06, NFR-05]
     anchors: [UI-017, INV-MDL-006]
+    implemented: 2026-10-09
