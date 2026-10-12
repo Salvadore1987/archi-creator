@@ -58,6 +58,17 @@ public record ViewNode(ViewNodeId id, Optional<ViewNodeId> parentId, ArchiId arc
         return ViewNodeKind.of(archiType);
     }
 
+    /** Подпись и текст заметки; пустая строка — текста нет. */
+    public ViewNode withText(Optional<String> newLabel, Optional<String> newContent) {
+        return new ViewNode(id, parentId, archiId, archiType, elementId, bounds, style,
+                newLabel.filter(l -> !l.isEmpty()), newContent.filter(c -> !c.isEmpty()), sortOrder, rawXml);
+    }
+
+    public ViewNode withStyle(StyleOverride newStyle) {
+        return new ViewNode(id, parentId, archiId, archiType, elementId, bounds, newStyle, label, content, sortOrder,
+                rawXml);
+    }
+
     public ViewNode withBounds(Bounds newBounds) {
         return new ViewNode(id, parentId, archiId, archiType, elementId, newBounds, style, label, content, sortOrder,
                 rawXml);

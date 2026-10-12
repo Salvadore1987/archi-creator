@@ -21,6 +21,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ViewRef;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bendpoint;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.DiagramType;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.StyleOverride;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdge;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
@@ -28,9 +29,13 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEndpoint;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeKind;
 
 /** Представления и размещение на них элементов и связей. */
 public final class ViewService {
+
+    /** Поле запроса по имени в JSON — в сообщении о том, чего не хватает. */
+    private static final String ELEMENT_ID = "elementId";
 
     private final ModelingKernel kernel;
 
@@ -121,11 +126,99 @@ public final class ViewService {
         return view.nodes().contains(ViewNodeId.of(id)) ? ViewNodeId.of(id) : ViewEdgeId.of(id);
     }
 
+    /**
+     * Что поставить на представление: элемент, группу или заметку. Незаданный размер —
+     * размер Archi для вида узла.
+     *
+     * @param elementId обязателен у узла элемента, запрещён у группы и заметки
+     */
+    public record NewNode(ViewNodeKind kind, Optional<ElementId> elementId, Optional<String> label,
+                          Optional<String> content, int x, int y, Optional<Integer> width, Optional<Integer> height,
+                          Optional<ViewNodeId> parentId, RequestedIds ids) {
+    }
+
+    /**
+     * Узел любого вида. Узел элемента — как {@link #place}: уже размещённый элемент
+     * возвращает существующий узел. Группа и заметка создаются всегда.
+     */
+    public Created<ViewNode> placeNode(EditorIdentity actor, ViewId viewId, NewNode request) {
+        Bounds bounds = bounds(request);
+        if (request.kind() == ViewNodeKind.DIAGRAM_OBJECT) {
+            ElementId elementId = request.elementId().orElseThrow(() ->
+                    ModelingException.invalid(Message.of(ModelingMessages.FIELD_MISSING, ELEMENT_ID)));
+            return place(actor, viewId, elementId, bounds, request.parentId(), request.ids());
+        }
+        if (request.elementId().isPresent()) {
+            throw ModelingException.invalid(Message.of(ModelingMessages.FIELD_NOT_FOR_KIND, ELEMENT_ID,
+                    request.kind()));
+        }
+        return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
+            View view = loadView(viewId);
+            ArchitectureModel model = kernel.writableModel(view.modelId(), actor);
+            ViewNode node = view.placeAnnotation(request.kind(), request.label(), request.content(), bounds,
+                    request.parentId(), ViewNodeId.of(kernel.newId(request.ids())),
+                    kernel.newArchiId(model, view, request.ids()));
+            kernel.views.save(view);
+            return new Created<>(node, true);
+        }));
+    }
+
+    private static Bounds bounds(NewNode request) {
+        try {
+            return Bounds.ofNew(request.kind(), request.x(), request.y(), request.width(), request.height());
+        } catch (IllegalArgumentException invalid) {
+            throw ModelingException.invalid(invalid);
+        }
+    }
+
+    /** Подпись группы, текст заметки, собственный стиль узла; отсутствующее не меняется. */
+    public ViewNode editNode(EditorIdentity actor, ViewNodeId nodeId, Optional<String> label,
+                             Optional<String> content, Optional<StyleOverride> style) {
+        return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
+            View view = viewOf(nodeId);
+            kernel.writableModel(view.modelId(), actor);
+            ViewNode node = view.editNode(nodeId, label, content, style);
+            kernel.views.save(view);
+            return node;
+        }));
+    }
+
+    /** Собственный стиль ребра; заменяется целиком. */
+    public ViewEdge editEdge(EditorIdentity actor, ViewEdgeId edgeId, StyleOverride style) {
+        return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
+            View view = viewOf(edgeId);
+            kernel.writableModel(view.modelId(), actor);
+            ViewEdge edge = view.editEdge(edgeId, style);
+            kernel.views.save(view);
+            return edge;
+        }));
+    }
+
+    /** Убрать ребро с представления; связь остаётся в модели. */
+    public void removeEdge(EditorIdentity actor, ViewEdgeId edgeId) {
+        kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
+            View view = viewOf(edgeId);
+            kernel.writableModel(view.modelId(), actor);
+            view.removeEdge(edgeId);
+            kernel.views.save(view);
+            return null;
+        }));
+    }
+
+    private View viewOf(ViewNodeId nodeId) {
+        return loadView(kernel.views.viewOfNode(nodeId)
+                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW_NODE, nodeId))));
+    }
+
+    private View viewOf(ViewEdgeId edgeId) {
+        return loadView(kernel.views.viewOfEdge(edgeId)
+                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW_EDGE, edgeId))));
+    }
+
     /** Убрать узел с представления; элемент остаётся в модели. */
     public void removeNode(EditorIdentity actor, ViewNodeId nodeId) {
         kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
-            View view = loadView(kernel.views.viewOfNode(nodeId)
-                    .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW_NODE, nodeId))));
+            View view = viewOf(nodeId);
             kernel.writableModel(view.modelId(), actor);
             view.removeNode(nodeId);
             kernel.views.save(view);

@@ -83,6 +83,7 @@ public final class ModelingMessages {
     public static final String ACCESS_TYPE_REQUESTED = "modeling.request.access-type";
     public static final String ACL_ENTRY_FORMAT = "modeling.request.acl-entry";
     public static final String ARCHI_TYPE_REQUESTED = "modeling.request.archi-type";
+    public static final String NODE_KIND_REQUESTED = "modeling.request.node-kind";
     public static final String FIELD_MISSING = "modeling.request.field-missing";
     public static final String FIELDS_MISSING = "modeling.request.fields-missing";
     public static final String ITEMS_EMPTY = "modeling.request.items-empty";
@@ -128,6 +129,10 @@ public final class ModelingMessages {
     public static final String EDGE_RELATIONSHIP_ELSEWHERE = "modeling.view.edge-relationship-elsewhere";
     public static final String EDGE_SELF_END = "modeling.view.edge-self-end";
     public static final String NODE_NESTING_CYCLE = "modeling.view.nesting-cycle";
+    public static final String FIELD_NOT_FOR_KIND = "modeling.view.field-not-for-kind";
+    public static final String NODE_NOT_ANNOTATION = "modeling.view.node-not-annotation";
+    public static final String NODE_NOT_CONTAINER = "modeling.view.node-not-container";
+    public static final String NODE_TEXT_NOT_APPLICABLE = "modeling.view.node-text-not-applicable";
     public static final String NODE_ELEMENT_ELSEWHERE = "modeling.view.node-element-elsewhere";
     public static final String NODE_PARENT_ELSEWHERE = "modeling.view.node-parent-elsewhere";
     public static final String NODE_SELF_PARENT = "modeling.view.node-self-parent";

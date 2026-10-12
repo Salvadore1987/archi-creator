@@ -167,6 +167,11 @@ final class InMemoryPorts {
         }
 
         @Override
+        public Optional<ViewId> viewOfEdge(ViewEdgeId edgeId) {
+            return views.values().stream().filter(v -> v.edges().contains(edgeId)).map(View::id).findFirst();
+        }
+
+        @Override
         public List<ViewPlacements> placements(ModelId modelId) {
             return views.values().stream().filter(v -> v.modelId().equals(modelId))
                     .map(v -> new ViewPlacements(v.id(),

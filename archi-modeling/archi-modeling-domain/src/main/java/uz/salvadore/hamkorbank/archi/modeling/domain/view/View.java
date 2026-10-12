@@ -148,12 +148,81 @@ public final class View {
         if (existing.isPresent()) {
             return new Created<>(existing.get(), false);
         }
-        parentId.ifPresent(this::requireNode);
+        parentId.ifPresent(this::requireContainer);
         requireFreeArchiId(newArchiId);
         ViewNode node = new ViewNode(newId, parentId, newArchiId, DiagramType.DIAGRAM_OBJECT, Optional.of(elementId),
                 bounds, StyleOverride.NONE, nextOrderIn(parentId.map(p -> (ViewEndpoint) p)), Optional.empty());
         nodes.put(node.id(), node);
         return new Created<>(node, true);
+    }
+
+    /**
+     * Группа или заметка — узел без элемента модели. Подпись бывает у группы, текст —
+     * у заметки.
+     */
+    public ViewNode placeAnnotation(ViewNodeKind kind, Optional<String> label, Optional<String> content,
+                                    Bounds bounds, Optional<ViewNodeId> parentId, ViewNodeId newId,
+                                    ArchiId newArchiId) {
+        requireEditable();
+        if (kind != ViewNodeKind.GROUP && kind != ViewNodeKind.NOTE) {
+            throw new ModelingException(ModelingCodes.INVALID_INPUT, Failure.UNPROCESSABLE,
+                    Message.of(ModelingMessages.NODE_NOT_ANNOTATION, kind));
+        }
+        parentId.ifPresent(this::requireContainer);
+        requireFreeArchiId(newArchiId);
+        ViewNode node = new ViewNode(newId, parentId, newArchiId, kind.diagramType().orElseThrow(), Optional.empty(),
+                bounds, StyleOverride.NONE, Optional.empty(), Optional.empty(),
+                nextOrderIn(parentId.map(p -> (ViewEndpoint) p)), Optional.empty());
+        requireTextFits(node, label, content);
+        node = node.withText(label, content);
+        nodes.put(node.id(), node);
+        return node;
+    }
+
+    /**
+     * Подпись группы, текст заметки, собственный стиль узла. Отсутствующее не меняется;
+     * стиль заменяется целиком.
+     */
+    public ViewNode editNode(ViewNodeId nodeId, Optional<String> label, Optional<String> content,
+                             Optional<StyleOverride> style) {
+        requireEditable();
+        ViewNode node = requireNode(nodeId);
+        requireTextFits(node, label, content);
+        node = node.withText(label.isPresent() ? label : node.label(),
+                content.isPresent() ? content : node.content());
+        node = style.map(node::withStyle).orElse(node);
+        nodes.put(nodeId, node);
+        return node;
+    }
+
+    /** Подпись бывает у группы, текст — у заметки; чужое поле — отказ, а не молчаливый пропуск. */
+    private static void requireTextFits(ViewNode node, Optional<String> label, Optional<String> content) {
+        if (label.isPresent() && node.kind() != ViewNodeKind.GROUP) {
+            throw notApplicable(node, "label");
+        }
+        if (content.isPresent() && node.kind() != ViewNodeKind.NOTE) {
+            throw notApplicable(node, "content");
+        }
+    }
+
+    private static ModelingException notApplicable(ViewNode node, String field) {
+        return new ModelingException(ModelingCodes.INVALID_INPUT, Failure.UNPROCESSABLE,
+                Message.of(ModelingMessages.NODE_TEXT_NOT_APPLICABLE, node.archiId(), node.kind(), field));
+    }
+
+    /** Собственный стиль ребра; заменяется целиком. */
+    public ViewEdge editEdge(ViewEdgeId edgeId, StyleOverride style) {
+        requireEditable();
+        ViewEdge edge = requireEdge(edgeId).withStyle(style);
+        edges.put(edgeId, edge);
+        return edge;
+    }
+
+    /** Убрать ребро с представления: связь остаётся в модели, рёбра к этому ребру уходят с ним. */
+    public void removeEdge(ViewEdgeId edgeId) {
+        requireEditable();
+        requireEdge(edgeId);
+        removeEdgesCascading(List.of(edgeId));
     }
 
     /** Убрать узел с представления: элемент остаётся в модели, вложенные узлы и рёбра уходят с ним. */
@@ -305,6 +374,15 @@ public final class View {
             case ViewEdgeId edge -> concept instanceof RelationshipId relationship
                     && edges.get(edge).flatMap(ViewEdge::relationshipId).equals(Optional.of(relationship));
         };
+    }
+
+    /** Узел, способный содержать другие: элемент или группа, но не заметка. */
+    private ViewNode requireContainer(ViewNodeId nodeId) {
+        ViewNode container = requireNode(nodeId);
+        if (container.kind() != ViewNodeKind.DIAGRAM_OBJECT && container.kind() != ViewNodeKind.GROUP) {
+            throw integrity(Message.of(ModelingMessages.NODE_NOT_CONTAINER, container.archiId(), container.kind()));
+        }
+        return container;
     }
 
     public ViewNode requireNode(ViewNodeId nodeId) {
