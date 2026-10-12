@@ -32,7 +32,8 @@ export type IconName =
   | 'align-middle'
   | 'align-bottom'
   | 'match-width'
-  | 'match-height';
+  | 'match-height'
+  | 'map';
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {
   return (

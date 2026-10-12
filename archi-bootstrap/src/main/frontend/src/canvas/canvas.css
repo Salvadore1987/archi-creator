@@ -322,6 +322,13 @@
 .bend-insert:hover {
   opacity: 1;
 }
+.navigator.react-flow__minimap {
+  margin: 12px 14px;
+  background: var(--paper);
+  border: 1px solid var(--paper-line-major);
+  border-radius: 8px;
+  overflow: hidden;
+}
 .guide-lines {
   position: absolute;
   inset: 0;

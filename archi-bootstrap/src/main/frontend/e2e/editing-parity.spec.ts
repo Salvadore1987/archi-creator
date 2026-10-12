@@ -373,4 +373,44 @@ test.describe('UI-006: паритет с Archi', () => {
     await page.getByTestId('undo').click();
     await expect.poll(() => editorState<string>(page, `s.doc.loadedViews['${viewId}'].edges['${edge.id}']?.id`)).toBe(edge.id);
   });
+
+  test('навигатор: мини-карта представления показывает все узлы, клик по ней двигает холст', async ({ page }) => {
+    const api = await openModel(page);
+    const viewId = await openView(page, api, '02 ');
+    const { canvas } = canvasOf(page, viewId);
+    await expect(canvas.locator('.react-flow__minimap')).toHaveCount(0);
+    await page.getByTestId('navigator-toggle').click();
+    const map = canvas.locator('.react-flow__minimap');
+    await expect(map).toBeVisible();
+    await expect(map.locator('.react-flow__minimap-node')).toHaveCount(api.views[viewId]!.nodes.length);
+
+    await page.keyboard.press('ControlOrMeta+0');
+    const before = await editorState<{ x: number; y: number }>(page, `s.viewports['${viewId}']`);
+    const box = (await map.boundingBox())!;
+    await drag(page, { x: box.x + box.width / 2, y: box.y + box.height / 2 }, { x: box.x + box.width / 2 + 30, y: box.y + box.height / 2 + 20 });
+    await expect
+      .poll(async () => (await editorState<{ x: number }>(page, `s.viewports['${viewId}']`)).x)
+      .not.toBe(before?.x);
+  });
+
+  test('поиск по модели и «где используется»: Ctrl+F, строка найдена, представления элемента открываются с выделением', async ({ page }) => {
+    const api = await openModel(page);
+    const iabs = api.element('IABS');
+    await page.keyboard.press('ControlOrMeta+f');
+    await expect(page.getByPlaceholder('Поиск по модели')).toBeFocused();
+    await page.keyboard.type('IABS');
+    const row = page.locator(`[data-row="${iabs.id}"]`).first();
+    await expect(row).toBeVisible();
+    await row.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Где используется' }).click();
+    const card = page.getByTestId('description');
+    const views = card.getByRole('button', { name: /^0[0-9] / });
+    const second = views.nth(1);
+    await expect(second).toBeVisible();
+    const name = (await second.textContent())!.trim();
+    await second.click();
+    const viewId = api.viewByName(name.slice(0, 3)).id;
+    await expect(page.locator(`[data-view-tab="${viewId}"]`)).toHaveAttribute('aria-selected', 'true');
+    await expect(canvasOf(page, viewId).canvas.locator(`.react-flow__node.selected:has([data-element="${iabs.id}"])`)).toHaveCount(1);
+  });
 });

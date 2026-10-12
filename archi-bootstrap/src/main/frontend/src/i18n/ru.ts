@@ -105,6 +105,7 @@ export const ru = {
     layoutHierarchy: 'По иерархии связей',
     layoutCompact: 'Компактно',
     copied: 'Скопировано объектов: {n}',
+    navigator: 'Навигатор',
     bendpointHint: 'Тяните, чтобы сдвинуть точку; двойной щелчок убирает её',
     bendInsertHint: 'Тяните, чтобы добавить точку перегиба',
     alignLeft: 'Выровнять по левому краю',

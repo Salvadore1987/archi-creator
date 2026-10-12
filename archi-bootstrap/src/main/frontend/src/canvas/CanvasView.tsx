@@ -1,6 +1,7 @@
 import {
   Background,
   BackgroundVariant,
+  MiniMap,
   ReactFlow,
   applyEdgeChanges,
   applyNodeChanges,
@@ -52,6 +53,7 @@ import {
 import { DRAG_PALETTE_TYPE, parsePaletteDrag } from './palette-drag';
 import { alignmentGuides, type GuideLine } from './guides';
 import { effectiveSize } from './shapes';
+import { layerToken } from './style';
 import { CanvasTools } from './CanvasTools';
 import { RelationPicker, type RelationChoice } from './RelationPicker';
 import tokens from 'virtual:design-tokens';
@@ -76,6 +78,20 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
   const select = useEditor((s) => s.select);
   const perform = useEditor((s) => s.perform);
   const snap = useUi((s) => s.snapToGrid);
+  const navigator = useUi((s) => s.navigatorOpen);
+  // Цвет узла на мини-карте — токен его слоя, как на холсте.
+  const minimapColor = useCallback(
+    (flowNode: ArchiFlowNode) => {
+      const state = useEditor.getState().doc;
+      const node = state?.loadedViews[viewId]?.nodes[flowNode.id];
+      if (!node) return 'var(--paper-line)';
+      if (node.kind === 'GROUP') return 'var(--group-border)';
+      if (node.kind === 'NOTE') return 'var(--note-border)';
+      const element = node.elementId ? state?.elements[node.elementId] : undefined;
+      return `var(--layer-${layerToken(element?.layer)})`;
+    },
+    [viewId],
+  );
   const canEdit = useCanEdit() && view.editable;
   const flow = useReactFlow();
   const flowStore = useStoreApi();
@@ -601,6 +617,17 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
         attributionPosition="bottom-left"
         elevateNodesOnSelect={false}
       >
+        {navigator && (
+          <MiniMap
+            position="top-right"
+            pannable
+            zoomable
+            ariaLabel={t('canvas.navigator')}
+            className="navigator"
+            nodeColor={minimapColor}
+            nodeStrokeWidth={0}
+          />
+        )}
         {snap && <Background variant={BackgroundVariant.Lines} gap={GRID} color="var(--paper-line)" />}
       </ReactFlow>
       {guideLines.length > 0 && <GuideOverlay lines={guideLines} wrapper={wrapper} />}

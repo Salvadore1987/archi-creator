@@ -5,6 +5,7 @@ import type { LayoutStrategy, Uuid } from '../api/types';
 import { describeError } from '../app/errors';
 import { Icon } from '../app/Icon';
 import { useToast } from '../app/toast';
+import { useUi } from '../app/uiState';
 import { t, type MessageKey } from '../i18n';
 import type { IconName } from '../app/Icon';
 import { alignNodes, applyLayoutPatch, layoutRequest, type AlignMode } from '../model/ops';
@@ -49,6 +50,8 @@ export function CanvasTools({ viewId, canEdit }: { viewId: Uuid; canEdit: boolea
   const perform = useEditor((s) => s.perform);
   const toast = useToast((s) => s.show);
   const [menu, setMenu] = useState(false);
+  const navigator = useUi((s) => s.navigatorOpen);
+  const toggleNavigator = useUi((s) => s.toggleNavigator);
   const [busy, setBusy] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const alignable = useEditor((s) => {
@@ -97,22 +100,33 @@ export function CanvasTools({ viewId, canEdit }: { viewId: Uuid; canEdit: boolea
     }
   };
 
-  if (!canEdit) return null;
   return (
     <div className="canvas-tools" ref={box} data-testid="canvas-tools">
       <button
         type="button"
-        className={`btn btn--small${menu ? ' is-on' : ''}`}
-        data-testid="auto-layout"
-        disabled={busy}
-        aria-expanded={menu}
-        title={t('canvas.autoLayoutHint')}
-        onClick={() => setMenu((open) => !open)}
+        className={`btn btn--icon btn--small${navigator ? ' is-on' : ''}`}
+        data-testid="navigator-toggle"
+        aria-pressed={navigator}
+        title={t('canvas.navigator')}
+        onClick={toggleNavigator}
       >
-        <Icon name="layout" />
-        {t('canvas.autoLayout')}
+        <Icon name="map" />
       </button>
-      {alignable && (
+      {canEdit && (
+        <button
+          type="button"
+          className={`btn btn--small${menu ? ' is-on' : ''}`}
+          data-testid="auto-layout"
+          disabled={busy}
+          aria-expanded={menu}
+          title={t('canvas.autoLayoutHint')}
+          onClick={() => setMenu((open) => !open)}
+        >
+          <Icon name="layout" />
+          {t('canvas.autoLayout')}
+        </button>
+      )}
+      {canEdit && alignable && (
         <div className="canvas-tools__group" data-testid="align-tools">
           {ALIGN.map((a) => (
             <button
