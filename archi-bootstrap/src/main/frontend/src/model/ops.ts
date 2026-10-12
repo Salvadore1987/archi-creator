@@ -853,3 +853,17 @@ export function setBendpoints(view: ViewDoc, edgeId: Uuid, bendpoints: Bendpoint
     affected: [before.relationshipId ?? edgeId],
   };
 }
+
+/**
+ * Убрать рёбра с представления: связи остаются в модели. Рёбра, концом которых служит
+ * убираемое, сервер убирает сам, но отмена возвращает их явно.
+ */
+export function removeEdgesFromView(view: ViewDoc, edgeIds: Uuid[]): Edit {
+  const roots = edgeIds.filter((id) => view.edges[id]);
+  const attached = attachedEdges(view, roots).filter((e) => !roots.includes(e.id));
+  const changes: Change[] = [
+    ...[...attached].reverse().map((edge) => ({ entity: 'edge' as const, id: edge.id, viewId: view.id, before: edge, after: null, implicit: true })),
+    ...roots.map((id) => ({ entity: 'edge' as const, id, viewId: view.id, before: view.edges[id]!, after: null })),
+  ];
+  return { changes, affected: [...roots, ...attached.map((e) => e.id)].map((id) => view.edges[id]!.relationshipId ?? id) };
+}

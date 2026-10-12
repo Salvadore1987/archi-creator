@@ -349,4 +349,28 @@ test.describe('UI-006: паритет с Archi', () => {
     await handle.dblclick();
     await expect.poll(async () => (await bends()).length).toBe(0);
   });
+
+  test('удаление ребра: Delete убирает ребро с представления, связь остаётся в модели; отмена возвращает', async ({ page }) => {
+    const api = await openModel(page);
+    const viewId = await openView(page, api, '03 ');
+    const edge = api.views[viewId]!.edges[0]!;
+    await page.evaluate((id) => {
+      (window as unknown as { __archiEditor: { getState(): { select(ids: string[], o: string): void } } }).__archiEditor
+        .getState()
+        .select([id], 'canvas');
+    }, edge.relationshipId as string);
+    const drawn = canvasOf(page, viewId).canvas.locator(`.react-flow__edge[data-id="${edge.id}"]`);
+    await drawn.focus();
+    await drawn.press('Delete');
+    await expect.poll(() => editorState<unknown>(page, `s.doc.loadedViews['${viewId}'].edges['${edge.id}']`)).toBeUndefined();
+    expect(await editorState<unknown>(page, `s.doc.relationships['${edge.relationshipId}'] !== undefined`)).toBe(true);
+
+    await page.getByTestId('save').click();
+    await expect(page.getByTestId('save')).toBeHidden();
+    expect(api.writes().map((c) => `${c.method} ${c.path}`)).toContain(`DELETE /view-edges/${edge.id}`);
+    expect(api.writes().some((c) => c.method === 'DELETE' && c.path.startsWith('/relationships/'))).toBe(false);
+
+    await page.getByTestId('undo').click();
+    await expect.poll(() => editorState<string>(page, `s.doc.loadedViews['${viewId}'].edges['${edge.id}']?.id`)).toBe(edge.id);
+  });
 });

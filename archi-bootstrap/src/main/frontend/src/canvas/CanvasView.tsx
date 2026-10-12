@@ -30,6 +30,7 @@ import {
   pasteClip,
   placeAnnotation,
   placeElement,
+  removeEdgesFromView,
   removeFromView,
   resizeNode,
 } from '../model/ops';
@@ -41,6 +42,7 @@ import {
   absolutePosition,
   containerAt,
   descendants,
+  edgeSelected,
   nodeSelected,
   toFlowEdges,
   toFlowNodes,
@@ -468,10 +470,21 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
     const ids = Object.values(view.nodes)
       .filter((n) => nodeSelected(n, selected))
       .map((n) => n.id);
-    if (ids.length === 0) return;
+    const nodeEdit = removeFromView(view, ids);
+    // Рёбра выделенных связей, которые не уходят вместе с узлами: связь остаётся в модели.
+    const leaving = new Set(nodeEdit.changes.filter((c) => c.entity === 'edge').map((c) => c.id));
+    const edgeIds = Object.values(view.edges)
+      .filter((e) => edgeSelected(e, selected) && !leaving.has(e.id))
+      .map((e) => e.id);
+    if (ids.length === 0 && edgeIds.length === 0) return;
     event.preventDefault();
-    const edit = removeFromView(view, ids);
-    perform(t('tree_ops.removeFromViewOp', { n: ids.length }), edit.changes, edit.affected);
+    const remaining = applyChanges(useEditor.getState().doc!, nodeEdit.changes).loadedViews[viewId]!;
+    const edgeEdit = removeEdgesFromView(remaining, edgeIds);
+    perform(
+      t('tree_ops.removeFromViewOp', { n: ids.length + edgeIds.length }),
+      [...nodeEdit.changes, ...edgeEdit.changes],
+      [...nodeEdit.affected, ...edgeEdit.affected],
+    );
   };
 
   const onDragOver = (event: React.DragEvent) => {
