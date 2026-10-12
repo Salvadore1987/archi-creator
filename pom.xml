@@ -44,6 +44,8 @@
         <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
         <archunit.version>1.5.1</archunit.version>
         <anthropic-java.version>2.71.0</anthropic-java.version>
+        <batik.version>1.19</batik.version>
+        <fontbox.version>3.0.8</fontbox.version>
         <depgraph-maven-plugin.version>4.0.5</depgraph-maven-plugin.version>
 
         <!--
@@ -89,6 +91,22 @@
                 <groupId>com.anthropic</groupId>
                 <artifactId>anthropic-java</artifactId>
                 <version>${anthropic-java.version}</version>
+            </dependency>
+            <!-- Растр и шрифт экспорта картинок — только в archi-bootstrap, за портами Rasterizer и Typesetter. -->
+            <dependency>
+                <groupId>org.apache.xmlgraphics</groupId>
+                <artifactId>batik-transcoder</artifactId>
+                <version>${batik.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.xmlgraphics</groupId>
+                <artifactId>batik-codec</artifactId>
+                <version>${batik.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.pdfbox</groupId>
+                <artifactId>fontbox</artifactId>
+                <version>${fontbox.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.tngtech.archunit</groupId>

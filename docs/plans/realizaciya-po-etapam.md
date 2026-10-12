@@ -1148,7 +1148,7 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 5a.3 Шрифты и растр (`archi-bootstrap`, `bootstrap.export`)
 
-- ⬜ Загрузка `Notation` из classpath; `AwtTypesetter` на Inter; подмножество шрифта
+- ✅ Загрузка `Notation` из classpath; `AwtTypesetter` на Inter; подмножество шрифта
       для текстового SVG; `BatikRasterizer` → PNG @1x/@2x/@4x
 
 ### 5a.4 Сценарии и REST
