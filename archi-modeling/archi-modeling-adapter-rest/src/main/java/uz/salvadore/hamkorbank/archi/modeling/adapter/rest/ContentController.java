@@ -40,7 +40,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ConceptKind;
-import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationshipType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.AccessType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
@@ -173,14 +172,11 @@ public class ContentController {
                 .toList();
     }
 
-    /** Допустимые связи для пары типов; первая — выбор по умолчанию. */
+    /** Допустимые связи для пары типов; первая — выбор по умолчанию, подразумеваемая вложением помечена. */
     @GetMapping("/metamodel/relations")
     public List<RelationTypeDto> relationTypes(@RequestParam String source, @RequestParam String target) {
-        List<RelationshipType> permitted = RelationshipService.suggest(archiType(source), archiType(target));
-        return java.util.stream.IntStream.range(0, permitted.size())
-                .mapToObj(i -> new RelationTypeDto(permitted.get(i).archiType().value(), permitted.get(i).name(),
-                        i == 0))
-                .toList();
+        return RelationshipService.suggestions(archiType(source), archiType(target)).stream()
+                .map(DtoMapper::relationType).toList();
     }
 
     static ArchiType archiType(String value) {

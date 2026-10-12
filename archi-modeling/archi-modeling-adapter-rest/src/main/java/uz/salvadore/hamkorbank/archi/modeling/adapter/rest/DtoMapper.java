@@ -11,6 +11,7 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelSummary
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelTree;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PlacementDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PropertyDto;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.RelationTypeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.RelationshipDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.StyleDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.VersionInfo;
@@ -20,6 +21,7 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewPayload;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewSummary;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
@@ -141,5 +143,10 @@ public final class DtoMapper {
     private static List<PropertyDto> properties(List<PropertyEntry> entries) {
         return entries.stream().sorted(Comparator.comparing(PropertyEntry::sortOrder))
                 .map(p -> new PropertyDto(p.key(), p.value())).toList();
+    }
+
+    static RelationTypeDto relationType(RelationshipService.Suggestion suggestion) {
+        return new RelationTypeDto(suggestion.type().archiType().value(), suggestion.type().name(),
+                suggestion.byDefault(), suggestion.nesting());
     }
 }

@@ -25,6 +25,37 @@ class ViewEditingTest {
             DiagramType.DIAGRAM_MODEL, "Контекст", Models.root(model, FolderType.DIAGRAMS), Models.archiId(), NOW));
 
     @Test
+    @DisplayName("UC-MDL-008: вложенный узел встаёт в конец содержимого контейнера, цикл вложенности — отказ")
+    void nodeMovesIntoContainerAtEndOfContent() {
+        Element node = Models.element(model, "Node", FolderType.TECHNOLOGY, "Сервер");
+        Element software = Models.element(model, "SystemSoftware", FolderType.TECHNOLOGY, "СУБД");
+        Element device = Models.element(model, "Device", FolderType.TECHNOLOGY, "Стойка");
+        ViewNode server = view.placeElement(model, node.id(), new Bounds(0, 0, 400, 300), Optional.empty(),
+                ViewNodeId.next(UUIDS), Models.archiId()).value();
+        ViewNode inside = view.placeElement(model, device.id(), BOX, Optional.of(server.id()),
+                ViewNodeId.next(UUIDS), Models.archiId()).value();
+        ViewNode dbms = view.placeElement(model, software.id(), new Bounds(500, 40, 120, 55), Optional.empty(),
+                ViewNodeId.next(UUIDS), Models.archiId()).value();
+
+        ViewNode moved = view.moveToParent(dbms.id(), Optional.of(server.id()), 200, 40);
+
+        assertEquals(Optional.of(server.id()), moved.parentId());
+        assertEquals(new Bounds(200, 40, 120, 55), moved.bounds(), "координаты — относительно контейнера");
+        assertTrue(moved.sortOrder().value() > inside.sortOrder().value(), "в конце содержимого контейнера");
+        assertEquals(inside.sortOrder(), view.requireNode(inside.id()).sortOrder(), "соседи не перенумерованы");
+
+        ViewNode back = view.moveToParent(dbms.id(), Optional.empty(), 700, 40);
+        assertEquals(Optional.empty(), back.parentId());
+        assertEquals("INV-MDL-008", assertThrows(ModelingException.class,
+                () -> view.moveToParent(server.id(), Optional.of(inside.id()), 0, 0)).code(), "контейнер внутри себя");
+        assertEquals("INV-MDL-008", assertThrows(ModelingException.class,
+                () -> view.moveToParent(server.id(), Optional.of(server.id()), 0, 0)).code());
+
+        ViewNode same = view.moveToParent(inside.id(), Optional.of(server.id()), 30, 30);
+        assertEquals(inside.sortOrder(), same.sortOrder(), "в том же родителе место не меняется");
+    }
+
+    @Test
     @DisplayName("UC-MDL-008: группа и заметка — узлы без элемента, подпись у группы, текст у заметки")
     void groupAndNoteHaveNoElement() {
         ViewNode group = view.placeAnnotation(ViewNodeKind.GROUP, Optional.of("Ядро"), Optional.empty(),

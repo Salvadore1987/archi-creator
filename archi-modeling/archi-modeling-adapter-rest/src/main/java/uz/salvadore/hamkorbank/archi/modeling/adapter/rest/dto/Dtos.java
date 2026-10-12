@@ -96,7 +96,8 @@ public final class Dtos {
     public record ElementTypeDto(String archiType, String kind, String layer, String phase, boolean supported) {
     }
 
-    public record RelationTypeDto(String archiType, String type, boolean byDefault) {
+    /** @param nesting эту связь подразумевает вложение цели в источник */
+    public record RelationTypeDto(String archiType, String type, boolean byDefault, boolean nesting) {
     }
 
     // ── Запросы ─────────────────────────────────────────────────────
@@ -159,6 +160,10 @@ public final class Dtos {
     }
 
     public record EditEdgeRequest(StyleDto style) {
+    }
+
+    /** @param parentId нет — корень представления; координаты — относительно нового родителя */
+    public record MoveNodeRequest(UUID parentId, int x, int y) {
     }
 
     /** Ребро уже существующей связи: концы — узлы или рёбра того же представления. */

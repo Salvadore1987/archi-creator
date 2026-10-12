@@ -225,6 +225,41 @@ public final class View {
         removeEdgesCascading(List.of(edgeId));
     }
 
+    /**
+     * Вложить узел в контейнер или вынести в корень. Координаты — относительно нового
+     * родителя; дети едут вместе с узлом, их координаты не меняются. В другом родителе
+     * узел встаёт в конец содержимого, соседи не перенумеровываются.
+     */
+    public ViewNode moveToParent(ViewNodeId nodeId, Optional<ViewNodeId> parentId, int x, int y) {
+        requireEditable();
+        ViewNode node = requireNode(nodeId);
+        parentId.ifPresent(parent -> {
+            requireContainer(parent);
+            if (parent.equals(nodeId) || isInside(parent, nodeId)) {
+                throw integrity(Message.of(ModelingMessages.NODE_NESTING_CYCLE, node.archiId()));
+            }
+        });
+        Bounds bounds = new Bounds(x, y, node.bounds().width(), node.bounds().height());
+        ViewNode moved = parentId.equals(node.parentId())
+                ? node.withBounds(bounds)
+                : node.withParent(parentId, bounds, nextOrderIn(parentId.map(p -> (ViewEndpoint) p)));
+        nodes.put(nodeId, moved);
+        return moved;
+    }
+
+    /** Лежит ли узел где-то внутри предка. */
+    private boolean isInside(ViewNodeId nodeId, ViewNodeId ancestor) {
+        Set<ViewNodeId> visited = new HashSet<>();
+        Optional<ViewNodeId> current = nodes.get(nodeId).flatMap(ViewNode::parentId);
+        while (current.isPresent() && visited.add(current.get())) {
+            if (current.get().equals(ancestor)) {
+                return true;
+            }
+            current = nodes.get(current.get()).flatMap(ViewNode::parentId);
+        }
+        return false;
+    }
+
     /** Убрать узел с представления: элемент остаётся в модели, вложенные узлы и рёбра уходят с ним. */
     public void removeNode(ViewNodeId nodeId) {
         requireEditable();

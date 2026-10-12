@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -102,6 +103,54 @@ class ViewEditingIT extends ApiTest {
         String withoutEdge = export(model);
         assertTrue(!withoutEdge.contains("archimate:Connection"), "ребро ушло с представления");
         assertTrue(withoutEdge.contains("archimate:ServingRelationship"), "связь осталась в модели");
+    }
+
+    @Test
+    @DisplayName("UI-004: узел вкладывается в контейнер и выносится обратно; цикл — 422; связь вложения помечена")
+    void nodeMovesIntoContainer() throws Exception {
+        UUID model = lockedModel(architect(), "Вложенность");
+        UUID server = element(architect(), model, "Node", "Сервер");
+        UUID dbms = element(architect(), model, "SystemSoftware", "СУБД");
+        UUID view = id(mvc.perform(post("/api/v1/models/" + model + "/views").with(architect())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Развёртывание\"}"))
+                .andExpect(status().isCreated()).andReturn());
+        UUID outer = id(mvc.perform(post("/api/v1/views/" + view + "/nodes").with(architect())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"elementId\":\"" + server + "\",\"x\":0,\"y\":0,\"width\":400,\"height\":300}"))
+                .andExpect(status().isCreated()).andReturn());
+        UUID inner = id(mvc.perform(post("/api/v1/views/" + view + "/nodes").with(architect())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"elementId\":\"" + dbms + "\",\"x\":500,\"y\":40}"))
+                .andExpect(status().isCreated()).andReturn());
+
+        mvc.perform(get("/api/v1/metamodel/relations").param("source", "archimate:Node")
+                        .param("target", "archimate:SystemSoftware").with(architect()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.nesting == true)].type").value(org.hamcrest.Matchers.contains("COMPOSITION")));
+
+        mvc.perform(put("/api/v1/view-nodes/" + inner + "/parent").with(architect())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"parentId\":\"" + outer + "\",\"x\":20,\"y\":40}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.parentId").value(outer.toString()))
+                .andExpect(jsonPath("$.x").value(20));
+        mvc.perform(put("/api/v1/view-nodes/" + outer + "/parent").with(architect())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"parentId\":\"" + inner + "\",\"x\":0,\"y\":0}"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("INV-MDL-008"));
+
+        saveVersion(model);
+        String nested = export(model);
+        int outerAt = nested.indexOf("archimate:DiagramObject");
+        int innerAt = nested.indexOf("archimate:DiagramObject", outerAt + 1);
+        assertTrue(innerAt > outerAt && nested.indexOf("</child>", outerAt) > innerAt,
+                "вложенный узел — дочерний элемент контейнера в файле");
+
+        mvc.perform(put("/api/v1/view-nodes/" + inner + "/parent").with(architect())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"x\":520,\"y\":80}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.parentId").doesNotExist());
     }
 
     private void saveVersion(UUID model) throws Exception {

@@ -23,6 +23,7 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.CreateViewRe
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EditEdgeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EditNodeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.LayoutPatch;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.MoveNodeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PlaceEdgeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PlaceNodeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.StyleDto;
@@ -109,6 +110,13 @@ public class ViewController {
         return node.created()
                 ? ResponseEntity.created(URI.create("/api/v1/view-nodes/" + body.id())).body(body)
                 : ResponseEntity.ok(body);
+    }
+
+    @PutMapping("/view-nodes/{id}/parent")
+    public ViewNodeDto moveToParent(EditorIdentity actor, @PathVariable UUID id,
+                                    @RequestBody MoveNodeRequest request) {
+        return DtoMapper.node(views.moveToParent(actor, ViewNodeId.of(id),
+                Optional.ofNullable(request.parentId()).map(ViewNodeId::of), request.x(), request.y()));
     }
 
     @PatchMapping("/view-nodes/{id}")

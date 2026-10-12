@@ -171,6 +171,18 @@ public final class ViewService {
         }
     }
 
+    /** Вложить узел в контейнер или вынести в корень; координаты — относительно нового родителя. */
+    public ViewNode moveToParent(EditorIdentity actor, ViewNodeId nodeId, Optional<ViewNodeId> parentId, int x,
+                                 int y) {
+        return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
+            View view = viewOf(nodeId);
+            kernel.writableModel(view.modelId(), actor);
+            ViewNode node = view.moveToParent(nodeId, parentId, x, y);
+            kernel.views.save(view);
+            return node;
+        }));
+    }
+
     /** Подпись группы, текст заметки, собственный стиль узла; отсутствующее не меняется. */
     public ViewNode editNode(EditorIdentity actor, ViewNodeId nodeId, Optional<String> label,
                              Optional<String> content, Optional<StyleOverride> style) {

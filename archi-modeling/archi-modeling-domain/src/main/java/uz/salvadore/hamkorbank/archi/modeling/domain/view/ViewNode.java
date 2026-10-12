@@ -69,6 +69,12 @@ public record ViewNode(ViewNodeId id, Optional<ViewNodeId> parentId, ArchiId arc
                 rawXml);
     }
 
+    /** Узел в другом родителе: новые координаты относительно него и место в его содержимом. */
+    public ViewNode withParent(Optional<ViewNodeId> newParent, Bounds newBounds, SortOrder newOrder) {
+        return new ViewNode(id, newParent, archiId, archiType, elementId, newBounds, style, label, content, newOrder,
+                rawXml);
+    }
+
     public ViewNode withBounds(Bounds newBounds) {
         return new ViewNode(id, parentId, archiId, archiType, elementId, newBounds, style, label, content, sortOrder,
                 rawXml);
