@@ -104,6 +104,8 @@ export const ru = {
     layoutLayered: 'По слоям ArchiMate',
     layoutHierarchy: 'По иерархии связей',
     layoutCompact: 'Компактно',
+    copied: 'Скопировано объектов: {n}',
+    copyName: '{name} (копия)',
   },
   props: {
     tabProperties: 'Свойства',
@@ -233,6 +235,7 @@ export const ru = {
     nestOp: 'Вложено в «{name}»: {n}',
     unnestOp: 'Вынесено из контейнера: {n}',
     autoLayoutOp: 'Авторазметка: {strategy}',
+    pasteOp: 'Вставлено: {n}',
     removeFromViewOp: 'Убрано с представления: {n}',
     copied: 'Имя скопировано',
     undoToast: 'Отменить',

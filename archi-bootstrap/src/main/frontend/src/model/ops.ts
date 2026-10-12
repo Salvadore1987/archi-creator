@@ -12,7 +12,7 @@ import type {
   ViewNode,
 } from '../api/types';
 import { attachedEdges, descendants } from '../canvas/flowModel';
-import { attachedRelationships, type Change, type ModelDoc, type ViewDoc } from './doc';
+import { applyChanges, attachedRelationships, type Change, type ModelDoc, type ViewDoc } from './doc';
 import { newArchiId, uuidv7 } from './ids';
 
 /** Готовая правка: изменения и объекты, которые пометить в дереве. */
@@ -627,4 +627,173 @@ export function restyle(view: ViewDoc, nodeIds: Uuid[], edgeIds: Uuid[], patch: 
       c.entity === 'node' ? ((c.after as ViewNode).elementId ?? c.id) : ((c.after as ViewEdge).relationshipId ?? c.id),
     ),
   };
+}
+
+/** Скопированное с представления: узлы со всем вложенным и рёбра между ними. */
+export interface Clip {
+  viewId: Uuid;
+  nodes: ViewNode[];
+  edges: ViewEdge[];
+}
+
+/** Что копировать: выбранные узлы, всё внутри них и рёбра, оба конца которых скопированы. */
+export function copySelection(view: ViewDoc, nodeIds: Uuid[]): Clip | null {
+  const roots = nodeIds.filter((id) => view.nodes[id]);
+  if (roots.length === 0) return null;
+  const ids = new Set([...roots, ...descendants(view, roots).map((n) => n.id)]);
+  const nodes = Object.values(view.nodes).filter((n) => ids.has(n.id));
+  const ends = new Set(ids);
+  const edges: ViewEdge[] = [];
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const edge of Object.values(view.edges)) {
+      if (!ends.has(edge.id) && ends.has(edge.sourceId) && ends.has(edge.targetId)) {
+        ends.add(edge.id);
+        edges.push(edge);
+        grew = true;
+      }
+    }
+  }
+  return { viewId: view.id, nodes, edges };
+}
+
+/**
+ * Вставка как в Archi: элемент, которого на представлении нет, вставляется ссылкой на тот же
+ * элемент; уже размещённый — копией элемента. Связь между ссылками переиспользуется,
+ * связь с копией копируется. Вложенность сохраняется, верхние узлы смещаются на `offset`.
+ */
+export function pasteClip(
+  doc: ModelDoc,
+  view: ViewDoc,
+  clip: Clip,
+  offset: { x: number; y: number },
+  copyName: (name: string) => string,
+): Edit & { pasted: Uuid[] } {
+  const changes: Change[] = [];
+  const affected: Uuid[] = [];
+  const pasted: Uuid[] = [];
+  let working = view;
+  let model = doc;
+  const nodeMap = new Map<Uuid, Uuid>();
+  const conceptMap = new Map<Uuid, Uuid>();
+  const placedBefore = new Set(Object.values(view.nodes).map((n) => n.elementId).filter(Boolean));
+  const inClip = new Set(clip.nodes.map((n) => n.id));
+  const depth = (node: ViewNode) => {
+    let d = 0;
+    let parent = node.parentId;
+    while (parent && inClip.has(parent)) {
+      d++;
+      parent = clip.nodes.find((n) => n.id === parent)?.parentId;
+    }
+    return d;
+  };
+  const ordered = [...clip.nodes].sort((a, b) => depth(a) - depth(b) || a.sortOrder - b.sortOrder);
+  const push = (change: Change) => {
+    changes.push(change);
+    if (change.entity === 'node' || change.entity === 'edge') {
+      working = applyToView(working, change);
+    } else {
+      model = applyChanges(model, [change]);
+    }
+  };
+
+  for (const source of ordered) {
+    let elementId = source.elementId;
+    if (elementId && (placedBefore.has(elementId) || conceptMap.has(elementId))) {
+      const original = model.elements[elementId];
+      if (!original) continue;
+      const copy: Element = {
+        ...original,
+        id: uuidv7(),
+        archiId: newArchiId(),
+        name: copyName(original.name),
+        properties: original.properties.map((p) => ({ ...p })),
+        sortOrder: nextSortOrder(
+          [...Object.values(model.elements), ...Object.values(model.folders).map((f) => ({ ...f, folderId: f.parentId }))]
+            .filter((item) => item.folderId === original.folderId)
+            .map((item) => item.sortOrder),
+        ),
+      };
+      push({ entity: 'element', id: copy.id, before: null, after: copy });
+      conceptMap.set(original.id, copy.id);
+      affected.push(copy.id);
+      elementId = copy.id;
+    }
+    const parentId = source.parentId && nodeMap.get(source.parentId);
+    const node: ViewNode = {
+      ...source,
+      id: uuidv7(),
+      archiId: newArchiId(),
+      x: parentId ? source.x : source.x + offset.x,
+      y: parentId ? source.y : source.y + offset.y,
+      sortOrder: nextOrderIn(working, parentId),
+    };
+    if (parentId) node.parentId = parentId;
+    else delete node.parentId;
+    if (elementId) node.elementId = elementId;
+    nodeMap.set(source.id, node.id);
+    push({ entity: 'node', id: node.id, viewId: view.id, before: null, after: node });
+    pasted.push(elementId ?? node.id);
+    affected.push(elementId ?? node.id);
+  }
+
+  const edgeMap = new Map<Uuid, Uuid>();
+  const endOf = (id: Uuid) => nodeMap.get(id) ?? edgeMap.get(id);
+  let remaining = [...clip.edges];
+  while (remaining.length > 0) {
+    const ready = remaining.filter((e) => endOf(e.sourceId) && endOf(e.targetId));
+    if (ready.length === 0) break;
+    remaining = remaining.filter((e) => !ready.includes(e));
+    for (const edge of ready) {
+      const relationship = edge.relationshipId ? model.relationships[edge.relationshipId] : undefined;
+      if (!relationship) continue;
+      const sourceConcept = conceptMap.get(relationship.sourceId) ?? relationship.sourceId;
+      const targetConcept = conceptMap.get(relationship.targetId) ?? relationship.targetId;
+      let relationshipId = relationship.id;
+      if (sourceConcept !== relationship.sourceId || targetConcept !== relationship.targetId) {
+        const copy: Relationship = {
+          ...relationship,
+          id: uuidv7(),
+          archiId: newArchiId(),
+          sourceId: sourceConcept,
+          targetId: targetConcept,
+          properties: relationship.properties.map((p) => ({ ...p })),
+          sortOrder: nextSortOrder(
+            Object.values(model.relationships).filter((r) => r.folderId === relationship.folderId).map((r) => r.sortOrder),
+          ),
+        };
+        delete copy.edgeId;
+        push({ entity: 'relationship', id: copy.id, before: null, after: copy });
+        conceptMap.set(relationship.id, copy.id);
+        affected.push(copy.id);
+        relationshipId = copy.id;
+      }
+      const sourceId = endOf(edge.sourceId)!;
+      const targetId = endOf(edge.targetId)!;
+      const copy: ViewEdge = {
+        ...edge,
+        id: uuidv7(),
+        archiId: newArchiId(),
+        relationshipId,
+        sourceId,
+        targetId,
+        bendpoints: edge.bendpoints.map((b) => ({ ...b })),
+        sortOrder: nextOrderInEndpoint(working, sourceId),
+      };
+      edgeMap.set(edge.id, copy.id);
+      push({ entity: 'edge', id: copy.id, viewId: view.id, before: null, after: copy });
+    }
+  }
+  return { changes, affected, pasted };
+}
+
+function applyToView(view: ViewDoc, change: Change): ViewDoc {
+  if (change.entity === 'node') {
+    return { ...view, nodes: { ...view.nodes, [change.id]: change.after as ViewNode } };
+  }
+  if (change.entity === 'edge') {
+    return { ...view, edges: { ...view.edges, [change.id]: change.after as ViewEdge } };
+  }
+  return view;
 }

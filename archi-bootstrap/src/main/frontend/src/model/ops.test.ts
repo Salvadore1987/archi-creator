@@ -5,6 +5,7 @@ import { applyChanges, fromTree, viewDocOf } from './doc';
 import { invert } from './history';
 import {
   applyLayoutPatch,
+  copySelection,
   createFolder,
   deleteObjects,
   drawRelationship,
@@ -13,6 +14,7 @@ import {
   layoutRequest,
   moveItems,
   nestNodes,
+  pasteClip,
   placeElement,
   removeFromView,
   rootOf,
@@ -186,5 +188,27 @@ describe('UI-005: авторазметка', () => {
     const commands = edit.changes.flatMap((c) => commandsFor(doc.model.id, c)).map((c) => c.describe);
     expect(commands[0]).toBe(`layout node ${root.id}`);
     expect(applyLayoutPatch(view, { nodes: [], edges: [] }).changes).toEqual([]);
+  });
+});
+
+describe('UI-006: копирование и вставка', () => {
+  it('вложенность сохраняется, верхние узлы смещаются, дети — нет', () => {
+    const doc = docWithViews();
+    const views = Object.values(doc.loadedViews);
+    const nestedInElement = (v: (typeof views)[number]) =>
+      Object.values(v.nodes).find((n) => n.parentId && !v.nodes[n.parentId]!.parentId && v.nodes[n.parentId]!.elementId);
+    const source = views.find((v) => nestedInElement(v))!;
+    const child = nestedInElement(source)!;
+    const parent = source.nodes[child.parentId!]!;
+    const target = views.find((v) => v.id !== source.id && !Object.values(v.nodes).some((n) => n.elementId === parent.elementId))!;
+    const clip = copySelection(source, [parent.id])!;
+    const edit = pasteClip(doc, target, clip, { x: 20, y: 20 }, (name) => `${name}*`);
+    const after = applyChanges(doc, edit.changes).loadedViews[target.id]!;
+    const pastedParent = Object.values(after.nodes).find((n) => n.elementId === parent.elementId && !target.nodes[n.id])!;
+    expect([pastedParent.x, pastedParent.y]).toEqual([parent.x + 20, parent.y + 20]);
+    const pastedChild = Object.values(after.nodes).find((n) => n.parentId === pastedParent.id && n.x === child.x && n.y === child.y);
+    expect(pastedChild).toBeDefined();
+    const copiedNames = edit.changes.filter((c) => c.entity === 'element').map((c) => (c.after as { name: string }).name);
+    expect(copiedNames).not.toContain(`${doc.elements[parent.elementId!]!.name}*`);
   });
 });

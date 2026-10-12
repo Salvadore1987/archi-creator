@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { Clip } from '../model/ops';
 
 /** Состояние корпуса, не относящееся к модели: открытые панели, сетка. */
 interface UiState {
@@ -7,6 +8,10 @@ interface UiState {
   inspectorRequest: { tab: 'properties' | 'description'; seq: number } | null;
   requestInspector(tab: 'properties' | 'description'): void;
   snapToGrid: boolean;
+  /** Скопированное с холста; вставок из него — чтобы каждая следующая ложилась со сдвигом. */
+  clipboard: { clip: Clip; pastes: number } | null;
+  setClipboard(clip: Clip | null): void;
+  notePaste(): number;
   toggleHistory(open?: boolean): void;
   toggleSnap(): void;
 }
@@ -18,6 +23,17 @@ export const useUi = create<UiState>()((set, get) => ({
     set({ inspectorRequest: { tab, seq: (get().inspectorRequest?.seq ?? 0) + 1 } });
   },
   snapToGrid: true,
+  clipboard: null,
+  setClipboard(clip) {
+    set({ clipboard: clip ? { clip, pastes: 0 } : null });
+  },
+  notePaste() {
+    const current = get().clipboard;
+    if (!current) return 0;
+    const pastes = current.pastes + 1;
+    set({ clipboard: { ...current, pastes } });
+    return pastes;
+  },
   toggleHistory(open) {
     set({ historyOpen: open ?? !get().historyOpen });
   },

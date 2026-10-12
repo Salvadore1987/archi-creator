@@ -21,11 +21,13 @@ import { useUi } from '../app/uiState';
 import { t, typeName } from '../i18n';
 import {
   conceptTypeOfEndpoint,
+  copySelection,
   createAndPlace,
   drawRelationship,
   impliedRelationship,
   moveNodes,
   nestNodes,
+  pasteClip,
   placeAnnotation,
   placeElement,
   removeFromView,
@@ -106,6 +108,43 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
       },
     });
   }, [canEdit, viewId, perform, doc.elements]);
+
+  // Копирование и вставка, как в Archi: Ctrl+C, Ctrl+V. В другое представление элемент
+  // вставляется ссылкой, в то, где он уже есть, — копией.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
+      const key = event.key.toLowerCase();
+      if (key !== 'c' && key !== 'v') return;
+      const target = event.target as HTMLElement | null;
+      if (target && target !== document.body && !wrapper.current?.contains(target)) return;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      const state = useEditor.getState();
+      const current = state.doc?.loadedViews[viewId];
+      if (!current || !state.doc) return;
+      if (key === 'c') {
+        const chosen = new Set(state.selection.ids);
+        const clip = copySelection(current, Object.values(current.nodes).filter((n) => nodeSelected(n, chosen)).map((n) => n.id));
+        if (!clip) return;
+        event.preventDefault();
+        useUi.getState().setClipboard(clip);
+        toast(t('canvas.copied', { n: clip.nodes.length }));
+        return;
+      }
+      const clipboard = useUi.getState().clipboard;
+      if (!clipboard || !canEdit) return;
+      event.preventDefault();
+      const step = useUi.getState().notePaste() * GRID;
+      const shift = clipboard.clip.viewId === viewId ? step : step - GRID;
+      const edit = pasteClip(state.doc, current, clipboard.clip, { x: shift, y: shift }, (name) =>
+        name ? t('canvas.copyName', { name }) : name,
+      );
+      perform(t('tree_ops.pasteOp', { n: edit.pasted.length }), edit.changes, edit.affected);
+      select(edit.pasted, 'canvas');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [viewId, canEdit, perform, select, toast]);
 
   // Масштаб с клавиатуры, как в Archi: Ctrl+= крупнее, Ctrl+- мельче, Ctrl+0 — 100 %.
   useEffect(() => {

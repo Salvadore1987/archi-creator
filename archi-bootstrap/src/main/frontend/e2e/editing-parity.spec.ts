@@ -202,4 +202,58 @@ test.describe('UI-006: паритет с Archi', () => {
     await expect(page.getByTestId('save')).toBeHidden();
     expect(api.writes().filter((c) => c.path === `/view-nodes/${node!.id}`).at(-1)!.body).toEqual({ style: {} });
   });
+
+  test('копирование и вставка: в том же представлении — копия элемента, в другом — тот же элемент со связью', async ({ page }) => {
+    const api = await openModel(page);
+    const contextId = await openView(page, api, '12 ');
+    const view = api.views[contextId]!;
+    const edge = view.edges.find((e) => {
+      const s = view.nodes.find((n) => n.id === e.sourceId);
+      const t = view.nodes.find((n) => n.id === e.targetId);
+      return s && t && !s.parentId && !t.parentId;
+    })!;
+    const ends = [edge.sourceId, edge.targetId] as string[];
+    const { node } = canvasOf(page, contextId);
+    await node(ends[0]!).click();
+    await page.keyboard.down('ControlOrMeta');
+    await node(ends[1]!).click();
+    await page.keyboard.up('ControlOrMeta');
+    await page.keyboard.press('ControlOrMeta+c');
+    await expect(page.getByText('Скопировано объектов: 2')).toBeVisible();
+
+    const elementsBefore = await editorState<number>(page, 'Object.keys(s.doc.elements).length');
+    await page.keyboard.press('ControlOrMeta+v');
+    const copies = await editorState<string[]>(page, "Object.values(s.doc.elements).filter((e) => e.name.endsWith('(копия)')).map((e) => e.name)");
+    expect(copies).toHaveLength(2);
+    expect(await editorState<number>(page, 'Object.keys(s.doc.elements).length')).toBe(elementsBefore + 2);
+    const copiedRelations = await editorState<number>(
+      page,
+      `Object.values(s.doc.relationships).filter((r) => s.doc.elements[r.sourceId]?.name.endsWith('(копия)')).length`,
+    );
+    expect(copiedRelations).toBe(1);
+    await page.keyboard.press('ControlOrMeta+z');
+    expect(await editorState<number>(page, 'Object.keys(s.doc.elements).length')).toBe(elementsBefore);
+
+    const otherId = await openView(page, api, '03 ');
+    const pane = (await canvasOf(page, otherId).canvas.boundingBox())!;
+    await page.mouse.click(pane.x + pane.width - 20, pane.y + 20);
+    const nodesBefore = await editorState<number>(page, `Object.keys(s.doc.loadedViews['${otherId}'].nodes).length`);
+    await page.keyboard.press('ControlOrMeta+v');
+    expect(await editorState<number>(page, `Object.keys(s.doc.loadedViews['${otherId}'].nodes).length`)).toBe(nodesBefore + 2);
+    expect(await editorState<number>(page, 'Object.keys(s.doc.elements).length')).toBe(elementsBefore);
+    const pastedEdge = await editorState<string[]>(
+      page,
+      `Object.values(s.doc.loadedViews['${otherId}'].edges).filter((e) => e.relationshipId === '${edge.relationshipId}').map((e) => e.id)`,
+    );
+    expect(pastedEdge).toHaveLength(1);
+
+    await page.getByTestId('save').click();
+    await expect(page.getByTestId('save')).toBeHidden();
+    const writes = api.writes();
+    expect(writes.some((c) => c.method === 'POST' && c.path.endsWith('/elements'))).toBe(false);
+    expect(writes.filter((c) => c.method === 'POST' && c.path === `/views/${otherId}/nodes`)).toHaveLength(2);
+    expect(writes.find((c) => c.method === 'POST' && c.path === `/views/${otherId}/edges`)?.body).toMatchObject({
+      relationshipId: edge.relationshipId,
+    });
+  });
 });
