@@ -27,6 +27,8 @@ export function AdvisorPanel({ status }: { status: AdvisorStatus }) {
   const selected = selectedId ? doc.elements[selectedId] : undefined;
   const activeView = activeViewId ? doc.views[activeViewId] : undefined;
   const exhausted = status.budgetStatus === 'EXHAUSTED';
+  // Подсказка и документация — сам ответ в Markdown; у ревью и плана текст — ход работы над находками и планом.
+  const textual = advisor.fn === 'explain' || advisor.fn === 'document';
 
   return (
     <section className="ai" data-testid="advisor">
@@ -65,6 +67,7 @@ export function AdvisorPanel({ status }: { status: AdvisorStatus }) {
         {advisor.meta?.contextTruncated && <div className="ai__banner">{t('advisor.truncated')}</div>}
         {advisor.error && <div className="ai__banner ai__banner--err" data-testid="advisor-error">{advisor.error}</div>}
         {!advisor.fn && !advisor.error && <p className="ai__idle">{t('advisor.idle')}</p>}
+        {advisor.text && !textual && <p className="ai__muted ai__stream">{advisor.text}</p>}
 
         {advisor.findings.map((finding) => (
           <FindingCard key={finding.id} finding={finding} onGo={goTo} />
@@ -78,11 +81,7 @@ export function AdvisorPanel({ status }: { status: AdvisorStatus }) {
         {advisor.answer ? (
           <MarkdownView markdown={advisor.answer.markdown} references={advisor.answer.references} onGo={goTo} />
         ) : (
-          advisor.text && (advisor.fn === 'explain' || advisor.fn === 'document' ? (
-            <MarkdownView markdown={advisor.text} references={[]} onGo={goTo} />
-          ) : (
-            <p className="ai__muted ai__stream">{advisor.text}</p>
-          ))
+          advisor.text && textual && <MarkdownView markdown={advisor.text} references={[]} onGo={goTo} />
         )}
         {advisor.running && <p className="ai__muted" data-testid="advisor-running">{t('advisor.running')}</p>}
         {advisor.answer && advisor.fn === 'document' && (

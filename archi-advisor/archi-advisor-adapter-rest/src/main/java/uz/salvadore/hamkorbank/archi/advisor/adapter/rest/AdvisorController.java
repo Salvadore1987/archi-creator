@@ -3,15 +3,16 @@ package uz.salvadore.hamkorbank.archi.advisor.adapter.rest;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.http.CacheControl;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import tools.jackson.databind.json.JsonMapper;
 import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.DocumentRequest;
 import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.ExplainRequest;
@@ -37,17 +38,22 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorRequest;
 public class AdvisorController {
 
     private static final String IDEMPOTENCY_KEY = "Idempotency-Key";
+    /** Дольше самого долгого обращения: документация по модели — до пяти минут. */
+    private static final long STREAM_TIMEOUT_MS = 330_000;
 
     private final AdvisorService advisor;
     private final JsonMapper json;
+    private final AsyncTaskExecutor executor;
 
-    public AdvisorController(AdvisorService advisor, JsonMapper json) {
+    public AdvisorController(AdvisorService advisor, JsonMapper json,
+                             @Qualifier("applicationTaskExecutor") AsyncTaskExecutor executor) {
         this.advisor = advisor;
         this.json = json;
+        this.executor = executor;
     }
 
     @PostMapping("/review")
-    public ResponseEntity<StreamingResponseBody> review(Requester requester, @RequestBody ReviewRequest body,
+    public ResponseEntity<SseEmitter> review(Requester requester, @RequestBody ReviewRequest body,
                                                         @RequestHeader(IDEMPOTENCY_KEY) Optional<String> key,
                                                         Locale locale) {
         return stream(advisor.ask(requester, AdvisorRequest.review(model(body.modelId()), view(body.viewId())),
@@ -55,7 +61,7 @@ public class AdvisorController {
     }
 
     @PostMapping("/explain")
-    public ResponseEntity<StreamingResponseBody> explain(Requester requester, @RequestBody ExplainRequest body,
+    public ResponseEntity<SseEmitter> explain(Requester requester, @RequestBody ExplainRequest body,
                                                          @RequestHeader(IDEMPOTENCY_KEY) Optional<String> key,
                                                          Locale locale) {
         return stream(advisor.ask(requester, AdvisorRequest.explain(model(body.modelId()), body.elementId()),
@@ -63,7 +69,7 @@ public class AdvisorController {
     }
 
     @PostMapping("/plan")
-    public ResponseEntity<StreamingResponseBody> plan(Requester requester, @RequestBody PlanRequest body,
+    public ResponseEntity<SseEmitter> plan(Requester requester, @RequestBody PlanRequest body,
                                                       @RequestHeader(IDEMPOTENCY_KEY) Optional<String> key,
                                                       Locale locale) {
         return stream(advisor.ask(requester, AdvisorRequest.plan(model(body.modelId()), body.prompt()), key(key),
@@ -71,19 +77,28 @@ public class AdvisorController {
     }
 
     @PostMapping("/document")
-    public ResponseEntity<StreamingResponseBody> document(Requester requester, @RequestBody DocumentRequest body,
+    public ResponseEntity<SseEmitter> document(Requester requester, @RequestBody DocumentRequest body,
                                                           @RequestHeader(IDEMPOTENCY_KEY) Optional<String> key,
                                                           Locale locale) {
         return stream(advisor.ask(requester, AdvisorRequest.document(model(body.modelId()), view(body.viewId()),
                 Optional.ofNullable(body.elementId())), key(key), locale));
     }
 
-    private ResponseEntity<StreamingResponseBody> stream(AdvisorStream stream) {
+    /** Поток читается в фоне: поток запроса освобождается, кадры уходят по мере прихода. */
+    private ResponseEntity<SseEmitter> stream(AdvisorStream stream) {
+        SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MS);
+        executor.execute(() -> {
+            try {
+                stream.run(new SseWriter(emitter, json));
+                emitter.complete();
+            } catch (RuntimeException broken) {
+                emitter.completeWithError(broken);
+            }
+        });
         return ResponseEntity.ok()
-                .contentType(MediaType.TEXT_EVENT_STREAM)
                 .cacheControl(CacheControl.noStore())
                 .header("X-Accel-Buffering", "no")
-                .body(out -> stream.run(new SseWriter(out, json)));
+                .body(emitter);
     }
 
     private static ModelId model(UUID modelId) {

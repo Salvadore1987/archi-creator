@@ -50,6 +50,7 @@ public final class FakeAnthropic {
                 for (String frame : reply.frames("msg_" + messageIds.incrementAndGet())) {
                     out.write(frame.getBytes(StandardCharsets.UTF_8));
                     out.flush();
+                    pause(reply.frameDelayMs);
                 }
             }
         });
@@ -79,6 +80,14 @@ public final class FakeAnthropic {
         status = httpStatus;
     }
 
+    private static void pause(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     public List<Recorded> requests() {
         return List.copyOf(requests);
     }
@@ -93,6 +102,7 @@ public final class FakeAnthropic {
         private final List<String> blocks = new ArrayList<>();
         private long inputTokens = 120;
         private long outputTokens = 30;
+        private long frameDelayMs;
 
         public static Reply text(String text) {
             return new Reply().withText(text);
@@ -106,6 +116,12 @@ public final class FakeAnthropic {
         /** Вызов инструмента с готовым JSON входа. */
         public Reply withTool(String name, String inputJson) {
             blocks.add("U" + name + "\u0000" + inputJson);
+            return this;
+        }
+
+        /** Пауза после каждого кадра — модель пишет не мгновенно. */
+        public Reply slowly(long millis) {
+            this.frameDelayMs = millis;
             return this;
         }
 

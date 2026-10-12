@@ -77,8 +77,8 @@ abstract class AdvisorApiTest extends ApiTest {
             List<String> found = new ArrayList<>();
             String[] lines = body.split("\n");
             for (int i = 0; i + 1 < lines.length; i++) {
-                if (lines[i].equals("event: " + event) && lines[i + 1].startsWith("data: ")) {
-                    found.add(lines[i + 1].substring("data: ".length()));
+                if (lines[i].replace("event: ", "event:").equals("event:" + event) && lines[i + 1].startsWith("data:")) {
+                    found.add(lines[i + 1].substring("data:".length()).strip());
                 }
             }
             return found;
