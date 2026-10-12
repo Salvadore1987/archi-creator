@@ -14,6 +14,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // Холст тяжёл для процессора: на четырёх ядрах раннера CI больше двух потоков
+  // дают таймауты, а не ускорение.
+  workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
     baseURL: `http://localhost:${PORT}`,
