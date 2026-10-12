@@ -1000,6 +1000,9 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 - ✅ Порты `ModelContextReader`, `MetamodelCatalog`, `WorkspaceDirectory`, `LlmPort`,
       `PromptCatalog`, `TokenBudgetRepository`, `AdvisorSessionRepository`, `AuditLog`,
       `AdvisorSettingsRepository`, свой `UnitOfWork`
+- ✅ Хранение: миграция `V4__advisor.sql` (`advisor_session`, `token_budget`,
+      исход и ссылка на сессию в `ai_audit_log`), JPA-адаптеры; бюджет месяца —
+      вставка «если нет» и `SELECT … FOR UPDATE`
 - ✅ Построение контекста ([§7.3](../backend.md#73-контекст-запроса)): компактный
       JSON; при превышении лимита — подграф (для подсказки элемент и соседи
       на два шага, для ревью усечение по слоям с пометкой)
