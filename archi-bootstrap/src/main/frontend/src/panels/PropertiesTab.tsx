@@ -6,6 +6,8 @@ import { placementIndex, type ModelDoc } from '../model/doc';
 import { editNodeText, updateContent } from '../model/ops';
 import { useEditor } from '../model/store';
 import { folderPath } from '../tree/buildTree';
+import { layerToken } from '../canvas/style';
+import { StyleEditor } from './StyleEditor';
 
 /**
  * Форма объекта модели: имя, документация и свойства меняют элемент или
@@ -105,6 +107,11 @@ export function PropertiesTab({ id, editable }: { id: Uuid; editable: boolean })
           onCommit={(properties) => commit(t('props.propertiesOp', { name }), { properties })}
         />
       </Field>
+      {activeViewId && doc.loadedViews[activeViewId] && (
+        <Field label={t('props.appearance')}>
+          <Appearance viewId={activeViewId} objectId={id} name={name} readOnly={readOnly} fallbackFill={`--layer-${layerToken(element?.layer)}`} />
+        </Field>
+      )}
       <Field label={t('props.views')}>
         <div className="kvs">
           <div className="kv">
@@ -146,10 +153,40 @@ function AnnotationProps({ viewId, node, editable }: { viewId: Uuid; node: ViewN
           {typeName(node.archiType)} <span className="field__mono">{node.archiType}</span>
         </div>
       </Field>
+      <Field label={t('props.appearance')}>
+        <StyleEditor
+          viewId={viewId}
+          nodeIds={[node.id]}
+          edgeIds={[]}
+          name={(group ? node.label : node.content) ?? typeName(node.archiType)}
+          readOnly={!editable}
+          fallbackFill={group ? '--group-fill' : '--note-fill'}
+        />
+      </Field>
       <Field label={t('props.identifier')}>
         <div className="field__mono">{node.archiId}</div>
       </Field>
     </div>
+  );
+}
+
+/** Оформление элемента или связи — на их узлах и рёбрах открытого представления. */
+function Appearance(props: { viewId: Uuid; objectId: Uuid; name: string; readOnly: boolean; fallbackFill: string }) {
+  const view = useEditor((s) => s.doc!.loadedViews[props.viewId]);
+  const nodeIds = Object.values(view?.nodes ?? {}).filter((n) => n.elementId === props.objectId).map((n) => n.id);
+  const edgeIds = Object.values(view?.edges ?? {}).filter((e) => e.relationshipId === props.objectId).map((e) => e.id);
+  if (nodeIds.length === 0 && edgeIds.length === 0) {
+    return <div className="field__static">{t('props.appearanceNone')}</div>;
+  }
+  return (
+    <StyleEditor
+      viewId={props.viewId}
+      nodeIds={nodeIds}
+      edgeIds={edgeIds}
+      name={props.name}
+      readOnly={props.readOnly}
+      fallbackFill={props.fallbackFill}
+    />
   );
 }
 

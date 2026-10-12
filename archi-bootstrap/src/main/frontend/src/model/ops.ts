@@ -6,6 +6,7 @@ import type {
   LayoutStrategy,
   Property,
   Relationship,
+  Style,
   Uuid,
   ViewEdge,
   ViewNode,
@@ -579,6 +580,46 @@ export function applyLayoutPatch(view: ViewDoc, patch: LayoutPatch): Edit {
     const before = view.edges[id];
     if (!before || JSON.stringify(before.bendpoints) === JSON.stringify(bendpoints)) continue;
     changes.push({ entity: 'edge', id, viewId: view.id, before, after: { ...before, bendpoints } });
+  }
+  return {
+    changes,
+    affected: changes.map((c) =>
+      c.entity === 'node' ? ((c.after as ViewNode).elementId ?? c.id) : ((c.after as ViewEdge).relationshipId ?? c.id),
+    ),
+  };
+}
+
+/** Пустой стиль и отсутствующий — одно и то же: действует токен слоя. */
+function cleanStyle(style: Style): Style | undefined {
+  const entries = Object.entries(style).filter(([, v]) => v !== undefined && v !== '');
+  return entries.length > 0 ? (Object.fromEntries(entries) as Style) : undefined;
+}
+
+/**
+ * Собственный стиль узлов и рёбер представления. Значение `undefined` в правке
+ * снимает поле — объект возвращается к токену слоя.
+ */
+export function restyle(view: ViewDoc, nodeIds: Uuid[], edgeIds: Uuid[], patch: Partial<Record<keyof Style, unknown>>): Edit {
+  const changes: Change[] = [];
+  const next = (style: Style | undefined) => cleanStyle({ ...(style ?? {}), ...(patch as Style) });
+  const same = (a?: Style, b?: Style) => JSON.stringify(cleanStyle(a ?? {}) ?? {}) === JSON.stringify(b ?? {});
+  for (const id of nodeIds) {
+    const before = view.nodes[id];
+    if (!before) continue;
+    const style = next(before.style);
+    if (same(before.style, style)) continue;
+    const after: ViewNode = { ...before, style };
+    if (!style) delete after.style;
+    changes.push({ entity: 'node', id, viewId: view.id, before, after });
+  }
+  for (const id of edgeIds) {
+    const before = view.edges[id];
+    if (!before) continue;
+    const style = next(before.style);
+    if (same(before.style, style)) continue;
+    const after: ViewEdge = { ...before, style };
+    if (!style) delete after.style;
+    changes.push({ entity: 'edge', id, viewId: view.id, before, after });
   }
   return {
     changes,

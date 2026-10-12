@@ -273,3 +273,43 @@
   width: 12px;
   height: 12px;
 }
+
+/* Собственный стиль объекта на представлении. */
+.style-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.style-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.style-row__label {
+  width: 92px;
+  flex: 0 0 auto;
+  color: var(--text-mid);
+  font-size: 11px;
+}
+.style-row__color {
+  width: 34px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+}
+.style-row__select {
+  height: 24px;
+  max-width: 120px;
+  background: var(--ink-750);
+  color: var(--text-hi);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font: inherit;
+  font-size: 11px;
+}
+.style-row__select--size {
+  width: 52px;
+}

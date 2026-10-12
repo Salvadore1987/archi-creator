@@ -164,4 +164,34 @@ test.describe('UI-006: паритет с Archi', () => {
     expect(api.writes().find((c) => c.method === 'PATCH' && c.path === `/view-nodes/${groupId}`)?.body).toEqual({ label: 'Контур подписи' });
     expect(api.writes().find((c) => c.method === 'PATCH' && c.path === `/view-nodes/${note.id}`)?.body).toEqual({ content: 'Строка 1\nСтрока 2' });
   });
+
+  test('переопределение стиля: заливка и шрифт узла — сильнее токена слоя, уходят в PATCH, сбрасываются', async ({ page }) => {
+    const api = await openModel(page);
+    const viewId = await openView(page, api, '03 ');
+    const [node] = rootNodes(api, viewId);
+    const { node: nodeOf } = canvasOf(page, viewId);
+    await nodeOf(node!.id).click();
+
+    await page.getByTestId('style-fillColor').fill('#ff8800');
+    await expect(nodeOf(node!.id).locator('.shape__outline')).toHaveAttribute('fill', '#ff8800');
+    await page.getByTestId('style-bold').click();
+    await page.getByTestId('style-font-size').selectOption('12');
+    await expect(page.getByTestId('undo')).toHaveAttribute('title', /Оформление/);
+    expect(await nodeState<{ fillColor: string; font: string }>(page, viewId, node!.id, 'style')).toEqual({
+      fillColor: '#ff8800',
+      font: '1|Segoe UI|12.0|1|',
+    });
+
+    await page.getByTestId('save').click();
+    await expect(page.getByTestId('save')).toBeHidden();
+    const patches = api.writes().filter((c) => c.method === 'PATCH' && c.path === `/view-nodes/${node!.id}`);
+    expect(patches.at(-1)!.body).toEqual({ style: { fillColor: '#ff8800', font: '1|Segoe UI|12.0|1|' } });
+
+    await page.getByTestId('style-reset-all').click();
+    await expect(nodeOf(node!.id).locator('.shape__outline')).not.toHaveAttribute('fill', '#ff8800');
+    expect(await nodeState<unknown>(page, viewId, node!.id, 'style')).toBeUndefined();
+    await page.getByTestId('save').click();
+    await expect(page.getByTestId('save')).toBeHidden();
+    expect(api.writes().filter((c) => c.path === `/view-nodes/${node!.id}`).at(-1)!.body).toEqual({ style: {} });
+  });
 });
