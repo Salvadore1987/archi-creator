@@ -96,7 +96,8 @@ public final class Dtos {
     public record ElementTypeDto(String archiType, String kind, String layer, String phase, boolean supported) {
     }
 
-    public record RelationTypeDto(String archiType, String type, boolean byDefault) {
+    /** @param nesting эту связь подразумевает вложение цели в источник */
+    public record RelationTypeDto(String archiType, String type, boolean byDefault, boolean nesting) {
     }
 
     // ── Запросы ─────────────────────────────────────────────────────
@@ -145,8 +146,24 @@ public final class Dtos {
     public record CreateViewRequest(String name, UUID folderId, UUID id, String archiId) {
     }
 
-    public record PlaceNodeRequest(UUID elementId, int x, int y, Integer width, Integer height, UUID parentId,
-                                   UUID id, String archiId) {
+    /**
+     * Узел элемента, группа или заметка.
+     *
+     * @param kind {@code DIAGRAM_OBJECT}, {@code GROUP} или {@code NOTE}; нет — узел элемента
+     */
+    public record PlaceNodeRequest(String kind, UUID elementId, String label, String content, int x, int y,
+                                   Integer width, Integer height, UUID parentId, UUID id, String archiId) {
+    }
+
+    /** Отсутствующее поле не меняется; стиль заменяется целиком. */
+    public record EditNodeRequest(String label, String content, StyleDto style) {
+    }
+
+    public record EditEdgeRequest(StyleDto style) {
+    }
+
+    /** @param parentId нет — корень представления; координаты — относительно нового родителя */
+    public record MoveNodeRequest(UUID parentId, int x, int y) {
     }
 
     /** Ребро уже существующей связи: концы — узлы или рёбра того же представления. */
@@ -162,5 +179,16 @@ public final class Dtos {
 
     /** Геометрия после перемещений: узлы и точки перегиба одной транзакцией. */
     public record LayoutPatch(List<NodeBounds> nodes, List<EdgeBendpoints> edges) {
+    }
+
+    /** Граф представления как он в браузере — с несохранёнными узлами. */
+    public record AutoLayoutRequest(String strategy, List<LayoutNode> nodes, List<LayoutEdge> edges) {
+    }
+
+    /** @param conceptType тип элемента узла; нет — группа, заметка или иное */
+    public record LayoutNode(UUID id, UUID parentId, String conceptType, int x, int y, int width, int height) {
+    }
+
+    public record LayoutEdge(UUID id, UUID sourceId, UUID targetId) {
     }
 }

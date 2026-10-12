@@ -23,6 +23,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 
@@ -77,6 +78,11 @@ public class JpaViewRepository implements ViewRepository {
     @Override
     public Optional<ViewId> viewOfNode(ViewNodeId nodeId) {
         return Optional.ofNullable(em.find(ViewNodeEntity.class, nodeId.value())).map(n -> ViewId.of(n.viewId));
+    }
+
+    @Override
+    public Optional<ViewId> viewOfEdge(ViewEdgeId edgeId) {
+        return Optional.ofNullable(em.find(ViewEdgeEntity.class, edgeId.value())).map(x -> ViewId.of(x.viewId));
     }
 
     /** Два запроса — пары «представление — элемент» и «представление — связь» без повторов. */

@@ -15,6 +15,11 @@ public record Bounds(int x, int y, int width, int height) {
     /** Размер нового узла элемента, когда клиент его не задал, — как у Archi. */
     public static final int ELEMENT_WIDTH = 120;
     public static final int ELEMENT_HEIGHT = 55;
+    /** Размер новой группы и заметки — тоже как у Archi. */
+    public static final int GROUP_WIDTH = 400;
+    public static final int GROUP_HEIGHT = 140;
+    public static final int NOTE_WIDTH = 185;
+    public static final int NOTE_HEIGHT = 80;
 
     public Bounds {
         if (!validSize(width) || !validSize(height)) {
@@ -25,6 +30,15 @@ public record Bounds(int x, int y, int width, int height) {
     /** Узел нового размещения: незаданный размер — размер элемента Archi по умолчанию. */
     public static Bounds ofNewElement(int x, int y, Optional<Integer> width, Optional<Integer> height) {
         return new Bounds(x, y, width.orElse(ELEMENT_WIDTH), height.orElse(ELEMENT_HEIGHT));
+    }
+
+    /** Узел нового размещения любого вида: незаданный размер — размер Archi для этого вида. */
+    public static Bounds ofNew(ViewNodeKind kind, int x, int y, Optional<Integer> width, Optional<Integer> height) {
+        return switch (kind) {
+            case GROUP -> new Bounds(x, y, width.orElse(GROUP_WIDTH), height.orElse(GROUP_HEIGHT));
+            case NOTE -> new Bounds(x, y, width.orElse(NOTE_WIDTH), height.orElse(NOTE_HEIGHT));
+            case DIAGRAM_OBJECT, OTHER -> ofNewElement(x, y, width, height);
+        };
     }
 
     public static boolean validSize(int size) {

@@ -1,27 +1,49 @@
 import {
   Background,
   BackgroundVariant,
+  MiniMap,
   ReactFlow,
   applyEdgeChanges,
   applyNodeChanges,
   useReactFlow,
+  useStoreApi,
   type EdgeChange,
   type NodeChange,
 } from '@xyflow/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Uuid } from '../api/types';
+import { api } from '../api/endpoints';
+import type { RelationType, Uuid, ViewNode } from '../api/types';
+import { applyChanges, type Change, type ModelDoc, type ViewDoc } from '../model/doc';
 import { Icon } from '../app/Icon';
 import { useCanEdit } from '../app/session';
 import { useToast } from '../app/toast';
 import { useUi } from '../app/uiState';
-import { t } from '../i18n';
-import { createAndPlace, moveNodes, placeElement, removeFromView, resizeNode } from '../model/ops';
+import { t, typeName } from '../i18n';
+import {
+  conceptTypeOfEndpoint,
+  copySelection,
+  createAndPlace,
+  drawRelationship,
+  impliedRelationship,
+  moveNodes,
+  nestNodes,
+  pasteClip,
+  placeAnnotation,
+  placeElement,
+  removeEdgesFromView,
+  removeFromView,
+  resizeNode,
+} from '../model/ops';
 import { useEditor } from '../model/store';
 import { DRAG_ELEMENT } from '../tree/TreePanel';
 import { ArchiEdge } from './ArchiEdge';
 import { ArchiNode, setNodeEditing } from './ArchiNode';
 import {
   absolutePosition,
+  containerAt,
+  descendants,
+  edgeSelected,
   nodeSelected,
   toFlowEdges,
   toFlowNodes,
@@ -29,11 +51,18 @@ import {
   type ArchiFlowNode,
 } from './flowModel';
 import { DRAG_PALETTE_TYPE, parsePaletteDrag } from './palette-drag';
+import { alignmentGuides, type GuideLine } from './guides';
+import { effectiveSize } from './shapes';
+import { layerToken } from './style';
+import { CanvasTools } from './CanvasTools';
+import { RelationPicker, type RelationChoice } from './RelationPicker';
 import tokens from 'virtual:design-tokens';
 
 const nodeTypes = { archi: ArchiNode };
 const edgeTypes = { archi: ArchiEdge };
 const GRID = parseFloat(tokens.values.grid_step ?? '20');
+/** Насколько близко, в экранных пикселях, край узла притягивается к направляющей. */
+const GUIDE_THRESHOLD = 6;
 
 /**
  * Холст одного представления. Узлы React Flow — производная документа:
@@ -49,14 +78,32 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
   const select = useEditor((s) => s.select);
   const perform = useEditor((s) => s.perform);
   const snap = useUi((s) => s.snapToGrid);
+  const navigator = useUi((s) => s.navigatorOpen);
+  // Цвет узла на мини-карте — токен его слоя, как на холсте.
+  const minimapColor = useCallback(
+    (flowNode: ArchiFlowNode) => {
+      const state = useEditor.getState().doc;
+      const node = state?.loadedViews[viewId]?.nodes[flowNode.id];
+      if (!node) return 'var(--paper-line)';
+      if (node.kind === 'GROUP') return 'var(--group-border)';
+      if (node.kind === 'NOTE') return 'var(--note-border)';
+      const element = node.elementId ? state?.elements[node.elementId] : undefined;
+      return `var(--layer-${layerToken(element?.layer)})`;
+    },
+    [viewId],
+  );
   const canEdit = useCanEdit() && view.editable;
   const flow = useReactFlow();
+  const flowStore = useStoreApi();
   const wrapper = useRef<HTMLDivElement>(null);
   const toast = useToast((s) => s.show);
+  const queries = useQueryClient();
+  const [connecting, setConnecting] = useState<{ sourceId: Uuid; from: Point; to: Point } | null>(null);
+  const [choice, setChoice] = useState<(RelationChoice & { sourceId: Uuid; targetId: Uuid }) | null>(null);
 
   const selected = useMemo(() => new Set(selection.ids), [selection.ids]);
   const derivedNodes = useMemo(() => toFlowNodes(view, selected, canEdit), [view, selected, canEdit]);
-  const derivedEdges = useMemo(() => toFlowEdges(view, selected), [view, selected]);
+  const derivedEdges = useMemo(() => toFlowEdges(view, selected, canEdit), [view, selected, canEdit]);
   const [nodes, setNodes] = useState<ArchiFlowNode[]>(derivedNodes);
   const [edges, setEdges] = useState<ArchiFlowEdge[]>(derivedEdges);
   useEffect(() => setNodes(derivedNodes), [derivedNodes]);
@@ -72,8 +119,162 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
         const edit = resizeNode(current, id, bounds);
         perform(t('tree_ops.resizeOp', { name: node?.elementId ? (doc.elements[node.elementId]?.name ?? '') : '' }), edit.changes, edit.affected);
       },
+      onConnectStart: (id, event) => {
+        const box = wrapper.current?.getBoundingClientRect();
+        const nodeBox = (event.currentTarget as HTMLElement).closest('.react-flow__node')?.getBoundingClientRect();
+        if (!box || !nodeBox) return;
+        const from = { x: nodeBox.left + nodeBox.width / 2 - box.left, y: nodeBox.top + nodeBox.height / 2 - box.top };
+        setChoice(null);
+        setConnecting({ sourceId: id, from, to: { x: event.clientX - box.left, y: event.clientY - box.top } });
+      },
     });
   }, [canEdit, viewId, perform, doc.elements]);
+
+  // Копирование и вставка, как в Archi: Ctrl+C, Ctrl+V. В другое представление элемент
+  // вставляется ссылкой, в то, где он уже есть, — копией.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
+      const key = event.key.toLowerCase();
+      if (key !== 'c' && key !== 'v') return;
+      const target = event.target as HTMLElement | null;
+      if (target && target !== document.body && !wrapper.current?.contains(target)) return;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      const state = useEditor.getState();
+      const current = state.doc?.loadedViews[viewId];
+      if (!current || !state.doc) return;
+      if (key === 'c') {
+        const chosen = new Set(state.selection.ids);
+        const clip = copySelection(current, Object.values(current.nodes).filter((n) => nodeSelected(n, chosen)).map((n) => n.id));
+        if (!clip) return;
+        event.preventDefault();
+        useUi.getState().setClipboard(clip);
+        toast(t('canvas.copied', { n: clip.nodes.length }));
+        return;
+      }
+      const clipboard = useUi.getState().clipboard;
+      if (!clipboard || !canEdit) return;
+      event.preventDefault();
+      const step = useUi.getState().notePaste() * GRID;
+      const shift = clipboard.clip.viewId === viewId ? step : step - GRID;
+      const edit = pasteClip(state.doc, current, clipboard.clip, { x: shift, y: shift }, (name) =>
+        name ? t('canvas.copyName', { name }) : name,
+      );
+      perform(t('tree_ops.pasteOp', { n: edit.pasted.length }), edit.changes, edit.affected);
+      select(edit.pasted, 'canvas');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [viewId, canEdit, perform, select, toast]);
+
+  // Масштаб с клавиатуры, как в Archi: Ctrl+= крупнее, Ctrl+- мельче, Ctrl+0 — 100 %.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      if (event.key === '=' || event.key === '+') {
+        event.preventDefault();
+        void flow.zoomIn({ duration: 120 });
+      } else if (event.key === '-') {
+        event.preventDefault();
+        void flow.zoomOut({ duration: 120 });
+      } else if (event.key === '0') {
+        event.preventDefault();
+        void flow.zoomTo(1, { duration: 120 });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [flow]);
+
+  // Протягивание связи: линия идёт за указателем, по отпусканию над узлом или ребром
+  // появляется список типов, допустимых матрицей для пары.
+  const connectingSource = connecting?.sourceId;
+  useEffect(() => {
+    if (!connectingSource) return;
+    const move = (event: PointerEvent) => {
+      const box = wrapper.current?.getBoundingClientRect();
+      if (!box) return;
+      setConnecting((current) => current && { ...current, to: { x: event.clientX - box.left, y: event.clientY - box.top } });
+    };
+    const up = (event: PointerEvent) => {
+      setConnecting(null);
+      const target = endpointAt(event.clientX, event.clientY);
+      if (!target || target === connectingSource) return;
+      void offerRelations(connectingSource, target, event.clientX, event.clientY);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up, { once: true });
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    // offerRelations читает документ в момент отпускания.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connectingSource]);
+
+  const offerRelations = async (sourceId: Uuid, targetId: Uuid, clientX: number, clientY: number) => {
+    const current = useEditor.getState().doc!;
+    const currentView = current.loadedViews[viewId]!;
+    const sourceType = conceptTypeOfEndpoint(current, currentView, sourceId);
+    const targetType = conceptTypeOfEndpoint(current, currentView, targetId);
+    if (!sourceType || !targetType) {
+      toast(t('canvas.relationEndpoint'));
+      return;
+    }
+    const options = await queries.fetchQuery({
+      queryKey: ['metamodel', 'relations', sourceType, targetType],
+      queryFn: () => api.relationTypes(sourceType, targetType),
+      staleTime: Infinity,
+    });
+    const names = { source: nameOfEndpoint(sourceId), target: nameOfEndpoint(targetId) };
+    if (options.length === 0) {
+      toast(t('canvas.relationNone', names));
+      return;
+    }
+    const box = wrapper.current?.getBoundingClientRect();
+    if (!box) return;
+    setChoice({
+      sourceId,
+      targetId,
+      x: clientX - box.left + 4,
+      y: clientY - box.top + 4,
+      title: t('canvas.relationTitle', names),
+      options,
+    });
+  };
+
+  const nameOfEndpoint = (id: Uuid): string => {
+    const current = useEditor.getState().doc!;
+    const currentView = current.loadedViews[viewId]!;
+    const node = currentView.nodes[id];
+    if (node?.elementId) return current.elements[node.elementId]?.name ?? '';
+    const relationship = currentView.edges[id]?.relationshipId;
+    return relationship ? typeName(current.relationships[relationship]?.archiType ?? '') : '';
+  };
+
+  const pickRelation = (option: RelationType) => {
+    if (!choice) return;
+    setChoice(null);
+    const current = useEditor.getState().doc!;
+    const edit = drawRelationship(current, current.loadedViews[viewId]!, choice.sourceId, choice.targetId, option.archiType);
+    if (!edit) return;
+    if (edit.changes.length === 0) {
+      toast(t('canvas.relationDrawn'));
+    } else {
+      perform(
+        t('tree_ops.connectOp', {
+          type: typeName(option.archiType),
+          source: nameOfEndpoint(choice.sourceId),
+          target: nameOfEndpoint(choice.targetId),
+        }),
+        edit.changes,
+        edit.affected,
+      );
+    }
+    select([edit.relationshipId], 'canvas');
+  };
 
   // Выделение извне — из дерева, карточки, находки — показывает узел, если он за краем экрана.
   const lastSeq = useRef(selection.seq);
@@ -132,20 +333,151 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
       queueMicrotask(() => select([...new Set(ids)], 'canvas'));
       return current;
     });
-  }, [viewId, select]);
+    // Рамка вокруг выделенного перехватывала бы клики по узлам внутри неё: Ctrl+клик
+    // по одному из выделенных должен снимать с него выделение, как в Archi.
+    queueMicrotask(() => flowStore.setState({ nodesSelectionActive: false }));
+  }, [viewId, select, flowStore]);
+
+  // Отпускание узла над контейнером вкладывает его, над пустым местом — выносит в корень.
+  // Элемент в элементе получает подразумеваемую связь той же операцией истории.
+  const dropTarget = useRef<Uuid | undefined>(undefined);
+  const nestingDrop = (event: MouseEvent | TouchEvent, dragged: ArchiFlowNode[]) => {
+    const current = useEditor.getState().doc?.loadedViews[viewId];
+    if (!current) return undefined;
+    const ids = new Set(dragged.map((n) => n.id));
+    const moving = new Set([...ids, ...descendants(current, ids).map((n) => n.id)]);
+    const at = 'touches' in event ? (event.changedTouches[0] ?? event.touches[0]) : event;
+    if (!at) return undefined;
+    const point = flow.screenToFlowPosition({ x: at.clientX, y: at.clientY });
+    return { current, ids, container: containerAt(current, point, moving) };
+  };
+
+  // Направляющие: край или середина перетаскиваемого узла рядом с краем или серединой
+  // другого — показывается линия, а по отпусканию узел встаёт точно по ней. С привязкой
+  // к сетке выравнивает сетка: две привязки сразу спорили бы, куда ставить узел.
+  const [guideLines, setGuideLines] = useState<GuideLine[]>([]);
+  const guideShift = useRef({ dx: 0, dy: 0 });
+  const updateGuides = (primary: ArchiFlowNode, dragged: ArchiFlowNode[]) => {
+    const current = useEditor.getState().doc?.loadedViews[viewId];
+    const node = current?.nodes[primary.id];
+    if (!current || !node || useUi.getState().snapToGrid) return;
+    const moving = new Set([...dragged.map((n) => n.id), ...descendants(current, dragged.map((n) => n.id)).map((n) => n.id)]);
+    const parentAt = node.parentId && current.nodes[node.parentId] ? absolutePosition(current, node.parentId) : { x: 0, y: 0 };
+    const size = effectiveSize(node.archiType, node.width, node.height);
+    const rect = { x: parentAt.x + primary.position.x, y: parentAt.y + primary.position.y, ...size };
+    const others = Object.values(current.nodes)
+      .filter((n) => !moving.has(n.id))
+      .map((n) => ({ ...absolutePosition(current, n.id), ...effectiveSize(n.archiType, n.width, n.height) }));
+    const guides = alignmentGuides(rect, others, GUIDE_THRESHOLD / flow.getZoom());
+    guideShift.current = { dx: guides.dx, dy: guides.dy };
+    setGuideLines(guides.lines);
+  };
+
+  const onNodeDrag = useCallback(
+    (event: MouseEvent | TouchEvent, primary: ArchiFlowNode, dragged: ArchiFlowNode[]) => {
+      updateGuides(primary, dragged);
+      const drop = nestingDrop(event, dragged);
+      const target = drop?.container?.id;
+      if (target === dropTarget.current) return;
+      dropTarget.current = target;
+      setNodes((current) => current.map((n) => ({ ...n, className: n.id === target ? 'is-drop-target' : undefined })));
+    },
+    // nestingDrop читает документ в момент события.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [viewId, flow],
+  );
 
   const onNodeDragStop = useCallback(
-    (_: unknown, __: ArchiFlowNode, dragged: ArchiFlowNode[]) => {
-      const current = useEditor.getState().doc?.loadedViews[viewId];
-      if (!current) return;
-      const edit = moveNodes(
-        current,
-        dragged.map((n) => ({ id: n.id, x: Math.round(n.position.x), y: Math.round(n.position.y) })),
-      );
-      perform(t('tree_ops.moveNodeOp', { n: edit.changes.length }), edit.changes, edit.affected);
+    (event: MouseEvent | TouchEvent, _: ArchiFlowNode, dragged: ArchiFlowNode[]) => {
+      dropTarget.current = undefined;
+      const shift = guideShift.current;
+      guideShift.current = { dx: 0, dy: 0 };
+      setGuideLines([]);
+      const drop = nestingDrop(event, dragged);
+      if (!drop) return;
+      const { current, ids, container } = drop;
+      const tops = dragged.filter((n) => !hasAncestorIn(current, n.id, ids));
+      const parentAt = container ? absolutePosition(current, container.id) : { x: 0, y: 0 };
+      const snapTo = (v: number) => (snap ? Math.round(v / GRID) * GRID : Math.round(v));
+      const moves = tops.map((n) => {
+        const node = current.nodes[n.id]!;
+        const oldParent = node.parentId && current.nodes[node.parentId] ? absolutePosition(current, node.parentId) : { x: 0, y: 0 };
+        if ((node.parentId ?? undefined) === container?.id) {
+          return {
+            id: n.id,
+            parentId: container?.id,
+            x: Math.round(n.position.x + shift.dx),
+            y: Math.round(n.position.y + shift.dy),
+          };
+        }
+        return {
+          id: n.id,
+          parentId: container?.id,
+          x: snapTo(oldParent.x + n.position.x - parentAt.x),
+          y: snapTo(oldParent.y + n.position.y - parentAt.y),
+        };
+      });
+      const nested = moves.some((m) => (current.nodes[m.id]!.parentId ?? undefined) !== m.parentId);
+      // Вложенные в переносимые едут вместе с ними: их координаты относительны родителю.
+      const inner = dragged
+        .filter((n) => !tops.includes(n))
+        .map((n) => ({ id: n.id, parentId: current.nodes[n.id]!.parentId, x: Math.round(n.position.x), y: Math.round(n.position.y) }));
+      if (!nested) {
+        const edit = moveNodes(current, [...moves, ...inner]);
+        perform(t('tree_ops.moveNodeOp', { n: edit.changes.length }), edit.changes, edit.affected);
+        setNodes((list) => list.map((n) => (n.className ? { ...n, className: undefined } : n)));
+        return;
+      }
+      void nest(moves, container);
     },
-    [viewId, perform],
+    // nestingDrop и nest читают документ в момент события.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [viewId, perform, snap, flow],
   );
+
+  const nest = async (moves: Array<{ id: Uuid; parentId?: Uuid; x: number; y: number }>, container?: ViewNode) => {
+    const before = useEditor.getState().doc!;
+    const edit = nestNodes(before.loadedViews[viewId]!, moves);
+    const changes: Change[] = [...edit.changes];
+    const affected = [...edit.affected];
+    const children = moves
+      .filter((m) => (before.loadedViews[viewId]!.nodes[m.id]!.parentId ?? undefined) !== m.parentId)
+      .map((m) => before.loadedViews[viewId]!.nodes[m.id]!.elementId)
+      .filter((id): id is Uuid => !!id);
+    const implied = await impliedChanges(applyChanges(before, changes), container, children);
+    changes.push(...implied.changes);
+    affected.push(...implied.affected);
+    setNodes((list) => list.map((n) => (n.className ? { ...n, className: undefined } : n)));
+    const name = container
+      ? (container.elementId ? before.elements[container.elementId]?.name : container.label) ?? ''
+      : '';
+    perform(container ? t('tree_ops.nestOp', { n: moves.length, name }) : t('tree_ops.unnestOp', { n: moves.length }), changes, affected);
+  };
+
+  /** Связи, которые подразумевает вложение элементов в элемент-контейнер; тип называет сервер. */
+  const impliedChanges = async (working: ModelDoc, container: ViewNode | undefined, childElementIds: Uuid[]) => {
+    const changes: Change[] = [];
+    const affected: Uuid[] = [];
+    const parent = container?.elementId ? working.elements[container.elementId] : undefined;
+    if (!parent) return { changes, affected };
+    let doc = working;
+    for (const childId of childElementIds) {
+      const child = doc.elements[childId];
+      if (!child) continue;
+      const options = await queries.fetchQuery({
+        queryKey: ['metamodel', 'relations', parent.archiType, child.archiType],
+        queryFn: () => api.relationTypes(parent.archiType, child.archiType),
+        staleTime: Infinity,
+      });
+      const nesting = options.find((o) => o.nesting);
+      if (!nesting) continue;
+      const relation = impliedRelationship(doc, parent.id, child.id, nesting.archiType);
+      changes.push(...relation.changes);
+      affected.push(...relation.affected);
+      doc = applyChanges(doc, relation.changes);
+    }
+    return { changes, affected };
+  };
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (!canEdit || (event.key !== 'Delete' && event.key !== 'Backspace')) return;
@@ -153,15 +485,22 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
     const ids = Object.values(view.nodes)
       .filter((n) => nodeSelected(n, selected))
-      .filter((n) => n.kind === 'DIAGRAM_OBJECT' || n.kind === 'OTHER')
       .map((n) => n.id);
-    if (Object.values(view.nodes).some((n) => nodeSelected(n, selected) && (n.kind === 'GROUP' || n.kind === 'NOTE'))) {
-      toast(t('errors.unsupported', { detail: t('canvas.groupRemoval') }), { tone: 'error' });
-    }
-    if (ids.length === 0) return;
+    const nodeEdit = removeFromView(view, ids);
+    // Рёбра выделенных связей, которые не уходят вместе с узлами: связь остаётся в модели.
+    const leaving = new Set(nodeEdit.changes.filter((c) => c.entity === 'edge').map((c) => c.id));
+    const edgeIds = Object.values(view.edges)
+      .filter((e) => edgeSelected(e, selected) && !leaving.has(e.id))
+      .map((e) => e.id);
+    if (ids.length === 0 && edgeIds.length === 0) return;
     event.preventDefault();
-    const edit = removeFromView(view, ids);
-    perform(t('tree_ops.removeFromViewOp', { n: ids.length }), edit.changes, edit.affected);
+    const remaining = applyChanges(useEditor.getState().doc!, nodeEdit.changes).loadedViews[viewId]!;
+    const edgeEdit = removeEdgesFromView(remaining, edgeIds);
+    perform(
+      t('tree_ops.removeFromViewOp', { n: ids.length + edgeIds.length }),
+      [...nodeEdit.changes, ...edgeEdit.changes],
+      [...nodeEdit.affected, ...edgeEdit.affected],
+    );
   };
 
   const onDragOver = (event: React.DragEvent) => {
@@ -173,15 +512,26 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
     }
   };
 
-  const onDrop = (event: React.DragEvent) => {
+  // Отпущенное над контейнером ложится внутрь него, как в Archi; элемент в элементе
+  // получает подразумеваемую связь той же операцией.
+  const onDrop = async (event: React.DragEvent) => {
     if (!canEdit) return;
     event.preventDefault();
     const point = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
     const snapTo = (v: number) => (snap ? Math.round(v / GRID) * GRID : Math.round(v));
-    const x = snapTo(point.x - 60);
-    const y = snapTo(point.y - 27);
     const current = useEditor.getState().doc!;
     const currentView = current.loadedViews[viewId]!;
+    const container = containerAt(currentView, point, new Set());
+    const origin = container ? absolutePosition(currentView, container.id) : { x: 0, y: 0 };
+    const at = (size: { width: number; height: number }) => ({
+      x: snapTo(point.x - size.width / 2 - origin.x),
+      y: snapTo(point.y - size.height / 2 - origin.y),
+    });
+    const placeWithImplied = async (label: string, edit: { changes: Change[]; affected: Uuid[] }, elementId: Uuid) => {
+      const implied = await impliedChanges(applyChanges(current, edit.changes), container, [elementId]);
+      perform(label, [...edit.changes, ...implied.changes], [...edit.affected, ...implied.affected]);
+      select([elementId], 'canvas');
+    };
     const elementId = event.dataTransfer.getData(DRAG_ELEMENT);
     if (elementId) {
       const existing = Object.values(currentView.nodes).find((n) => n.elementId === elementId);
@@ -193,19 +543,28 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
       }
       const element = current.elements[elementId];
       if (!element) return;
-      const edit = placeElement(currentView, elementId, x, y);
-      perform(t('tree_ops.placeOp', { name: element.name }), edit.changes, edit.affected);
-      select([elementId], 'canvas');
+      const size = effectiveSize(element.archiType, -1, -1);
+      const { x, y } = at(size);
+      const edit = placeElement(currentView, elementId, x, y, size, container?.id);
+      await placeWithImplied(t('tree_ops.placeOp', { name: element.name }), edit, elementId);
       return;
     }
     const paletteType = parsePaletteDrag(event.dataTransfer.getData(DRAG_PALETTE_TYPE));
-    if (paletteType) {
-      const name = paletteType.defaultName;
-      const edit = createAndPlace(current, currentView, paletteType.archiType, paletteType.layer, name, x, y);
-      if (!edit) return;
-      perform(t('tree_ops.createOp', { name }), edit.changes, edit.affected);
-      select([edit.elementId], 'canvas');
+    if (!paletteType) return;
+    if (paletteType.kind) {
+      const size = effectiveSize(paletteType.archiType, -1, -1);
+      const { x, y } = at(size);
+      const edit = placeAnnotation(currentView, paletteType.kind, paletteType.defaultName, x, y, container?.id);
+      perform(t('tree_ops.createOp', { name: paletteType.defaultName || typeName(paletteType.archiType) }), edit.changes, edit.affected);
+      select([edit.nodeId], 'canvas');
+      return;
     }
+    const size = effectiveSize(paletteType.archiType, -1, -1);
+    const { x, y } = at(size);
+    const name = paletteType.defaultName;
+    const edit = createAndPlace(current, currentView, paletteType.archiType, paletteType.layer, name, x, y, size, container?.id);
+    if (!edit) return;
+    await placeWithImplied(t('tree_ops.createOp', { name: name || typeName(paletteType.archiType) }), edit, edit.elementId);
   };
 
   return (
@@ -216,7 +575,7 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
       data-view={viewId}
       onKeyDown={onKeyDown}
       onDragOver={onDragOver}
-      onDrop={onDrop}
+      onDrop={(event) => void onDrop(event)}
     >
       <ReactFlow
         nodes={nodes}
@@ -238,6 +597,7 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
           boxSelecting.current = true;
         }}
         onSelectionEnd={onSelectionEnd}
+        onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         defaultViewport={viewport}
         fitView={!viewport}
@@ -256,11 +616,85 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
         onlyRenderVisibleElements
         attributionPosition="bottom-left"
         elevateNodesOnSelect={false}
+        // Порядок слоёв задаёт глубина вложенности, и только она: React Flow в режиме
+        // по умолчанию добавляет к уровню ребра уровень вложенного конца, и ребро
+        // к вложенному узлу встаёт над соседями и перехватывает клики по ним.
+        zIndexMode="manual"
       >
-        <Background variant={BackgroundVariant.Lines} gap={GRID} color="var(--paper-line)" />
+        {navigator && (
+          <MiniMap
+            position="top-right"
+            pannable
+            zoomable
+            ariaLabel={t('canvas.navigator')}
+            className="navigator"
+            nodeColor={minimapColor}
+            nodeStrokeWidth={0}
+          />
+        )}
+        {snap && <Background variant={BackgroundVariant.Lines} gap={GRID} color="var(--paper-line)" />}
       </ReactFlow>
+      {guideLines.length > 0 && <GuideOverlay lines={guideLines} wrapper={wrapper} />}
+      {connecting && (
+        <svg className="connect-line" data-testid="connect-line">
+          <line x1={connecting.from.x} y1={connecting.from.y} x2={connecting.to.x} y2={connecting.to.y} />
+        </svg>
+      )}
+      {choice && <RelationPicker choice={choice} onPick={pickRelation} onCancel={() => setChoice(null)} />}
+      <CanvasTools viewId={viewId} canEdit={canEdit} />
       <Zoomer />
     </div>
+  );
+}
+
+/** Есть ли среди предков узла кто-то из набора. */
+function hasAncestorIn(view: ViewDoc, id: Uuid, set: ReadonlySet<Uuid>): boolean {
+  let parent = view.nodes[id]?.parentId;
+  while (parent) {
+    if (set.has(parent)) return true;
+    parent = view.nodes[parent]?.parentId;
+  }
+  return false;
+}
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+/**
+ * Узел или ребро холста под указателем. Узел сильнее ребра: полоса захвата ребра,
+ * проходящего через фигуру, не должна превращать связь с элементом в связь со связью.
+ */
+function endpointAt(clientX: number, clientY: number): Uuid | undefined {
+  const hits = document.elementsFromPoint(clientX, clientY);
+  const first = (selector: string) => {
+    for (const element of hits) {
+      const id = element.closest(selector)?.getAttribute('data-id');
+      if (id) return id;
+    }
+    return undefined;
+  };
+  return first('.react-flow__node') ?? first('.react-flow__edge');
+}
+
+/** Направляющие поверх холста: линии в координатах холста переводятся в экранные. */
+function GuideOverlay({ lines, wrapper }: { lines: GuideLine[]; wrapper: React.RefObject<HTMLDivElement | null> }) {
+  const flow = useReactFlow();
+  const box = wrapper.current?.getBoundingClientRect();
+  if (!box) return null;
+  const at = (x: number, y: number) => {
+    const p = flow.flowToScreenPosition({ x, y });
+    return { x: p.x - box.left, y: p.y - box.top };
+  };
+  return (
+    <svg className="guide-lines" data-testid="guide-lines">
+      {lines.map((line, i) => {
+        const a = at(line.x1, line.y1);
+        const b = at(line.x2, line.y2);
+        return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} />;
+      })}
+    </svg>
   );
 }
 
@@ -272,7 +706,7 @@ function Zoomer() {
       <button type="button" className="btn btn--icon" title={t('canvas.zoomOut')} onClick={() => void flow.zoomOut()}>
         <Icon name="minus" />
       </button>
-      <span className="zoomer__val">{`${Math.round((zoom ?? 1) * 100)}%`}</span>
+      <span className="zoomer__val" data-testid="zoom-value">{`${Math.round((zoom ?? 1) * 100)}%`}</span>
       <button type="button" className="btn btn--icon" title={t('canvas.zoomIn')} onClick={() => void flow.zoomIn()}>
         <Icon name="plus" />
       </button>

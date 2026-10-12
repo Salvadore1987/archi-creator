@@ -3,7 +3,22 @@ import { referenceTree, referenceViews } from '../tree/fixture';
 import { commandsFor } from './commands';
 import { applyChanges, fromTree, viewDocOf } from './doc';
 import { invert } from './history';
-import { createFolder, deleteObjects, isSystemFolder, moveItems, placeElement, removeFromView, rootOf } from './ops';
+import {
+  applyLayoutPatch,
+  copySelection,
+  createFolder,
+  deleteObjects,
+  drawRelationship,
+  impliedRelationship,
+  isSystemFolder,
+  layoutRequest,
+  moveItems,
+  nestNodes,
+  pasteClip,
+  placeElement,
+  removeFromView,
+  rootOf,
+} from './ops';
 
 function docWithViews() {
   const doc = fromTree(referenceTree);
@@ -98,5 +113,102 @@ describe('UI-016: правка дерева', () => {
     const edit = createFolder(doc, root.id, 'Новая');
     const [command] = edit.changes.flatMap((c) => commandsFor(doc.model.id, c));
     expect(command!.describe).toBe(`create folder ${edit.folderId}`);
+  });
+});
+
+describe('UI-003: нарисованная связь', () => {
+  it('новая связь и её ребро — одна правка, на сервер две команды', () => {
+    const doc = docWithViews();
+    const view = Object.values(doc.loadedViews).find((v) => Object.values(v.nodes).filter((n) => n.elementId).length > 1)!;
+    const [a, b] = Object.values(view.nodes).filter((n) => n.elementId && !n.parentId);
+    const edit = drawRelationship(doc, view, a!.id, b!.id, 'archimate:AssociationRelationship')!;
+    expect(edit.created).toBe(true);
+    const after = applyChanges(doc, edit.changes);
+    const relationship = after.relationships[edit.relationshipId]!;
+    expect([relationship.sourceId, relationship.targetId]).toEqual([a!.elementId, b!.elementId]);
+    expect(doc.folders[relationship.folderId]!.folderType).toBe('RELATIONS');
+    const commands = edit.changes.flatMap((c) => commandsFor(doc.model.id, c)).map((c) => c.describe);
+    expect(commands).toEqual([`create relationship ${edit.relationshipId}`, expect.stringMatching(/^place edge /)]);
+  });
+
+  it('связь того же типа между той же парой не дублируется — рисуется её ребро', () => {
+    const doc = docWithViews();
+    const view = Object.values(doc.loadedViews).find((v) => Object.values(v.edges).length > 0)!;
+    const edge = Object.values(view.edges).find((e) => view.nodes[e.sourceId] && view.nodes[e.targetId])!;
+    const relationship = doc.relationships[edge.relationshipId!]!;
+    expect(drawRelationship(doc, view, edge.sourceId, edge.targetId, relationship.archiType)!.changes).toEqual([]);
+    const without = applyChanges(doc, [{ entity: 'edge', id: edge.id, viewId: view.id, before: edge, after: null }]);
+    const again = drawRelationship(without, without.loadedViews[view.id]!, edge.sourceId, edge.targetId, relationship.archiType)!;
+    expect(again.created).toBe(false);
+    expect(again.changes.map((c) => c.entity)).toEqual(['edge']);
+  });
+});
+
+describe('UI-004: вложенность', () => {
+  it('перенос в контейнер — в конец его содержимого, на сервер команда переноса', () => {
+    const doc = docWithViews();
+    const view = Object.values(doc.loadedViews).find((v) => Object.values(v.nodes).filter((n) => !n.parentId && n.elementId).length > 1)!;
+    const [parent, child] = Object.values(view.nodes).filter((n) => !n.parentId && n.elementId);
+    const edit = nestNodes(view, [{ id: child!.id, parentId: parent!.id, x: 10, y: 20 }]);
+    const moved = edit.changes[0]!.after as typeof child;
+    expect(moved!.parentId).toBe(parent!.id);
+    const siblings = Object.values(view.nodes).filter((n) => n.parentId === parent!.id).map((n) => n.sortOrder);
+    expect(moved!.sortOrder).toBeGreaterThan(Math.max(0, ...siblings));
+    expect(commandsFor(doc.model.id, edit.changes[0]!).map((c) => c.describe)).toEqual([`reparent node ${child!.id}`]);
+    const back = invert(op(edit.changes)).changes.flatMap((c) => commandsFor(doc.model.id, c)).map((c) => c.describe);
+    expect(back).toEqual([`reparent node ${child!.id}`]);
+  });
+
+  it('подразумеваемая связь не дублирует уже выражающую вложенность', () => {
+    const doc = docWithViews();
+    const composition = Object.values(doc.relationships).find((r) => r.archiType === 'archimate:CompositionRelationship')!;
+    expect(impliedRelationship(doc, composition.sourceId, composition.targetId, 'archimate:CompositionRelationship').changes).toEqual([]);
+    const [a, b] = Object.values(doc.elements).filter(
+      (e) => !Object.values(doc.relationships).some((r) => r.sourceId === e.id || r.targetId === e.id),
+    );
+    const implied = impliedRelationship(doc, a!.id, b!.id, 'archimate:AssignmentRelationship');
+    expect(implied.changes.map((c) => c.entity)).toEqual(['relationship']);
+  });
+});
+
+describe('UI-005: авторазметка', () => {
+  it('граф — все узлы с типами элементов, предложение — одна правка, на сервер PUT layout', () => {
+    const doc = docWithViews();
+    const view = Object.values(doc.loadedViews).find((v) => Object.values(v.edges).length > 0)!;
+    const request = layoutRequest(doc, view, 'layered');
+    expect(request.nodes).toHaveLength(Object.keys(view.nodes).length);
+    const withElement = request.nodes.find((n) => view.nodes[n.id]!.elementId)!;
+    expect(withElement.conceptType).toBe(doc.elements[view.nodes[withElement.id]!.elementId!]!.archiType);
+    const root = request.nodes.find((n) => !n.parentId)!;
+    const edge = Object.values(view.edges).find((e) => e.bendpoints.length > 0) ?? Object.values(view.edges)[0]!;
+    const edit = applyLayoutPatch(view, {
+      nodes: [{ id: root.id, x: root.x + 100, y: root.y, width: root.width, height: root.height }],
+      edges: [{ id: edge.id, bendpoints: [] }],
+    });
+    const commands = edit.changes.flatMap((c) => commandsFor(doc.model.id, c)).map((c) => c.describe);
+    expect(commands[0]).toBe(`layout node ${root.id}`);
+    expect(applyLayoutPatch(view, { nodes: [], edges: [] }).changes).toEqual([]);
+  });
+});
+
+describe('UI-006: копирование и вставка', () => {
+  it('вложенность сохраняется, верхние узлы смещаются, дети — нет', () => {
+    const doc = docWithViews();
+    const views = Object.values(doc.loadedViews);
+    const nestedInElement = (v: (typeof views)[number]) =>
+      Object.values(v.nodes).find((n) => n.parentId && !v.nodes[n.parentId]!.parentId && v.nodes[n.parentId]!.elementId);
+    const source = views.find((v) => nestedInElement(v))!;
+    const child = nestedInElement(source)!;
+    const parent = source.nodes[child.parentId!]!;
+    const target = views.find((v) => v.id !== source.id && !Object.values(v.nodes).some((n) => n.elementId === parent.elementId))!;
+    const clip = copySelection(source, [parent.id])!;
+    const edit = pasteClip(doc, target, clip, { x: 20, y: 20 }, (name) => `${name}*`);
+    const after = applyChanges(doc, edit.changes).loadedViews[target.id]!;
+    const pastedParent = Object.values(after.nodes).find((n) => n.elementId === parent.elementId && !target.nodes[n.id])!;
+    expect([pastedParent.x, pastedParent.y]).toEqual([parent.x + 20, parent.y + 20]);
+    const pastedChild = Object.values(after.nodes).find((n) => n.parentId === pastedParent.id && n.x === child.x && n.y === child.y);
+    expect(pastedChild).toBeDefined();
+    const copiedNames = edit.changes.filter((c) => c.entity === 'element').map((c) => (c.after as { name: string }).name);
+    expect(copiedNames).not.toContain(`${doc.elements[parent.elementId!]!.name}*`);
   });
 });

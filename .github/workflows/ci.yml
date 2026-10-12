@@ -2,13 +2,9 @@
 # Конвейер сборки.
 #
 # Порядок: сборка → юнит → golden-file → интеграционные →
-# фронтенд → Playwright → образ. Здесь пока шаги, которым есть что
-# проверять: golden-file round-trip, интеграционные на Testcontainers,
-# юнит-тесты, сборка фронтенда внутрь jar и образ.
-#
-# Отсутствующие шаги не заведены пустыми намеренно: зелёная галочка
-# над ненаписанным тестом хуже отсутствующей. Где они появятся:
-#   Playwright        — этап 4
+# фронтенд → Playwright → образ. Playwright идёт своей работой
+# параллельно сборке: API в сценариях подменяется в браузере,
+# и ни сервер, ни база им не нужны.
 # ───────────────────────────────────────────────────────────────────
 name: CI
 
@@ -153,6 +149,51 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # Сценарии E2E, визуальные снимки и замер канвы. Сервер не поднимается:
+  # API подменяет in-memory сервер на снимке эталонной модели.
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    # Браузер, шрифты и сглаживание — из образа Playwright, в котором снят визуальный
+    # эталон (…-chromium-linux.png): на голом ubuntu-latest шрифты другие, и снимок
+    # расходился на 2 %. Тег образа — версия @playwright/test из package-lock.json.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    defaults:
+      run:
+        working-directory: archi-bootstrap/src/main/frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      # Версия Node — та, что ставит сборка: читается из pom.xml родителя,
+      # а не дублируется здесь, иначе две версии разошлись бы.
+      - name: Версия Node из pom.xml
+        id: node
+        working-directory: .
+        run: echo "version=$(sed -n 's:.*<node.version>v\(.*\)</node.version>.*:\1:p' pom.xml)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+          cache: npm
+          cache-dependency-path: archi-bootstrap/src/main/frontend/package-lock.json
+
+      - name: npm ci
+        run: npm ci
+
+      # Браузер уже в образе — ставить нечего.
+      - name: Сценарии Playwright
+        run: npx playwright test
+
+      - name: Отчёт при отказе
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: archi-bootstrap/src/main/frontend/test-results
+          retention-days: 7
+
   image:
     name: Образ приложения
     needs: build
@@ -189,8 +230,8 @@ jobs:
 
       # Проверяется не «собрался», а «поднимается»: образ с базой должен
       # дойти до UP. Это тот же критерий готовности этапа 0, только без
-      # Keycloak — вход проверяется руками, автоматический тест входа
-      # придёт вместе с Playwright на этапе 4.
+      # Keycloak: вход сервера проверяют KeycloakIT и SessionIT, а сценарии
+      # Playwright идут на подменённом API и Keycloak не касаются.
       - name: Образ поднимается и отвечает UP
         run: |
           docker run -d --name archi-smoke --network host \

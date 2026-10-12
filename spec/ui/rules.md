@@ -1,6 +1,6 @@
 ---
 version: 1.0
-last_modified: 2026-10-09
+last_modified: 2026-10-12
 layer: ui
 ---
 
@@ -454,8 +454,7 @@ CSS не рисуется.
 | UI-020 | `e2e/opaque-node.spec.ts` | — |
 | UI-021 | `e2e/i18n-resources.spec.ts` | — |
 
-Имена — контракт на то, как тест назван. Тесты правил этапа 3 существуют
-(2026-10-09) и лежат в `archi-bootstrap/src/main/frontend/`: `e2e/`, `visual/`,
-`perf/`; у `UI-003`…`UI-006` и `UI-019` (паритет с серверным SVG) тестов ещё нет —
-это этапы 4 и 5a. E2E-стек — Playwright
+Имена — контракт на то, как тест назван. Тесты правил этапов 3 и 4 существуют
+(2026-10-09 и 2026-10-12) и лежат в `archi-bootstrap/src/main/frontend/`: `e2e/`,
+`visual/`, `perf/`; у `UI-019` (паритет с серверным SVG) теста ещё нет — это этап 5a. E2E-стек — Playwright
 ([`docs/frontend.md` §9.4](../../docs/frontend.md#94-e2e-playwright)).

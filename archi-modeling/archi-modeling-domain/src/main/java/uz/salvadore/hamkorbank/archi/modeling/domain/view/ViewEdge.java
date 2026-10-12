@@ -40,6 +40,11 @@ public record ViewEdge(ViewEdgeId id, ArchiId archiId, DiagramType archiType, Op
         return source.equals(endpoint) || target.equals(endpoint);
     }
 
+    public ViewEdge withStyle(StyleOverride newStyle) {
+        return new ViewEdge(id, archiId, archiType, relationshipId, source, target, bendpoints, newStyle, sortOrder,
+                rawXml);
+    }
+
     public ViewEdge withBendpoints(List<Bendpoint> newBendpoints) {
         return new ViewEdge(id, archiId, archiType, relationshipId, source, target, newBendpoints, style, sortOrder,
                 rawXml);

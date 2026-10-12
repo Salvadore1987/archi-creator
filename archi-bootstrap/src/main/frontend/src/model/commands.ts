@@ -2,7 +2,7 @@ import { api } from '../api/endpoints';
 import { ErrorCodes } from '../api/codes';
 import { ApiError } from '../api/http';
 import type { MessageKey } from '../i18n';
-import type { Element, Folder, Property, Relationship, Uuid, ViewEdge, ViewNode, ViewSummary } from '../api/types';
+import type { Element, Folder, Property, Relationship, Style, Uuid, ViewEdge, ViewNode, ViewSummary } from '../api/types';
 import type { Change } from './doc';
 import type { Operation } from './history';
 
@@ -164,44 +164,92 @@ function viewCommands(modelId: Uuid, before: ViewSummary | null, after: ViewSumm
   return result;
 }
 
+/** Стиль как его хранит сервер: пустой и отсутствующий — одно и то же. */
+function sameStyle(a?: Style, b?: Style): boolean {
+  const norm = (style?: Style) => JSON.stringify(Object.fromEntries(Object.entries(style ?? {}).filter(([, v]) => v !== undefined && v !== '').sort()));
+  return norm(a) === norm(b);
+}
+
+function hasStyle(style?: Style): boolean {
+  return !sameStyle(style, undefined);
+}
+
 function nodeCommands(viewId: Uuid, before: ViewNode | null, after: ViewNode | null): Command[] {
   if (!before && after) {
-    if (!after.elementId) {
-      throw new UnsupportedChange('unsupported.groupNotePlacement');
+    const result: Command[] = [];
+    if (after.elementId) {
+      result.push(
+        command(`place node ${after.id}`, () =>
+          api.placeNode(viewId, {
+            id: after.id,
+            archiId: after.archiId,
+            elementId: after.elementId!,
+            x: after.x,
+            y: after.y,
+            width: after.width,
+            height: after.height,
+            parentId: after.parentId,
+          }),
+        ),
+      );
+    } else if (after.kind === 'GROUP' || after.kind === 'NOTE') {
+      result.push(
+        command(`place node ${after.id}`, () =>
+          api.placeNode(viewId, {
+            id: after.id,
+            archiId: after.archiId,
+            kind: after.kind as 'GROUP' | 'NOTE',
+            label: after.kind === 'GROUP' ? after.label : undefined,
+            content: after.kind === 'NOTE' ? after.content : undefined,
+            x: after.x,
+            y: after.y,
+            width: after.width,
+            height: after.height,
+            parentId: after.parentId,
+          }),
+        ),
+      );
+    } else {
+      throw new UnsupportedChange('unsupported.nodeKindPlacement');
     }
-    return [
-      command(`place node ${after.id}`, () =>
-        api.placeNode(viewId, {
-          id: after.id,
-          archiId: after.archiId,
-          elementId: after.elementId!,
-          x: after.x,
-          y: after.y,
-          width: after.width,
-          height: after.height,
-          parentId: after.parentId,
-        }),
-      ),
-    ];
+    if (hasStyle(after.style)) {
+      result.push(command(`style node ${after.id}`, () => api.editNode(after.id, { style: after.style! })));
+    }
+    return result;
   }
   if (before && !after) {
     return [command(`remove node ${before.id}`, () => api.removeNode(before.id))];
   }
-  if ((before!.parentId ?? null) !== (after!.parentId ?? null)) {
-    throw new UnsupportedChange('unsupported.nodeReparent');
+  const was = before!;
+  const now = after!;
+  const result: Command[] = [];
+  const reparented = (was.parentId ?? null) !== (now.parentId ?? null);
+  if (reparented) {
+    result.push(
+      command(`reparent node ${now.id}`, () => api.moveNodeToParent(now.id, { parentId: now.parentId, x: now.x, y: now.y })),
+    );
   }
-  const moved =
-    before!.x !== after!.x || before!.y !== after!.y || before!.width !== after!.width || before!.height !== after!.height;
-  return moved
-    ? [
-        command(`layout node ${after!.id}`, () =>
-          api.saveLayout(viewId, {
-            nodes: [{ id: after!.id, x: after!.x, y: after!.y, width: after!.width, height: after!.height }],
-            edges: [],
-          }),
-        ),
-      ]
-    : [];
+  const moved = !reparented && (was.x !== now.x || was.y !== now.y);
+  const resized = was.width !== now.width || was.height !== now.height;
+  if (moved || resized) {
+    result.push(
+      command(`layout node ${now.id}`, () =>
+        api.saveLayout(viewId, {
+          nodes: [{ id: now.id, x: now.x, y: now.y, width: now.width, height: now.height }],
+          edges: [],
+        }),
+      ),
+    );
+  }
+  const text: { label?: string; content?: string } = {};
+  if ((was.label ?? '') !== (now.label ?? '')) text.label = now.label ?? '';
+  if ((was.content ?? '') !== (now.content ?? '')) text.content = now.content ?? '';
+  const restyled = !sameStyle(was.style, now.style);
+  if (Object.keys(text).length > 0 || restyled) {
+    const body = restyled ? { ...text, style: now.style ?? {} } : text;
+    result.push(command(`edit node ${now.id}`, () => api.editNode(now.id, body)));
+  }
+  return result;
 }
 
 function edgeCommands(viewId: Uuid, before: ViewEdge | null, after: ViewEdge | null): Command[] {
@@ -209,7 +257,7 @@ function edgeCommands(viewId: Uuid, before: ViewEdge | null, after: ViewEdge | n
     if (!after.relationshipId) {
       throw new UnsupportedChange('unsupported.edgeWithoutRelationship');
     }
-    return [
+    const result = [
       command(`place edge ${after.id}`, () =>
         api.placeEdge(viewId, {
           id: after.id,
@@ -221,17 +269,26 @@ function edgeCommands(viewId: Uuid, before: ViewEdge | null, after: ViewEdge | n
         }),
       ),
     ];
+    if (hasStyle(after.style)) {
+      result.push(command(`style edge ${after.id}`, () => api.editEdge(after.id, { style: after.style! })));
+    }
+    return result;
   }
   if (before && !after) {
-    throw new UnsupportedChange('unsupported.edgeRemoval');
+    return [command(`remove edge ${before.id}`, () => api.removeEdge(before.id))];
   }
-  return JSON.stringify(before!.bendpoints) !== JSON.stringify(after!.bendpoints)
-    ? [
-        command(`layout edge ${after!.id}`, () =>
-          api.saveLayout(viewId, { nodes: [], edges: [{ id: after!.id, bendpoints: after!.bendpoints }] }),
-        ),
-      ]
-    : [];
+  const result: Command[] = [];
+  if (JSON.stringify(before!.bendpoints) !== JSON.stringify(after!.bendpoints)) {
+    result.push(
+      command(`layout edge ${after!.id}`, () =>
+        api.saveLayout(viewId, { nodes: [], edges: [{ id: after!.id, bendpoints: after!.bendpoints }] }),
+      ),
+    );
+  }
+  if (!sameStyle(before!.style, after!.style)) {
+    result.push(command(`style edge ${after!.id}`, () => api.editEdge(after!.id, { style: after!.style ?? {} })));
+  }
+  return result;
 }
 
 /** Ход синхронизации: сколько выполнено и что осталось, если прервалась. */

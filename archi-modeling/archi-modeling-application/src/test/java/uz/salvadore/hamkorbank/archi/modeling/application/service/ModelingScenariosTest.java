@@ -171,4 +171,24 @@ class ModelingScenariosTest {
         assertEquals(1, ports.models.get(model).elements().size());
         assertEquals(0, ports.views.get(view.id()).nodes().size(), "размещение ушло вместе с элементом");
     }
+
+    @Test
+    @DisplayName("UI-004: среди допустимых связей пары помечена подразумеваемая вложением — одна или ни одной")
+    void suggestionsMarkNestingRelationship() {
+        var nodeInNode = RelationshipService.suggestions(ArchiType.ofSimpleName("Node"),
+                ArchiType.ofSimpleName("SystemSoftware"));
+        assertEquals(List.of("COMPOSITION"), nodeInNode.stream().filter(RelationshipService.Suggestion::nesting)
+                .map(x -> x.type().name()).toList(), "где допустимы обе — composition");
+        assertTrue(nodeInNode.getFirst().byDefault());
+        assertEquals(1, nodeInNode.stream().filter(RelationshipService.Suggestion::byDefault).count());
+
+        var actorInRole = RelationshipService.suggestions(ArchiType.ofSimpleName("BusinessActor"),
+                ArchiType.ofSimpleName("BusinessRole"));
+        assertEquals(List.of("ASSIGNMENT"), actorInRole.stream().filter(RelationshipService.Suggestion::nesting)
+                .map(x -> x.type().name()).toList());
+
+        var componentInProcess = RelationshipService.suggestions(COMPONENT, ArchiType.ofSimpleName("BusinessProcess"));
+        assertFalse(componentInProcess.stream().anyMatch(RelationshipService.Suggestion::nesting),
+                "вложенность связи не подразумевает");
+    }
 }

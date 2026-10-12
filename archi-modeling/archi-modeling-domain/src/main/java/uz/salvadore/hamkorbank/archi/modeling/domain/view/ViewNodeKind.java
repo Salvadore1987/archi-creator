@@ -11,6 +11,16 @@ public enum ViewNodeKind {
     NOTE,
     OTHER;
 
+    /** Тип узла этого вида в файле; у {@link #OTHER} своего типа нет. */
+    public java.util.Optional<DiagramType> diagramType() {
+        return switch (this) {
+            case DIAGRAM_OBJECT -> java.util.Optional.of(DiagramType.DIAGRAM_OBJECT);
+            case GROUP -> java.util.Optional.of(DiagramType.GROUP);
+            case NOTE -> java.util.Optional.of(DiagramType.NOTE);
+            case OTHER -> java.util.Optional.empty();
+        };
+    }
+
     public static ViewNodeKind of(DiagramType type) {
         return switch (type.value()) {
             case "archimate:DiagramObject" -> DIAGRAM_OBJECT;

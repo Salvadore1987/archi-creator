@@ -81,6 +81,12 @@ export function parseArchiFont(value: string): FontSpec | undefined {
   return { family, sizePt: size, bold: (flags & 1) === 1, italic: (flags & 2) === 2 };
 }
 
+/** Обратное преобразование: строка SWT, которую Archi прочтёт как шрифт. */
+export function formatArchiFont(font: FontSpec): string {
+  const flags = (font.bold ? 1 : 0) | (font.italic ? 2 : 0);
+  return `1|${font.family}|${font.sizePt.toFixed(1)}|${flags}|`;
+}
+
 /** Выравнивание подписи Archi: 1 — влево, 2 — по центру, 4 — вправо. */
 export function textAlign(alignment: number | null | undefined): 'left' | 'center' | 'right' {
   return alignment === 1 ? 'left' : alignment === 4 ? 'right' : 'center';

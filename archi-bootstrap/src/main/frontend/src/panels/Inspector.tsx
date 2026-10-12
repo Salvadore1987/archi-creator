@@ -28,6 +28,10 @@ export function Inspector({ defaultTab }: { defaultTab: InspectorTab }) {
 
   const single = ids.length === 1 ? ids[0]! : undefined;
   const element = single ? doc.elements[single] : undefined;
+  const activeViewId = useEditor((s) => s.activeViewId);
+  const node = single && activeViewId ? doc.loadedViews[activeViewId]?.nodes[single] : undefined;
+  // У группы и заметки нет карточки модели: обе вкладки показывают сам объект представления.
+  const annotation = node?.kind === 'GROUP' || node?.kind === 'NOTE';
 
   return (
     <div className="inspector" data-testid="inspector">
@@ -63,8 +67,8 @@ export function Inspector({ defaultTab }: { defaultTab: InspectorTab }) {
         <BulkPanel ids={ids} />
       ) : !single ? (
         <div className="inspector__empty">{t('props.noSelection')}</div>
-      ) : tab === 'properties' ? (
-        <PropertiesTab key={single} id={single} editable={canEdit} />
+      ) : tab === 'properties' || annotation ? (
+        <PropertiesTab key={single} id={single} editable={canEdit && tab === 'properties'} />
       ) : (
         <DescriptionTab key={single} id={single} />
       )}

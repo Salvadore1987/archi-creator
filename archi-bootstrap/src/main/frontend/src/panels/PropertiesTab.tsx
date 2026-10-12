@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Property, Uuid } from '../api/types';
+import type { Property, Uuid, ViewNode } from '../api/types';
 import { Icon } from '../app/Icon';
 import { layerName, t, typeName } from '../i18n';
 import { placementIndex, type ModelDoc } from '../model/doc';
-import { updateContent } from '../model/ops';
+import { editNodeText, updateContent } from '../model/ops';
 import { useEditor } from '../model/store';
 import { folderPath } from '../tree/buildTree';
+import { layerToken } from '../canvas/style';
+import { StyleEditor } from './StyleEditor';
 
 /**
  * Форма объекта модели: имя, документация и свойства меняют элемент или
@@ -22,6 +24,12 @@ export function PropertiesTab({ id, editable }: { id: Uuid; editable: boolean })
   const object = element ?? relationship;
   const opaque = object ? !object.supported : false;
   const readOnly = !editable || opaque || !object;
+
+  const activeViewId = useEditor((s) => s.activeViewId);
+  const annotation = activeViewId ? doc.loadedViews[activeViewId]?.nodes[id] : undefined;
+  if (annotation && (annotation.kind === 'GROUP' || annotation.kind === 'NOTE')) {
+    return <AnnotationProps viewId={activeViewId!} node={annotation} editable={editable} />;
+  }
 
   const commit = (label: string, patch: { name?: string; documentation?: string; properties?: Property[] }) => {
     const edit = updateContent(useEditor.getState().doc!, id, patch);
@@ -99,6 +107,11 @@ export function PropertiesTab({ id, editable }: { id: Uuid; editable: boolean })
           onCommit={(properties) => commit(t('props.propertiesOp', { name }), { properties })}
         />
       </Field>
+      {activeViewId && doc.loadedViews[activeViewId] && (
+        <Field label={t('props.appearance')}>
+          <Appearance viewId={activeViewId} objectId={id} name={name} readOnly={readOnly} fallbackFill={`--layer-${layerToken(element?.layer)}`} />
+        </Field>
+      )}
       <Field label={t('props.views')}>
         <div className="kvs">
           <div className="kv">
@@ -111,6 +124,69 @@ export function PropertiesTab({ id, editable }: { id: Uuid; editable: boolean })
         <div className="field__mono">{object.archiId}</div>
       </Field>
     </div>
+  );
+}
+
+/** Группа и заметка — объекты представления, а не модели: правится подпись или текст узла. */
+function AnnotationProps({ viewId, node, editable }: { viewId: Uuid; node: ViewNode; editable: boolean }) {
+  const perform = useEditor((s) => s.perform);
+  const group = node.kind === 'GROUP';
+  const commit = (value: string) => {
+    const view = useEditor.getState().doc!.loadedViews[viewId]!;
+    const edit = editNodeText(view, node.id, group ? { label: value } : { content: value });
+    perform(group ? t('props.groupLabelOp', { name: value }) : t('props.noteTextOp'), edit.changes, edit.affected);
+  };
+  return (
+    <div className="props scroll" data-testid="properties">
+      {!editable && <div className="props__note">{t('props.readOnly')}</div>}
+      <Field label={group ? t('props.groupLabel') : t('props.noteText')}>
+        <CommitInput
+          multiline={!group}
+          value={(group ? node.label : node.content) ?? ''}
+          readOnly={!editable}
+          testId={group ? 'prop-label' : 'prop-content'}
+          onCommit={commit}
+        />
+      </Field>
+      <Field label={t('props.type')}>
+        <div className="field__static">
+          {typeName(node.archiType)} <span className="field__mono">{node.archiType}</span>
+        </div>
+      </Field>
+      <Field label={t('props.appearance')}>
+        <StyleEditor
+          viewId={viewId}
+          nodeIds={[node.id]}
+          edgeIds={[]}
+          name={(group ? node.label : node.content) ?? typeName(node.archiType)}
+          readOnly={!editable}
+          fallbackFill={group ? '--group-fill' : '--note-fill'}
+        />
+      </Field>
+      <Field label={t('props.identifier')}>
+        <div className="field__mono">{node.archiId}</div>
+      </Field>
+    </div>
+  );
+}
+
+/** Оформление элемента или связи — на их узлах и рёбрах открытого представления. */
+function Appearance(props: { viewId: Uuid; objectId: Uuid; name: string; readOnly: boolean; fallbackFill: string }) {
+  const view = useEditor((s) => s.doc!.loadedViews[props.viewId]);
+  const nodeIds = Object.values(view?.nodes ?? {}).filter((n) => n.elementId === props.objectId).map((n) => n.id);
+  const edgeIds = Object.values(view?.edges ?? {}).filter((e) => e.relationshipId === props.objectId).map((e) => e.id);
+  if (nodeIds.length === 0 && edgeIds.length === 0) {
+    return <div className="field__static">{t('props.appearanceNone')}</div>;
+  }
+  return (
+    <StyleEditor
+      viewId={props.viewId}
+      nodeIds={nodeIds}
+      edgeIds={edgeIds}
+      name={props.name}
+      readOnly={props.readOnly}
+      fallbackFill={props.fallbackFill}
+    />
   );
 }
 

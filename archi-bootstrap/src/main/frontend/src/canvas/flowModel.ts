@@ -3,8 +3,9 @@ import type { Uuid, ViewEdge, ViewNode } from '../api/types';
 import type { ModelDoc, ViewDoc } from '../model/doc';
 import { effectiveSize } from './shapes';
 
-export type ArchiNodeData = { viewId: Uuid };
-export type ArchiEdgeData = { viewId: Uuid };
+/** `editable` — можно ли править представление: от него зависят полосы протягивания связи. */
+export type ArchiNodeData = { viewId: Uuid; editable: boolean };
+export type ArchiEdgeData = { viewId: Uuid; editable: boolean };
 export type ArchiFlowNode = Node<ArchiNodeData, 'archi'>;
 export type ArchiFlowEdge = Edge<ArchiEdgeData, 'archi'>;
 
@@ -54,7 +55,7 @@ export function toFlowNodes(
       type: 'archi',
       position: { x: node.x, y: node.y },
       parentId: node.parentId && view.nodes[node.parentId] ? node.parentId : undefined,
-      data: { viewId: view.id },
+      data: { viewId: view.id, editable },
       width: size.width,
       height: size.height,
       selected: nodeSelected(node, selected),
@@ -70,7 +71,7 @@ export function toFlowNodes(
  * React Flow такого не умеет, поэтому ему отдаётся ближайший узел, а точку
  * на середине ребра-конца считает сама отрисовка ребра.
  */
-export function toFlowEdges(view: ViewDoc, selected: ReadonlySet<Uuid>): ArchiFlowEdge[] {
+export function toFlowEdges(view: ViewDoc, selected: ReadonlySet<Uuid>, editable = false): ArchiFlowEdge[] {
   const nodeOf = (endpoint: Uuid, guard = 0): Uuid | undefined => {
     if (view.nodes[endpoint]) return endpoint;
     const edge = view.edges[endpoint];
@@ -86,7 +87,7 @@ export function toFlowEdges(view: ViewDoc, selected: ReadonlySet<Uuid>): ArchiFl
       type: 'archi',
       source,
       target,
-      data: { viewId: view.id },
+      data: { viewId: view.id, editable },
       selected: edgeSelected(edge, selected),
       // Над контейнерами, где лежат концы, но не над узлами своего уровня:
       // иначе полоса захвата ребра перекрывает клик по узлу под линией.
@@ -141,4 +142,23 @@ export function attachedEdges(view: ViewDoc, endpointIds: Iterable<Uuid>): ViewE
     }
   }
   return found;
+}
+
+/**
+ * Самый глубокий контейнер под точкой холста — элемент или группа, кроме исключённых
+ * (переносимые узлы и всё внутри них). При равной глубине — верхний по порядку отрисовки.
+ */
+export function containerAt(view: ViewDoc, point: { x: number; y: number }, exclude: ReadonlySet<Uuid>): ViewNode | undefined {
+  let best: { node: ViewNode; depth: number } | undefined;
+  for (const node of Object.values(view.nodes)) {
+    if (exclude.has(node.id) || (node.kind !== 'DIAGRAM_OBJECT' && node.kind !== 'GROUP')) continue;
+    const at = absolutePosition(view, node.id);
+    const size = effectiveSize(node.archiType, node.width, node.height);
+    if (point.x < at.x || point.y < at.y || point.x > at.x + size.width || point.y > at.y + size.height) continue;
+    const depth = depthOf(view, node);
+    if (!best || depth > best.depth || (depth === best.depth && node.sortOrder > best.node.sortOrder)) {
+      best = { node, depth };
+    }
+  }
+  return best?.node;
 }

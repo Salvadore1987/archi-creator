@@ -11,6 +11,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
+import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.NestingRules;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationMatrix;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationshipType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.AccessType;
@@ -171,6 +172,25 @@ public final class RelationshipService {
                 kernel.views.save(view);
             }
         }
+    }
+
+    /**
+     * Допустимый тип связи для пары в том порядке, в котором его предлагать.
+     *
+     * @param byDefault выбран по умолчанию — первый в списке
+     * @param nesting   этот тип подразумевает вложение цели в источник
+     */
+    public record Suggestion(RelationshipType type, boolean byDefault, boolean nesting) {
+    }
+
+    /** Что предложить при рисовании связи от {@code sourceType} к {@code targetType}. */
+    public static List<Suggestion> suggestions(ArchiType sourceType, ArchiType targetType) {
+        List<RelationshipType> permitted = suggest(sourceType, targetType);
+        Optional<RelationshipType> nesting = NestingRules.archimate32().impliedRelationship(sourceType, targetType);
+        return java.util.stream.IntStream.range(0, permitted.size())
+                .mapToObj(i -> new Suggestion(permitted.get(i), i == 0,
+                        nesting.equals(Optional.of(permitted.get(i)))))
+                .toList();
     }
 
     /** Допустимые типы для упорядоченной пары; первый — выбор по умолчанию. */

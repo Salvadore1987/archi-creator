@@ -1,6 +1,6 @@
 ---
-version: 1.3
-last_modified: 2026-10-08
+version: 1.4
+last_modified: 2026-10-12
 ---
 
 # ───────────────────────────────────────────────────────────────────
@@ -249,3 +249,13 @@ decisions:
     requirements: [FR-35, FR-05, FR-06, NFR-05]
     anchors: [UI-017, INV-MDL-006]
     implemented: 2026-10-09
+
+  - id: ADR-0019
+    title: Авторазметка считается на сервере, применяется в браузере
+    status: accepted
+    date: 2026-10-12
+    kind: architecture
+    adr_file: 0019-auto-layout-proposal.md
+    affects: [ui, modeling]
+    requirements: [FR-15]
+    anchors: [UI-005, UC-MDL-008]

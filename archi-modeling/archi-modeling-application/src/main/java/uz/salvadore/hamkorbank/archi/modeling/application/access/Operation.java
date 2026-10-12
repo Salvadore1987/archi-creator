@@ -27,6 +27,7 @@ public enum Operation {
     DELETE_RELATIONSHIP("DeleteRelationship", Role.ARCHITECT, Role.ADMIN),
     CREATE_VIEW("CreateView", Role.ARCHITECT, Role.ADMIN),
     SAVE_VIEW_LAYOUT("SaveViewLayout", Role.ARCHITECT, Role.ADMIN),
+    AUTO_LAYOUT_VIEW("AutoLayoutView", Role.ARCHITECT, Role.ADMIN),
     REORGANIZE_TREE("ReorganizeTree", Role.ARCHITECT, Role.ADMIN),
     SAVE_MODEL("SaveModel", Role.ARCHITECT, Role.ADMIN),
     RESTORE_VERSION("RestoreVersion", Role.ARCHITECT, Role.ADMIN),

@@ -23,7 +23,17 @@ export type IconName =
   | 'copy'
   | 'target'
   | 'upload'
-  | 'download';
+  | 'download'
+  | 'layout'
+  | 'align-left'
+  | 'align-center'
+  | 'align-right'
+  | 'align-top'
+  | 'align-middle'
+  | 'align-bottom'
+  | 'match-width'
+  | 'match-height'
+  | 'map';
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {
   return (

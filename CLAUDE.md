@@ -10,8 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Состояние репозитория
 
-**Этапы 0–3 закрыты (этап 3 — 2026-10-09). Следующий — этап 4: умные связи,
-вложенность, авторазметка, паритет с Archi.**
+**Этапы 0–4 закрыты (этап 4 — 2026-10-12). Следующие — независимые ветки 5 (ИИ),
+5a (экспорт картинок), 6 (метамодель фазы 2), 7a (Git).**
 Собирается multi-module Maven по
 [`ADR-0001`](spec/adr/0001-maven-multi-module.md): 17 проектов в реакторе — родитель,
 три агрегатора контекстов, двенадцать модулей-слоёв, `archi-bootstrap` с классом запуска
@@ -114,18 +114,35 @@ Application-слои без Spring: транзакция — порт `UnitOfWor
 | Идентификаторы от клиента, ребро связи, `label`/`content` узла, `placements` | modeling и interchange, миграция `V3__view_node_text.sql` |
 | E2E, визуальные проверки, замеры | `frontend/e2e/`, `frontend/visual/`, `frontend/perf/` |
 
+Что появилось на этапе 4 и где лежит:
+
+| Что | Где |
+|---|---|
+| Правка представления: группа и заметка, подпись и текст, стиль узла и ребра, удаление ребра, вложение узла ([`UC-MDL-008`](spec/application/modeling/usecases/edit-view.md)) | `View`, `ViewService`, `ViewController`; `ViewEditingIT` |
+| Авторазметка — предложение геометрии, база не меняется ([`ADR-0019`](spec/adr/0019-auto-layout-proposal.md)) | `archi-modeling-domain/.../modeling/domain/view/layout/` |
+| Флаг связи вложения в `/metamodel/relations` | `RelationshipService.suggestions` по `NestingRules` |
+| Умные связи, вложенность, авторазметка, паритет с Archi на канве | `frontend/src/canvas/` (`CanvasView`, `CanvasTools`, `RelationPicker`, `guides.ts`), `frontend/src/model/ops.ts` |
+| Собственный стиль объекта в «Свойствах» | `frontend/src/panels/StyleEditor.tsx` |
+| E2E этапа и приёмка | `frontend/e2e/{smart-relation,nesting,auto-layout,editing-parity,acceptance}.spec.ts`; работа `e2e` в CI |
+
+Подменный сервер E2E (`e2e/support/mockApi.ts`) читает ту же матрицу связей, что сервер
+(`e2e/support/relationMatrix.ts`), а авторазметку отвечает упрощённо — алгоритм сервера
+проверяют его юнит-тесты. Визуальный эталон — в двух вариантах, `-darwin` и `-linux`
+(снят в `mcr.microsoft.com/playwright` той же версии, что `@playwright/test`).
+
 **Правки живут в браузере до «Сохранить»** ([`ADR-0018`](spec/adr/0018-local-edit-session.md)):
 сохранение переводит сервер от точки сохранения к текущей позиции истории командами
 API и фиксирует версию. Идентификаторы новых объектов (`id`, `archiId`) задаёт клиент.
 Команды API по-прежнему меняют базу сразу — это свойство сервера, а не интерфейса.
 
-Тестов на сервере: 237 юнит-тестов (`./mvnw test`) и 43 интеграционных `*IT` на
+Тестов на сервере: 260 юнит-тестов (`./mvnw test`) и 48 интеграционных `*IT` на
 Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
-Во фронтенде: 52 юнит-теста vitest (`npm test`, гоняется фазой `test` Maven)
-и 43 сценария Playwright (`npm run e2e`, API подменяется — сервер не нужен).
+Во фронтенде: 62 юнит-теста vitest (`npm test`, гоняется фазой `test` Maven)
+и 67 сценариев Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
+работа `e2e`, два потока).
 
-Ещё не заведено: умные связи, вложенность и авторазметка (этап 4), Playwright в CI (4),
-правка стиля и групп/заметок (паритет, 4), экспорт картинок (5a), OEF (6a), Git (7a–7c).
+Ещё не заведено: ИИ-помощник (5), экспорт картинок (5a), метамодель фазы 2 (6),
+OEF (6a), Git (7a–7c); создание и удаление представлений из дерева (API нет).
 
 Содержательная часть проекта — **спецификация**. Прежде чем писать код, читай её:
 почти каждое решение уже принято и обосновано, и переизобретать его не нужно.
@@ -375,7 +392,7 @@ Co-Authored-By: …
 | [`spec/application/<bc>/usecases/`](spec/application/) | Use case'ы `UC-<BC>-NNN`: Given/When/Then, порты, отказы |
 | [`spec/ui/`](spec/ui/README.md) | Слой интерфейса: правила `UI-NNN`, токены стиля, контракт геометрии фигур |
 | [`spec/contracts/<bc>/`](spec/contracts/) | OpenAPI и AsyncAPI |
-| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 18 записей, шесть с файлами MADR |
+| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 19 записей, семь с файлами MADR |
 | [`spec/nfr/<bc>.yaml`](spec/nfr/) | SLO, latency, throughput, security по контекстам |
 
 Правила при правке `spec/`:

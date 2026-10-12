@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -17,11 +18,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.AutoLayoutRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.BendpointDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.CreateViewRequest;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EditEdgeRequest;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EditNodeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.LayoutPatch;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.MoveNodeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PlaceEdgeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PlaceNodeRequest;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.StyleDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewEdgeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewNodeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewPayload;
@@ -39,9 +45,12 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bendpoint;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.StyleOverride;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeKind;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutGraph;
 
 /** Представления: payload, геометрия, размещение. */
 @RestController
@@ -49,8 +58,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 public class ViewController {
 
     /** Поля запроса по их именам в JSON — в сообщении о том, чего не хватает. */
-    private static final String ELEMENT_ID = "elementId";
     private static final String EDGE_FIELDS = "relationshipId, sourceId, targetId";
+    private static final String LAYOUT_NODES = "nodes";
+    private static final String LAYOUT_NODE_ID = "nodes[].id";
+    private static final String LAYOUT_EDGE_FIELDS = "edges[].id, edges[].sourceId, edges[].targetId";
 
     private final ModelQueryService queries;
     private final ViewService views;
@@ -87,22 +98,55 @@ public class ViewController {
         return ResponseEntity.noContent().build();
     }
 
-    /** Новый узел — {@code 201}; элемент уже размещён на представлении — {@code 200} с его узлом. */
+    /** Предложение авторазметки; база не меняется. */
+    @PostMapping("/views/{id}/auto-layout")
+    public LayoutPatch autoLayout(EditorIdentity actor, @PathVariable UUID id, @RequestBody AutoLayoutRequest request) {
+        return DtoMapper.layoutPatch(views.proposeLayout(actor, ViewId.of(id), Optional.ofNullable(request.strategy()),
+                layoutGraph(request)));
+    }
+
+    /**
+     * Новый узел — {@code 201}; элемент уже размещён на представлении — {@code 200} с его узлом.
+     * Группа и заметка создаются всегда.
+     */
     @PostMapping("/views/{id}/nodes")
     public ResponseEntity<ViewNodeDto> place(EditorIdentity actor, @PathVariable UUID id,
                                              @RequestBody PlaceNodeRequest request) {
-        if (request.elementId() == null) {
-            throw ModelingException.invalid(Message.of(ModelingMessages.FIELD_MISSING, ELEMENT_ID));
-        }
-        var node = views.place(actor, ViewId.of(id), ElementId.of(request.elementId()),
-                newElementBounds(request.x(), request.y(), Optional.ofNullable(request.width()),
-                        Optional.ofNullable(request.height())),
+        var node = views.placeNode(actor, ViewId.of(id), new ViewService.NewNode(kind(request.kind()),
+                Optional.ofNullable(request.elementId()).map(ElementId::of), Optional.ofNullable(request.label()),
+                Optional.ofNullable(request.content()), request.x(), request.y(),
+                Optional.ofNullable(request.width()), Optional.ofNullable(request.height()),
                 Optional.ofNullable(request.parentId()).map(ViewNodeId::of),
-                RequestedIds.of(request.id(), request.archiId()));
+                RequestedIds.of(request.id(), request.archiId())));
         ViewNodeDto body = DtoMapper.node(node.value());
         return node.created()
                 ? ResponseEntity.created(URI.create("/api/v1/view-nodes/" + body.id())).body(body)
                 : ResponseEntity.ok(body);
+    }
+
+    @PutMapping("/view-nodes/{id}/parent")
+    public ViewNodeDto moveToParent(EditorIdentity actor, @PathVariable UUID id,
+                                    @RequestBody MoveNodeRequest request) {
+        return DtoMapper.node(views.moveToParent(actor, ViewNodeId.of(id),
+                Optional.ofNullable(request.parentId()).map(ViewNodeId::of), request.x(), request.y()));
+    }
+
+    @PatchMapping("/view-nodes/{id}")
+    public ViewNodeDto editNode(EditorIdentity actor, @PathVariable UUID id, @RequestBody EditNodeRequest request) {
+        return DtoMapper.node(views.editNode(actor, ViewNodeId.of(id), Optional.ofNullable(request.label()),
+                Optional.ofNullable(request.content()), Optional.ofNullable(request.style()).map(ViewController::style)));
+    }
+
+    @PatchMapping("/view-edges/{id}")
+    public ViewEdgeDto editEdge(EditorIdentity actor, @PathVariable UUID id, @RequestBody EditEdgeRequest request) {
+        return DtoMapper.edge(views.editEdge(actor, ViewEdgeId.of(id),
+                Optional.ofNullable(request.style()).map(ViewController::style).orElse(StyleOverride.NONE)));
+    }
+
+    @DeleteMapping("/view-edges/{id}")
+    public ResponseEntity<Void> removeEdge(EditorIdentity actor, @PathVariable UUID id) {
+        views.removeEdge(actor, ViewEdgeId.of(id));
+        return ResponseEntity.noContent().build();
     }
 
     /** Новое ребро — {@code 201}; такое же ребро между теми же концами уже есть — {@code 200} с ним. */
@@ -130,9 +174,44 @@ public class ViewController {
                 .map(b -> new Bendpoint(b.startX(), b.startY(), b.endX(), b.endY())).toList();
     }
 
-    private static Bounds newElementBounds(int x, int y, Optional<Integer> width, Optional<Integer> height) {
+    private static LayoutGraph layoutGraph(AutoLayoutRequest request) {
+        if (request.nodes() == null) {
+            throw ModelingException.invalid(Message.of(ModelingMessages.FIELD_MISSING, LAYOUT_NODES));
+        }
+        List<LayoutGraph.Node> nodes = request.nodes().stream().map(n -> {
+            if (n.id() == null) {
+                throw ModelingException.invalid(Message.of(ModelingMessages.FIELD_MISSING, LAYOUT_NODE_ID));
+            }
+            return new LayoutGraph.Node(n.id(), Optional.ofNullable(n.parentId()),
+                    Optional.ofNullable(n.conceptType()).map(ContentController::archiType),
+                    bounds(n.x(), n.y(), n.width(), n.height()));
+        }).toList();
+        List<LayoutGraph.Edge> edges = Optional.ofNullable(request.edges()).orElse(List.of()).stream().map(e -> {
+            if (e.id() == null || e.sourceId() == null || e.targetId() == null) {
+                throw ModelingException.invalid(Message.of(ModelingMessages.FIELDS_MISSING, LAYOUT_EDGE_FIELDS));
+            }
+            return new LayoutGraph.Edge(e.id(), e.sourceId(), e.targetId());
+        }).toList();
+        return new LayoutGraph(nodes, edges);
+    }
+
+    /** Вид узла по имени из контракта; нет — узел элемента. */
+    private static ViewNodeKind kind(String value) {
+        if (value == null) {
+            return ViewNodeKind.DIAGRAM_OBJECT;
+        }
         try {
-            return Bounds.ofNewElement(x, y, width, height);
+            return ViewNodeKind.valueOf(value);
+        } catch (IllegalArgumentException unknown) {
+            throw ModelingException.invalid(Message.of(ModelingMessages.NODE_KIND_REQUESTED, value));
+        }
+    }
+
+    private static StyleOverride style(StyleDto dto) {
+        try {
+            return new StyleOverride(Optional.ofNullable(dto.fillColor()), Optional.ofNullable(dto.font()),
+                    Optional.ofNullable(dto.fontColor()), Optional.ofNullable(dto.lineColor()),
+                    Optional.ofNullable(dto.textAlignment()));
         } catch (IllegalArgumentException invalid) {
             throw ModelingException.invalid(invalid);
         }

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 
@@ -16,6 +17,8 @@ public interface ViewRepository {
     List<View> loadAll(ModelId modelId);
 
     Optional<ViewId> viewOfNode(ViewNodeId nodeId);
+
+    Optional<ViewId> viewOfEdge(ViewEdgeId edgeId);
 
     /**
      * Размещения элементов и связей на представлениях модели — без загрузки самих

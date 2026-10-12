@@ -5,12 +5,16 @@ import java.util.List;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.BendpointDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ElementDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.Finding;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EdgeBendpoints;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.FolderDto;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.LayoutPatch;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.LockInfo;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelSummary;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelTree;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.NodeBounds;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PlacementDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PropertyDto;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.RelationTypeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.RelationshipDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.StyleDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.VersionInfo;
@@ -20,6 +24,7 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewPayload;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewSummary;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
@@ -36,6 +41,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdge;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutProposal;
 
 /** Агрегаты — в DTO. Списки — в порядке {@code sort_order}: клиенту не нужно сортировать заново. */
 public final class DtoMapper {
@@ -141,5 +147,19 @@ public final class DtoMapper {
     private static List<PropertyDto> properties(List<PropertyEntry> entries) {
         return entries.stream().sorted(Comparator.comparing(PropertyEntry::sortOrder))
                 .map(p -> new PropertyDto(p.key(), p.value())).toList();
+    }
+
+    static RelationTypeDto relationType(RelationshipService.Suggestion suggestion) {
+        return new RelationTypeDto(suggestion.type().archiType().value(), suggestion.type().name(),
+                suggestion.byDefault(), suggestion.nesting());
+    }
+
+    /** Предложение авторазметки в форме правки геометрии: точки перегиба рёбер — пустые. */
+    static LayoutPatch layoutPatch(LayoutProposal proposal) {
+        return new LayoutPatch(proposal.nodes().entrySet().stream()
+                .map(e -> new NodeBounds(e.getKey(), e.getValue().x(), e.getValue().y(), e.getValue().width(),
+                        e.getValue().height()))
+                .toList(),
+                proposal.clearedEdges().stream().map(id -> new EdgeBendpoints(id, List.of())).toList());
     }
 }

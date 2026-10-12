@@ -262,10 +262,10 @@ round-trip ломается на структуре, а не на содержи
 | INV-MDL-002 | [`UC-MDL-001`](../../application/modeling/usecases/create-model.md) |
 | INV-MDL-003 | `UC-MDL-001`, [`UC-MDL-004`](../../application/modeling/usecases/save-model-version.md) |
 | INV-MDL-004 | [`UC-MDL-003`](../../application/modeling/usecases/create-relationship.md), [`UC-MDL-006`](../../application/modeling/usecases/reorganize-model-tree.md) |
-| INV-MDL-005 | `UC-MDL-002`, `UC-MDL-006` |
-| INV-MDL-006 | `UC-MDL-002`, `UC-MDL-004`, [`UC-MDL-005`](../../application/modeling/usecases/acquire-model-lock.md) |
+| INV-MDL-005 | `UC-MDL-002`, `UC-MDL-006`, [`UC-MDL-008`](../../application/modeling/usecases/edit-view.md) |
+| INV-MDL-006 | `UC-MDL-002`, `UC-MDL-004`, [`UC-MDL-005`](../../application/modeling/usecases/acquire-model-lock.md), `UC-MDL-008` |
 | INV-MDL-007 | `UC-MDL-003` |
-| INV-MDL-008 | `UC-MDL-002`, `UC-MDL-003` |
+| INV-MDL-008 | `UC-MDL-002`, `UC-MDL-003`, `UC-MDL-008` |
 | INV-MDL-009 | `UC-MDL-001`, `UC-MDL-006` |
 | INV-MDL-010 | `UC-MDL-004` |
 | INV-MDL-011 | [`UC-MDL-007`](../../application/modeling/usecases/manage-model-access.md) |
