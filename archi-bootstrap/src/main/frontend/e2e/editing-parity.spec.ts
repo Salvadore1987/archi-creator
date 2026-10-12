@@ -315,4 +315,38 @@ test.describe('UI-006: паритет с Archi', () => {
     );
     expect(aligned).toBe(true);
   });
+
+  test('точки перегиба: тянем середину — точка добавлена в формате Archi, тянем точку — сдвинута, двойной щелчок — убрана', async ({ page }) => {
+    const api = await openModel(page);
+    const viewId = await openView(page, api, '03 ');
+    const view = api.views[viewId]!;
+    const edge = view.edges.find((e) => (e.bendpoints as unknown[] | undefined ?? []).length === 0)!;
+    await page.evaluate((id) => {
+      (window as unknown as { __archiEditor: { getState(): { select(ids: string[], o: string): void } } }).__archiEditor
+        .getState()
+        .select([id], 'canvas');
+    }, edge.relationshipId as string);
+    const insert = page.locator('[data-bend-insert="0"]');
+    await expect(insert).toBeVisible();
+    const from = (await insert.boundingBox())!;
+    await drag(page, { x: from.x + 3, y: from.y + 3 }, { x: from.x + 3 + 30, y: from.y + 3 + 60 });
+    const bends = () => editorState<Array<{ startX: number; endX: number }>>(page, `s.doc.loadedViews['${viewId}'].edges['${edge.id}'].bendpoints`);
+    await expect.poll(async () => (await bends()).length).toBe(1);
+    await expect(page.getByTestId('undo')).toHaveAttribute('title', /Точки перегиба связи/);
+
+    const handle = page.locator('[data-bendpoint="0"]');
+    const before = (await bends())[0]!;
+    const at = (await handle.boundingBox())!;
+    await drag(page, { x: at.x + 4, y: at.y + 4 }, { x: at.x + 4 + 40, y: at.y + 4 });
+    await expect.poll(async () => (await bends())[0]!.startX).toBeGreaterThan(before.startX);
+
+    await page.getByTestId('save').click();
+    await expect(page.getByTestId('save')).toBeHidden();
+    const layout = api.writes().filter((c) => c.method === 'PUT' && c.path === `/views/${viewId}/layout`).map((c) => c.body as { edges: Array<{ id: string; bendpoints: unknown[] }> });
+    expect(layout.at(-1)!.edges[0]).toMatchObject({ id: edge.id });
+    expect(layout.at(-1)!.edges[0]!.bendpoints).toHaveLength(1);
+
+    await handle.dblclick();
+    await expect.poll(async () => (await bends()).length).toBe(0);
+  });
 });

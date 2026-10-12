@@ -5,7 +5,7 @@ import { effectiveSize } from './shapes';
 
 /** `editable` — можно ли править представление: от него зависят полосы протягивания связи. */
 export type ArchiNodeData = { viewId: Uuid; editable: boolean };
-export type ArchiEdgeData = { viewId: Uuid };
+export type ArchiEdgeData = { viewId: Uuid; editable: boolean };
 export type ArchiFlowNode = Node<ArchiNodeData, 'archi'>;
 export type ArchiFlowEdge = Edge<ArchiEdgeData, 'archi'>;
 
@@ -71,7 +71,7 @@ export function toFlowNodes(
  * React Flow такого не умеет, поэтому ему отдаётся ближайший узел, а точку
  * на середине ребра-конца считает сама отрисовка ребра.
  */
-export function toFlowEdges(view: ViewDoc, selected: ReadonlySet<Uuid>): ArchiFlowEdge[] {
+export function toFlowEdges(view: ViewDoc, selected: ReadonlySet<Uuid>, editable = false): ArchiFlowEdge[] {
   const nodeOf = (endpoint: Uuid, guard = 0): Uuid | undefined => {
     if (view.nodes[endpoint]) return endpoint;
     const edge = view.edges[endpoint];
@@ -87,7 +87,7 @@ export function toFlowEdges(view: ViewDoc, selected: ReadonlySet<Uuid>): ArchiFl
       type: 'archi',
       source,
       target,
-      data: { viewId: view.id },
+      data: { viewId: view.id, editable },
       selected: edgeSelected(edge, selected),
       // Над контейнерами, где лежат концы, но не над узлами своего уровня:
       // иначе полоса захвата ребра перекрывает клик по узлу под линией.

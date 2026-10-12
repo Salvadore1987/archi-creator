@@ -85,7 +85,7 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
 
   const selected = useMemo(() => new Set(selection.ids), [selection.ids]);
   const derivedNodes = useMemo(() => toFlowNodes(view, selected, canEdit), [view, selected, canEdit]);
-  const derivedEdges = useMemo(() => toFlowEdges(view, selected), [view, selected]);
+  const derivedEdges = useMemo(() => toFlowEdges(view, selected, canEdit), [view, selected, canEdit]);
   const [nodes, setNodes] = useState<ArchiFlowNode[]>(derivedNodes);
   const [edges, setEdges] = useState<ArchiFlowEdge[]>(derivedEdges);
   useEffect(() => setNodes(derivedNodes), [derivedNodes]);

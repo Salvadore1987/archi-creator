@@ -1,5 +1,6 @@
 import type {
   AutoLayoutRequest,
+  Bendpoint,
   Element,
   Folder,
   LayoutPatch,
@@ -841,4 +842,14 @@ export function alignNodes(
     changes.push({ entity: 'node', id: node.id, viewId: view.id, before: node, after });
   }
   return { changes, affected: changes.map((c) => (c.after as ViewNode).elementId ?? c.id) };
+}
+
+/** Точки перегиба ребра — уже в формате Archi: смещения от центров концов. */
+export function setBendpoints(view: ViewDoc, edgeId: Uuid, bendpoints: Bendpoint[]): Edit {
+  const before = view.edges[edgeId];
+  if (!before || JSON.stringify(before.bendpoints) === JSON.stringify(bendpoints)) return { changes: [], affected: [] };
+  return {
+    changes: [{ entity: 'edge', id: edgeId, viewId: view.id, before, after: { ...before, bendpoints } }],
+    affected: [before.relationshipId ?? edgeId],
+  };
 }
