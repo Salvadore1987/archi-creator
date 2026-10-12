@@ -1140,11 +1140,11 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 5a.2 Писатель SVG (`archi-interchange-application`)
 
-- ⬜ `Notation` и порт `Typesetter`; маршрут связи, точки перегиба и подпись —
+- ✅ `Notation` и порт `Typesetter`; маршрут связи, точки перегиба и подпись —
       перенос `routing.ts` канвы
-- ⬜ `SvgWriter`: фигуры по `shapes.json` и токенам, иконки, связи с
+- ✅ `SvgWriter`: фигуры по `shapes.json` и токенам, иконки, связи с
       наконечниками, подписи, собственный стиль объекта (FR-21), отчёт о потерях
-- ⬜ `Slug` (`archi-interchange-domain`)
+- ✅ `Slug` (`archi-interchange-domain`)
 
 ### 5a.3 Шрифты и растр (`archi-bootstrap`, `bootstrap.export`)
 

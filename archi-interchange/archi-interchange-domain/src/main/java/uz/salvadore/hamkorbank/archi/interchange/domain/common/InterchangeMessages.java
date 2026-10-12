@@ -41,6 +41,15 @@ public final class InterchangeMessages {
     public static final String TEXT_OUTSIDE_VALUE = "interchange.document.text-outside-value";
     public static final String ARTIFACT_HASH_MISMATCH = "interchange.export.artifact-hash-mismatch";
     public static final String FORMAT_NOT_AVAILABLE = "interchange.export.format-not-available";
+    public static final String IMAGE_LOSS_EDGE = "interchange.image.loss-edge";
+    public static final String IMAGE_LOSS_FONT = "interchange.image.loss-font";
+    public static final String IMAGE_LOSS_IMAGE = "interchange.image.loss-image";
+    public static final String IMAGE_LOSS_LABEL = "interchange.image.loss-label";
+    public static final String IMAGE_LOSS_PLACEHOLDER = "interchange.image.loss-placeholder";
+    public static final String IMAGE_OPAQUE_SUBTITLE = "interchange.image.opaque-subtitle";
+    public static final String IMAGE_OPTION_INVALID = "interchange.image.option-invalid";
+    public static final String IMAGE_TOO_LARGE = "interchange.image.too-large";
+    public static final String IMAGE_VIEW_NOT_IN_VERSION = "interchange.image.view-not-in-version";
     public static final String EXPORT_LOSS_REPORT_MISSING = "interchange.export.loss-report-missing";
     public static final String LOSS_UNKNOWN_KIND = "interchange.export.loss-unknown-kind";
     public static final String LOSS_WITHOUT_REASON = "interchange.export.loss-without-reason";
