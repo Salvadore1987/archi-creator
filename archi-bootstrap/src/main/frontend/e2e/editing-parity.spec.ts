@@ -87,24 +87,32 @@ test.describe('UI-006: паритет с Archi', () => {
   test('сетка и привязка: узел встаёт на шаг сетки; выключенная сетка не видна и не привязывает', async ({ page }) => {
     const api = await openModel(page);
     const viewId = await openView(page, api, '03 ');
-    const [node] = rootNodes(api, viewId);
     const { box, canvas } = canvasOf(page, viewId);
+    // Узел ближе всех к середине холста: у края перетаскивание прокручивает холст само.
+    const pane = (await canvas.boundingBox())!;
+    const middle = { x: pane.x + pane.width / 2, y: pane.y + pane.height / 2 };
+    const distances = await Promise.all(
+      rootNodes(api, viewId).map(async (n) => {
+        const b = await box(n.id);
+        return { n, d: Math.hypot(b.x + b.width / 2 - middle.x, b.y + b.height / 2 - middle.y) };
+      }),
+    );
+    const node = distances.sort((a, b) => a.d - b.d)[0]!.n;
     await expect(canvas.locator('.react-flow__background')).toHaveCount(1);
 
-    let at = await box(node!.id);
+    let at = await box(node.id);
     await drag(page, { x: at.x + 30, y: at.y + 20 }, { x: at.x + 30 + 37, y: at.y + 20 + 23 });
-    const x = await nodeState<number>(page, viewId, node!.id, 'x');
-    const y = await nodeState<number>(page, viewId, node!.id, 'y');
+    const x = await nodeState<number>(page, viewId, node.id, 'x');
+    const y = await nodeState<number>(page, viewId, node.id, 'y');
     expect(x % 20).toBe(0);
     expect(y % 20).toBe(0);
 
     await page.getByTitle('Сетка и привязка').click();
     await expect(canvas.locator('.react-flow__background')).toHaveCount(0);
-    at = await box(node!.id);
-    await page.keyboard.press('ControlOrMeta+0');
-    at = await box(node!.id);
+    at = await box(node.id);
     await drag(page, { x: at.x + 30, y: at.y + 20 }, { x: at.x + 30 + 37, y: at.y + 20 + 23 });
-    const free = await nodeState<number>(page, viewId, node!.id, 'x');
+    await expect.poll(() => nodeState<number>(page, viewId, node.id, 'x')).not.toBe(x);
+    const free = await nodeState<number>(page, viewId, node.id, 'x');
     expect(free % 20).not.toBe(0);
   });
 
