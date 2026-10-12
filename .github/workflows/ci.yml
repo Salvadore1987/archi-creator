@@ -154,6 +154,12 @@ jobs:
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
+    # Браузер, шрифты и сглаживание — из образа Playwright, в котором снят визуальный
+    # эталон (…-chromium-linux.png): на голом ubuntu-latest шрифты другие, и снимок
+    # расходился на 2 %. Тег образа — версия @playwright/test из package-lock.json.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
     defaults:
       run:
         working-directory: archi-bootstrap/src/main/frontend
@@ -176,12 +182,7 @@ jobs:
       - name: npm ci
         run: npm ci
 
-      - name: Браузер Playwright
-        run: npx playwright install --with-deps chromium
-
-      # Визуальный эталон — снимок под Linux (…-chromium-linux.png): шрифты
-      # и сглаживание у macOS другие, и эталон с машины разработчика здесь
-      # не совпал бы ни разу.
+      # Браузер уже в образе — ставить нечего.
       - name: Сценарии Playwright
         run: npx playwright test
 
