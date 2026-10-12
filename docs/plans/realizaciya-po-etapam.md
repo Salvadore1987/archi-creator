@@ -1153,11 +1153,13 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 5a.4 Сценарии и REST
 
-- ⬜ `ExportViewImage` и `ExportAllViewImages` в `ExportService`; `ExportJob` прибит
+- ✅ `ExportViewImage` и `ExportAllViewImages` в `ExportService`; `ExportJob` прибит
       к версии (`INV-IXC-008`), отчёт о потерях есть всегда (`INV-IXC-006`)
-- ⬜ `GET /views/{id}/export`, `GET /models/{id}/views/export`; доступно `VIEWER` (FR-41)
-- ⬜ `ExportJobTest#renderedJobAlwaysHasLossReport` (есть с этапа 1),
-      `BatchViewExportIT#allImagesComeFromOneVersion`, `ViewImageExportIT`
+- ✅ `GET /views/{id}/export`, `GET /models/{id}/views/export`; доступно `VIEWER` (FR-41)
+- ✅ `ExportJobTest#renderedJobAlwaysHasLossReport` (есть с этапа 1),
+      `BatchViewExportIT#allImagesComeFromOneVersion`, `ViewImageExportIT`. Сервис картинок —
+      отдельный `ViewImageService`: у него свои порты (нотация, шрифт, растр) и мост
+      к modeling на чтение (`ModelQueryService.openView` — `archiId` представления)
 
 ### 5a.5 Интерфейс
 
