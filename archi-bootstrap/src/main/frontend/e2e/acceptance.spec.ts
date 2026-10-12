@@ -100,7 +100,8 @@ test.describe('приёмка этапа 4', () => {
   test('экспорт → скачанный файл открывается импортом обратно', async ({ page }) => {
     const api = await openModel(page);
     const downloaded = page.waitForEvent('download');
-    await page.getByRole('button', { name: /Экспорт \.archimate/ }).click();
+    await page.getByTestId('export-menu').click();
+    await page.getByRole('menuitem', { name: 'Модель .archimate' }).click();
     const download = await downloaded;
     expect(download.suggestedFilename()).toMatch(/\.archimate$/);
     const path = await download.path();

@@ -13,7 +13,7 @@ test('UI-015: читателю — «Описание», только чтени
   await page.locator(`[data-row="${iabs.id}"]`).click();
   await page.getByRole('tab', { name: 'Свойства' }).click();
   await expect(page.getByTestId('prop-name')).not.toBeEditable();
-  await expect(page.getByRole('button', { name: 'Экспорт .archimate' })).toBeVisible();
+  await expect(page.getByTestId('export-menu')).toBeVisible();
   expect(api.writes().filter((c) => c.path.endsWith('/lock'))).toHaveLength(0);
 });
 
