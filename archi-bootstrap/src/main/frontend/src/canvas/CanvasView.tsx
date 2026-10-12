@@ -5,6 +5,7 @@ import {
   applyEdgeChanges,
   applyNodeChanges,
   useReactFlow,
+  useStoreApi,
   type EdgeChange,
   type NodeChange,
 } from '@xyflow/react';
@@ -68,6 +69,7 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
   const snap = useUi((s) => s.snapToGrid);
   const canEdit = useCanEdit() && view.editable;
   const flow = useReactFlow();
+  const flowStore = useStoreApi();
   const wrapper = useRef<HTMLDivElement>(null);
   const toast = useToast((s) => s.show);
   const queries = useQueryClient();
@@ -102,6 +104,27 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
       },
     });
   }, [canEdit, viewId, perform, doc.elements]);
+
+  // Масштаб с клавиатуры, как в Archi: Ctrl+= крупнее, Ctrl+- мельче, Ctrl+0 — 100 %.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      if (event.key === '=' || event.key === '+') {
+        event.preventDefault();
+        void flow.zoomIn({ duration: 120 });
+      } else if (event.key === '-') {
+        event.preventDefault();
+        void flow.zoomOut({ duration: 120 });
+      } else if (event.key === '0') {
+        event.preventDefault();
+        void flow.zoomTo(1, { duration: 120 });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [flow]);
 
   // Протягивание связи: линия идёт за указателем, по отпусканию над узлом или ребром
   // появляется список типов, допустимых матрицей для пары.
@@ -248,7 +271,10 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
       queueMicrotask(() => select([...new Set(ids)], 'canvas'));
       return current;
     });
-  }, [viewId, select]);
+    // Рамка вокруг выделенного перехватывала бы клики по узлам внутри неё: Ctrl+клик
+    // по одному из выделенных должен снимать с него выделение, как в Archi.
+    queueMicrotask(() => flowStore.setState({ nodesSelectionActive: false }));
+  }, [viewId, select, flowStore]);
 
   // Отпускание узла над контейнером вкладывает его, над пустым местом — выносит в корень.
   // Элемент в элементе получает подразумеваемую связь той же операцией истории.
@@ -456,7 +482,7 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
         attributionPosition="bottom-left"
         elevateNodesOnSelect={false}
       >
-        <Background variant={BackgroundVariant.Lines} gap={GRID} color="var(--paper-line)" />
+        {snap && <Background variant={BackgroundVariant.Lines} gap={GRID} color="var(--paper-line)" />}
       </ReactFlow>
       {connecting && (
         <svg className="connect-line" data-testid="connect-line">
@@ -509,7 +535,7 @@ function Zoomer() {
       <button type="button" className="btn btn--icon" title={t('canvas.zoomOut')} onClick={() => void flow.zoomOut()}>
         <Icon name="minus" />
       </button>
-      <span className="zoomer__val">{`${Math.round((zoom ?? 1) * 100)}%`}</span>
+      <span className="zoomer__val" data-testid="zoom-value">{`${Math.round((zoom ?? 1) * 100)}%`}</span>
       <button type="button" className="btn btn--icon" title={t('canvas.zoomIn')} onClick={() => void flow.zoomIn()}>
         <Icon name="plus" />
       </button>
