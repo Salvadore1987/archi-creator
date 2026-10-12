@@ -365,7 +365,7 @@ export function drawRelationship(
 ): (Edit & { relationshipId: Uuid; created: boolean }) | null {
   const source = conceptOfEndpoint(view, sourceEnd);
   const target = conceptOfEndpoint(view, targetEnd);
-  const root = Object.values(doc.folders).find((f) => !f.parentId && f.folderType === 'RELATIONS');
+  const root = relationsRoot(doc);
   if (!source || !target || !root) return null;
   const existing = Object.values(doc.relationships).find(
     (r) => r.archiType === archiType && r.sourceId === source && r.targetId === target,
@@ -383,21 +383,7 @@ export function drawRelationship(
       affected: [existing.id],
     };
   }
-  const relationship: Relationship = {
-    id: uuidv7(),
-    folderId: root.id,
-    archiId: newArchiId(),
-    archiType,
-    sourceId: source,
-    targetId: target,
-    properties: [],
-    supported: true,
-    sortOrder: nextSortOrder(
-      [...Object.values(doc.relationships), ...Object.values(doc.folders).map((f) => ({ ...f, folderId: f.parentId }))]
-        .filter((item) => item.folderId === root.id)
-        .map((item) => item.sortOrder),
-    ),
-  };
+  const relationship = newRelationship(doc, root.id, archiType, source, target);
   const edge = edgeOf(view, relationship, sourceEnd, targetEnd);
   return {
     relationshipId: relationship.id,
@@ -407,5 +393,85 @@ export function drawRelationship(
       { entity: 'edge', id: edge.id, viewId: view.id, before: null, after: edge },
     ],
     affected: [relationship.id, source, target],
+  };
+}
+
+function relationsRoot(doc: ModelDoc): Folder | undefined {
+  return Object.values(doc.folders).find((f) => !f.parentId && f.folderType === 'RELATIONS');
+}
+
+/** Новая связь в корне папки связей — в конце, соседи не перенумеровываются. */
+function newRelationship(doc: ModelDoc, folderId: Uuid, archiType: string, sourceId: Uuid, targetId: Uuid): Relationship {
+  return {
+    id: uuidv7(),
+    folderId,
+    archiId: newArchiId(),
+    archiType,
+    sourceId,
+    targetId,
+    properties: [],
+    supported: true,
+    sortOrder: nextSortOrder(
+      [...Object.values(doc.relationships), ...Object.values(doc.folders).map((f) => ({ ...f, folderId: f.parentId }))]
+        .filter((item) => item.folderId === folderId)
+        .map((item) => item.sortOrder),
+    ),
+  };
+}
+
+/** Узел, способный содержать другие: элемент или группа, но не заметка. */
+export function isContainer(node: ViewNode): boolean {
+  return node.kind === 'DIAGRAM_OBJECT' || node.kind === 'GROUP';
+}
+
+/**
+ * Перенос узлов в контейнер или в корень. Координаты — относительно нового родителя;
+ * в другом родителе узел встаёт в конец содержимого, дети едут вместе с ним.
+ */
+export function nestNodes(view: ViewDoc, moves: Array<{ id: Uuid; parentId?: Uuid; x: number; y: number }>): Edit {
+  const changes: Change[] = [];
+  let working = view;
+  for (const { id, parentId, x, y } of moves) {
+    const before = working.nodes[id];
+    if (!before) continue;
+    const sameParent = (before.parentId ?? undefined) === parentId;
+    if (sameParent && before.x === x && before.y === y) continue;
+    const after: ViewNode = { ...before, x, y };
+    if (!sameParent) {
+      after.parentId = parentId;
+      if (!parentId) delete after.parentId;
+      after.sortOrder = parentId
+        ? nextOrderInEndpoint(working, parentId)
+        : nextSortOrder(Object.values(working.nodes).filter((n) => !n.parentId).map((n) => n.sortOrder));
+    }
+    changes.push({ entity: 'node', id, viewId: view.id, before, after });
+    working = { ...working, nodes: { ...working.nodes, [id]: after } };
+  }
+  return { changes, affected: changes.map((c) => (c.after as ViewNode).elementId ?? c.id) };
+}
+
+/** Связи, которые считаются уже выражающими вложенность: с ними новая не нужна. */
+const STRUCTURAL = [
+  'archimate:CompositionRelationship',
+  'archimate:AggregationRelationship',
+  'archimate:AssignmentRelationship',
+  'archimate:RealizationRelationship',
+  'archimate:SpecializationRelationship',
+];
+
+/**
+ * Подразумеваемая связь вложения от родителя к ребёнку. Её тип называет метамодель;
+ * структурная связь между ними уже есть — новая не создаётся.
+ */
+export function impliedRelationship(doc: ModelDoc, parentElementId: Uuid, childElementId: Uuid, archiType: string): Edit {
+  const root = relationsRoot(doc);
+  const exists = Object.values(doc.relationships).some(
+    (r) => r.sourceId === parentElementId && r.targetId === childElementId && STRUCTURAL.includes(r.archiType),
+  );
+  if (!root || exists) return { changes: [], affected: [] };
+  const relationship = newRelationship(doc, root.id, archiType, parentElementId, childElementId);
+  return {
+    changes: [{ entity: 'relationship', id: relationship.id, before: null, after: relationship }],
+    affected: [relationship.id, parentElementId, childElementId],
   };
 }

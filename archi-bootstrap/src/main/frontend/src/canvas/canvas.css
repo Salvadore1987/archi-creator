@@ -158,6 +158,10 @@
   width: 100%;
   height: 100%;
 }
+.react-flow__node.is-drop-target .shape__outline {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
 .archi-node--opaque .shape__outline {
   stroke: var(--opaque-border);
 }

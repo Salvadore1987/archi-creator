@@ -143,3 +143,22 @@ export function attachedEdges(view: ViewDoc, endpointIds: Iterable<Uuid>): ViewE
   }
   return found;
 }
+
+/**
+ * Самый глубокий контейнер под точкой холста — элемент или группа, кроме исключённых
+ * (переносимые узлы и всё внутри них). При равной глубине — верхний по порядку отрисовки.
+ */
+export function containerAt(view: ViewDoc, point: { x: number; y: number }, exclude: ReadonlySet<Uuid>): ViewNode | undefined {
+  let best: { node: ViewNode; depth: number } | undefined;
+  for (const node of Object.values(view.nodes)) {
+    if (exclude.has(node.id) || (node.kind !== 'DIAGRAM_OBJECT' && node.kind !== 'GROUP')) continue;
+    const at = absolutePosition(view, node.id);
+    const size = effectiveSize(node.archiType, node.width, node.height);
+    if (point.x < at.x || point.y < at.y || point.x > at.x + size.width || point.y > at.y + size.height) continue;
+    const depth = depthOf(view, node);
+    if (!best || depth > best.depth || (depth === best.depth && node.sortOrder > best.node.sortOrder)) {
+      best = { node, depth };
+    }
+  }
+  return best?.node;
+}

@@ -11,7 +11,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api/endpoints';
-import type { RelationType, Uuid } from '../api/types';
+import type { RelationType, Uuid, ViewNode } from '../api/types';
+import { applyChanges, type Change, type ViewDoc } from '../model/doc';
 import { Icon } from '../app/Icon';
 import { useCanEdit } from '../app/session';
 import { useToast } from '../app/toast';
@@ -21,7 +22,9 @@ import {
   conceptTypeOfEndpoint,
   createAndPlace,
   drawRelationship,
+  impliedRelationship,
   moveNodes,
+  nestNodes,
   placeElement,
   removeFromView,
   resizeNode,
@@ -32,6 +35,8 @@ import { ArchiEdge } from './ArchiEdge';
 import { ArchiNode, setNodeEditing } from './ArchiNode';
 import {
   absolutePosition,
+  containerAt,
+  descendants,
   nodeSelected,
   toFlowEdges,
   toFlowNodes,
@@ -244,18 +249,104 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
     });
   }, [viewId, select]);
 
-  const onNodeDragStop = useCallback(
-    (_: unknown, __: ArchiFlowNode, dragged: ArchiFlowNode[]) => {
-      const current = useEditor.getState().doc?.loadedViews[viewId];
-      if (!current) return;
-      const edit = moveNodes(
-        current,
-        dragged.map((n) => ({ id: n.id, x: Math.round(n.position.x), y: Math.round(n.position.y) })),
-      );
-      perform(t('tree_ops.moveNodeOp', { n: edit.changes.length }), edit.changes, edit.affected);
+  // Отпускание узла над контейнером вкладывает его, над пустым местом — выносит в корень.
+  // Элемент в элементе получает подразумеваемую связь той же операцией истории.
+  const dropTarget = useRef<Uuid | undefined>(undefined);
+  const nestingDrop = (event: MouseEvent | TouchEvent, dragged: ArchiFlowNode[]) => {
+    const current = useEditor.getState().doc?.loadedViews[viewId];
+    if (!current) return undefined;
+    const ids = new Set(dragged.map((n) => n.id));
+    const moving = new Set([...ids, ...descendants(current, ids).map((n) => n.id)]);
+    const at = 'touches' in event ? (event.changedTouches[0] ?? event.touches[0]) : event;
+    if (!at) return undefined;
+    const point = flow.screenToFlowPosition({ x: at.clientX, y: at.clientY });
+    return { current, ids, container: containerAt(current, point, moving) };
+  };
+
+  const onNodeDrag = useCallback(
+    (event: MouseEvent | TouchEvent, _: ArchiFlowNode, dragged: ArchiFlowNode[]) => {
+      const drop = nestingDrop(event, dragged);
+      const target = drop?.container?.id;
+      if (target === dropTarget.current) return;
+      dropTarget.current = target;
+      setNodes((current) => current.map((n) => ({ ...n, className: n.id === target ? 'is-drop-target' : undefined })));
     },
-    [viewId, perform],
+    // nestingDrop читает документ в момент события.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [viewId, flow],
   );
+
+  const onNodeDragStop = useCallback(
+    (event: MouseEvent | TouchEvent, _: ArchiFlowNode, dragged: ArchiFlowNode[]) => {
+      dropTarget.current = undefined;
+      const drop = nestingDrop(event, dragged);
+      if (!drop) return;
+      const { current, ids, container } = drop;
+      const tops = dragged.filter((n) => !hasAncestorIn(current, n.id, ids));
+      const parentAt = container ? absolutePosition(current, container.id) : { x: 0, y: 0 };
+      const snapTo = (v: number) => (snap ? Math.round(v / GRID) * GRID : Math.round(v));
+      const moves = tops.map((n) => {
+        const node = current.nodes[n.id]!;
+        const oldParent = node.parentId && current.nodes[node.parentId] ? absolutePosition(current, node.parentId) : { x: 0, y: 0 };
+        if ((node.parentId ?? undefined) === container?.id) {
+          return { id: n.id, parentId: container?.id, x: Math.round(n.position.x), y: Math.round(n.position.y) };
+        }
+        return {
+          id: n.id,
+          parentId: container?.id,
+          x: snapTo(oldParent.x + n.position.x - parentAt.x),
+          y: snapTo(oldParent.y + n.position.y - parentAt.y),
+        };
+      });
+      const nested = moves.some((m) => (current.nodes[m.id]!.parentId ?? undefined) !== m.parentId);
+      // Вложенные в переносимые едут вместе с ними: их координаты относительны родителю.
+      const inner = dragged
+        .filter((n) => !tops.includes(n))
+        .map((n) => ({ id: n.id, parentId: current.nodes[n.id]!.parentId, x: Math.round(n.position.x), y: Math.round(n.position.y) }));
+      if (!nested) {
+        const edit = moveNodes(current, [...moves, ...inner]);
+        perform(t('tree_ops.moveNodeOp', { n: edit.changes.length }), edit.changes, edit.affected);
+        setNodes((list) => list.map((n) => (n.className ? { ...n, className: undefined } : n)));
+        return;
+      }
+      void nest(moves, container);
+    },
+    // nestingDrop и nest читают документ в момент события.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [viewId, perform, snap, flow],
+  );
+
+  const nest = async (moves: Array<{ id: Uuid; parentId?: Uuid; x: number; y: number }>, container?: ViewNode) => {
+    const before = useEditor.getState().doc!;
+    const edit = nestNodes(before.loadedViews[viewId]!, moves);
+    const changes: Change[] = [...edit.changes];
+    const affected = [...edit.affected];
+    const parentElement = container?.elementId ? before.elements[container.elementId] : undefined;
+    if (parentElement) {
+      let working = applyChanges(before, changes);
+      for (const move of moves) {
+        const child = before.loadedViews[viewId]!.nodes[move.id];
+        const childElement = child?.elementId ? before.elements[child.elementId] : undefined;
+        if (!childElement || (child!.parentId ?? undefined) === move.parentId) continue;
+        const options = await queries.fetchQuery({
+          queryKey: ['metamodel', 'relations', parentElement.archiType, childElement.archiType],
+          queryFn: () => api.relationTypes(parentElement.archiType, childElement.archiType),
+          staleTime: Infinity,
+        });
+        const implied = options.find((o) => o.nesting);
+        if (!implied) continue;
+        const relation = impliedRelationship(working, parentElement.id, childElement.id, implied.archiType);
+        changes.push(...relation.changes);
+        affected.push(...relation.affected);
+        working = applyChanges(working, relation.changes);
+      }
+    }
+    setNodes((list) => list.map((n) => (n.className ? { ...n, className: undefined } : n)));
+    const name = container
+      ? (container.elementId ? before.elements[container.elementId]?.name : container.label) ?? ''
+      : '';
+    perform(container ? t('tree_ops.nestOp', { n: moves.length, name }) : t('tree_ops.unnestOp', { n: moves.length }), changes, affected);
+  };
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (!canEdit || (event.key !== 'Delete' && event.key !== 'Backspace')) return;
@@ -344,6 +435,7 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
           boxSelecting.current = true;
         }}
         onSelectionEnd={onSelectionEnd}
+        onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         defaultViewport={viewport}
         fitView={!viewport}
@@ -374,6 +466,16 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
       <Zoomer />
     </div>
   );
+}
+
+/** Есть ли среди предков узла кто-то из набора. */
+function hasAncestorIn(view: ViewDoc, id: Uuid, set: ReadonlySet<Uuid>): boolean {
+  let parent = view.nodes[id]?.parentId;
+  while (parent) {
+    if (set.has(parent)) return true;
+    parent = view.nodes[parent]?.parentId;
+  }
+  return false;
 }
 
 interface Point {

@@ -204,6 +204,8 @@ export const ru = {
     moveNodeOp: 'Перемещено на холсте: {n}',
     resizeOp: 'Изменён размер «{name}»',
     connectOp: 'Связь «{type}»: {source} → {target}',
+    nestOp: 'Вложено в «{name}»: {n}',
+    unnestOp: 'Вынесено из контейнера: {n}',
     removeFromViewOp: 'Убрано с представления: {n}',
     copied: 'Имя скопировано',
     undoToast: 'Отменить',
