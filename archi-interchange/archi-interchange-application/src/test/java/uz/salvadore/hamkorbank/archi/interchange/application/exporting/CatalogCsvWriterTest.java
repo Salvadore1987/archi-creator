@@ -1,5 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.exporting;
 
+import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -21,13 +23,16 @@ import org.junit.jupiter.api.Test;
 
 class CatalogCsvWriterTest {
 
+    /** Значения «да/нет» — как их отдаст каталог сообщений на русском. */
+    private static final TextCatalog RU = message -> message.key().equals(InterchangeMessages.CSV_YES) ? "да" : "нет";
+
     private static final Path FIXTURES = Path.of("../../archi-bootstrap/src/test/resources/fixtures");
     private static final Path REFERENCE = Path.of("../../docs/Hamkorbank_AS_IS_strict.archimate");
 
     @Test
     @DisplayName("FR-45: два файла, UTF-8 с BOM, разделитель ';', типы и слои по-человечески")
     void catalogHasTwoFilesWithBom() throws IOException {
-        Map<String, byte[]> files = unzip(new CatalogCsvWriter().write(
+        Map<String, byte[]> files = unzip(new CatalogCsvWriter(RU).write(
                 Files.readAllBytes(FIXTURES.resolve("all_relationship_types.archimate")),
                 CatalogCsvOptions.of(Optional.empty(), Optional.empty())));
 
@@ -46,13 +51,13 @@ class CatalogCsvWriterTest {
     @DisplayName("§5.2: столбцы свойств — по частоте ключа; фильтр папкой; sep=','")
     void propertyColumnsByFrequencyAndFolderFilter() throws IOException {
         byte[] reference = Files.readAllBytes(REFERENCE);
-        String all = text(unzip(new CatalogCsvWriter().write(reference,
+        String all = text(unzip(new CatalogCsvWriter(RU).write(reference,
                 CatalogCsvOptions.of(Optional.of(","), Optional.empty()))).get("elements.csv"));
         String header = all.substring(0, all.indexOf("\r\n"));
         assertTrue(header.startsWith("id,type,name,layer,folder,documentation,views,placed,"), header);
 
         String applicationFolder = "id-" + firstFolderId(reference, "application");
-        String filtered = text(unzip(new CatalogCsvWriter().write(reference,
+        String filtered = text(unzip(new CatalogCsvWriter(RU).write(reference,
                 CatalogCsvOptions.of(Optional.empty(), Optional.of(applicationFolder)))).get("elements.csv"));
         assertTrue(filtered.contains(";Application;"), "поддерево Application на месте");
         assertTrue(!filtered.contains(";Business;") && !filtered.contains(";Technology;"),

@@ -14,17 +14,16 @@
 
     <name>Archi Creator :: Modeling :: Domain</name>
     <description>
-        Доменная модель modeling: агрегаты, сущности, value objects, инварианты
-        INV-MDL-NNN. Спека — spec/domain/modeling/.
+        Доменная модель modeling: агрегаты, сущности, value objects, инварианты.
 
         Зависимостей, кроме тестовых, здесь нет и быть не должно: это и есть
-        гарантия ADR-0001. Правило enforcer'а ниже останавливает возврат Spring
+        гарантия чистоты домена. Правило enforcer'а ниже останавливает возврат Spring
         и JPA, если кто-то попробует.
     </description>
 
     <build>
         <plugins>
-            <!-- ADR-0001: запрет Spring, JPA и Hibernate. Правило — в pluginManagement родителя. -->
+            <!-- Запрет Spring, JPA и Hibernate. Правило — в pluginManagement родителя. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>

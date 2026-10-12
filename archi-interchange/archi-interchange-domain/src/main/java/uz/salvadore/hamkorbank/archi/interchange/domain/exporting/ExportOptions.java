@@ -3,6 +3,8 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 /**
  * Параметры выгрузки. Каждый относится к своим форматам: масштаб, контур и фон —
@@ -18,7 +20,7 @@ public record ExportOptions(Optional<BigDecimal> scale, Optional<Boolean> outlin
         Objects.requireNonNull(separator, "separator");
         Objects.requireNonNull(folderFilter, "folderFilter");
         if (scale.filter(s -> s.signum() <= 0).isPresent()) {
-            throw new IllegalArgumentException("масштаб обязан быть положительным");
+            throw new InvalidValueException(InterchangeMessages.EXPORT_SCALE_POSITIVE);
         }
     }
 

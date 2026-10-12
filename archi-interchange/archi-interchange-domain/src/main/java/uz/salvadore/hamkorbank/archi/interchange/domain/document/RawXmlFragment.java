@@ -2,10 +2,12 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.document;
 
 import java.util.Objects;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 /**
- * Непрозрачный фрагмент: узел, которого кодек не понимает, — дословно и с адресом
- * (FR-03, INV-IXC-001). Без адреса фрагмент сохранить можно, а воспроизвести — нет.
+ * Непрозрачный фрагмент: узел, которого кодек не понимает, — дословно и с адресом.
+ * Без адреса фрагмент сохранить можно, а воспроизвести — нет.
  *
  * @param xml           разметка фрагмента с внутренними пробелами как в файле;
  *                      префиксы пространств имён — те, что объявлены выше по дереву
@@ -20,7 +22,7 @@ public record RawXmlFragment(String xml, Optional<ArchiId> parentArchiId, Docume
         Objects.requireNonNull(parentArchiId, "parentArchiId");
         Objects.requireNonNull(order, "order");
         if (!xml.startsWith("<")) {
-            throw new IllegalArgumentException("фрагмент обязан быть элементом XML");
+            throw new InvalidValueException(InterchangeMessages.FRAGMENT_NOT_ELEMENT);
         }
     }
 }

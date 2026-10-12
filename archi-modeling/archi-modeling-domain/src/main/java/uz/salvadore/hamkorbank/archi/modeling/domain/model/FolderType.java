@@ -5,7 +5,7 @@ import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
 
 /**
- * Девять корневых папок Archi (INV-MDL-009) в порядке, в котором их пишет Archi.
+ * Девять корневых папок Archi в порядке, в котором их пишет Archi.
  * В файле — атрибут {@code type} в нижнем регистре.
  */
 public enum FolderType {

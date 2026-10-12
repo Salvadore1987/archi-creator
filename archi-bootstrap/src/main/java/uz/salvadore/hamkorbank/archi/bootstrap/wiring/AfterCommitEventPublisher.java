@@ -7,7 +7,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
- * Публикация доменных событий после коммита, в процессе (ADR-0003, {@code direct}).
+ * Публикация доменных событий после коммита, в процессе, без брокера.
  * Откат транзакции событий не публикует. Окно потери — падение процесса между
  * коммитом и доставкой — принято до этапа 7a, где нужен outbox.
  */

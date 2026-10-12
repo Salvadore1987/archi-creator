@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * Внешний идентификатор объекта в файле Archi (INV-MDL-001, ADR-0002). Уникален
+ * Внешний идентификатор объекта в файле Archi. Уникален
  * в пределах модели, поэтому первичным ключом не служит.
  *
  * <p>Шаблон широкий намеренно: Archi пишет {@code id-<32 hex>}, эталонная модель —
@@ -17,7 +17,7 @@ public record ArchiId(String value) {
     public ArchiId {
         Objects.requireNonNull(value, "archiId");
         if (!FORMAT.matcher(value).matches()) {
-            throw new IllegalArgumentException("INV-MDL-001: недопустимый идентификатор Archi: '" + value + "'");
+            throw new InvalidValueException(ModelingMessages.ARCHI_ID_INVALID, value);
         }
     }
 

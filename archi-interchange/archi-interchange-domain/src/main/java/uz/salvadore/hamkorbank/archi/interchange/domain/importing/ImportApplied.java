@@ -9,10 +9,10 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
 /**
- * Разобранный и проверенный документ принят (spec/domain/interchange/events.yaml#ImportApplied).
+ * Разобранный и проверенный документ принят.
  * Отклонённый импорт события не порождает: его результат — в отчёте сессии.
  *
- * @param opaqueObjectCount сколько объектов сохранено непрозрачными (FR-03)
+ * @param opaqueObjectCount сколько объектов сохранено непрозрачными
  */
 public record ImportApplied(ImportSessionId importSessionId, WorkspaceId workspaceId, ModelId modelId,
                             long versionNo, String sourceName, ContentHash sourceHash, boolean strictMode,

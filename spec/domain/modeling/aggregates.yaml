@@ -1,6 +1,6 @@
 ---
-version: 0.2
-last_modified: 2026-10-08
+version: 0.3
+last_modified: 2026-10-09
 bounded_context: modeling
 target_module: archi-modeling-domain
 ---
@@ -261,8 +261,10 @@ entities:
       - { name: elementId, type: Optional<ElementId>,  constraints: [optional, not_null_when: "kind = DIAGRAM_OBJECT", null_when: "kind in (GROUP, NOTE)"] }
       - { name: bounds,    type: Bounds,               constraints: [not_null] }
       - { name: style,     type: Optional<StyleOverride>, constraints: [optional] }
+      - { name: label,     type: Optional<String>,     constraints: [optional], note: "атрибут name узла в файле: подпись группы, объектов скетча и холста; у DIAGRAM_OBJECT подпись — имя элемента, своей обычно нет. Пустая строка — атрибут есть, но пуст" }
+      - { name: content,   type: Optional<String>,     constraints: [optional], note: "дочерний <content> заметки — текст как есть, с переводами строк" }
       - { name: sortOrder, type: SortOrder,            constraints: [not_null] }
-      - { name: rawXml,    type: Optional<RawXml>,     constraints: [optional] }
+      - { name: rawXml,    type: Optional<RawXml>,     constraints: [optional], note: "остаток XML (ADR-0017); label и content в нём — места, а не значения" }
 
   ViewEdge:
     type: entity

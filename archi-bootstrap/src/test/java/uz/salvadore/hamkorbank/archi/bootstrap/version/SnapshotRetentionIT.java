@@ -19,7 +19,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
 /**
- * INV-MDL-010, FR-47: снимок — единственная копия, пока Git не настроен. Правило
+ * Снимок версии — единственная копия, пока Git не настроен. Правило
  * ретеншена есть и включается настройкой, но без доступного Git не трогает ничего.
  */
 class SnapshotRetentionIT extends IntegrationTest {
@@ -47,7 +47,7 @@ class SnapshotRetentionIT extends IntegrationTest {
                     Optional.empty(), Optional.empty());
             versions.save(ARCHITECT, model, Optional.of("правка " + i), Optional.empty());
         }
-        // Версии «стареют» на полгода и получают git_sha — по правилу §4.4 их снимки уже лишние.
+        // Версии «стареют» на полгода и получают git_sha — по правилу ретеншена их снимки лишние.
         jdbc.update("update model_version set created_at = created_at - interval '180 days', git_sha = ? "
                 + "where model_id = ?", "a".repeat(40), model.value());
 

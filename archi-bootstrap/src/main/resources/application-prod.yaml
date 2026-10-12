@@ -1,5 +1,5 @@
 # ───────────────────────────────────────────────────────────────────
-# Профиль prod (§10.3): Keycloak обязателен, CORS закрыт,
+# Профиль prod: Keycloak обязателен, CORS закрыт,
 # Flyway validate, логи в JSON.
 #
 # Переменные без значения по умолчанию — намеренно: приложение обязано
@@ -38,8 +38,7 @@ management:
       show-details: when-authorized
 
 logging:
-  # spec/nfr/modeling.yaml#observability.logging.format: json.
-  # ECS: traceId, spanId и MDC попадают в поля, а не в текст строки.
+  # Логи в JSON, формат ECS: traceId, spanId и MDC попадают в поля, а не в текст строки.
   structured:
     format:
       console: ecs

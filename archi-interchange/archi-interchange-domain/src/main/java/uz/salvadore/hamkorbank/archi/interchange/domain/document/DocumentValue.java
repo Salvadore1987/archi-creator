@@ -3,6 +3,8 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.document;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 /**
  * Значение без собственного идентификатора: {@code documentation}, {@code purpose},
@@ -26,7 +28,7 @@ public record DocumentValue(String tag, DocumentOrder order, Attributes attribut
         Objects.requireNonNull(attributes, "attributes");
         Objects.requireNonNull(text, "text");
         if (!TAGS.contains(tag)) {
-            throw new IllegalArgumentException("не значение: " + tag);
+            throw new InvalidValueException(InterchangeMessages.NOT_DOCUMENT_VALUE, tag);
         }
     }
 

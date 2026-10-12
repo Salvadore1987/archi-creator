@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.AccessPolicy;
@@ -15,6 +16,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelAccessListRe
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelLockRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelVersionRepository;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
@@ -22,7 +24,11 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiIdGenerator;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotencyRecord;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
@@ -30,6 +36,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 
 /**
  * Общее у всех сценариев modeling: зависимости и порядок проверок записи.
@@ -49,6 +56,7 @@ public final class ModelingKernel {
     final UnitOfWork unitOfWork;
     final DomainEventPublisher events;
     final UseCaseMetrics metrics;
+    final TextCatalog texts;
     final Clock clock;
     final UuidV7 uuids;
     final ArchiIdGenerator archiIds;
@@ -57,7 +65,7 @@ public final class ModelingKernel {
     public ModelingKernel(ModelRepository models, ViewRepository views, ModelLockRepository locks,
                           ModelVersionRepository versions, ModelAccessListRepository accessLists,
                           IdempotencyRepository idempotency, UnitOfWork unitOfWork, DomainEventPublisher events,
-                          UseCaseMetrics metrics, Clock clock, Duration lockTtl) {
+                          UseCaseMetrics metrics, TextCatalog texts, Clock clock, Duration lockTtl) {
         this.models = Objects.requireNonNull(models);
         this.views = Objects.requireNonNull(views);
         this.locks = Objects.requireNonNull(locks);
@@ -67,6 +75,7 @@ public final class ModelingKernel {
         this.unitOfWork = Objects.requireNonNull(unitOfWork);
         this.events = Objects.requireNonNull(events);
         this.metrics = Objects.requireNonNull(metrics);
+        this.texts = Objects.requireNonNull(texts);
         this.clock = Objects.requireNonNull(clock);
         this.lockTtl = Objects.requireNonNull(lockTtl);
         this.uuids = new UuidV7(clock);
@@ -85,22 +94,22 @@ public final class ModelingKernel {
         });
     }
 
-    /** Заголовок модели, видимой автору с данным уровнем (INV-MDL-011). */
+    /** Заголовок модели, видимой автору с данным уровнем доступа. */
     ModelHeader visibleHeader(ModelId modelId, EditorIdentity actor, AclAccess access) {
         ModelHeader header = models.findHeader(modelId)
-                .orElseThrow(() -> ModelingException.notFound("модель " + modelId));
+                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.MODEL, modelId)));
         accessLists.find(modelId).require(actor, access);
         return header;
     }
 
     ArchitectureModel visibleModel(ModelId modelId, EditorIdentity actor, AclAccess access) {
         visibleHeader(modelId, actor, access);
-        return models.load(modelId).orElseThrow(() -> ModelingException.notFound("модель " + modelId));
+        return models.load(modelId).orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.MODEL, modelId)));
     }
 
     /**
-     * Модель для записи содержимого: видима на запись, активна (INV-MDL-002),
-     * заблокирована автором команды (INV-MDL-006).
+     * Модель для записи содержимого: видима на запись, активна,
+     * заблокирована автором команды.
      */
     ArchitectureModel writableModel(ModelId modelId, EditorIdentity actor) {
         ArchitectureModel model = visibleModel(modelId, actor, AclAccess.WRITE);
@@ -118,8 +127,49 @@ public final class ModelingKernel {
         return archiIds.nextUnique(model::archiIdTaken);
     }
 
+    /** Ключ нового объекта: заданный клиентом — если свободен, иначе следующий UUIDv7. */
+    UUID newId(RequestedIds requested) {
+        requested.id().ifPresent(id -> {
+            if (models.idTaken(id)) {
+                throw new ModelingException(ModelingCodes.ID_TAKEN, Failure.CONFLICT,
+                        Message.of(ModelingMessages.ID_TAKEN, id));
+            }
+        });
+        return requested.id().orElseGet(uuids::next);
+    }
+
     /**
-     * Команда с необязательным ключом идемпотентности (INV-MDL-003). Ключ есть — повтор
+     * {@code archiId} нового объекта модели. Заданный клиентом проверяется по формату
+     * и по всему, что попадёт в тот же файл: концептам, папкам, представлениям, их узлам и рёбрам.
+     */
+    ArchiId newArchiId(ArchitectureModel model, RequestedIds requested) {
+        return requested.archiId().map(value -> requireFree(model, Optional.empty(), value))
+                .orElseGet(() -> newArchiId(model));
+    }
+
+    /** {@code archiId} нового узла или ребра: свободен и в модели, и на представлении. */
+    ArchiId newArchiId(ArchitectureModel model, View view, RequestedIds requested) {
+        return requested.archiId().map(value -> requireFree(model, Optional.of(view), value))
+                .orElseGet(() -> archiIds.nextUnique(id -> model.archiIdTaken(id) || view.archiIdTaken(id)));
+    }
+
+    private ArchiId requireFree(ArchitectureModel model, Optional<View> view, String value) {
+        ArchiId candidate;
+        try {
+            candidate = ArchiId.of(value);
+        } catch (IllegalArgumentException invalid) {
+            throw ModelingException.invalid(Message.of(ModelingMessages.ARCHI_ID_REQUESTED_INVALID, value));
+        }
+        if (model.archiIdTaken(candidate) || view.filter(v -> v.archiIdTaken(candidate)).isPresent()
+                || models.diagramArchiIdTaken(model.id(), candidate)) {
+            throw new ModelingException(ModelingCodes.ID_TAKEN, Failure.CONFLICT,
+                    Message.of(ModelingMessages.ARCHI_ID_TAKEN, candidate, model.id()));
+        }
+        return candidate;
+    }
+
+    /**
+     * Команда с необязательным ключом идемпотентности. Ключ есть — повтор
      * с тем же телом отдаёт первый результат, перечитанный заново; другое тело — {@code 409}.
      *
      * @param execute выполнить и вернуть ссылку на результат

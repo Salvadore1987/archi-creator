@@ -14,11 +14,9 @@
 
     <name>Archi Creator :: Interchange :: Adapter REST</name>
     <description>
-        Входящий адаптер HTTP для interchange: контроллеры и DTO по контракту
-        spec/contracts/interchange/rest-api.openapi.yaml.
+        Входящий адаптер HTTP для interchange: контроллеры и DTO по контракту OpenAPI.
 
-        Генерация из контракта пока не подключена — см.
-        docs/plans/multi-module-pom.md, «Что НЕ сделано сознательно».
+        Генерация из контракта пока не подключена сознательно.
     </description>
 
     <dependencies>

@@ -5,7 +5,7 @@ import java.util.Objects;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 
 /**
- * Содержимое зафиксированной версии — то, что выгружается (INV-IXC-008): не текущее
+ * Содержимое зафиксированной версии — то, что выгружается: не текущее
  * состояние, а снимок, сделанный при сохранении.
  *
  * @param xml несжатый {@code .archimate}

@@ -18,8 +18,6 @@
     <description>
         Агрегатор bounded context'а modeling (MDL): модель как таковая: папки, элементы, связи, представления,
         блокировки, версии, валидация по метамодели.
-        Спека — spec/domain/modeling/, spec/application/modeling/, spec/contracts/modeling/,
-        spec/nfr/modeling.yaml. Инварианты имеют код INV-MDL-NNN, сценарии — UC-MDL-NNN.
     </description>
 
     <modules>

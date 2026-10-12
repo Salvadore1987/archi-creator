@@ -29,7 +29,7 @@ import uz.salvadore.hamkorbank.archi.bootstrap.roundtrip.RoundTripGoldenFileTest
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Containers;
 
 /**
- * FR-28 на настоящем Keycloak 26 (§9.3): realm проекта, токены от Keycloak, проверка
+ * Роли модели доступа на настоящем Keycloak 26: realm проекта, токены от Keycloak, проверка
  * подписи ресурс-сервером, роли из {@code realm_access}. Остальные тесты REST кладут
  * токен через {@code spring-security-test}; этот — единственный, где путь от входа
  * до отказа роли пройден целиком.
@@ -86,6 +86,26 @@ class KeycloakIT {
         mvc.perform(get("/api/v1/models")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/models").header("Authorization", "Bearer " + viewer + "x"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("FR-28, UI-015: /me по токену Keycloak — sub, имя из name, роль из realm_access; /ui-config без токена")
+    void meFromKeycloakToken() throws Exception {
+        String architect = token("architect");
+        String subject = JsonPath.read(new String(java.util.Base64.getUrlDecoder().decode(architect.split("\\.")[1]),
+                StandardCharsets.UTF_8), "$.sub");
+
+        mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + architect))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.subject").value(subject))
+                .andExpect(jsonPath("$.displayName").value("Архитектор Демо"))
+                .andExpect(jsonPath("$.roles.length()").value(1))
+                .andExpect(jsonPath("$.roles[0]").value("ARCHITECT"));
+        mvc.perform(get("/api/v1/me")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/ui-config"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.oidc.authority").value(issuer()))
+                .andExpect(jsonPath("$.oidc.clientId").value("archi-creator-ui"));
     }
 
     private static String issuer() {

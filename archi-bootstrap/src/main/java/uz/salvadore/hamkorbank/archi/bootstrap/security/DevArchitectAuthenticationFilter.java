@@ -13,7 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Заглушка авторизации профиля {@code dev} (§10.3): каждый запрос приходит
+ * Заглушка авторизации профиля {@code dev}: каждый запрос приходит
  * от пользователя {@value #PRINCIPAL} с ролью {@code ARCHITECT}.
  *
  * <p>Нужна не ради удобства, а ради того, чтобы код за фильтром был одинаков

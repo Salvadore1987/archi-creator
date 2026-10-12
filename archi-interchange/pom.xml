@@ -16,10 +16,8 @@
 
     <name>Archi Creator :: Interchange</name>
     <description>
-        Агрегатор bounded context'а interchange (IXC): преобразования на границе: кодек .archimate, OEF, CSV, SVG/PNG,
-        Git-выгрузка.
-        Спека — spec/domain/interchange/, spec/application/interchange/, spec/contracts/interchange/,
-        spec/nfr/interchange.yaml. Инварианты имеют код INV-IXC-NNN, сценарии — UC-IXC-NNN.
+        Агрегатор bounded context'а interchange: преобразования на границе — кодек .archimate,
+        OEF, CSV, SVG/PNG, Git-выгрузка.
     </description>
 
     <modules>

@@ -8,7 +8,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 
 /**
  * Представление глазами дерева модели: где лежит и как называется. Само представление —
- * отдельный агрегат и грузится по требованию (docs/database.md §4.3); дереву нужно
+ * отдельный агрегат и грузится по требованию; дереву нужно
  * лишь знать, что папка не пуста, и не занять его место в нумерации.
  */
 public record ViewRef(ViewId id, FolderId folderId, ArchiId archiId, DiagramType archiType, String name,

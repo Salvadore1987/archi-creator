@@ -30,10 +30,10 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
 
 /**
- * Golden-file round-trip — критический контур (docs/backend.md §9.1, NFR-05).
+ * Golden-file round-trip — критический контур.
  *
- * <p>Цикл «прочитать → записать» обязан дать XML, семантически идентичный исходному
- * (INV-IXC-005), а второй цикл — тот же документ и те же байты (INV-IXC-004).
+ * <p>Цикл «прочитать → записать» обязан дать XML, семантически идентичный исходному,
+ * а второй цикл — тот же документ и те же байты.
  * Падение блокирует сборку: в CI этот класс — отдельный шаг.
  *
  * <p>На этапе 1 цикл идёт через кодек; на этапе 2 тот же тест пойдёт через БД.
@@ -41,8 +41,8 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
 public class RoundTripGoldenFileTest {
 
     /**
-     * Эталон читается из docs/, а не копируется в фикстуры: INV-IXC-005 называет
-     * эталоном именно этот файл, и копия молча разошлась бы с ним.
+     * Эталон читается из docs/, а не копируется в фикстуры: эталоном lossless-обещания
+     * служит именно этот файл, и копия молча разошлась бы с ним.
      */
     private static final String REFERENCE = "docs/Hamkorbank_AS_IS_strict.archimate";
 

@@ -12,7 +12,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.validation.Severity;
 
-/** Метрики modeling на Micrometer (spec/nfr/modeling.yaml#observability.metrics). */
+/** Метрики modeling на Micrometer. */
 public final class ModelingMicrometerMetrics implements UseCaseMetrics {
 
     private final MeterRegistry registry;

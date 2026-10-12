@@ -1,8 +1,10 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.document;
 
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+
 /**
- * Позиция среди соседей в исходном файле: читатель фиксирует, писатель воспроизводит
- * (docs/backend.md §3.4, п. 3).
+ * Позиция среди соседей в исходном файле: читатель фиксирует, писатель воспроизводит.
  *
  * <p>Плотная и живёт одно преобразование. Не путать с {@code SortOrder} модели:
  * тот разрежен шагом 1000 и живёт в БД.
@@ -11,7 +13,7 @@ public record DocumentOrder(int value) {
 
     public DocumentOrder {
         if (value < 0) {
-            throw new IllegalArgumentException("позиция не может быть отрицательной: " + value);
+            throw new InvalidValueException(InterchangeMessages.ORDER_NEGATIVE, value);
         }
     }
 

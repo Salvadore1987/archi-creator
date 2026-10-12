@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
@@ -84,6 +85,6 @@ class FolderTreeTest {
         ModelingException notEmpty = assertThrows(ModelingException.class,
                 () -> model.removeFolder(masters.id(), NOW));
 
-        assertEquals(ModelingException.Codes.FOLDER_NOT_EMPTY, notEmpty.code());
+        assertEquals(ModelingCodes.FOLDER_NOT_EMPTY, notEmpty.code());
     }
 }

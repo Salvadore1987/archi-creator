@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.ByteArrayInputStream;
@@ -40,6 +41,10 @@ class CatalogExportIT extends ApiTest {
             assertTrue(in.getNextEntry().getName().equals("relations.csv"));
         }
         mvc.perform(get("/api/v1/models/" + model + "/export?fmt=oef").with(viewer()))
-                .andExpect(status().isUnprocessableContent());
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("IXC_FORMAT_NOT_AVAILABLE"));
+        mvc.perform(get("/api/v1/models/" + model + "/export?fmt=pdf").with(viewer()))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("IXC_UNKNOWN_FORMAT"));
     }
 }

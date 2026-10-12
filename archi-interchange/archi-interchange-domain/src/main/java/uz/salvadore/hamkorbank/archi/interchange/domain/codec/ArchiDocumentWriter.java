@@ -4,12 +4,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 
-/** Порт записи {@code .archimate} (FR-02). */
+/** Порт записи {@code .archimate}. */
 public interface ArchiDocumentWriter {
 
     /**
      * Пишет документ в порядке, в котором его построил читатель. Один и тот же
-     * документ даёт побайтово один и тот же результат (INV-IXC-004).
+     * документ даёт побайтово один и тот же результат.
      */
     void write(ModelDocument document, OutputStream out);
 

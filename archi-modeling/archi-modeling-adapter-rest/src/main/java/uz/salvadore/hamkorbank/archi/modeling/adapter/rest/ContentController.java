@@ -31,13 +31,17 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.Relationship
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.RenameRequest;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.RequestedIds;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.TreeService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ConceptKind;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationshipType;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.AccessType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
@@ -45,8 +49,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 
 /**
- * Содержимое модели: элементы, связи, дерево папок, метамодель для палитры
- * (UC-MDL-002, UC-MDL-003, UC-MDL-006).
+ * Содержимое модели: элементы, связи, дерево папок, метамодель для палитры.
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -62,14 +65,15 @@ public class ContentController {
         this.tree = tree;
     }
 
-    // ── Элементы (UC-MDL-002) ───────────────────────────────────────
+    // ── Элементы ────────────────────────────────────────────────────
 
     @PostMapping("/models/{id}/elements")
     public ResponseEntity<ElementDto> createElement(EditorIdentity actor, @PathVariable UUID id,
                                                     @RequestBody CreateElementRequest request,
                                                     @RequestHeader("Idempotency-Key") Optional<String> key) {
         var element = elements.create(actor, ModelId.of(id), archiType(request.archiType()), request.name(),
-                Optional.ofNullable(request.folderId()).map(FolderId::of), key);
+                Optional.ofNullable(request.folderId()).map(FolderId::of),
+                RequestedIds.of(request.id(), request.archiId()), key);
         return ResponseEntity.created(URI.create("/api/v1/elements/" + element.id())).body(DtoMapper.element(element));
     }
 
@@ -79,14 +83,14 @@ public class ContentController {
                 Optional.ofNullable(patch.documentation()), properties(patch.properties())));
     }
 
-    /** Со связями — {@code 409} с их перечнем в {@code relationships} (INV-MDL-004). */
+    /** Со связями — {@code 409} с их перечнем в {@code relationships}. */
     @DeleteMapping("/elements/{id}")
     public ResponseEntity<Void> deleteElement(EditorIdentity actor, @PathVariable UUID id) {
         elements.delete(actor, ElementId.of(id));
         return ResponseEntity.noContent().build();
     }
 
-    // ── Связи (UC-MDL-003) ──────────────────────────────────────────
+    // ── Связи ───────────────────────────────────────────────────────
 
     /** Новая — {@code 201}; дубль того же типа между той же парой — {@code 200} с существующей. */
     @PostMapping("/models/{id}/relationships")
@@ -94,10 +98,14 @@ public class ContentController {
                                                               @RequestBody CreateRelationshipRequest request,
                                                               @RequestHeader("Idempotency-Key") Optional<String> key) {
         var placement = Optional.ofNullable(request.view()).map(v -> new RelationshipService.EdgePlacement(
-                ViewId.of(v.viewId()), v.sourceNodeId(), v.targetNodeId()));
+                ViewId.of(require(v.viewId(), "view.viewId")), require(v.sourceNodeId(), "view.sourceNodeId"),
+                require(v.targetNodeId(), "view.targetNodeId"), RequestedIds.of(v.edgeId(), v.edgeArchiId())));
+        var details = new RelationshipService.Details(Optional.ofNullable(request.name()),
+                Optional.ofNullable(request.folderId()).map(FolderId::of), accessType(request.accessType()),
+                Optional.ofNullable(request.directed()), RequestedIds.of(request.id(), request.archiId()));
         var result = relationships.create(actor, ModelId.of(id), archiType(request.archiType()),
-                require(request.sourceId(), "sourceId"), require(request.targetId(), "targetId"),
-                Optional.ofNullable(request.name()), placement, key);
+                require(request.sourceId(), "sourceId"), require(request.targetId(), "targetId"), details,
+                placement, key);
         RelationshipDto body = DtoMapper.relationship(result.relationship(),
                 result.edge().map(e -> e.value()).orElse(null));
         return result.created()
@@ -119,14 +127,14 @@ public class ContentController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── Дерево (UC-MDL-006) ─────────────────────────────────────────
+    // ── Дерево ──────────────────────────────────────────────────────
 
     @PostMapping("/models/{id}/folders")
     public ResponseEntity<FolderDto> createFolder(EditorIdentity actor, @PathVariable UUID id,
                                                   @RequestBody CreateFolderRequest request,
                                                   @RequestHeader("Idempotency-Key") Optional<String> key) {
         var folder = tree.createFolder(actor, ModelId.of(id), FolderId.of(require(request.parentId(), "parentId")),
-                request.name(), key);
+                request.name(), RequestedIds.of(request.id(), request.archiId()), key);
         return ResponseEntity.status(HttpStatus.CREATED).body(DtoMapper.folder(folder));
     }
 
@@ -154,7 +162,7 @@ public class ContentController {
 
     // ── Метамодель ──────────────────────────────────────────────────
 
-    /** Каталог типов для палитры: что редактируется в текущей фазе (FR-07, FR-08). */
+    /** Каталог типов для палитры: что редактируется в текущей фазе. */
     @GetMapping("/metamodel/elements")
     public List<ElementTypeDto> elementTypes() {
         ArchiTypeRegistry registry = ArchiTypeRegistry.archimate32();
@@ -165,7 +173,7 @@ public class ContentController {
                 .toList();
     }
 
-    /** Допустимые связи для пары типов; первая — выбор по умолчанию (UC-MDL-003, п. 1–2). */
+    /** Допустимые связи для пары типов; первая — выбор по умолчанию. */
     @GetMapping("/metamodel/relations")
     public List<RelationTypeDto> relationTypes(@RequestParam String source, @RequestParam String target) {
         List<RelationshipType> permitted = RelationshipService.suggest(archiType(source), archiType(target));
@@ -179,7 +187,18 @@ public class ContentController {
         try {
             return ArchiType.of(value);
         } catch (IllegalArgumentException | NullPointerException invalid) {
-            throw ModelingException.invalid("archiType вида archimate:<Имя>, получено: " + value);
+            throw ModelingException.invalid(Message.of(ModelingMessages.ARCHI_TYPE_REQUESTED, value));
+        }
+    }
+
+    private static Optional<AccessType> accessType(String value) {
+        if (value == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(AccessType.valueOf(value));
+        } catch (IllegalArgumentException invalid) {
+            throw ModelingException.invalid(Message.of(ModelingMessages.ACCESS_TYPE_REQUESTED, value));
         }
     }
 
@@ -190,14 +209,14 @@ public class ContentController {
 
     private static List<UUID> items(List<UUID> ids) {
         if (ids == null || ids.isEmpty()) {
-            throw ModelingException.invalid("пустой список объектов");
+            throw ModelingException.invalid(Message.of(ModelingMessages.ITEMS_EMPTY));
         }
         return ids;
     }
 
     private static <T> T require(T value, String name) {
         if (value == null) {
-            throw ModelingException.invalid("не задано поле " + name);
+            throw ModelingException.invalid(Message.of(ModelingMessages.FIELD_MISSING, name));
         }
         return value;
     }

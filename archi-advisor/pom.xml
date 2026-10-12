@@ -16,10 +16,8 @@
 
     <name>Archi Creator :: Advisor</name>
     <description>
-        Агрегатор bounded context'а advisor (ADV): ИИ-помощник: ревью, подсказка, план, документация;
-        аудит и бюджет токенов.
-        Спека — spec/domain/advisor/, spec/application/advisor/, spec/contracts/advisor/,
-        spec/nfr/advisor.yaml. Инварианты имеют код INV-ADV-NNN, сценарии — UC-ADV-NNN.
+        Агрегатор bounded context'а advisor: ИИ-помощник — ревью, подсказка, план,
+        документация; аудит и бюджет токенов.
     </description>
 
     <modules>

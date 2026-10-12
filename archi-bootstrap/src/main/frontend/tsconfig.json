@@ -16,8 +16,10 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "paths": { "@shared-ui/*": ["../resources/ui/*"] }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "build", "perf", "e2e", "vite.config.ts", "playwright.config.ts"]
 }

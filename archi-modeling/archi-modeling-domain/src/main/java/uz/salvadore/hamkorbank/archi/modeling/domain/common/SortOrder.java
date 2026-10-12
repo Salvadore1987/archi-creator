@@ -4,8 +4,7 @@ import java.util.Collection;
 import java.util.Optional;
 
 /**
- * Позиция среди соседей одного родителя — разреженная, шаг {@value #STEP}
- * (INV-MDL-005, docs/database.md §11.6).
+ * Позиция среди соседей одного родителя — разреженная, шаг {@value #STEP}.
  *
  * <p>Вставка между соседями берёт середину зазора и не трогает остальных:
  * плотная нумерация превращала бы каждую вставку в diff на всю папку при
@@ -18,7 +17,7 @@ public record SortOrder(long value) implements Comparable<SortOrder> {
 
     public SortOrder {
         if (value <= 0) {
-            throw new IllegalArgumentException("INV-MDL-005: sort_order обязан быть положительным: " + value);
+            throw new InvalidValueException(ModelingMessages.SORT_ORDER_POSITIVE, value);
         }
     }
 

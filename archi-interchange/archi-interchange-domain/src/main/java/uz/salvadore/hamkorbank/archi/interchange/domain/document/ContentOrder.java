@@ -1,6 +1,8 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.document;
 
 import java.util.List;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 /** Общие проверки и выборки над упорядоченным содержимым узла. */
 final class ContentOrder {
@@ -12,8 +14,7 @@ final class ContentOrder {
     static void requireDense(List<DocumentContent> content) {
         for (int i = 0; i < content.size(); i++) {
             if (content.get(i).order().value() != i) {
-                throw new IllegalArgumentException(
-                        "позиция " + content.get(i).order().value() + " на месте " + i + ": порядок рассогласован");
+                throw new InvalidValueException(InterchangeMessages.ORDER_MISMATCH, content.get(i).order().value(), i);
             }
         }
     }

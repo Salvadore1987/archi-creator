@@ -9,7 +9,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 
 /**
  * Девять корневых папок новой модели — сразу при создании, а не по первому элементу:
- * файл Archi без них невалиден (UC-MDL-001, INV-MDL-009).
+ * файл Archi без них невалиден.
  */
 public final class FolderTreeInitializer {
 

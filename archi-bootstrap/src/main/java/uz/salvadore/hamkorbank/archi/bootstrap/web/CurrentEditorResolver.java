@@ -21,7 +21,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 /**
  * Автор команды — параметр {@code EditorIdentity} контроллера. Субъект — {@code sub}
  * из JWT, роли — {@code ROLE_*} из {@code realm_access} (KeycloakRealmRolesConverter),
- * группы — claim {@code groups} для списка доступа модели (INV-MDL-011). Персональных
+ * группы — claim {@code groups} для списка доступа модели. Персональных
  * данных нет: имя и почта в домен не попадают.
  *
  * <p>Контроллеры не знают ни Spring Security, ни формата токена: заглушка профиля
@@ -41,7 +41,7 @@ public final class CurrentEditorResolver implements HandlerMethodArgumentResolve
                                           NativeWebRequest request, WebDataBinderFactory binders) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new InsufficientAuthenticationException("запрос без аутентификации");
+            throw new InsufficientAuthenticationException(BootstrapMessages.NOT_AUTHENTICATED);
         }
         return of(authentication);
     }

@@ -7,19 +7,23 @@ import java.util.Objects;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelLockReleased;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
 /**
- * Право единолично редактировать модель — агрегат (INV-MDL-006, UC-MDL-005).
+ * Право единолично редактировать модель — агрегат.
  *
  * <p>Хранится только действующая или просроченная запись: снятая блокировка строки
  * не оставляет. Просроченная прав не даёт, даже если запись ещё существует.
  */
 public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Instant expiresAt) {
 
-    public static final String INVARIANT = "INV-MDL-006";
+    public static final String INVARIANT = ModelingCodes.LOCK_REQUIRED;
 
     public ModelLock {
         Objects.requireNonNull(modelId, "modelId");
@@ -27,7 +31,7 @@ public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Insta
         Objects.requireNonNull(acquiredAt, "acquiredAt");
         Objects.requireNonNull(expiresAt, "expiresAt");
         if (!expiresAt.isAfter(acquiredAt)) {
-            throw new IllegalArgumentException("срок блокировки истекает раньше захвата");
+            throw new InvalidValueException(ModelingMessages.LOCK_EXPIRES_BEFORE_ACQUIRED);
         }
     }
 
@@ -62,7 +66,7 @@ public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Insta
     }
 
     /**
-     * Снятие. Владелец снимает свою, {@code ADMIN} — любую принудительно (FR-05);
+     * Снятие. Владелец снимает свою, {@code ADMIN} — любую принудительно;
      * архитектору чужую снимать нельзя.
      */
     public ModelLockReleased release(EditorIdentity by, Instant now) {
@@ -75,22 +79,21 @@ public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Insta
         if (by.isAdmin()) {
             return new ModelLockReleased(modelId, owner, by.subject(), LockReleaseReason.FORCED_BY_ADMIN, now);
         }
-        throw new ModelingException(ModelingException.Codes.ACCESS_DENIED, Failure.FORBIDDEN,
-                "чужую блокировку снимает только ADMIN (FR-05)", Map.of("lockOwner", owner));
+        throw new ModelingException(ModelingCodes.ACCESS_DENIED, Failure.FORBIDDEN,
+                Message.of(ModelingMessages.LOCK_FOREIGN_RELEASE), Map.of("lockOwner", owner));
     }
 
     /**
-     * Запись требует действующей блокировки автора команды (INV-MDL-006). Иначе — {@code 409}:
+     * Запись требует действующей блокировки автора команды. Иначе — {@code 409}:
      * клиент показывает владельца и предлагает read-only.
      */
     public static void requireWriteAccess(ModelId modelId, Optional<ModelLock> lock, String subject, Instant now) {
         if (lock.isEmpty()) {
-            throw new ModelingException(INVARIANT, Failure.CONFLICT,
-                    "модель " + modelId + " не заблокирована на редактирование: сначала захватите блокировку");
+            throw new ModelingException(INVARIANT, Failure.CONFLICT, Message.of(ModelingMessages.LOCK_NOT_HELD, modelId));
         }
         if (lock.get().status(now) == LockStatus.EXPIRED) {
             throw new ModelingException(INVARIANT, Failure.CONFLICT,
-                    "блокировка модели " + modelId + " истекла: перезахватите её и повторите",
+                    Message.of(ModelingMessages.LOCK_EXPIRED, modelId),
                     Map.of("lockOwner", lock.get().owner, "expiresAt", lock.get().expiresAt.toString()));
         }
         if (!lock.get().owner.equals(subject)) {
@@ -100,7 +103,7 @@ public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Insta
 
     private static ModelingException heldByOther(ModelLock lock) {
         return new ModelingException(INVARIANT, Failure.CONFLICT,
-                "модель редактирует " + lock.owner + " до " + lock.expiresAt,
+                Message.of(ModelingMessages.LOCK_HELD_BY_OTHER, lock.owner, lock.expiresAt),
                 Map.of("lockOwner", lock.owner, "expiresAt", lock.expiresAt.toString()));
     }
 

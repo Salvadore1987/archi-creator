@@ -3,6 +3,8 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.residue;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 /**
  * Единица содержимого узла без собственного идентификатора — с позицией {@code order}
@@ -34,12 +36,12 @@ public sealed interface ResidueItem permits ResidueItem.Slot, ResidueItem.Value,
             Objects.requireNonNull(text, "text");
             attributes = List.copyOf(attributes);
             if (attributes.stream().anyMatch(ResidueAttribute::typed)) {
-                throw new IllegalArgumentException("у нетипизированного значения все атрибуты буквальны");
+                throw new InvalidValueException(InterchangeMessages.UNTYPED_VALUE_LITERAL);
             }
         }
     }
 
-    /** Непрозрачный фрагмент дословно (FR-03). */
+    /** Непрозрачный фрагмент дословно. */
     record Fragment(long order, String xml) implements ResidueItem {
 
         public Fragment {

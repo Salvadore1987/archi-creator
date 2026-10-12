@@ -2,16 +2,16 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.metamodel;
 
 import java.util.Objects;
 import java.util.regex.Pattern;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
  * Тип объекта ArchiMate в нотации файла Archi: {@code archimate:ApplicationComponent}.
  *
  * <p>Намеренно не enum: тип вне текущей фазы метамодели обязан сохраниться
- * и уйти обратно при экспорте (FR-03). Enum отверг бы его на чтении, и
+ * и уйти обратно при экспорте. Enum отверг бы его на чтении, и
  * round-trip сломался бы на первом же {@code Capability}. Знает ли метамодель
  * этот тип, отвечает {@link ArchiTypeRegistry}, а не конструктор.
- *
- * <p>Спецификация: spec/domain/modeling/aggregates.yaml#ArchiType.
  */
 public record ArchiType(String value) {
 
@@ -21,8 +21,7 @@ public record ArchiType(String value) {
     public ArchiType {
         Objects.requireNonNull(value, "archiType");
         if (!FORMAT.matcher(value).matches()) {
-            throw new IllegalArgumentException(
-                    "archiType должен иметь вид archimate:<Имя>, получено: " + value);
+            throw new InvalidValueException(ModelingMessages.ARCHI_TYPE_FORMAT, value);
         }
     }
 

@@ -50,7 +50,7 @@ public class ModelEntity {
     @Column(name = "updated_at", nullable = false)
     public Instant updatedAt;
 
-    /** Оптимистичная блокировка строки (NFR-07). */
+    /** Оптимистичная блокировка строки. */
     @Version
     public long version;
 

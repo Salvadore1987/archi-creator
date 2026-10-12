@@ -5,7 +5,7 @@ import java.util.Map;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.ModelAccessList;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
-/** Списки доступа (INV-MDL-011). Нет записей — список пуст, модель открыта по ролям. */
+/** Списки доступа модели. Нет записей — список пуст, модель открыта по ролям. */
 public interface ModelAccessListRepository {
 
     ModelAccessList find(ModelId modelId);

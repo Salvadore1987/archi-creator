@@ -19,13 +19,13 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
 /**
- * Одна попытка внести файл в систему — агрегат (spec/domain/interchange/aggregates.yaml#ImportSession).
+ * Одна попытка внести файл в систему — агрегат.
  *
- * <p>Автомат INV-IXC-002: {@code RECEIVED → PARSED → VALIDATED → APPLIED}, отказ
+ * <p>Автомат: {@code RECEIVED → PARSED → VALIDATED → APPLIED}, отказ
  * из любого нетерминального. Применить можно только проверенное; {@code APPLIED}
  * и {@code REJECTED} терминальны, повторное применение отклоняется.
  *
- * <p>INV-IXC-007: строгость меняет порог отказа, но не отношение к повреждённым
+ * <p>Строгость меняет порог отказа, но не отношение к повреждённым
  * данным. Повреждённый файл отклоняется на разборе в любом режиме; находка
  * {@code ERROR} на проверке отклоняет только в строгом.
  */
@@ -66,7 +66,7 @@ public final class ImportSession {
     /**
      * Сессия из хранилища. Документ не хранится: он нужен лишь в пределах одного
      * импорта, а отчёт и результат — навсегда. Повтор по ключу отдаёт этот результат,
-     * а не применяет документ снова (INV-IXC-003).
+     * а не применяет документ снова.
      */
     public static ImportSession restore(ImportSessionId id, ImportRequest request, Instant startedAt,
                                         ImportStatus status, List<ImportFinding> findings,
@@ -87,7 +87,7 @@ public final class ImportSession {
     }
 
     /**
-     * Разбор: {@code RECEIVED → PARSED}. Повреждённые данные (FR-50) переводят сессию
+     * Разбор: {@code RECEIVED → PARSED}. Повреждённые данные переводят сессию
      * в {@code REJECTED} сразу, в любом режиме — со всеми дефектами в отчёте.
      */
     public void parse(ArchiDocumentReader reader, InputStream content, Supplier<FindingId> findingIds, Instant now) {
@@ -103,7 +103,7 @@ public final class ImportSession {
 
     /**
      * Проверка методологии: {@code PARSED → VALIDATED}. Находки попадают в отчёт;
-     * в строгом режиме хотя бы одна {@link Severity#ERROR} даёт {@code REJECTED} (INV-IXC-007).
+     * в строгом режиме хотя бы одна {@link Severity#ERROR} даёт {@code REJECTED}.
      */
     public void validate(List<ImportFinding> methodologyFindings, Instant now) {
         require(ImportStatus.PARSED, "validate");
@@ -128,7 +128,7 @@ public final class ImportSession {
     /**
      * {@code VALIDATED → APPLIED}: документ записан в модель. Только из {@code VALIDATED} —
      * разбор без проверки не даёт права писать в модель, а повтор терминальной сессии
-     * удвоил бы модель (INV-IXC-002).
+     * удвоил бы модель.
      */
     public ImportApplied apply(ModelId modelId, long versionNo, int opaqueObjectCount, Instant now) {
         require(ImportStatus.VALIDATED, "ApplyImport");

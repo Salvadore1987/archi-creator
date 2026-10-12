@@ -1,10 +1,10 @@
 ---
-version: 1.0
-last_modified: 2026-09-28
+version: 1.1
+last_modified: 2026-10-09
 bounded_context: modeling
 use_case: UC-MDL-003
 requirements: [FR-09, FR-10, FR-13, FR-14]
-invariants: [INV-MDL-004, INV-MDL-007, INV-MDL-008]
+invariants: [INV-MDL-001, INV-MDL-004, INV-MDL-007, INV-MDL-008, INV-MDL-009]
 stages: ["2", "4"]
 ---
 
@@ -32,7 +32,11 @@ stages: ["2", "4"]
    в пределах допустимых.
 3. Команда создания проверяет допустимость повторно на сервере: интерфейс —
    удобство, а правило защищает `INV-MDL-007`.
-4. Создаётся `Relationship` с `archi_id`, попадает в системную папку `Relations`.
+4. Создаётся `Relationship` с `archi_id`, попадает в системную папку `Relations` —
+   или в указанную папку её поддерева (`INV-MDL-009`). Ключ и `archi_id` связи
+   и ребра может задать клиент ([`ADR-0018`](../../../adr/0018-local-edit-session.md)),
+   проверка — как в `UC-MDL-002`. Вид доступа задаётся только у Access,
+   направленность — только у Association.
 5. На представлении создаётся `ViewEdge`, точки перегиба — по умолчанию пусты.
 6. При вложении узла в узел (containment) тип связи выбирается по паре:
    composition либо assignment (FR-14).
@@ -43,7 +47,10 @@ stages: ["2", "4"]
 |---|---|---|
 | Тип не разрешён матрицей | `422`, `RELATION_NOT_PERMITTED` | Связь не создаётся, возвращается причина и список допустимых (§8) |
 | Конец из другой модели | `422` | Отказ (`INV-MDL-004`) |
-| Связь-дубль того же типа между той же парой | `200` | Возвращается существующая, дубль не создаётся |
+| Связь-дубль того же типа между той же парой | `200` | Возвращается существующая, дубль не создаётся; идентификаторы и атрибуты из запроса к ней не применяются |
+| Ключ или `archi_id` от клиента уже заняты | `409`, `MDL_ID_TAKEN` | Связь не создаётся |
+| Папка вне поддерева `Relations` | `422`, `INV-MDL-009` | Связь не создаётся |
+| `accessType` не у Access, `directed` не у Association | `422`, `MDL_INVALID_INPUT` | Связь не создаётся |
 | Нарушение пришло из импорта | — | Не блокируется: попадает в отчёт валидации и фильтр «Замечания» (FR-10, `INV-IXC-007`) |
 
 Различие последних двух строк — суть FR-10: правило применяется при рисовании,
@@ -51,7 +58,8 @@ stages: ["2", "4"]
 
 ## Порты
 
-**Входящие:** `CreateRelationship(modelId, archiType, sourceId, targetId)`,
+**Входящие:** `CreateRelationship(modelId, archiType, sourceId, targetId, folderId?, accessType?,
+directed?, id?, archiId?)`,
 `SuggestRelationTypes(sourceType, targetType)` → список типов
 
 **Исходящие:** `RelationMatrix`, `RelationshipRepository`, `LockGuard`
@@ -63,3 +71,4 @@ stages: ["2", "4"]
 | Запрет по матрице | `RelationMatrixTest#forbiddenRelationIsRejectedOnCreate` |
 | Импортированные нарушения не блокируют | `ValidationReportIT#importedViolationsAppearInReport` |
 | Концы одной модели | `RelationshipIntegrityTest#deletingConnectedElementIsRejected` |
+| Папка и атрибуты типа | `ClientIdsScenariosTest#relationshipFolderAndTypeAttributes` |

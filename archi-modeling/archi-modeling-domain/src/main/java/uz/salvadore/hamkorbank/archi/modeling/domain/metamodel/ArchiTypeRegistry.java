@@ -9,24 +9,24 @@ import static uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ConceptKin
 import static uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.MetamodelPhase.PHASE_1;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.MetamodelPhase.PHASE_2;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.MetamodelPhase.PHASE_3;
-
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
- * Каталог типов ArchiMate 3.2 и реестр {@code xsi:type} ↔ внутренний тип
- * (docs/backend.md §3.3).
+ * Каталог типов ArchiMate 3.2 и реестр {@code xsi:type} ↔ внутренний тип.
  *
  * <p>Внутренний тип и {@code xsi:type} записываются одинаково —
  * {@code archimate:ApplicationComponent}, — поэтому реестр не переводит строки,
  * а отвечает, <em>что</em> за тип перед нами: элемент или связь, какого слоя,
  * с какой фазы редактируется. Тип вне каталога законен: он хранится и
- * выгружается как есть (FR-03), его слой — {@link Layer#OTHER}.
+ * выгружается как есть, его слой — {@link Layer#OTHER}.
  *
- * <p>Фазы — FR-07 и FR-08: в фазе 1 Business, Application, Technology, все
+ * <p>Фазы: в фазе 1 Business, Application, Technology, все
  * связи и {@code Junction}; Motivation и Strategy — фаза 2; Physical и
  * Implementation &amp; Migration — фаза 3.
  */
@@ -61,7 +61,7 @@ public final class ArchiTypeRegistry {
         return find(type).map(ConceptDefinition::layer).orElse(Layer.OTHER);
     }
 
-    /** Редактируется ли тип в текущей фазе. Незнакомый — нет, он opaque (FR-03). */
+    /** Редактируется ли тип в текущей фазе. Незнакомый — нет, он opaque. */
     public boolean isSupported(ArchiType type) {
         return find(type).map(ConceptDefinition::supported).orElse(false);
     }
@@ -95,7 +95,7 @@ public final class ArchiTypeRegistry {
                 "Resource", "Capability", "ValueStream", "CourseOfAction");
         catalog.elements(Layer.IMPLEMENTATION, PHASE_3,
                 "WorkPackage", "Deliverable", "ImplementationEvent", "Plateau", "Gap");
-        // Пробел спеки: FR-07/FR-08 не относят Location и Grouping ни к одной фазе.
+        // Location и Grouping пока не отнесены ни к одной фазе метамодели.
         // До решения они opaque — хранятся и выгружаются, но не редактируются.
         catalog.add("Location", ELEMENT, Layer.OTHER, null);
         catalog.add("Grouping", ELEMENT, Layer.OTHER, null);
@@ -127,7 +127,7 @@ public final class ArchiTypeRegistry {
             ConceptDefinition previous = concepts.put(type,
                     new ConceptDefinition(type, kind, layer, Optional.ofNullable(phase)));
             if (previous != null) {
-                throw new IllegalStateException("тип объявлен в каталоге дважды: " + type);
+                throw new IllegalStateException(Message.of(ModelingMessages.CATALOG_DUPLICATE, type).toString());
             }
         }
     }

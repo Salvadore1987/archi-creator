@@ -2,6 +2,8 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 
 import java.util.Arrays;
 import java.util.Objects;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 
 /** Готовый файл выгрузки с отпечатком содержимого. */
@@ -14,7 +16,7 @@ public record Artifact(byte[] bytes, String mediaType, String fileName, ContentH
         Objects.requireNonNull(hash, "hash");
         bytes = bytes.clone();
         if (!hash.equals(ContentHash.of(bytes))) {
-            throw new IllegalArgumentException("отпечаток не соответствует содержимому");
+            throw new InvalidValueException(InterchangeMessages.ARTIFACT_HASH_MISMATCH);
         }
     }
 
@@ -41,6 +43,6 @@ public record Artifact(byte[] bytes, String mediaType, String fileName, ContentH
 
     @Override
     public String toString() {
-        return "Artifact[" + fileName + ", " + mediaType + ", " + bytes.length + " байт, " + hash + "]";
+        return "Artifact[" + fileName + ", " + mediaType + ", " + bytes.length + " B, " + hash + "]";
     }
 }

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 /**
  * Полное содержимое модели в порядке исходного файла — published language
@@ -23,11 +25,12 @@ public record ModelDocument(Attributes attributes, List<DocumentContent> content
     public ModelDocument {
         Objects.requireNonNull(attributes, "attributes");
         content = List.copyOf(content);
-        ArchiId.of(attributes.get("id").orElseThrow(() -> new IllegalArgumentException("у модели нет id")));
+        ArchiId.of(attributes.get("id")
+                .orElseThrow(() -> new InvalidValueException(InterchangeMessages.MODEL_WITHOUT_ID)));
         ContentOrder.requireDense(content);
         for (DocumentContent item : content) {
             if (item instanceof RawXmlFragment raw && raw.parentArchiId().isPresent()) {
-                throw new IllegalArgumentException("фрагмент в корне модели адресован " + raw.parentArchiId());
+                throw new InvalidValueException(InterchangeMessages.FRAGMENT_ROOT_MISADDRESSED, raw.parentArchiId());
             }
         }
     }

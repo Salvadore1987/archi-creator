@@ -9,6 +9,7 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.FolderDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.LockInfo;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelSummary;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelTree;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PlacementDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PropertyDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.RelationshipDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.StyleDto;
@@ -17,6 +18,8 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewEdgeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewNodeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewPayload;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewSummary;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
@@ -46,7 +49,8 @@ public final class DtoMapper {
                 h.updatedAt());
     }
 
-    public static ModelTree tree(ArchitectureModel model) {
+    public static ModelTree tree(ModelQueryService.OpenedModel opened) {
+        ArchitectureModel model = opened.model();
         return new ModelTree(summary(model.header()),
                 model.folders().values().stream().sorted(Comparator.comparing(ModelFolder::sortOrder))
                         .map(DtoMapper::folder).toList(),
@@ -54,7 +58,10 @@ public final class DtoMapper {
                         .map(DtoMapper::element).toList(),
                 model.relationships().values().stream().sorted(Comparator.comparing(Relationship::sortOrder))
                         .map(r -> relationship(r, null)).toList(),
-                model.views().stream().sorted(Comparator.comparing(ViewRef::sortOrder)).map(DtoMapper::view).toList());
+                model.views().stream().sorted(Comparator.comparing(ViewRef::sortOrder)).map(DtoMapper::view).toList(),
+                opened.placements().stream().map(p -> new PlacementDto(p.viewId().value(),
+                        p.elementIds().stream().map(e -> e.value()).toList(),
+                        p.relationshipIds().stream().map(r -> r.value()).toList())).toList());
     }
 
     public static FolderDto folder(ModelFolder f) {
@@ -101,7 +108,7 @@ public final class DtoMapper {
         return new ViewNodeDto(n.id().value(), n.parentId().map(p -> p.value()).orElse(null), n.archiId().value(),
                 n.archiType().value(), n.kind().name(), n.elementId().map(e -> e.value()).orElse(null),
                 n.bounds().x(), n.bounds().y(), n.bounds().width(), n.bounds().height(), style(n.style()),
-                n.sortOrder().value());
+                n.label().orElse(null), n.content().orElse(null), n.sortOrder().value());
     }
 
     public static ViewEdgeDto edge(ViewEdge e) {
@@ -120,9 +127,10 @@ public final class DtoMapper {
         return new LockInfo(l.modelId().value(), l.owner(), l.acquiredAt(), l.expiresAt());
     }
 
-    public static Finding finding(ValidationFinding f) {
-        return new Finding(f.severity().name(), f.code(), f.message(), f.targetKind(), f.targetId(),
-                f.suggestion().orElse(null));
+    /** Находка с текстом на языке запроса: сообщение и подсказка хранятся ключами. */
+    public static Finding finding(ValidationFinding f, TextCatalog text) {
+        return new Finding(f.severity().name(), f.code(), text.text(f.message()), f.targetKind(), f.targetId(),
+                f.suggestion().map(text::text).orElse(null));
     }
 
     private static StyleDto style(StyleOverride s) {

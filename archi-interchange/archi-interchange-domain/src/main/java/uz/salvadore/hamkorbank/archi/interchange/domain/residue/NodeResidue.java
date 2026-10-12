@@ -12,9 +12,12 @@ import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 
 /**
- * Остаток XML одного объекта (ADR-0017): порядок атрибутов с метками типизированных,
+ * Остаток XML одного объекта: порядок атрибутов с метками типизированных,
  * незнакомые атрибуты, содержимое без идентификатора с позициями.
  *
  * <p>Строковая форма — маленький XML: формат свой, закрытый, и читается тем же StAX,
@@ -87,7 +90,7 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
             xml.writeEndElement();
             xml.close();
         } catch (XMLStreamException e) {
-            throw new IllegalStateException("остаток XML не записывается", e);
+            throw new IllegalStateException(Message.of(InterchangeMessages.RESIDUE_UNWRITABLE).toString(), e);
         }
         return out.toString();
     }
@@ -110,12 +113,12 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
                     case "s" -> items.add(readSlot(xml));
                     case "v" -> items.add(readValue(xml));
                     case "f" -> items.add(new ResidueItem.Fragment(order(xml), xml.getElementText()));
-                    default -> throw new IllegalArgumentException("неизвестная запись остатка: " + xml.getLocalName());
+                    default -> throw new InvalidValueException(InterchangeMessages.RESIDUE_UNKNOWN_RECORD, xml.getLocalName());
                 }
             }
             return new NodeResidue(attributes, items);
         } catch (XMLStreamException e) {
-            throw new IllegalArgumentException("остаток XML повреждён", e);
+            throw new IllegalArgumentException(Message.of(InterchangeMessages.RESIDUE_CORRUPTED).toString(), e);
         }
     }
 
@@ -188,7 +191,7 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
 
     private static void require(XMLStreamReader xml, String name) {
         if (!xml.getLocalName().equals(name)) {
-            throw new IllegalArgumentException("ожидалась запись остатка <" + name + ">");
+            throw new InvalidValueException(InterchangeMessages.RESIDUE_RECORD_EXPECTED, name);
         }
     }
 }

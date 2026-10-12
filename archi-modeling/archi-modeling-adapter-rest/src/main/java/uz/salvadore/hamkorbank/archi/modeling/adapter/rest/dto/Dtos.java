@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * DTO modeling — §5.1 и spec/contracts/modeling/rest-api.openapi.yaml. Остаток XML
- * ({@code raw_xml}) наружу не отдаётся: это внутренний формат interchange (ADR-0017).
+ * DTO modeling по контракту OpenAPI. Остаток XML ({@code raw_xml}) наружу
+ * не отдаётся: это внутренний формат interchange.
  * Отсутствующее значение — {@code null}, а не {@code Optional}: так его видит JSON.
  */
 public final class Dtos {
@@ -41,16 +41,26 @@ public final class Dtos {
     public record ViewSummary(UUID id, UUID folderId, String archiId, String archiType, String name, long sortOrder) {
     }
 
-    /** Дерево модели: папки, элементы, связи, список представлений (OpenModel). */
+    /** Дерево модели: папки, элементы, связи, список представлений и что на них размещено (OpenModel). */
     public record ModelTree(ModelSummary model, List<FolderDto> folders, List<ElementDto> elements,
-                            List<RelationshipDto> relationships, List<ViewSummary> views) {
+                            List<RelationshipDto> relationships, List<ViewSummary> views,
+                            List<PlacementDto> placements) {
+    }
+
+    /** Элементы с узлом и связи с ребром на одном представлении, без повторов. */
+    public record PlacementDto(UUID viewId, List<UUID> elementIds, List<UUID> relationshipIds) {
     }
 
     public record StyleDto(String fillColor, String font, String fontColor, String lineColor, Integer textAlignment) {
     }
 
+    /**
+     * @param label   собственная подпись узла — у группы, объектов скетча и холста
+     * @param content текст заметки с переводами строк
+     */
     public record ViewNodeDto(UUID id, UUID parentId, String archiId, String archiType, String kind, UUID elementId,
-                              int x, int y, int width, int height, StyleDto style, long sortOrder) {
+                              int x, int y, int width, int height, StyleDto style, String label, String content,
+                              long sortOrder) {
     }
 
     public record BendpointDto(int startX, int startY, int endX, int endY) {
@@ -103,21 +113,24 @@ public final class Dtos {
     public record LabelRequest(String label) {
     }
 
-    public record CreateElementRequest(String archiType, String name, UUID folderId) {
+    /** {@code id} и {@code archiId} задаёт клиент, который ссылается на объект до ответа; без них — сервер. */
+    public record CreateElementRequest(String archiType, String name, UUID folderId, UUID id, String archiId) {
     }
 
     /** {@code properties}: {@code null} — не менять, пустой список — снять все. */
     public record ElementPatch(String name, String documentation, List<PropertyDto> properties) {
     }
 
-    public record EdgePlacementRequest(UUID viewId, UUID sourceNodeId, UUID targetNodeId) {
+    public record EdgePlacementRequest(UUID viewId, UUID sourceNodeId, UUID targetNodeId, UUID edgeId,
+                                       String edgeArchiId) {
     }
 
     public record CreateRelationshipRequest(String archiType, UUID sourceId, UUID targetId, String name,
-                                            EdgePlacementRequest view) {
+                                            EdgePlacementRequest view, UUID id, String archiId, UUID folderId,
+                                            String accessType, Boolean directed) {
     }
 
-    public record CreateFolderRequest(UUID parentId, String name) {
+    public record CreateFolderRequest(UUID parentId, String name, UUID id, String archiId) {
     }
 
     public record RenameRequest(String name) {
@@ -129,10 +142,16 @@ public final class Dtos {
     public record ItemsRequest(List<UUID> itemIds) {
     }
 
-    public record CreateViewRequest(String name, UUID folderId) {
+    public record CreateViewRequest(String name, UUID folderId, UUID id, String archiId) {
     }
 
-    public record PlaceNodeRequest(UUID elementId, int x, int y, Integer width, Integer height, UUID parentId) {
+    public record PlaceNodeRequest(UUID elementId, int x, int y, Integer width, Integer height, UUID parentId,
+                                   UUID id, String archiId) {
+    }
+
+    /** Ребро уже существующей связи: концы — узлы или рёбра того же представления. */
+    public record PlaceEdgeRequest(UUID id, String archiId, UUID relationshipId, UUID sourceId, UUID targetId,
+                                   List<BendpointDto> bendpoints) {
     }
 
     public record NodeBounds(UUID id, int x, int y, int width, int height) {

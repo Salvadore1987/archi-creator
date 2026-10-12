@@ -17,7 +17,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
  * {@code JwtGrantedAuthoritiesConverter} их не видит и приложение получает
  * аутентифицированного пользователя без единой роли.
  *
- * <p>Из токена берутся только три роли FR-28: {@code VIEWER}, {@code ARCHITECT},
+ * <p>Из токена берутся только три роли модели доступа: {@code VIEWER}, {@code ARCHITECT},
  * {@code ADMIN}. Всё остальное, что realm мог выдать (например
  * {@code offline_access} или {@code default-roles-archi}), отбрасывается:
  * полномочие, которого нет в модели доступа, не должно попадать в контекст
@@ -25,7 +25,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
  */
 public final class KeycloakRealmRolesConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
 
-    /** Роли модели доступа (FR-28). Порядок не важен, важна закрытость набора. */
+    /** Роли модели доступа. Порядок не важен, важна закрытость набора. */
     static final Set<String> KNOWN_ROLES = Set.of("VIEWER", "ARCHITECT", "ADMIN");
 
     private static final String REALM_ACCESS = "realm_access";

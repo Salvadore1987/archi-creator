@@ -7,7 +7,7 @@ import java.util.Optional;
  * Запись каталога: что за тип, какого слоя и с какой фазы поддержан.
  *
  * @param phase фаза, в которой тип становится редактируемым; пусто — фаза не назначена
- *              (так сейчас у {@code Location} и {@code Grouping}: спека не относит их ни к одной)
+ *              (так сейчас у {@code Location} и {@code Grouping}: они пока не отнесены ни к одной)
  */
 public record ConceptDefinition(ArchiType type, ConceptKind kind, Layer layer, Optional<MetamodelPhase> phase) {
 
@@ -18,7 +18,7 @@ public record ConceptDefinition(ArchiType type, ConceptKind kind, Layer layer, O
         Objects.requireNonNull(phase, "phase");
     }
 
-    /** Редактируется ли тип в текущей фазе. Неподдержанный хранится как opaque (FR-03). */
+    /** Редактируется ли тип в текущей фазе. Неподдержанный хранится как opaque. */
     public boolean supported() {
         return phase.filter(p -> p == MetamodelPhase.PHASE_1).isPresent();
     }

@@ -4,13 +4,15 @@ import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 
 /**
  * Входящий порт для interchange: применить импортированный документ как новую модель
- * (UC-IXC-001, п. 5, порт {@code ModelWriter}). Роль проверяет вызывающий — у импорта
- * своя строка в таблице доступа (spec/nfr/interchange.yaml).
+ * (порт {@code ModelWriter}). Роль проверяет вызывающий — у импорта своя строка
+ * в таблице доступа.
  */
 public final class ModelImportService {
 
@@ -28,7 +30,8 @@ public final class ModelImportService {
     public ModelVersion store(ModelContent content, EditorIdentity actor, String comment) {
         return kernel.unitOfWork.write(() -> {
             workspaces.find(content.model().workspaceId()).orElseThrow(
-                    () -> ModelingException.notFound("рабочее пространство " + content.model().workspaceId()));
+                    () -> ModelingException.notFound(
+                            Message.of(ModelingMessages.WORKSPACE, content.model().workspaceId())));
             kernel.save(content.model());
             content.views().forEach(kernel.views::save);
             return versions.commit(content.model(), actor, Optional.of(comment));

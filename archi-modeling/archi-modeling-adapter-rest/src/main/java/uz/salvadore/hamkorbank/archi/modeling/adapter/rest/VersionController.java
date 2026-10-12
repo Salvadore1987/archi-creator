@@ -21,7 +21,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
-/** История версий: сохранить, пометить, откатиться (UC-MDL-004; FR-06, FR-48). */
+/** История версий: сохранить, пометить, откатиться. */
 @RestController
 @RequestMapping("/api/v1/models/{id}/versions")
 public class VersionController {

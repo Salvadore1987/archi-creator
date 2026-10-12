@@ -5,7 +5,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
 
-/** Метрики interchange (spec/nfr/interchange.yaml#observability). */
+/** Метрики interchange: длительность сценариев, исходы импорта, непрозрачные объекты. */
 public interface InterchangeMetrics {
 
     <T> T observe(String useCase, Supplier<T> work);
@@ -17,7 +17,7 @@ public interface InterchangeMetrics {
     default void importFinished(String outcome, boolean strictMode, List<ImportFinding> findings) {
     }
 
-    /** {@code interchange_opaque_objects{model_id}}: сколько объектов сохранено непрозрачными (FR-03). */
+    /** {@code interchange_opaque_objects{model_id}}: сколько объектов сохранено непрозрачными. */
     default void opaqueObjects(UUID modelId, int count) {
     }
 

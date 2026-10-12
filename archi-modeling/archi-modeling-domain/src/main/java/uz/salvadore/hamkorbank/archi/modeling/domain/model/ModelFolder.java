@@ -3,11 +3,13 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 import java.util.Objects;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 
 /**
- * Папка дерева модели (INV-MDL-009). Корневая — с {@code folderType} и без родителя,
+ * Папка дерева модели. Корневая — с {@code folderType} и без родителя,
  * пользовательская — с родителем и без типа.
  */
 public record ModelFolder(FolderId id, Optional<FolderId> parentId, ArchiId archiId, String name,
@@ -20,9 +22,9 @@ public record ModelFolder(FolderId id, Optional<FolderId> parentId, ArchiId arch
         Objects.requireNonNull(folderType, "folderType");
         Objects.requireNonNull(sortOrder, "sortOrder");
         Objects.requireNonNull(rawXml, "rawXml");
-        Names.limited(name, "папки");
+        Names.limited(name, Names.FOLDER);
         if (folderType.isPresent() == parentId.isPresent()) {
-            throw new IllegalArgumentException("INV-MDL-009: тип задан только у корневой папки, родитель — только у вложенной");
+            throw new InvalidValueException(ModelingMessages.FOLDER_TYPE_OR_PARENT);
         }
     }
 

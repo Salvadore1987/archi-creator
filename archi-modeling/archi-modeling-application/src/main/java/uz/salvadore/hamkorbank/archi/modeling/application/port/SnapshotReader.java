@@ -4,7 +4,7 @@ import java.time.Instant;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 
 /**
- * Обратный путь снимка — откат к версии (UC-MDL-004, {@code RollbackToVersion}).
+ * Обратный путь снимка — откат к версии ({@code RollbackToVersion}).
  * Реализует interchange.
  */
 public interface SnapshotReader {

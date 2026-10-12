@@ -24,6 +24,7 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelPatch;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelSummary;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelTree;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.WorkspaceDto;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.AccessListService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.LockService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
@@ -33,13 +34,14 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.PrincipalType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
- * Модели: список, дерево, жизненный цикл, блокировка, отчёт валидации, список доступа
- * (UC-MDL-001, UC-MDL-005, UC-MDL-007; docs/backend.md §5).
+ * Модели: список, дерево, жизненный цикл, блокировка, отчёт валидации, список доступа.
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -50,9 +52,11 @@ public class ModelController {
     private final LockService locks;
     private final AccessListService accessLists;
     private final WorkspaceService workspaces;
+    private final TextCatalog text;
 
     public ModelController(ModelQueryService queries, ModelLifecycleService lifecycle, LockService locks,
-                           AccessListService accessLists, WorkspaceService workspaces) {
+                           AccessListService accessLists, WorkspaceService workspaces, TextCatalog text) {
+        this.text = text;
         this.queries = queries;
         this.lifecycle = lifecycle;
         this.locks = locks;
@@ -80,7 +84,7 @@ public class ModelController {
 
     @GetMapping("/models/{id}")
     public ModelTree open(EditorIdentity actor, @PathVariable UUID id) {
-        return DtoMapper.tree(queries.open(actor, ModelId.of(id)));
+        return DtoMapper.tree(queries.openWithPlacements(actor, ModelId.of(id)));
     }
 
     @PatchMapping("/models/{id}")
@@ -106,7 +110,7 @@ public class ModelController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── Блокировка (UC-MDL-005) ─────────────────────────────────────
+    // ── Блокировка ──────────────────────────────────────────────────
 
     @GetMapping("/models/{id}/lock")
     public ResponseEntity<LockInfo> lock(EditorIdentity actor, @PathVariable UUID id) {
@@ -129,7 +133,7 @@ public class ModelController {
 
     @GetMapping("/models/{id}/validate")
     public List<Finding> validate(EditorIdentity actor, @PathVariable UUID id) {
-        return queries.validate(actor, ModelId.of(id)).stream().map(DtoMapper::finding).toList();
+        return queries.validate(actor, ModelId.of(id)).stream().map(f -> DtoMapper.finding(f, text)).toList();
     }
 
     @GetMapping("/models/{id}/acl")
@@ -151,12 +155,11 @@ public class ModelController {
             return new AclEntry(PrincipalType.valueOf(dto.principalType()), dto.principal(),
                     AclAccess.valueOf(dto.access()));
         } catch (IllegalArgumentException | NullPointerException invalid) {
-            throw ModelingException.invalid("запись списка доступа: тип USER|GROUP, уровень READ|WRITE");
+            throw ModelingException.invalid(Message.of(ModelingMessages.ACL_ENTRY_FORMAT));
         }
     }
 
     private WorkspaceId workspace(Optional<UUID> requested) {
-        return requested.map(WorkspaceId::of).orElseGet(() -> workspaces.list().stream().findFirst()
-                .orElseThrow(() -> ModelingException.notFound("рабочее пространство")).id());
+        return workspaces.resolve(requested.map(WorkspaceId::of));
     }
 }

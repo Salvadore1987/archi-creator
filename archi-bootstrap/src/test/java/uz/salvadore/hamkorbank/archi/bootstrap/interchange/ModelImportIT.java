@@ -22,7 +22,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
 
 /**
  * Критерий готовности этапа 2 на уровне сценариев: импорт → таблицы → экспорт даёт
- * исходный файл (§12, INV-IXC-005, NFR-05). Тот же круг через REST — {@code RoundTripApiIT}.
+ * исходный файл без потерь. Тот же круг через REST — {@code RoundTripApiIT}.
  */
 class ModelImportIT extends IntegrationTest {
 

@@ -15,8 +15,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 
 /**
  * Снимок версии modeling — файл {@code .archimate}: сборка из агрегатов и детерминированная
- * запись (INV-IXC-004), а для отката — чтение и раскладка обратно. Формат файла — язык
- * interchange, поэтому порты modeling реализованы здесь (ADR-0017).
+ * запись, а для отката — чтение и раскладка обратно. Формат файла — язык
+ * interchange, поэтому порты modeling реализованы здесь.
  */
 public final class ArchimateSnapshots implements SnapshotWriter, SnapshotReader {
 
