@@ -9,7 +9,8 @@ info:
 
     Каждая операция ссылается на use case в `x-use-case` и на строку таблицы
     доступа в `x-operation` (spec/nfr/interchange.yaml#security.authorization).
-    Наполнено на этапе 2 (2026-10-08); операции этапов 5a, 6a и 7a–7c
+    Наполнено на этапе 2 (2026-10-08), картинки представлений — этап 5a
+    (2026-10-12); операции этапов 6a и 7a–7c
     перечислены в конце раздела `paths` и появятся вместе со своими use case'ами.
 
 servers:
@@ -114,6 +115,77 @@ paths:
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 
+  /views/{id}/export:
+    get:
+      tags: [interchange]
+      operationId: exportViewImage
+      summary: Картинка представления из зафиксированной версии (FR-41, INV-IXC-008)
+      x-use-case: UC-IXC-004
+      x-operation: ExportViewImage
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid },
+            description: "Представление; ищется в снимке версии по своему archiId." }
+        - $ref: '#/components/parameters/ImageFormat'
+        - $ref: '#/components/parameters/ImageScale'
+        - $ref: '#/components/parameters/ImageOutline'
+        - $ref: '#/components/parameters/ImageBackground'
+        - { in: query, name: version, required: false, schema: { type: integer, format: int64 },
+            description: "Номер версии; без него — последняя." }
+      responses:
+        '200':
+          description: |
+            Картинка; номер версии — в `X-Archi-Version-No`, число записей отчёта
+            о потерях — в `X-Archi-Loss-Count` (INV-IXC-006), отпечаток — в `ETag`.
+          content:
+            image/svg+xml: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+        '404':
+          description: Представления нет, оно скрыто списком доступа или его нет в версии — `IXC_VIEW_NOT_IN_VERSION`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '410':
+          description: Снимок версии очищен, Git не настроен (FR-47).
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '422': { $ref: '#/components/responses/ImageOptionRejected422' }
+
+  /models/{id}/views/export:
+    get:
+      tags: [interchange]
+      operationId: exportAllViewImages
+      summary: Все представления модели одним архивом из одной версии (FR-41, INV-IXC-008)
+      x-use-case: UC-IXC-004
+      x-operation: ExportAllViewImages
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+        - $ref: '#/components/parameters/ImageFormat'
+        - $ref: '#/components/parameters/ImageScale'
+        - $ref: '#/components/parameters/ImageOutline'
+        - $ref: '#/components/parameters/ImageBackground'
+        - { in: query, name: version, required: false, schema: { type: integer, format: int64 },
+            description: "Номер версии; без него — последняя." }
+      responses:
+        '200':
+          description: |
+            Zip: файл `<слаг>.<8 hex>.<ext>` на представление и `loss-report.json`
+            (схема `LossReport` на каждое представление). Все файлы — из одной версии,
+            её номер в `X-Archi-Version-No`.
+          content:
+            application/zip: { schema: { type: string, format: binary } }
+        '404':
+          description: Модели нет или она скрыта списком доступа (INV-MDL-011).
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '409':
+          description: Модель удалена — `MODEL_DELETED`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '410':
+          description: Снимок версии очищен, Git не настроен (FR-47).
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '422': { $ref: '#/components/responses/ImageOptionRejected422' }
+
   /workspaces/{id}/import-settings:
     parameters:
       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
@@ -150,8 +222,6 @@ paths:
 # ───────────────────────────────────────────────────────────────────
 # Появятся со своими use case'ами:
 #
-#   GET  /views/{id}/export             ?fmt=svg|png — этап 5a (§6.10)
-#   GET  /models/{id}/views/export      пакетная выгрузка — этап 5a
 #   GET  /models/{id}/export?fmt=oef    этап 6a (§3.5)
 #   POST /models/{id}/git/push          этап 7a
 #   POST /models/{id}/git/pull          этап 7b
@@ -171,6 +241,32 @@ components:
       bearerFormat: JWT
 
   parameters:
+    ImageFormat:
+      in: query
+      name: fmt
+      required: false
+      schema: { type: string, enum: [svg, png], default: svg }
+      description: Формат картинки (§6.10).
+    ImageScale:
+      in: query
+      name: scale
+      required: false
+      schema: { type: integer, enum: [1, 2, 4], default: 1 }
+      description: Плотность PNG; у SVG не влияет.
+    ImageOutline:
+      in: query
+      name: outline
+      required: false
+      schema: { type: boolean, default: false }
+      description: |
+        `true` — подписи в кривых, для получателей без шрифта (Inkscape, Word).
+        Без него текст остаётся текстом, шрифт вшит в файл подмножеством глифов.
+    ImageBackground:
+      in: query
+      name: background
+      required: false
+      schema: { type: string, enum: [paper, transparent], default: paper }
+      description: Фон под диаграммой.
     IdempotencyKey:
       in: header
       name: Idempotency-Key
@@ -256,6 +352,16 @@ components:
         reason:     { type: string }
 
   responses:
+
+    ImageOptionRejected422:
+      description: |
+        Недопустимый параметр картинки — `IXC_UNKNOWN_FORMAT` или
+        `IXC_INVALID_EXPORT_OPTION`; PNG стороной больше 16 000 px (4 000 × 4 000
+        при `scale=4`) — `IXC_IMAGE_TOO_LARGE`, наибольшая допустимая плотность
+        в поле `maxScale` (0 — не помещается даже при `scale=1`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
 
     UnprocessableEntity422:
       description: |

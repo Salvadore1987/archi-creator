@@ -289,10 +289,11 @@ round-trip на цикле БД → Git → БД, хотя сам `.archimate` �
 **Покрытие use case'ами** (2026-09-28): `INV-IXC-001`…`INV-IXC-003`,
 `INV-IXC-007` — [`UC-IXC-001`](../../application/interchange/usecases/import-archimate-file.md);
 `INV-IXC-004`, `INV-IXC-005`, `INV-IXC-008` — [`UC-IXC-002`](../../application/interchange/usecases/export-archimate-file.md);
-`INV-IXC-008`, `INV-IXC-009`, `INV-IXC-011` — [`UC-IXC-003`](../../application/interchange/usecases/commit-version-to-git.md).
-Без use case'а остаются три: `INV-IXC-006` (отчёт о потерях, этап 6a),
-`INV-IXC-010` (слияние по сущностям, этап 7c) и `INV-IXC-012` (импорт
-по ссылке, этап 7b) — их сценарии пишутся на своих этапах. Отчёт даёт `tools/check-traceability.py`.
+`INV-IXC-008`, `INV-IXC-009`, `INV-IXC-011` — [`UC-IXC-003`](../../application/interchange/usecases/commit-version-to-git.md);
+`INV-IXC-006`, `INV-IXC-008` — [`UC-IXC-004`](../../application/interchange/usecases/export-view-image.md)
+(2026-10-12, этап 5a).
+Без use case'а остаются два: `INV-IXC-010` (слияние по сущностям, этап 7c)
+и `INV-IXC-012` (импорт по ссылке, этап 7b) — их сценарии пишутся на своих этапах. Отчёт даёт `tools/check-traceability.py`.
 
 **Приоритет:** `INV-IXC-001`, `INV-IXC-004`, `INV-IXC-005` покрываются
 первыми — этап 1 закрывается именно round-trip референсной модели
