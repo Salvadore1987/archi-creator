@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
+import { AdvisorAdmin } from '../advisor/AdvisorAdmin';
 import { api } from '../api/endpoints';
 import type { Me } from '../api/types';
 import { signOut, type AuthMode } from '../auth/session';
@@ -111,6 +112,7 @@ export function ModelList({ me, auth }: { me?: Me; auth: AuthMode }) {
             </button>
           ))}
         </div>
+        {me?.roles.includes('ADMIN') && <AdvisorAdmin />}
       </main>
     </div>
   );

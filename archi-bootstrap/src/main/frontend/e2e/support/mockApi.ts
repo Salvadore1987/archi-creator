@@ -109,6 +109,16 @@ export class MockApi {
         return route.fulfill({ status: 200, contentType: 'application/xml', body: readFileSync(REFERENCE_FILE) });
       }
       if (path === '/metamodel/elements') return json(200, reference.elementTypes);
+      if (path === '/ai/settings' && this.options.advisor) {
+        return json(200, { enabled: this.options.advisor.enabled ?? true, monthlyTokenLimit: 5000000 });
+      }
+      if (path === '/ai/usage' && this.options.advisor) {
+        return json(200, {
+          period: '2026-10', limitTokens: 5000000, consumedTokens: 4100000, budgetStatus: 'WARNING',
+          byUser: [{ key: 'architect', requests: 12, rejected: 2, promptTokens: 4000000, completionTokens: 100000 }],
+          byFunction: [{ key: 'REVIEW', requests: 12, rejected: 2, promptTokens: 4000000, completionTokens: 100000 }],
+        });
+      }
       if (path === '/ai/status') {
         const advisor = this.options.advisor;
         if (!advisor) return json(404, { status: 404, title: 'Not Found', code: 'ADV_NOT_FOUND' });
@@ -128,6 +138,7 @@ export class MockApi {
       return json(404, { status: 404, title: 'Not Found', code: 'MDL_NOT_FOUND' });
     }
 
+    if (path === '/ai/settings' && method === 'PUT') return json(200, body);
     const advisorCall = path.match(/^\/ai\/(review|explain|plan|document)$/);
     if (advisorCall && method === 'POST') {
       const reply = this.options.advisor?.replies?.[advisorCall[1] as 'review'];

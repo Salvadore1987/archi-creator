@@ -294,3 +294,25 @@ export interface AdvisorStatus {
   period: string;
   resetsAt: string;
 }
+
+export interface AdvisorSettings {
+  enabled: boolean;
+  monthlyTokenLimit: number;
+}
+
+export interface UsageRow {
+  key: string;
+  requests: number;
+  rejected: number;
+  promptTokens: number;
+  completionTokens: number;
+}
+
+export interface TokenUsageReport {
+  period: string;
+  limitTokens: number;
+  consumedTokens: number;
+  budgetStatus: 'OK' | 'WARNING' | 'EXHAUSTED';
+  byUser: UsageRow[];
+  byFunction: UsageRow[];
+}

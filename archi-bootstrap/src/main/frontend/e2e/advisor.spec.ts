@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { editorState, openModel, openView, type AdvisorMock } from './support/mockApi';
+import { editorState, MockApi, openModel, openView, type AdvisorMock } from './support/mockApi';
 
 const META = { sessionId: '00000000-0000-7000-8000-000000000001', outcome: 'COMPLETED', promptTokens: 900, completionTokens: 120, contextTruncated: false };
 
@@ -109,5 +109,21 @@ test.describe('помощник', () => {
     await expect(answer.locator('h3')).toHaveText('Влияние');
     await expect(answer.getByRole('button', { name: 'IABS' })).toBeVisible();
     expect(api.calls.find((c) => c.path === '/ai/document')!.body).toEqual({ modelId: api.modelId, elementId: iabs.archiId });
+  });
+
+  test('администратор видит расход и меняет выключатель и лимит на экране моделей', async ({ page }) => {
+    const api = new MockApi({ roles: ['ADMIN'], advisor: {} });
+    await api.install(page);
+    await page.goto('/');
+
+    const admin = page.getByTestId('advisor-admin');
+    await expect(page.getByTestId('advisor-usage')).toContainText('больше 80 %');
+    await expect(admin.locator('table')).toHaveCount(2);
+    await admin.getByRole('checkbox').uncheck();
+    await admin.locator('input[type="number"]').fill('8000000');
+    await admin.getByRole('button', { name: 'Сохранить настройки' }).click();
+
+    await expect.poll(() => api.calls.find((c) => c.method === 'PUT' && c.path === '/ai/settings')?.body)
+      .toEqual({ enabled: false, monthlyTokenLimit: 8000000 });
   });
 });
