@@ -994,14 +994,21 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 - ⬜ `UC-ADV-001` — ревью модели, поток `Finding`
 - ⬜ `UC-ADV-002` — `ExplainElement`, `PlanModel`, `GenerateDocumentation`
-- ⬜ Порты `ModelContextReader`, `LlmPort`, `TokenBudgetRepository`, `AuditWriter`
-- ⬜ Построение контекста ([§7.3](../backend.md#73-контекст-запроса)): компактный
+- ✅ Сценарии в application-слое: `AdvisorService` (четыре функции одним порядком:
+      роль → повтор ключа → отказы до API → поток → списание), `AdvisorAdminService`
+      (`UC-ADV-003`), окно частоты и «один поток на автора» в памяти
+- ✅ Порты `ModelContextReader`, `MetamodelCatalog`, `WorkspaceDirectory`, `LlmPort`,
+      `PromptCatalog`, `TokenBudgetRepository`, `AdvisorSessionRepository`, `AuditLog`,
+      `AdvisorSettingsRepository`, свой `UnitOfWork`
+- ✅ Построение контекста ([§7.3](../backend.md#73-контекст-запроса)): компактный
       JSON; при превышении лимита — подграф (для подсказки элемент и соседи
       на два шага, для ревью усечение по слоям с пометкой)
 - ⬜ Клиент Anthropic API, модель `claude-sonnet-5` параметром конфигурации
 - ⬜ Потоковая отдача SSE, первые токены ≤ 3 с (NFR-04, поле `firstTokenAt`)
-- ⬜ Структурированные результаты через tool use со схемой — `Finding[]`
-      и `ModelPlan` приходят валидными без парсинга свободного текста
+- ✅ Структурированные результаты через tool use со схемой — `Finding[]`
+      и `ModelPlan` приходят валидными без парсинга свободного текста; находка
+      с целью вне контекста отбрасывается, тип плана вне фазы 1 — тоже, допустимость
+      связи плана решает матрица
 - ⬜ Ключ Anthropic только на сервере, в браузер не попадает (NFR-06,
       `INV-ADV-009`)
 - ⬜ Эндпоинты `/ai/review`, `/ai/explain`, `/ai/plan`, `/ai/document`
