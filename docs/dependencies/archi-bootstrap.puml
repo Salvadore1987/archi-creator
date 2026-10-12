@@ -134,6 +134,30 @@ rectangle "okhttp\n4.12.0" as com_squareup_okhttp3_okhttp_jar<<runtime>>
 rectangle "anthropic-java\n2.71.0" as com_anthropic_anthropic_java_jar
 rectangle "annotations\n17.0.0" as org_jetbrains_annotations_jar
 rectangle "kotlin-stdlib-jdk7\n2.3.21" as org_jetbrains_kotlin_kotlin_stdlib_jdk7_jar
+rectangle "batik-anim\n1.19" as org_apache_xmlgraphics_batik_anim_jar
+rectangle "batik-awt-util\n1.19" as org_apache_xmlgraphics_batik_awt_util_jar
+rectangle "batik-css\n1.19" as org_apache_xmlgraphics_batik_css_jar
+rectangle "batik-shared-resources\n1.19" as org_apache_xmlgraphics_batik_shared_resources_jar
+rectangle "batik-util\n1.19" as org_apache_xmlgraphics_batik_util_jar
+rectangle "xmlgraphics-commons\n2.11" as org_apache_xmlgraphics_xmlgraphics_commons_jar
+rectangle "xml-apis-ext\n1.3.04" as xml_apis_xml_apis_ext_jar
+rectangle "batik-dom\n1.19" as org_apache_xmlgraphics_batik_dom_jar
+rectangle "batik-ext\n1.19" as org_apache_xmlgraphics_batik_ext_jar
+rectangle "batik-parser\n1.19" as org_apache_xmlgraphics_batik_parser_jar
+rectangle "batik-xml\n1.19" as org_apache_xmlgraphics_batik_xml_jar
+rectangle "batik-svg-dom\n1.19" as org_apache_xmlgraphics_batik_svg_dom_jar
+rectangle "batik-transcoder\n1.19" as org_apache_xmlgraphics_batik_transcoder_jar
+rectangle "commons-io\n2.20.0" as commons_io_commons_io_jar
+rectangle "commons-logging\n1.3.6" as commons_logging_commons_logging_jar
+rectangle "batik-bridge\n1.19" as org_apache_xmlgraphics_batik_bridge_jar
+rectangle "batik-gvt\n1.19" as org_apache_xmlgraphics_batik_gvt_jar
+rectangle "batik-script\n1.19" as org_apache_xmlgraphics_batik_script_jar
+rectangle "batik-svggen\n1.19" as org_apache_xmlgraphics_batik_svggen_jar
+rectangle "batik-constants\n1.19" as org_apache_xmlgraphics_batik_constants_jar
+rectangle "batik-i18n\n1.19" as org_apache_xmlgraphics_batik_i18n_jar
+rectangle "batik-codec\n1.19" as org_apache_xmlgraphics_batik_codec_jar
+rectangle "pdfbox-io\n3.0.8" as org_apache_pdfbox_pdfbox_io_jar
+rectangle "fontbox\n3.0.8" as org_apache_pdfbox_fontbox_jar
 rectangle "spring-boot-starter-security\n4.1.1" as org_springframework_boot_spring_boot_starter_security_jar
 rectangle "spring-boot-security\n4.1.1" as org_springframework_boot_spring_boot_security_jar
 rectangle "spring-security-config\n7.1.1" as org_springframework_security_spring_security_config_jar
@@ -176,7 +200,6 @@ rectangle "mockito-junit-jupiter\n5.23.0" as org_mockito_mockito_junit_jupiter_j
 rectangle "junit-jupiter-api\n6.0.3" as org_junit_jupiter_junit_jupiter_api_jar<<test>>
 rectangle "jsonassert\n1.5.3" as org_skyscreamer_jsonassert_jar<<test>>
 rectangle "android-json\n0.0.20131108.vaadin1" as com_vaadin_external_google_android_json_jar<<test>>
-rectangle "commons-logging\n1.3.6" as commons_logging_commons_logging_jar
 rectangle "xmlunit-core\n2.11.0" as org_xmlunit_xmlunit_core_jar<<test>>
 rectangle "spring-boot-starter-jackson-test\n4.1.1" as org_springframework_boot_spring_boot_starter_jackson_test_jar<<test>>
 rectangle "spring-boot-starter-webmvc-test\n4.1.1" as org_springframework_boot_spring_boot_starter_webmvc_test_jar<<test>>
@@ -188,7 +211,6 @@ rectangle "spring-security-test\n7.1.1" as org_springframework_security_spring_s
 rectangle "testcontainers\n2.0.5" as org_testcontainers_testcontainers_jar<<test>>
 rectangle "commons-compress\n1.28.0" as org_apache_commons_commons_compress_jar<<test>>
 rectangle "commons-codec\n1.21.0" as commons_codec_commons_codec_jar<<test>>
-rectangle "commons-io\n2.20.0" as commons_io_commons_io_jar<<test>>
 rectangle "commons-lang3\n3.20.0" as org_apache_commons_commons_lang3_jar<<test>>
 rectangle "duct-tape\n1.0.8" as org_rnorth_duct_tape_duct_tape_jar<<test>>
 rectangle "docker-java-api\n3.7.1" as com_github_docker_java_docker_java_api_jar<<test>>
@@ -437,6 +459,94 @@ org_jetbrains_kotlin_kotlin_stdlib_jdk7_jar .[#ABABAB].> org_jetbrains_kotlin_ko
 org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar -[#000000]-> org_jetbrains_kotlin_kotlin_stdlib_jdk7_jar
 com_anthropic_anthropic_java_jar -[#000000]-> org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> com_anthropic_anthropic_java_jar
+org_apache_xmlgraphics_batik_anim_jar .[#ABABAB].> org_apache_xmlgraphics_batik_awt_util_jar
+org_apache_xmlgraphics_batik_css_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_css_jar .[#ABABAB].> org_apache_xmlgraphics_batik_util_jar
+org_apache_xmlgraphics_batik_css_jar .[#ABABAB].> org_apache_xmlgraphics_xmlgraphics_commons_jar
+org_apache_xmlgraphics_batik_css_jar .[#ABABAB].> xml_apis_xml_apis_ext_jar
+org_apache_xmlgraphics_batik_anim_jar -[#000000]-> org_apache_xmlgraphics_batik_css_jar
+org_apache_xmlgraphics_batik_anim_jar .[#ABABAB].> org_apache_xmlgraphics_batik_dom_jar
+org_apache_xmlgraphics_batik_ext_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_anim_jar -[#000000]-> org_apache_xmlgraphics_batik_ext_jar
+org_apache_xmlgraphics_batik_parser_jar .[#ABABAB].> org_apache_xmlgraphics_batik_awt_util_jar
+org_apache_xmlgraphics_batik_parser_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_parser_jar .[#ABABAB].> org_apache_xmlgraphics_batik_util_jar
+org_apache_xmlgraphics_batik_parser_jar .[#ABABAB].> org_apache_xmlgraphics_batik_xml_jar
+org_apache_xmlgraphics_batik_parser_jar .[#ABABAB].> xml_apis_xml_apis_ext_jar
+org_apache_xmlgraphics_batik_anim_jar -[#000000]-> org_apache_xmlgraphics_batik_parser_jar
+org_apache_xmlgraphics_batik_anim_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_svg_dom_jar .[#ABABAB].> org_apache_xmlgraphics_batik_awt_util_jar
+org_apache_xmlgraphics_batik_svg_dom_jar .[#ABABAB].> org_apache_xmlgraphics_batik_css_jar
+org_apache_xmlgraphics_batik_svg_dom_jar .[#ABABAB].> org_apache_xmlgraphics_batik_dom_jar
+org_apache_xmlgraphics_batik_svg_dom_jar .[#ABABAB].> org_apache_xmlgraphics_batik_ext_jar
+org_apache_xmlgraphics_batik_svg_dom_jar .[#ABABAB].> org_apache_xmlgraphics_batik_parser_jar
+org_apache_xmlgraphics_batik_svg_dom_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_svg_dom_jar .[#ABABAB].> org_apache_xmlgraphics_batik_util_jar
+org_apache_xmlgraphics_batik_svg_dom_jar .[#ABABAB].> xml_apis_xml_apis_ext_jar
+org_apache_xmlgraphics_batik_anim_jar -[#000000]-> org_apache_xmlgraphics_batik_svg_dom_jar
+org_apache_xmlgraphics_batik_anim_jar .[#ABABAB].> org_apache_xmlgraphics_batik_util_jar
+org_apache_xmlgraphics_batik_anim_jar .[#ABABAB].> xml_apis_xml_apis_ext_jar
+org_apache_xmlgraphics_batik_transcoder_jar -[#000000]-> org_apache_xmlgraphics_batik_anim_jar
+org_apache_xmlgraphics_batik_awt_util_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_awt_util_jar .[#ABABAB].> org_apache_xmlgraphics_batik_util_jar
+org_apache_xmlgraphics_xmlgraphics_commons_jar -[#000000]-> commons_io_commons_io_jar
+org_apache_xmlgraphics_xmlgraphics_commons_jar .[#ABABAB].> commons_logging_commons_logging_jar
+org_apache_xmlgraphics_batik_awt_util_jar -[#000000]-> org_apache_xmlgraphics_xmlgraphics_commons_jar
+org_apache_xmlgraphics_batik_transcoder_jar -[#000000]-> org_apache_xmlgraphics_batik_awt_util_jar
+org_apache_xmlgraphics_batik_bridge_jar .[#ABABAB].> org_apache_xmlgraphics_batik_anim_jar
+org_apache_xmlgraphics_batik_bridge_jar .[#ABABAB].> org_apache_xmlgraphics_batik_awt_util_jar
+org_apache_xmlgraphics_batik_bridge_jar .[#ABABAB].> org_apache_xmlgraphics_batik_css_jar
+org_apache_xmlgraphics_batik_bridge_jar .[#ABABAB].> org_apache_xmlgraphics_batik_dom_jar
+org_apache_xmlgraphics_batik_bridge_jar .[#ABABAB].> org_apache_xmlgraphics_batik_gvt_jar
+org_apache_xmlgraphics_batik_bridge_jar .[#ABABAB].> org_apache_xmlgraphics_batik_parser_jar
+org_apache_xmlgraphics_batik_script_jar .[#ABABAB].> org_apache_xmlgraphics_batik_anim_jar
+org_apache_xmlgraphics_batik_script_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_script_jar .[#ABABAB].> org_apache_xmlgraphics_batik_util_jar
+org_apache_xmlgraphics_batik_bridge_jar -[#000000]-> org_apache_xmlgraphics_batik_script_jar
+org_apache_xmlgraphics_batik_bridge_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_bridge_jar .[#ABABAB].> org_apache_xmlgraphics_batik_svg_dom_jar
+org_apache_xmlgraphics_batik_bridge_jar .[#ABABAB].> org_apache_xmlgraphics_batik_util_jar
+org_apache_xmlgraphics_batik_bridge_jar .[#ABABAB].> org_apache_xmlgraphics_batik_xml_jar
+org_apache_xmlgraphics_batik_bridge_jar .[#ABABAB].> org_apache_xmlgraphics_xmlgraphics_commons_jar
+org_apache_xmlgraphics_batik_bridge_jar .[#ABABAB].> xml_apis_xml_apis_ext_jar
+org_apache_xmlgraphics_batik_transcoder_jar -[#000000]-> org_apache_xmlgraphics_batik_bridge_jar
+org_apache_xmlgraphics_batik_dom_jar .[#ABABAB].> org_apache_xmlgraphics_batik_css_jar
+org_apache_xmlgraphics_batik_dom_jar .[#ABABAB].> org_apache_xmlgraphics_batik_ext_jar
+org_apache_xmlgraphics_batik_dom_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_dom_jar .[#ABABAB].> org_apache_xmlgraphics_batik_util_jar
+org_apache_xmlgraphics_batik_dom_jar .[#ABABAB].> org_apache_xmlgraphics_batik_xml_jar
+org_apache_xmlgraphics_batik_dom_jar .[#ABABAB].> xml_apis_xml_apis_ext_jar
+org_apache_xmlgraphics_batik_transcoder_jar -[#000000]-> org_apache_xmlgraphics_batik_dom_jar
+org_apache_xmlgraphics_batik_gvt_jar .[#ABABAB].> org_apache_xmlgraphics_batik_awt_util_jar
+org_apache_xmlgraphics_batik_gvt_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_gvt_jar .[#ABABAB].> org_apache_xmlgraphics_batik_util_jar
+org_apache_xmlgraphics_batik_transcoder_jar -[#000000]-> org_apache_xmlgraphics_batik_gvt_jar
+org_apache_xmlgraphics_batik_transcoder_jar -[#000000]-> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_svggen_jar .[#ABABAB].> org_apache_xmlgraphics_batik_awt_util_jar
+org_apache_xmlgraphics_batik_svggen_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_svggen_jar .[#ABABAB].> org_apache_xmlgraphics_batik_util_jar
+org_apache_xmlgraphics_batik_transcoder_jar -[#000000]-> org_apache_xmlgraphics_batik_svggen_jar
+org_apache_xmlgraphics_batik_constants_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_util_jar -[#000000]-> org_apache_xmlgraphics_batik_constants_jar
+org_apache_xmlgraphics_batik_i18n_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_util_jar -[#000000]-> org_apache_xmlgraphics_batik_i18n_jar
+org_apache_xmlgraphics_batik_util_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_transcoder_jar -[#000000]-> org_apache_xmlgraphics_batik_util_jar
+org_apache_xmlgraphics_batik_xml_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_xml_jar .[#ABABAB].> org_apache_xmlgraphics_batik_util_jar
+org_apache_xmlgraphics_batik_transcoder_jar -[#000000]-> org_apache_xmlgraphics_batik_xml_jar
+org_apache_xmlgraphics_batik_transcoder_jar -[#000000]-> xml_apis_xml_apis_ext_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_apache_xmlgraphics_batik_transcoder_jar
+org_apache_xmlgraphics_batik_codec_jar .[#ABABAB].> org_apache_xmlgraphics_batik_awt_util_jar
+org_apache_xmlgraphics_batik_codec_jar .[#ABABAB].> org_apache_xmlgraphics_batik_bridge_jar
+org_apache_xmlgraphics_batik_codec_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
+org_apache_xmlgraphics_batik_codec_jar .[#ABABAB].> org_apache_xmlgraphics_batik_transcoder_jar
+org_apache_xmlgraphics_batik_codec_jar .[#ABABAB].> org_apache_xmlgraphics_batik_util_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_apache_xmlgraphics_batik_codec_jar
+org_apache_pdfbox_pdfbox_io_jar .[#ABABAB].> commons_logging_commons_logging_jar
+org_apache_pdfbox_fontbox_jar -[#000000]-> org_apache_pdfbox_pdfbox_io_jar
+org_apache_pdfbox_fontbox_jar -[#000000]-> commons_logging_commons_logging_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_apache_pdfbox_fontbox_jar
 org_springframework_boot_spring_boot_starter_security_jar .[#ABABAB].> org_springframework_boot_spring_boot_starter_jar
 org_springframework_boot_spring_boot_security_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
 org_springframework_security_spring_security_config_jar .[#ABABAB].> org_springframework_security_spring_security_core_jar
@@ -541,7 +651,7 @@ org_mockito_mockito_junit_jupiter_jar .[#ABABAB].> org_junit_jupiter_junit_jupit
 org_springframework_boot_spring_boot_starter_test_jar -[#000000]-> org_mockito_mockito_junit_jupiter_jar
 org_skyscreamer_jsonassert_jar -[#000000]-> com_vaadin_external_google_android_json_jar
 org_springframework_boot_spring_boot_starter_test_jar -[#000000]-> org_skyscreamer_jsonassert_jar
-org_springframework_spring_core_jar -[#000000]-> commons_logging_commons_logging_jar
+org_springframework_spring_core_jar .[#ABABAB].> commons_logging_commons_logging_jar
 org_springframework_spring_core_jar .[#ABABAB].> org_jspecify_jspecify_jar
 org_springframework_boot_spring_boot_starter_test_jar -[#000000]-> org_springframework_spring_core_jar
 org_springframework_spring_test_jar .[#ABABAB].> org_springframework_spring_core_jar
@@ -596,7 +706,7 @@ org_springframework_security_spring_security_test_jar .[#ABABAB].> org_springfra
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_springframework_security_spring_security_test_jar
 org_testcontainers_testcontainers_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
 org_apache_commons_commons_compress_jar -[#000000]-> commons_codec_commons_codec_jar
-org_apache_commons_commons_compress_jar -[#000000]-> commons_io_commons_io_jar
+org_apache_commons_commons_compress_jar .[#ABABAB].> commons_io_commons_io_jar
 org_apache_commons_commons_compress_jar -[#000000]-> org_apache_commons_commons_lang3_jar
 org_testcontainers_testcontainers_jar -[#000000]-> org_apache_commons_commons_compress_jar
 org_rnorth_duct_tape_duct_tape_jar .[#ABABAB].> org_jetbrains_annotations_jar

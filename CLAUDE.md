@@ -10,8 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Состояние репозитория
 
-**Этапы 0–5 закрыты (этапы 4 и 5 — 2026-10-12). Следующие — независимые ветки
-5a (экспорт картинок), 6 (метамодель фазы 2), 7a (Git).**
+**Этапы 0–5 и 5a закрыты (этапы 4, 5 и 5a — 2026-10-12). Следующие — независимые
+ветки 6 (метамодель фазы 2), 7a (Git).**
 Собирается multi-module Maven по
 [`ADR-0001`](spec/adr/0001-maven-multi-module.md): 17 проектов в реакторе — родитель,
 три агрегатора контекстов, двенадцать модулей-слоёв, `archi-bootstrap` с классом запуска
@@ -156,13 +156,40 @@ API и до открытия потока; расход списывается �
 `ANTHROPIC_API_KEY` помощник отвечает `503`, остальное приложение работает.
 Поток отдаёт `SseEmitter`: `StreamingResponseBody` в Spring 7 не сбрасывает кадры.
 
-Тестов на сервере: 314 юнит-тестов (`./mvnw test`) и 65 интеграционных `*IT` на
+Что появилось на этапе 5a и где лежит:
+
+| Что | Где |
+|---|---|
+| Писатель SVG по визуальному языку канвы: силуэты, токены, иконки, маршрут связей, перенос подписи, отчёт о потерях | `archi-interchange-application/.../application/rendering/` (`SvgWriter`, `LabelLayout`, `Routing`) |
+| Сценарии `ExportViewImage`, `ExportAllViewImages` ([`UC-IXC-004`](spec/application/interchange/usecases/export-view-image.md)), порты `Typesetter`, `Rasterizer` | `ViewImageService`; `.../application/port/` |
+| REST: `GET /views/{id}/export`, `GET /models/{id}/views/export` | `InterchangeController` |
+| Нотация из classpath, шрифт Inter на AWT, подмножество глифов (fontbox), растр (Batik) | `archi-bootstrap/.../bootstrap/export/` |
+| Шрифт Inter 4.1 (TTF — сервер, WOFF2 — канва, OFL) | `archi-bootstrap/src/main/resources/ui/fonts/` |
+| Имена файлов пакета `<слаг>.<8 hex>` (их же возьмёт Git) | `archi-interchange-domain/.../exporting/FileSlug` |
+| Меню «Экспорт» в верхней панели | `frontend/src/app/TopBar.tsx`; `e2e/view-export.spec.ts` |
+| Сверка канвы и экспорта | `frontend/visual/export-parity.spec.ts`, эталоны сервера — `frontend/visual/export-parity/`, их актуальность — `ExportParityFixturesTest` |
+
+**Картинка строится из снимка версии, а не из таблиц** — как `.archimate` и CSV: правка
+после сохранения в неё не попадает, пакет не смешивает версии. **PNG растеризуется из
+SVG с подписями в кривых**: Batik не зависит от шрифтов образа. Писатель печатает SVG 1.1
+без CSS (наконечники, ореол подписи, иконки — явной геометрией), чтобы файл одинаково
+читали браузер, Batik, Inkscape и Word. **Раскладка подписи повторяет браузер** до
+мелочей — половина межстрочного зазора вниз до пикселя, высота строки до 1/64 px,
+многоточие после выровненной строки; правка в `LabelLayout` или `SvgWriter` без
+прогона сверки почти наверняка её сломает. Изменил писатель — пересними эталоны:
+`./mvnw -P '!frontend' -pl archi-bootstrap -am test -Dtest=ExportParityFixturesTest
+-Dexport.parity.update=true -Dsurefire.failIfNoSpecifiedTests=false`, затем
+`npx playwright test visual/export-parity.spec.ts`. Сверка запускает Chromium
+с `--font-render-hinting=none`: в Linux без него ширины глифов целые, и переносы
+расходятся и с macOS/Windows, и с сервером.
+
+Тестов на сервере: 337 юнит-тестов (`./mvnw test`) и 69 интеграционных `*IT` на
 Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
 Во фронтенде: 65 юнит-тестов vitest (`npm test`, гоняется фазой `test` Maven)
-и 73 сценария Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
+и 81 сценарий Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
 работа `e2e`, два потока).
 
-Ещё не заведено: экспорт картинок (5a), метамодель фазы 2 (6), OEF (6a), Git (7a–7c);
+Ещё не заведено: метамодель фазы 2 (6), OEF (6a), Git (7a–7c);
 создание и удаление представлений из дерева (API нет); предохранитель (circuit breaker)
 на Anthropic API.
 

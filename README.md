@@ -79,7 +79,7 @@ open docs/mockups/index.html
 | Канва | React Flow (`@xyflow/react`), узлы — собственные SVG-компоненты |
 | Состояние | Zustand (документ модели) + TanStack Query (серверные данные) |
 | Стили | CSS-переменные (токены) + CSS Modules |
-| Экспорт картинок | Собственный `SvgWriter` на Java + Apache Batik |
+| Экспорт картинок | Собственный `SvgWriter` на Java по геометрии канвы, шрифт Inter (AWT, подмножество — fontbox), PNG — Apache Batik |
 | ИИ | Anthropic API, модель `claude-sonnet-5`, потоковая отдача (SSE) |
 | Тесты | JUnit 5, Testcontainers, Playwright |
 | Сборка/деплой | Maven, Docker Compose |
@@ -128,7 +128,14 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 
 Перерисовывается по закрытии каждого этапа — `tools/render-depgraph.py`
 ([depgraph-maven-plugin](https://github.com/ferstl/depgraph-maven-plugin),
-формат PlantUML, версии на узлах). Состояние ниже — **этап 5** (2026-10-12).
+формат PlantUML, версии на узлах). Состояние ниже — **этап 5a** (2026-10-12).
+
+Что изменил этап 5a: в `archi-bootstrap` пришли Apache Batik 1.19 (`batik-transcoder`,
+`batik-codec` — растр PNG за портом `Rasterizer`) и fontbox 3.0.8 (подмножество шрифта
+для вшивания в SVG, порт `Typesetter`). `xml-apis` из Batik исключён — эти интерфейсы
+есть в JDK. `commons-io` приходил двумя версиями (от Batik и от Testcontainers) —
+версия закреплена в родителе, конфликта в графе нет. Писатель SVG живёт
+в `archi-interchange-application` и новых зависимостей не тянет.
 
 Что изменил этап 5: в `archi-bootstrap` пришёл клиент Anthropic API —
 `com.anthropic:anthropic-java` 2.71.0 с OkHttp, Kotlin stdlib и Jackson 2 (версия

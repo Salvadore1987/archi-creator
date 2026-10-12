@@ -146,6 +146,29 @@ rectangle "kotlin-stdlib\n2.3.21" as org_jetbrains_kotlin_kotlin_stdlib_jar_comp
 rectangle "annotations\n17.0.0" as org_jetbrains_annotations_jar_compile
 rectangle "kotlin-stdlib-jdk8\n2.3.21" as org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar_compile
 rectangle "kotlin-stdlib-jdk7\n2.3.21" as org_jetbrains_kotlin_kotlin_stdlib_jdk7_jar_compile
+rectangle "batik-anim\n1.19" as org_apache_xmlgraphics_batik_anim_jar_compile
+rectangle "batik-css\n1.19" as org_apache_xmlgraphics_batik_css_jar_compile
+rectangle "batik-ext\n1.19" as org_apache_xmlgraphics_batik_ext_jar_compile
+rectangle "batik-parser\n1.19" as org_apache_xmlgraphics_batik_parser_jar_compile
+rectangle "batik-svg-dom\n1.19" as org_apache_xmlgraphics_batik_svg_dom_jar_compile
+rectangle "batik-transcoder\n1.19" as org_apache_xmlgraphics_batik_transcoder_jar_compile
+rectangle "xmlgraphics-commons\n2.11" as org_apache_xmlgraphics_xmlgraphics_commons_jar_compile
+rectangle "commons-io\n2.20.0" as commons_io_commons_io_jar_compile
+rectangle "batik-awt-util\n1.19" as org_apache_xmlgraphics_batik_awt_util_jar_compile
+rectangle "batik-bridge\n1.19" as org_apache_xmlgraphics_batik_bridge_jar_compile
+rectangle "batik-script\n1.19" as org_apache_xmlgraphics_batik_script_jar_compile
+rectangle "batik-dom\n1.19" as org_apache_xmlgraphics_batik_dom_jar_compile
+rectangle "batik-gvt\n1.19" as org_apache_xmlgraphics_batik_gvt_jar_compile
+rectangle "batik-shared-resources\n1.19" as org_apache_xmlgraphics_batik_shared_resources_jar_compile
+rectangle "batik-svggen\n1.19" as org_apache_xmlgraphics_batik_svggen_jar_compile
+rectangle "batik-util\n1.19" as org_apache_xmlgraphics_batik_util_jar_compile
+rectangle "batik-constants\n1.19" as org_apache_xmlgraphics_batik_constants_jar_compile
+rectangle "batik-i18n\n1.19" as org_apache_xmlgraphics_batik_i18n_jar_compile
+rectangle "batik-xml\n1.19" as org_apache_xmlgraphics_batik_xml_jar_compile
+rectangle "xml-apis-ext\n1.3.04" as xml_apis_xml_apis_ext_jar_compile
+rectangle "batik-codec\n1.19" as org_apache_xmlgraphics_batik_codec_jar_compile
+rectangle "fontbox\n3.0.8" as org_apache_pdfbox_fontbox_jar_compile
+rectangle "pdfbox-io\n3.0.8" as org_apache_pdfbox_pdfbox_io_jar_compile
 rectangle "spring-boot-security\n4.1.1" as org_springframework_boot_spring_boot_security_jar_compile
 rectangle "spring-security-config\n7.1.1" as org_springframework_security_spring_security_config_jar_compile
 rectangle "spring-boot-starter-security\n4.1.1" as org_springframework_boot_spring_boot_starter_security_jar_compile
@@ -194,7 +217,6 @@ rectangle "spring-security-test\n7.1.1" as org_springframework_security_spring_s
 rectangle "spring-security-web\n7.1.1" as org_springframework_security_spring_security_web_jar_compile
 rectangle "commons-compress\n1.28.0" as org_apache_commons_commons_compress_jar_test<<test>>
 rectangle "commons-codec\n1.21.0" as commons_codec_commons_codec_jar_test<<test>>
-rectangle "commons-io\n2.20.0" as commons_io_commons_io_jar_test<<test>>
 rectangle "commons-lang3\n3.20.0" as org_apache_commons_commons_lang3_jar_test<<test>>
 rectangle "testcontainers\n2.0.5" as org_testcontainers_testcontainers_jar_test<<test>>
 rectangle "duct-tape\n1.0.8" as org_rnorth_duct_tape_duct_tape_jar_test<<test>>
@@ -378,6 +400,30 @@ org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar_compile -[#000000]-> org_jetbrains_k
 org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar_compile -[#000000]-> org_jetbrains_kotlin_kotlin_stdlib_jdk7_jar_compile
 com_anthropic_anthropic_java_jar_compile -[#000000]-> org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar_compile
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> com_anthropic_anthropic_java_jar_compile
+org_apache_xmlgraphics_batik_anim_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_css_jar_compile
+org_apache_xmlgraphics_batik_anim_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_ext_jar_compile
+org_apache_xmlgraphics_batik_anim_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_parser_jar_compile
+org_apache_xmlgraphics_batik_anim_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_svg_dom_jar_compile
+org_apache_xmlgraphics_batik_transcoder_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_anim_jar_compile
+org_apache_xmlgraphics_xmlgraphics_commons_jar_compile -[#000000]-> commons_io_commons_io_jar_compile
+org_apache_xmlgraphics_batik_awt_util_jar_compile -[#000000]-> org_apache_xmlgraphics_xmlgraphics_commons_jar_compile
+org_apache_xmlgraphics_batik_transcoder_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_awt_util_jar_compile
+org_apache_xmlgraphics_batik_bridge_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_script_jar_compile
+org_apache_xmlgraphics_batik_transcoder_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_bridge_jar_compile
+org_apache_xmlgraphics_batik_transcoder_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_dom_jar_compile
+org_apache_xmlgraphics_batik_transcoder_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_gvt_jar_compile
+org_apache_xmlgraphics_batik_transcoder_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_shared_resources_jar_compile
+org_apache_xmlgraphics_batik_transcoder_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_svggen_jar_compile
+org_apache_xmlgraphics_batik_util_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_constants_jar_compile
+org_apache_xmlgraphics_batik_util_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_i18n_jar_compile
+org_apache_xmlgraphics_batik_transcoder_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_util_jar_compile
+org_apache_xmlgraphics_batik_transcoder_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_xml_jar_compile
+org_apache_xmlgraphics_batik_transcoder_jar_compile -[#000000]-> xml_apis_xml_apis_ext_jar_compile
+uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_transcoder_jar_compile
+uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_codec_jar_compile
+org_apache_pdfbox_fontbox_jar_compile -[#000000]-> org_apache_pdfbox_pdfbox_io_jar_compile
+org_apache_pdfbox_fontbox_jar_compile -[#000000]-> commons_logging_commons_logging_jar_compile
+uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_apache_pdfbox_fontbox_jar_compile
 org_springframework_boot_spring_boot_security_jar_compile -[#000000]-> org_springframework_security_spring_security_config_jar_compile
 org_springframework_boot_spring_boot_starter_security_jar_compile -[#000000]-> org_springframework_boot_spring_boot_security_jar_compile
 org_springframework_spring_aop_jar_compile -[#000000]-> org_springframework_spring_beans_jar_compile
@@ -437,7 +483,6 @@ org_springframework_security_spring_security_test_jar_test -[#000000]-> org_spri
 org_springframework_security_spring_security_test_jar_test -[#000000]-> org_springframework_security_spring_security_web_jar_compile
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_springframework_security_spring_security_test_jar_test
 org_apache_commons_commons_compress_jar_test -[#000000]-> commons_codec_commons_codec_jar_test
-org_apache_commons_commons_compress_jar_test -[#000000]-> commons_io_commons_io_jar_test
 org_apache_commons_commons_compress_jar_test -[#000000]-> org_apache_commons_commons_lang3_jar_test
 org_testcontainers_testcontainers_jar_test -[#000000]-> org_apache_commons_commons_compress_jar_test
 org_testcontainers_testcontainers_jar_test -[#000000]-> org_rnorth_duct_tape_duct_tape_jar_test
