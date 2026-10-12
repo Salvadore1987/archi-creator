@@ -10,13 +10,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Состояние репозитория
 
-**Этапы 0–4 закрыты (этап 4 — 2026-10-12). Следующие — независимые ветки 5 (ИИ),
+**Этапы 0–5 закрыты (этапы 4 и 5 — 2026-10-12). Следующие — независимые ветки
 5a (экспорт картинок), 6 (метамодель фазы 2), 7a (Git).**
 Собирается multi-module Maven по
 [`ADR-0001`](spec/adr/0001-maven-multi-module.md): 17 проектов в реакторе — родитель,
 три агрегатора контекстов, двенадцать модулей-слоёв, `archi-bootstrap` с классом запуска
-и fat jar. Код есть в modeling и interchange во всех четырёх слоях; в `advisor` —
-только `package-info.java`.
+и fat jar. Код есть во всех трёх контекстах во всех четырёх слоях.
 
 ```
 archi-<bc>/archi-<bc>-domain              зависимостей нет, кроме junit (test)
@@ -135,14 +134,37 @@ Application-слои без Spring: транзакция — порт `UnitOfWor
 API и фиксирует версию. Идентификаторы новых объектов (`id`, `archiId`) задаёт клиент.
 Команды API по-прежнему меняют базу сразу — это свойство сервера, а не интерфейса.
 
-Тестов на сервере: 260 юнит-тестов (`./mvnw test`) и 48 интеграционных `*IT` на
+Что появилось на этапе 5 и где лежит:
+
+| Что | Где |
+|---|---|
+| Домен помощника: сессия, бюджет месяца, контекст модели с усечением | `archi-advisor-domain/.../advisor/domain/` (`session/`, `budget/`, `context/`) |
+| Сценарии: обращение к четырём функциям, управление и расход ([`UC-ADV-001`…`003`](spec/application/advisor/usecases/)) | `archi-advisor-application/.../application/service/` |
+| Хранение: сессии, бюджеты, исход в аудите | `archi-advisor-adapter-persistence`, миграция `V4__advisor.sql` |
+| REST `/ai/**`: поток SSE на `SseEmitter`, отказы до потока | `archi-advisor-adapter-rest` |
+| Клиент Anthropic (Java SDK), мост к modeling на чтение, промпты, метрики | `archi-bootstrap/.../bootstrap/advisor/`, `src/main/resources/advisor/prompts/` |
+| Панель помощника, фильтр палитры по плану, настройки для `ADMIN` | `frontend/src/advisor/` |
+| Тесты: подменный Anthropic на уровне HTTP, поток на настоящем Tomcat | `archi-bootstrap/src/test/.../bootstrap/advisor/` (`FakeAnthropic`, `AdvisorStreamingIT`); `frontend/e2e/advisor.spec.ts` |
+
+**Помощник не изменяет модель — и держит это граница модулей.** Модули advisor
+не зависят от modeling вовсе; порт чтения `ModelContextReader` и каталог метамодели
+реализует мост в `bootstrap.advisor` поверх `ModelQueryService` и `RelationMatrix`.
+`AdvisorArchitectureTest` (ArchUnit) роняет сборку, если мост тронет сервис записи.
+Отказы (роль, выключатель, бюджет, частота, размер контекста) принимаются до вызова
+API и до открытия потока; расход списывается в транзакции сессии даже при обрыве.
+Выключатель — `workspace.ai_enabled`, по умолчанию выключен; без ключа
+`ANTHROPIC_API_KEY` помощник отвечает `503`, остальное приложение работает.
+Поток отдаёт `SseEmitter`: `StreamingResponseBody` в Spring 7 не сбрасывает кадры.
+
+Тестов на сервере: 314 юнит-тестов (`./mvnw test`) и 65 интеграционных `*IT` на
 Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
-Во фронтенде: 62 юнит-теста vitest (`npm test`, гоняется фазой `test` Maven)
-и 67 сценариев Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
+Во фронтенде: 65 юнит-тестов vitest (`npm test`, гоняется фазой `test` Maven)
+и 73 сценария Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
 работа `e2e`, два потока).
 
-Ещё не заведено: ИИ-помощник (5), экспорт картинок (5a), метамодель фазы 2 (6),
-OEF (6a), Git (7a–7c); создание и удаление представлений из дерева (API нет).
+Ещё не заведено: экспорт картинок (5a), метамодель фазы 2 (6), OEF (6a), Git (7a–7c);
+создание и удаление представлений из дерева (API нет); предохранитель (circuit breaker)
+на Anthropic API.
 
 Содержательная часть проекта — **спецификация**. Прежде чем писать код, читай её:
 почти каждое решение уже принято и обосновано, и переизобретать его не нужно.
@@ -226,6 +248,9 @@ jar'а в репозитории нет.
 `archi-creator-1.0-SNAPSHOT.jar`. Node ставит сборка, а не разработчик:
 версия в `pom.xml` родителя, каталог — `archi-bootstrap/.node/` (вне `target/`,
 иначе `mvn clean` качал бы его заново).
+
+Помощнику нужен `ANTHROPIC_API_KEY` в `.env`; модель, адрес API и пределы —
+`archi.ai.*` в `application.yaml` (`ARCHI_AI_MODEL`, `ARCHI_AI_BASE_URL`).
 
 Порты в `docker-compose.yml` — переменные со значениями по умолчанию
 из [§10.1](docs/archi-creator.md#101-состав): `ARCHI_APP_PORT` (8080),

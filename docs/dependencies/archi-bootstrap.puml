@@ -81,6 +81,8 @@ rectangle "archi-advisor-domain\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_
 rectangle "archi-advisor-application\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_advisor_application_jar
 rectangle "archi-advisor-adapter-rest\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_advisor_adapter_rest_jar
 rectangle "archi-advisor-adapter-persistence\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_advisor_adapter_persistence_jar
+rectangle "jackson-annotations\n2.21" as com_fasterxml_jackson_core_jackson_annotations_jar
+rectangle "jackson-core\n3.1.5" as tools_jackson_core_jackson_core_jar
 rectangle "logback-classic\n1.5.38" as ch_qos_logback_logback_classic_jar
 rectangle "logback-core\n1.5.38" as ch_qos_logback_logback_core_jar
 rectangle "spring-boot-starter-logging\n4.1.1" as org_springframework_boot_spring_boot_starter_logging_jar
@@ -109,6 +111,29 @@ rectangle "prometheus-metrics-core\n1.7.0" as io_prometheus_prometheus_metrics_c
 rectangle "prometheus-metrics-tracer-common\n1.7.0" as io_prometheus_prometheus_metrics_tracer_common_jar<<runtime>>
 rectangle "prometheus-metrics-exposition-textformats\n1.7.0" as io_prometheus_prometheus_metrics_exposition_textformats_jar<<runtime>>
 rectangle "prometheus-metrics-exposition-formats\n1.7.0" as io_prometheus_prometheus_metrics_exposition_formats_jar<<runtime>>
+rectangle "anthropic-java-core\n2.71.0" as com_anthropic_anthropic_java_core_jar
+rectangle "jackson-core\n2.21.5" as com_fasterxml_jackson_core_jackson_core_jar
+rectangle "jackson-databind\n2.21.5" as com_fasterxml_jackson_core_jackson_databind_jar
+rectangle "error_prone_annotations\n2.50.0" as com_google_errorprone_error_prone_annotations_jar
+rectangle "standardwebhooks\n1.2.0" as com_standardwebhooks_standardwebhooks_jar
+rectangle "swagger-annotations\n2.2.50" as io_swagger_core_v3_swagger_annotations_jar
+rectangle "kotlin-stdlib-jdk8\n2.3.21" as org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar
+rectangle "jackson-datatype-jdk8\n2.21.5" as com_fasterxml_jackson_datatype_jackson_datatype_jdk8_jar<<runtime>>
+rectangle "jackson-datatype-jsr310\n2.21.5" as com_fasterxml_jackson_datatype_jackson_datatype_jsr310_jar<<runtime>>
+rectangle "jackson-module-kotlin\n2.21.5" as com_fasterxml_jackson_module_jackson_module_kotlin_jar<<runtime>>
+rectangle "kotlin-reflect\n2.3.21" as org_jetbrains_kotlin_kotlin_reflect_jar<<runtime>>
+rectangle "kotlin-stdlib\n2.3.21" as org_jetbrains_kotlin_kotlin_stdlib_jar
+rectangle "jsonschema-generator\n4.38.0" as com_github_victools_jsonschema_generator_jar<<runtime>>
+rectangle "jsonschema-module-jackson\n4.38.0" as com_github_victools_jsonschema_module_jackson_jar<<runtime>>
+rectangle "jsonschema-module-swagger-2\n4.38.0" as com_github_victools_jsonschema_module_swagger_2_jar<<runtime>>
+rectangle "anthropic-java-client-okhttp\n2.71.0" as com_anthropic_anthropic_java_client_okhttp_jar
+rectangle "okio-jvm\n3.6.0" as com_squareup_okio_okio_jvm_jar<<runtime>>
+rectangle "kotlin-stdlib-common\n1.9.10" as org_jetbrains_kotlin_kotlin_stdlib_common_jar<<runtime>>
+rectangle "okio\n3.6.0" as com_squareup_okio_okio_jar<<runtime>>
+rectangle "okhttp\n4.12.0" as com_squareup_okhttp3_okhttp_jar<<runtime>>
+rectangle "anthropic-java\n2.71.0" as com_anthropic_anthropic_java_jar
+rectangle "annotations\n17.0.0" as org_jetbrains_annotations_jar
+rectangle "kotlin-stdlib-jdk7\n2.3.21" as org_jetbrains_kotlin_kotlin_stdlib_jdk7_jar
 rectangle "spring-boot-starter-security\n4.1.1" as org_springframework_boot_spring_boot_starter_security_jar
 rectangle "spring-boot-security\n4.1.1" as org_springframework_boot_spring_boot_security_jar
 rectangle "spring-security-config\n7.1.1" as org_springframework_security_spring_security_config_jar
@@ -123,8 +148,6 @@ rectangle "spring-security-oauth2-resource-server\n7.1.1" as org_springframework
 rectangle "spring-boot-flyway\n4.1.1" as org_springframework_boot_spring_boot_flyway_jar
 rectangle "spring-boot-sql\n4.1.1" as org_springframework_boot_spring_boot_sql_jar
 rectangle "flyway-core\n12.4.0" as org_flywaydb_flyway_core_jar
-rectangle "jackson-annotations\n2.21" as com_fasterxml_jackson_core_jackson_annotations_jar
-rectangle "jackson-core\n3.1.5" as tools_jackson_core_jackson_core_jar
 rectangle "flyway-database-postgresql\n12.4.0" as org_flywaydb_flyway_database_postgresql_jar
 rectangle "postgresql\n42.7.13" as org_postgresql_postgresql_jar<<runtime>>
 rectangle "checker-qual\n3.55.1" as org_checkerframework_checker_qual_jar<<runtime>>
@@ -168,7 +191,6 @@ rectangle "commons-codec\n1.21.0" as commons_codec_commons_codec_jar<<test>>
 rectangle "commons-io\n2.20.0" as commons_io_commons_io_jar<<test>>
 rectangle "commons-lang3\n3.20.0" as org_apache_commons_commons_lang3_jar<<test>>
 rectangle "duct-tape\n1.0.8" as org_rnorth_duct_tape_duct_tape_jar<<test>>
-rectangle "annotations\n17.0.0" as org_jetbrains_annotations_jar<<test>>
 rectangle "docker-java-api\n3.7.1" as com_github_docker_java_docker_java_api_jar<<test>>
 rectangle "docker-java-transport-zerodep\n3.7.1" as com_github_docker_java_docker_java_transport_zerodep_jar<<test>>
 rectangle "docker-java-transport\n3.7.1" as com_github_docker_java_docker_java_transport_jar<<test>>
@@ -311,6 +333,9 @@ uz_salvadore_hamkorbank_archi_advisor_adapter_rest_jar .[#ABABAB].> org_springfr
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_advisor_adapter_rest_jar
 uz_salvadore_hamkorbank_archi_advisor_adapter_persistence_jar .[#ABABAB].> uz_salvadore_hamkorbank_archi_advisor_application_jar
 uz_salvadore_hamkorbank_archi_advisor_adapter_persistence_jar .[#ABABAB].> org_springframework_boot_spring_boot_starter_data_jpa_jar
+tools_jackson_core_jackson_databind_jar -[#000000]-> com_fasterxml_jackson_core_jackson_annotations_jar
+tools_jackson_core_jackson_databind_jar -[#000000]-> tools_jackson_core_jackson_core_jar
+uz_salvadore_hamkorbank_archi_advisor_adapter_persistence_jar -[#000000]-> tools_jackson_core_jackson_databind_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_advisor_adapter_persistence_jar
 ch_qos_logback_logback_classic_jar -[#000000]-> ch_qos_logback_logback_core_jar
 ch_qos_logback_logback_classic_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
@@ -366,6 +391,52 @@ io_prometheus_prometheus_metrics_exposition_textformats_jar .[#ABABAB].> io_prom
 io_prometheus_prometheus_metrics_exposition_formats_jar -[#000000]-> io_prometheus_prometheus_metrics_exposition_textformats_jar
 io_micrometer_micrometer_registry_prometheus_jar -[#000000]-> io_prometheus_prometheus_metrics_exposition_formats_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> io_micrometer_micrometer_registry_prometheus_jar
+com_anthropic_anthropic_java_core_jar -[#000000]-> com_fasterxml_jackson_core_jackson_core_jar
+com_fasterxml_jackson_core_jackson_databind_jar .[#ABABAB].> com_fasterxml_jackson_core_jackson_annotations_jar
+com_fasterxml_jackson_core_jackson_databind_jar .[#ABABAB].> com_fasterxml_jackson_core_jackson_core_jar
+com_anthropic_anthropic_java_core_jar -[#000000]-> com_fasterxml_jackson_core_jackson_databind_jar
+com_anthropic_anthropic_java_core_jar -[#000000]-> com_google_errorprone_error_prone_annotations_jar
+com_anthropic_anthropic_java_core_jar -[#000000]-> com_standardwebhooks_standardwebhooks_jar
+com_anthropic_anthropic_java_core_jar -[#000000]-> io_swagger_core_v3_swagger_annotations_jar
+com_anthropic_anthropic_java_core_jar .[#ABABAB].> org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar
+com_anthropic_anthropic_java_core_jar .[#ABABAB].> com_fasterxml_jackson_core_jackson_annotations_jar
+com_fasterxml_jackson_datatype_jackson_datatype_jdk8_jar .[#ABABAB].> com_fasterxml_jackson_core_jackson_core_jar
+com_fasterxml_jackson_datatype_jackson_datatype_jdk8_jar .[#ABABAB].> com_fasterxml_jackson_core_jackson_databind_jar
+com_anthropic_anthropic_java_core_jar -[#000000]-> com_fasterxml_jackson_datatype_jackson_datatype_jdk8_jar
+com_fasterxml_jackson_datatype_jackson_datatype_jsr310_jar .[#ABABAB].> com_fasterxml_jackson_core_jackson_annotations_jar
+com_fasterxml_jackson_datatype_jackson_datatype_jsr310_jar .[#ABABAB].> com_fasterxml_jackson_core_jackson_core_jar
+com_fasterxml_jackson_datatype_jackson_datatype_jsr310_jar .[#ABABAB].> com_fasterxml_jackson_core_jackson_databind_jar
+com_anthropic_anthropic_java_core_jar -[#000000]-> com_fasterxml_jackson_datatype_jackson_datatype_jsr310_jar
+com_fasterxml_jackson_module_jackson_module_kotlin_jar .[#ABABAB].> com_fasterxml_jackson_core_jackson_databind_jar
+com_fasterxml_jackson_module_jackson_module_kotlin_jar .[#ABABAB].> com_fasterxml_jackson_core_jackson_annotations_jar
+com_fasterxml_jackson_module_jackson_module_kotlin_jar .[#ABABAB].> org_jetbrains_kotlin_kotlin_reflect_jar
+com_anthropic_anthropic_java_core_jar -[#000000]-> com_fasterxml_jackson_module_jackson_module_kotlin_jar
+org_jetbrains_kotlin_kotlin_reflect_jar .[#ABABAB].> org_jetbrains_kotlin_kotlin_stdlib_jar
+com_anthropic_anthropic_java_core_jar -[#000000]-> org_jetbrains_kotlin_kotlin_reflect_jar
+com_github_victools_jsonschema_generator_jar .[#ABABAB].> com_fasterxml_classmate_jar
+com_github_victools_jsonschema_generator_jar .[#ABABAB].> com_fasterxml_jackson_core_jackson_core_jar
+com_github_victools_jsonschema_generator_jar .[#ABABAB].> com_fasterxml_jackson_core_jackson_databind_jar
+com_github_victools_jsonschema_generator_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
+com_anthropic_anthropic_java_core_jar -[#000000]-> com_github_victools_jsonschema_generator_jar
+com_github_victools_jsonschema_module_jackson_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
+com_anthropic_anthropic_java_core_jar -[#000000]-> com_github_victools_jsonschema_module_jackson_jar
+com_github_victools_jsonschema_module_swagger_2_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
+com_anthropic_anthropic_java_core_jar -[#000000]-> com_github_victools_jsonschema_module_swagger_2_jar
+com_anthropic_anthropic_java_client_okhttp_jar -[#000000]-> com_anthropic_anthropic_java_core_jar
+com_anthropic_anthropic_java_client_okhttp_jar .[#ABABAB].> org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar
+com_squareup_okio_okio_jvm_jar .[#ABABAB].> org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar
+com_squareup_okio_okio_jvm_jar -[#000000]-> org_jetbrains_kotlin_kotlin_stdlib_common_jar
+com_squareup_okio_okio_jar -[#000000]-> com_squareup_okio_okio_jvm_jar
+com_squareup_okhttp3_okhttp_jar -[#000000]-> com_squareup_okio_okio_jar
+com_squareup_okhttp3_okhttp_jar .[#ABABAB].> org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar
+com_anthropic_anthropic_java_client_okhttp_jar -[#000000]-> com_squareup_okhttp3_okhttp_jar
+com_anthropic_anthropic_java_jar -[#000000]-> com_anthropic_anthropic_java_client_okhttp_jar
+org_jetbrains_kotlin_kotlin_stdlib_jar -[#000000]-> org_jetbrains_annotations_jar
+org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar -[#000000]-> org_jetbrains_kotlin_kotlin_stdlib_jar
+org_jetbrains_kotlin_kotlin_stdlib_jdk7_jar .[#ABABAB].> org_jetbrains_kotlin_kotlin_stdlib_jar
+org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar -[#000000]-> org_jetbrains_kotlin_kotlin_stdlib_jdk7_jar
+com_anthropic_anthropic_java_jar -[#000000]-> org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> com_anthropic_anthropic_java_jar
 org_springframework_boot_spring_boot_starter_security_jar .[#ABABAB].> org_springframework_boot_spring_boot_starter_jar
 org_springframework_boot_spring_boot_security_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
 org_springframework_security_spring_security_config_jar .[#ABABAB].> org_springframework_security_spring_security_core_jar
@@ -426,9 +497,7 @@ org_springframework_boot_spring_boot_jdbc_jar -[#000000]-> org_springframework_s
 org_springframework_boot_spring_boot_flyway_jar -[#000000]-> org_springframework_boot_spring_boot_jdbc_jar
 org_springframework_boot_spring_boot_flyway_jar .[#ABABAB].> org_flywaydb_flyway_core_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_springframework_boot_spring_boot_flyway_jar
-tools_jackson_core_jackson_databind_jar -[#000000]-> com_fasterxml_jackson_core_jackson_annotations_jar
-tools_jackson_core_jackson_databind_jar -[#000000]-> tools_jackson_core_jackson_core_jar
-org_flywaydb_flyway_core_jar -[#000000]-> tools_jackson_core_jackson_databind_jar
+org_flywaydb_flyway_core_jar .[#ABABAB].> tools_jackson_core_jackson_databind_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_flywaydb_flyway_core_jar
 org_flywaydb_flyway_database_postgresql_jar .[#ABABAB].> org_flywaydb_flyway_core_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_flywaydb_flyway_database_postgresql_jar
@@ -530,7 +599,7 @@ org_apache_commons_commons_compress_jar -[#000000]-> commons_codec_commons_codec
 org_apache_commons_commons_compress_jar -[#000000]-> commons_io_commons_io_jar
 org_apache_commons_commons_compress_jar -[#000000]-> org_apache_commons_commons_lang3_jar
 org_testcontainers_testcontainers_jar -[#000000]-> org_apache_commons_commons_compress_jar
-org_rnorth_duct_tape_duct_tape_jar -[#000000]-> org_jetbrains_annotations_jar
+org_rnorth_duct_tape_duct_tape_jar .[#ABABAB].> org_jetbrains_annotations_jar
 org_testcontainers_testcontainers_jar -[#000000]-> org_rnorth_duct_tape_duct_tape_jar
 com_github_docker_java_docker_java_api_jar .[#ABABAB].> com_fasterxml_jackson_core_jackson_annotations_jar
 com_github_docker_java_docker_java_api_jar .[#ABABAB].> org_slf4j_slf4j_api_jar

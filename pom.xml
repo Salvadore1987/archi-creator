@@ -74,6 +74,16 @@
                 ArchUnit держит то, что сборкой не держится: изоляцию контекстов
                 друг от друга. Версия здесь, подключение — в archi-bootstrap.
             -->
+            <!--
+                Аннотации JetBrains приходят дважды: 13.0 — от kotlin-stdlib клиента Anthropic,
+                17.0.0 — от duct-tape в Testcontainers. Это метаданные компиляции, на работу
+                не влияют; версия закреплена старшая, чтобы граф не показывал конфликта.
+            -->
+            <dependency>
+                <groupId>org.jetbrains</groupId>
+                <artifactId>annotations</artifactId>
+                <version>17.0.0</version>
+            </dependency>
             <!-- Клиент Anthropic API — только в archi-bootstrap, за портом LlmPort помощника. -->
             <dependency>
                 <groupId>com.anthropic</groupId>

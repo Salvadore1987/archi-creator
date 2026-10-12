@@ -128,7 +128,16 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 
 Перерисовывается по закрытии каждого этапа — `tools/render-depgraph.py`
 ([depgraph-maven-plugin](https://github.com/ferstl/depgraph-maven-plugin),
-формат PlantUML, версии на узлах). Состояние ниже — **этап 4** (2026-10-12).
+формат PlantUML, версии на узлах). Состояние ниже — **этап 5** (2026-10-12).
+
+Что изменил этап 5: в `archi-bootstrap` пришёл клиент Anthropic API —
+`com.anthropic:anthropic-java` 2.71.0 с OkHttp, Kotlin stdlib и Jackson 2 (версия
+Jackson 2 — из BOM Spring Boot); он реализует порт `LlmPort` помощника, и больше
+его не видит никто. `archi-advisor-adapter-persistence` получил Jackson 3
+(`tools.jackson.core:jackson-databind`) — результат сессии хранится JSON-текстом.
+Модули advisor от modeling по-прежнему не зависят: мост на чтение живёт
+в `archi-bootstrap`. Аннотации JetBrains приходили двумя версиями (от Kotlin stdlib
+и от Testcontainers) — версия закреплена в родителе, конфликта в графе нет.
 
 Этапы 3 и 4 графа не изменили: перерисовка дала те же `.puml` байт в байт. Фронтенд
 в граф Maven не входит (ADR-0016), а серверные доработки — идентификаторы от клиента,

@@ -60,6 +60,8 @@ SKIP_SUFFIXES = {".md", ".archimate", ".json", ".png", ".svg", ".ico"}
 FROZEN = {
     "archi-bootstrap/src/main/resources/db/migration/V1__baseline.sql",
     "archi-bootstrap/src/main/resources/db/migration/V2__model.sql",
+    "archi-bootstrap/src/main/resources/db/migration/V3__view_node_text.sql",
+    "archi-bootstrap/src/main/resources/db/migration/V4__advisor.sql",
 }
 
 # (путь, фрагмент строки комментария) -> почему это не ссылка на спеку.
