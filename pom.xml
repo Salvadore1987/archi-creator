@@ -92,6 +92,17 @@
                 <artifactId>anthropic-java</artifactId>
                 <version>${anthropic-java.version}</version>
             </dependency>
+            <!--
+                commons-io приходит двумя версиями: 2.17.0 от xmlgraphics-commons (Batik)
+                и 2.20.0 от commons-compress (Testcontainers). Ближе к корню старшая не
+                оказывается, поэтому версия закреплена здесь — новая из двух, совместима
+                с обеими.
+            -->
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>2.20.0</version>
+            </dependency>
             <!-- Растр и шрифт экспорта картинок — только в archi-bootstrap, за портами Rasterizer и Typesetter. -->
             <dependency>
                 <groupId>org.apache.xmlgraphics</groupId>
