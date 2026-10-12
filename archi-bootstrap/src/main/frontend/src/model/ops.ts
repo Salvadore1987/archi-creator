@@ -1,4 +1,15 @@
-import type { Element, Folder, Property, Relationship, Uuid, ViewEdge, ViewNode } from '../api/types';
+import type {
+  AutoLayoutRequest,
+  Element,
+  Folder,
+  LayoutPatch,
+  LayoutStrategy,
+  Property,
+  Relationship,
+  Uuid,
+  ViewEdge,
+  ViewNode,
+} from '../api/types';
 import { attachedEdges, descendants } from '../canvas/flowModel';
 import { attachedRelationships, type Change, type ModelDoc, type ViewDoc } from './doc';
 import { newArchiId, uuidv7 } from './ids';
@@ -473,5 +484,45 @@ export function impliedRelationship(doc: ModelDoc, parentElementId: Uuid, childE
   return {
     changes: [{ entity: 'relationship', id: relationship.id, before: null, after: relationship }],
     affected: [relationship.id, parentElementId, childElementId],
+  };
+}
+
+/** Граф представления для авторазметки — как он сейчас в документе, с несохранёнными узлами. */
+export function layoutRequest(doc: ModelDoc, view: ViewDoc, strategy: LayoutStrategy): AutoLayoutRequest {
+  const nodes = Object.values(view.nodes)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((n) => ({
+      id: n.id,
+      parentId: n.parentId,
+      conceptType: n.elementId ? doc.elements[n.elementId]?.archiType : undefined,
+      x: n.x,
+      y: n.y,
+      width: n.width,
+      height: n.height,
+    }));
+  const edges = Object.values(view.edges).map((e) => ({ id: e.id, sourceId: e.sourceId, targetId: e.targetId }));
+  return { strategy, nodes, edges };
+}
+
+/** Предложение раскладки — одна правка: новые координаты узлов и сброшенные точки перегиба. */
+export function applyLayoutPatch(view: ViewDoc, patch: LayoutPatch): Edit {
+  const changes: Change[] = [];
+  for (const bounds of patch.nodes) {
+    const before = view.nodes[bounds.id];
+    if (!before || (before.x === bounds.x && before.y === bounds.y && before.width === bounds.width && before.height === bounds.height)) {
+      continue;
+    }
+    changes.push({ entity: 'node', id: before.id, viewId: view.id, before, after: { ...before, ...bounds } });
+  }
+  for (const { id, bendpoints } of patch.edges) {
+    const before = view.edges[id];
+    if (!before || JSON.stringify(before.bendpoints) === JSON.stringify(bendpoints)) continue;
+    changes.push({ entity: 'edge', id, viewId: view.id, before, after: { ...before, bendpoints } });
+  }
+  return {
+    changes,
+    affected: changes.map((c) =>
+      c.entity === 'node' ? ((c.after as ViewNode).elementId ?? c.id) : ((c.after as ViewEdge).relationshipId ?? c.id),
+    ),
   };
 }

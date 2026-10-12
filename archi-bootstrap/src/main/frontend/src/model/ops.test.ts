@@ -4,11 +4,13 @@ import { commandsFor } from './commands';
 import { applyChanges, fromTree, viewDocOf } from './doc';
 import { invert } from './history';
 import {
+  applyLayoutPatch,
   createFolder,
   deleteObjects,
   drawRelationship,
   impliedRelationship,
   isSystemFolder,
+  layoutRequest,
   moveItems,
   nestNodes,
   placeElement,
@@ -164,5 +166,25 @@ describe('UI-004: вложенность', () => {
     );
     const implied = impliedRelationship(doc, a!.id, b!.id, 'archimate:AssignmentRelationship');
     expect(implied.changes.map((c) => c.entity)).toEqual(['relationship']);
+  });
+});
+
+describe('UI-005: авторазметка', () => {
+  it('граф — все узлы с типами элементов, предложение — одна правка, на сервер PUT layout', () => {
+    const doc = docWithViews();
+    const view = Object.values(doc.loadedViews).find((v) => Object.values(v.edges).length > 0)!;
+    const request = layoutRequest(doc, view, 'layered');
+    expect(request.nodes).toHaveLength(Object.keys(view.nodes).length);
+    const withElement = request.nodes.find((n) => view.nodes[n.id]!.elementId)!;
+    expect(withElement.conceptType).toBe(doc.elements[view.nodes[withElement.id]!.elementId!]!.archiType);
+    const root = request.nodes.find((n) => !n.parentId)!;
+    const edge = Object.values(view.edges).find((e) => e.bendpoints.length > 0) ?? Object.values(view.edges)[0]!;
+    const edit = applyLayoutPatch(view, {
+      nodes: [{ id: root.id, x: root.x + 100, y: root.y, width: root.width, height: root.height }],
+      edges: [{ id: edge.id, bendpoints: [] }],
+    });
+    const commands = edit.changes.flatMap((c) => commandsFor(doc.model.id, c)).map((c) => c.describe);
+    expect(commands[0]).toBe(`layout node ${root.id}`);
+    expect(applyLayoutPatch(view, { nodes: [], edges: [] }).changes).toEqual([]);
   });
 });

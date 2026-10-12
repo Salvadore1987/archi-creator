@@ -44,6 +44,7 @@ import {
   type ArchiFlowNode,
 } from './flowModel';
 import { DRAG_PALETTE_TYPE, parsePaletteDrag } from './palette-drag';
+import { CanvasTools } from './CanvasTools';
 import { RelationPicker, type RelationChoice } from './RelationPicker';
 import tokens from 'virtual:design-tokens';
 
@@ -463,6 +464,7 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
         </svg>
       )}
       {choice && <RelationPicker choice={choice} onPick={pickRelation} onCancel={() => setChoice(null)} />}
+      <CanvasTools viewId={viewId} canEdit={canEdit} />
       <Zoomer />
     </div>
   );

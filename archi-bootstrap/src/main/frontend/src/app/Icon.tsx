@@ -23,7 +23,8 @@ export type IconName =
   | 'copy'
   | 'target'
   | 'upload'
-  | 'download';
+  | 'download'
+  | 'layout';
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {
   return (
