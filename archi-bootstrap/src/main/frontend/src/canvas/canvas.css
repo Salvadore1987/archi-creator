@@ -15,7 +15,9 @@
   font-weight: var(--node-font-weight);
   overflow: hidden;
   overflow-wrap: break-word;
-  hyphens: auto;
+  /* Без словарных переносов: словарь зависит от платформы браузера, и серверный
+     экспорт повторить его не может — слово шире строки рвётся по символам. */
+  hyphens: manual;
 }
 .shape__label--tab,
 .shape__label--dog-ear {

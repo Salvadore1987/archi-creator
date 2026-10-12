@@ -202,7 +202,7 @@ public final class SvgWriter {
             if (tab) {
                 // Ярлык группы — всегда шрифтом подписей, капителью: свой шрифт объекта его не меняет.
                 face = new Face(notation.family(), 11, 600, false, 0.04);
-                lineHeight = 11 * 1.2;
+                lineHeight = layoutUnit(11 * 1.2);
                 color = notation.value("node_subtitle_color");
                 text = text.toUpperCase(java.util.Locale.forLanguageTag("ru"));
                 maxLines = 1;
@@ -216,7 +216,7 @@ public final class SvgWriter {
                 double fontSize = own.map(f -> f.sizePt() * PT).orElse(13.0);
                 int weight = own.filter(ArchiFont::bold).isPresent() ? 700 : note ? 400 : 500;
                 face = new Face(family, fontSize, weight, own.filter(ArchiFont::italic).isPresent(), 0);
-                lineHeight = fontSize * 1.3;
+                lineHeight = layoutUnit(fontSize * 1.3);
                 color = paint.text();
                 maxLines = note ? 0 : NAME_LINES;
             }
@@ -226,18 +226,25 @@ public final class SvgWriter {
                     shortType(node.shapeType()))))
                     : Optional.empty();
             Face subtitleFace = new Face(notation.family(), 11, 400, false, 0);
-            double subtitleHeight = 11 * 1.2;
+            double subtitleHeight = layoutUnit(11 * 1.2);
             double content = lines.lines().size() * lineHeight + subtitle.map(s -> SUBTITLE_GAP + subtitleHeight)
                     .orElse(0.0);
             double top = tab || note ? box.y() : box.y() + (box.height() - content) / 2;
-            boolean clipped = top < box.y() - 0.01 || top + content > box.y() + box.height() + 0.01;
-            if (lines.truncated() || clipped && !text.isBlank()) {
+            String align = node.style().textAlignment().map(a -> a == 1 ? "left" : a == 4 ? "right" : "center")
+                    .orElse(tab ? "left" : "center");
+            boolean overflowsBox = top < box.y() - 0.01 || top + content > box.y() + box.height() + 0.01;
+            boolean overflowsSide = false;
+            for (int i = 0; i < lines.lines().size(); i++) {
+                double x = aligned(box, layout.width(lines.aligned(i), face), align);
+                overflowsSide |= x < box.x() - 0.01
+                        || x + layout.width(lines.lines().get(i), face) > box.x() + box.width() + 0.01;
+            }
+            boolean clipped = overflowsBox || overflowsSide;
+            if (lines.truncated() || overflowsBox && !text.isBlank()) {
                 losses.add(new ImageLoss(node.archiId(), "node", "label",
                         Message.of(InterchangeMessages.IMAGE_LOSS_LABEL)));
             }
 
-            String align = node.style().textAlignment().map(a -> a == 1 ? "left" : a == 4 ? "right" : "center")
-                    .orElse(tab ? "left" : "center");
             if (clipped) {
                 String id = "c" + (++clips);
                 body.append("<clipPath id=\"").append(id).append("\"><rect x=\"").append(Svg.num(box.x()))
@@ -246,9 +253,9 @@ public final class SvgWriter {
                         .append("<g clip-path=\"url(#").append(id).append(")\">");
             }
             double lineTop = top;
-            for (String line : lines.lines()) {
-                double x = aligned(box, layout.width(line, face), align);
-                text(line, face, x, baseline(face, lineTop, lineHeight), color, note);
+            for (int i = 0; i < lines.lines().size(); i++) {
+                double x = aligned(box, layout.width(lines.aligned(i), face), align);
+                text(lines.lines().get(i), face, x, baseline(face, lineTop, lineHeight), color, note);
                 lineTop += lineHeight;
             }
             if (subtitle.isPresent()) {
@@ -270,10 +277,13 @@ public final class SvgWriter {
             };
         }
 
-        /** Базовая линия в межстрочном интервале: половина зазора сверху, как у браузера. */
+        /**
+         * Базовая линия в межстрочном интервале — как ставит её браузер: половина зазора
+         * между высотой строки и высотой шрифта сверху, округлённая вниз до пикселя.
+         */
         private double baseline(Face face, double lineTop, double lineHeight) {
             Metrics metrics = typesetter.metrics(face);
-            return lineTop + (lineHeight - (metrics.ascent() + metrics.descent())) / 2 + metrics.ascent();
+            return lineTop + Math.floor((lineHeight - (metrics.ascent() + metrics.descent())) / 2) + metrics.ascent();
         }
 
         private Paint paint(ShapeEntry entry, Node node) {
@@ -491,6 +501,11 @@ public final class SvgWriter {
     }
 
     private record Paint(String fill, String stroke, String text) {
+    }
+
+    /** Высота строки с точностью раскладки браузера — 1/64 пикселя, остаток отбрасывается. */
+    private static double layoutUnit(double value) {
+        return Math.floor(value * 64) / 64;
     }
 
     /** Ключ слоя модели — в ключ токена: физический слой красится как технологии, реализация — как прочее. */

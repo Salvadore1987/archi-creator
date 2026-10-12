@@ -27,8 +27,27 @@ final class LabelLayout {
         this.typesetter = typesetter;
     }
 
-    /** Строки подписи и признак, что текст не поместился целиком. */
-    record Lines(List<String> lines, boolean truncated) {
+    /**
+     * Строки подписи и признак, что текст не поместился целиком.
+     *
+     * @param ellipsized номер строки, закончившейся многоточием; {@code -1} — такой нет
+     */
+    record Lines(List<String> lines, boolean truncated, int ellipsized) {
+
+        Lines(List<String> lines, boolean truncated) {
+            this(lines, truncated, -1);
+        }
+
+        /**
+         * Текст строки, по которому она выравнивается. Браузер выравнивает строку
+         * с многоточием без него и ставит многоточие следом — у центрированной
+         * подписи оно может выйти за край и обрезаться.
+         */
+        String aligned(int index) {
+            String line = lines.get(index);
+            return index == ellipsized && line.endsWith(ELLIPSIS)
+                    ? line.substring(0, line.length() - ELLIPSIS.length()) : line;
+        }
     }
 
     /**
@@ -52,7 +71,7 @@ final class LabelLayout {
         }
         List<String> visible = new ArrayList<>(lines.subList(0, maxLines));
         visible.set(maxLines - 1, ellipsize(visible.get(maxLines - 1), face, width, true));
-        return new Lines(visible, true);
+        return new Lines(visible, true, maxLines - 1);
     }
 
     /** Одна строка без переноса; не помещается — обрезается многоточием. */
