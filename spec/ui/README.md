@@ -1,6 +1,6 @@
 ---
 version: 1.0
-last_modified: 2026-09-28
+last_modified: 2026-10-12
 layer: ui
 ---
 
@@ -37,9 +37,10 @@ layer: ui
   в [`../nfr/modeling.yaml`](../nfr/modeling.yaml) и NFR-01.
 
 Имена в таблице «Маппинг на проверки» — контракт на имя теста. С этапа 3 (2026-10-09)
-тесты лежат в `archi-bootstrap/src/main/frontend/` под этими именами; правила этапа 4
-(`UI-003`…`UI-006`, `UI-019` в части экспорта) своих тестов ещё не имеют
-([`docs/archi-creator.md` §12](../../docs/archi-creator.md#12-этапы-работ)).
+тесты лежат в `archi-bootstrap/src/main/frontend/` под этими именами, с этапа 4
+(2026-10-12) — и тесты `UI-003`…`UI-006`; своего теста нет только у `UI-019` в части
+экспорта — это этап 5a ([`docs/archi-creator.md` §12](../../docs/archi-creator.md#12-этапы-работ)).
+Сценарии приёмки этапа 4 — `e2e/acceptance.spec.ts`.
 
 ## Чего здесь нет
 
