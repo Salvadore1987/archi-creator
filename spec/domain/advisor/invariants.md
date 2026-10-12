@@ -1,6 +1,6 @@
 ---
 version: 0.2
-last_modified: 2026-09-28
+last_modified: 2026-10-12
 bounded_context: advisor
 ---
 
@@ -187,8 +187,8 @@ bounded_context: advisor
 архитектурный ландшафт банка в логах, которые хранятся дольше и доступны
 шире, чем сама модель.
 
-**Тест:** `AdvisorSecurityTest#apiKeyNeverAppearsInResponseOrLog`,
-`AdvisorSecurityTest#promptContentIsNotLogged`
+**Тест:** `AdvisorSecurityIT#apiKeyNeverAppearsInResponseOrLog`,
+`AdvisorSecurityIT#promptContentIsNotLogged`
 
 ---
 
@@ -202,13 +202,15 @@ bounded_context: advisor
 | INV-ADV-002 | `AdvisorSessionStateMachineTest#rejectionHappensBeforeStreaming` | — |
 | INV-ADV-003 | `AdvisorIdempotencyTest#replayDoesNotCallUpstreamTwice` | `AdvisorIT#retryReturnsCachedSession` |
 | INV-ADV-004 | `AdvisorResultTest#resultCarriesNoMutations` | `AdvisorArchitectureTest#advisorHasNoWritePortToModeling` |
-| INV-ADV-005 | `TokenBudgetTest#exhaustedBudgetRejectsNewSessions` | `AdvisorIT#disabledWorkspaceReturns403` |
+| INV-ADV-005 | `TokenBudgetTest#exhaustedBudgetRejectsNewSessions`, `TokenBudgetTest#warningDoesNotBlockSessions` | `AdvisorIT#disabledWorkspaceReturns403`, `AdvisorIT#exhaustedBudgetReturns429WithResetDate` |
 | INV-ADV-006 | `TokenBudgetTest#consumptionIsMonotonic` | `TokenBudgetIT#concurrentSessionsDoNotLoseConsumption` |
-| INV-ADV-007 | `ModelContextTest#oversizedContextIsTruncatedAndFlagged` | `AdvisorIT#rateLimitReturns429` |
+| INV-ADV-007 | `ModelContextTest#oversizedContextIsTruncatedAndFlagged` | `AdvisorRateLimitIT#rateLimitReturns429` |
 | INV-ADV-008 | `FindingTest#everyFindingHasResolvableTarget` | `ReviewIT#findingsPointToExistingElements` |
-| INV-ADV-009 | — | `AdvisorSecurityIT#apiKeyNeverAppearsInResponseOrLog` |
+| INV-ADV-009 | — | `AdvisorSecurityIT#apiKeyNeverAppearsInResponseOrLog`, `AdvisorSecurityIT#promptContentIsNotLogged` |
 
-**Покрытие use case'ами** (2026-09-28): все девять инвариантов покрыты.
+**Покрытие use case'ами** (2026-09-28, дополнено 2026-10-12): все девять инвариантов покрыты;
+`INV-ADV-001`, `INV-ADV-005`, `INV-ADV-006` — ещё и
+[`UC-ADV-003`](../../application/advisor/usecases/manage-advisor.md).
 `INV-ADV-001`…`INV-ADV-003`, `INV-ADV-005`, `INV-ADV-006`, `INV-ADV-009` —
 [`UC-ADV-001`](../../application/advisor/usecases/review-model.md);
 `INV-ADV-004`, `INV-ADV-007`, `INV-ADV-008` — `UC-ADV-001`

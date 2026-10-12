@@ -15,11 +15,12 @@ import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.Requester;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 
 /**
- * Автор команды — параметр {@code EditorIdentity} контроллера. Субъект — {@code sub}
+ * Автор команды — параметр {@code EditorIdentity} контроллера (у помощника — {@code Requester}). Субъект — {@code sub}
  * из JWT, роли — {@code ROLE_*} из {@code realm_access} (KeycloakRealmRolesConverter),
  * группы — claim {@code groups} для списка доступа модели. Персональных
  * данных нет: имя и почта в домен не попадают.
@@ -33,17 +34,26 @@ public final class CurrentEditorResolver implements HandlerMethodArgumentResolve
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
-        return parameter.getParameterType().equals(EditorIdentity.class);
+        return parameter.getParameterType().equals(EditorIdentity.class)
+                || parameter.getParameterType().equals(Requester.class);
     }
 
     @Override
-    public EditorIdentity resolveArgument(MethodParameter parameter, ModelAndViewContainer container,
-                                          NativeWebRequest request, WebDataBinderFactory binders) {
+    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer container,
+                                  NativeWebRequest request, WebDataBinderFactory binders) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new InsufficientAuthenticationException(BootstrapMessages.NOT_AUTHENTICATED);
         }
-        return of(authentication);
+        EditorIdentity editor = of(authentication);
+        return parameter.getParameterType().equals(Requester.class) ? requester(editor) : editor;
+    }
+
+    /** Тот же автор глазами помощника: свой тип, потому что контексты друг от друга не зависят. */
+    static Requester requester(EditorIdentity editor) {
+        return new Requester(editor.subject(), editor.roles().stream()
+                .map(r -> uz.salvadore.hamkorbank.archi.advisor.domain.common.Role.valueOf(r.name()))
+                .collect(Collectors.toSet()), editor.groups());
     }
 
     static EditorIdentity of(Authentication authentication) {

@@ -86,8 +86,9 @@ stages: ["5"]
 
 | Проверка | Тест |
 |---|---|
-| Результат не содержит мутаций | `AdvisorAnswerTest#resultNeverContainsModelMutations` |
-| Отказ до расхода токенов | `AdvisorSessionStateMachineTest#rejectionHappensBeforeSpend` |
-| Находка ссылается на объект | `FindingTest#findingAlwaysReferencesModelObject` |
-| Ключ не уходит клиенту | `AiSecurityIT#responseNeverContainsApiKey` |
+| Результат не содержит мутаций | `AdvisorResultTest#resultCarriesNoMutations` |
+| Отказ до расхода токенов | `AdvisorSessionStateMachineTest#rejectionHappensBeforeStreaming` |
+| Находка ссылается на объект | `FindingTest#everyFindingHasResolvableTarget`, `ReviewIT#findingsPointToExistingElements` |
+| Ключ не уходит клиенту | `AdvisorSecurityIT#apiKeyNeverAppearsInResponseOrLog` |
 | Аудит на каждое обращение | `AdvisorAuditIT#everyCallLeavesAuditEntry` |
+| Обрыв потока списывает расход | `AdvisorServiceTest#brokenStreamStillConsumesBudget` |

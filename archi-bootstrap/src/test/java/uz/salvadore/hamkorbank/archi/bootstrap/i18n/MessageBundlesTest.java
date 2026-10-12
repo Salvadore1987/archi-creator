@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.bootstrap.web.BootstrapMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
@@ -66,14 +67,14 @@ class MessageBundlesTest {
     @Test
     @DisplayName("UI-021: ключ объявлен одной константой: два имени на один ключ — признак копирования")
     void keysAreUnique() throws Exception {
-        List<String> all = Stream.of(ModelingMessages.class, InterchangeMessages.class, BootstrapMessages.class)
+        List<String> all = Stream.of(ModelingMessages.class, InterchangeMessages.class, AdvisorMessages.class, BootstrapMessages.class)
                 .flatMap(MessageBundlesTest::constants).toList();
         assertThat(all).doesNotHaveDuplicates();
     }
 
     private static Set<String> codeKeys() {
         Set<String> keys = new HashSet<>();
-        Stream.of(ModelingMessages.class, InterchangeMessages.class, BootstrapMessages.class)
+        Stream.of(ModelingMessages.class, InterchangeMessages.class, AdvisorMessages.class, BootstrapMessages.class)
                 .flatMap(MessageBundlesTest::constants).forEach(keys::add);
         return keys;
     }

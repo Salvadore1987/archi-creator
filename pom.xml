@@ -43,6 +43,7 @@
         <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
         <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
         <archunit.version>1.5.1</archunit.version>
+        <anthropic-java.version>2.71.0</anthropic-java.version>
         <depgraph-maven-plugin.version>4.0.5</depgraph-maven-plugin.version>
 
         <!--
@@ -73,6 +74,12 @@
                 ArchUnit держит то, что сборкой не держится: изоляцию контекстов
                 друг от друга. Версия здесь, подключение — в archi-bootstrap.
             -->
+            <!-- Клиент Anthropic API — только в archi-bootstrap, за портом LlmPort помощника. -->
+            <dependency>
+                <groupId>com.anthropic</groupId>
+                <artifactId>anthropic-java</artifactId>
+                <version>${anthropic-java.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.tngtech.archunit</groupId>
                 <artifactId>archunit-junit5</artifactId>

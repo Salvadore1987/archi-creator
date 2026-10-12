@@ -61,7 +61,7 @@ public record AdvisorRequest(AdvisorFunction function, ModelId modelId, Optional
     }
 
     public static AdvisorRequest explain(ModelId modelId, String elementId) {
-        return new AdvisorRequest(AdvisorFunction.EXPLAIN, modelId, Optional.empty(), Optional.of(elementId),
+        return new AdvisorRequest(AdvisorFunction.EXPLAIN, modelId, Optional.empty(), Optional.ofNullable(elementId),
                 Optional.empty());
     }
 

@@ -253,7 +253,7 @@ components:
           description: |
             Код отказа: `ADVISOR_DISABLED`, `BUDGET_EXHAUSTED`, `RATE_LIMITED`,
             `CONTEXT_TOO_LARGE`, `ADVISOR_UNAVAILABLE`, `INV-ADV-003` (тот же ключ
-            с другими параметрами), `ADV_NOT_FOUND`, `ADV_INVALID_INPUT`, `ACCESS_DENIED`.
+            с другими параметрами), `ADV_NOT_FOUND`, `ADV_INVALID_INPUT`, `ADV_ACCESS_DENIED`.
           examples: ["ADVISOR_DISABLED", "BUDGET_EXHAUSTED"]
         resetsAt:
           type: string
@@ -425,7 +425,7 @@ components:
       description: |
         Помощник выключен администратором рабочего пространства
         (`ADVISOR_DISABLED`, INV-ADV-005) или роль не даёт права на операцию
-        (`ACCESS_DENIED`).
+        (`ADV_ACCESS_DENIED`).
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
