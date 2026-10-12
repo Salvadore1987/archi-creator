@@ -149,6 +149,9 @@ security:
     CreateView:         [ARCHITECT, ADMIN]
     ReorganizeTree:     [ARCHITECT, ADMIN]   # UC-MDL-006: папки, перенос, переименование
     ManageModelAccess:  [ARCHITECT, ADMIN]   # и только автор модели или ADMIN — UC-MDL-007
+    # Добавлена 2026-10-12, этап 4: авторазметка не меняет базу (ADR-0019),
+    # но смысл имеет только для того, кто правит представление.
+    AutoLayoutView:     [ARCHITECT, ADMIN]   # UC-MDL-008
   acl:
     level: model
     note: |

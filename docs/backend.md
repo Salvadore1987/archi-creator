@@ -136,11 +136,15 @@
 | DELETE | `/relationships/{id}` | Удалить связь | — | `204` |
 | GET | `/views/{id}` | Payload представления: узлы, рёбра, геометрия | — | `ViewPayload` |
 | PUT | `/views/{id}/layout` | Сохранить геометрию после перемещений | `LayoutPatch` | `204` |
-| POST | `/views/{id}/nodes` | Разместить элемент в представлении | `{elementId, x, y}` | `ViewNodeDto` |
+| POST | `/views/{id}/nodes` | Разместить элемент, группу или заметку | `{elementId, x, y}` \| `{kind, label/content, x, y}` | `ViewNodeDto` |
+| PATCH | `/view-nodes/{id}` | Подпись, текст заметки, собственный стиль | `{label?, content?, style?}` | `ViewNodeDto` |
+| PUT | `/view-nodes/{id}/parent` | Вложить в контейнер или вынести в корень | `{parentId?, x, y}` | `ViewNodeDto` |
 | DELETE | `/view-nodes/{id}` | Убрать из представления (элемент остаётся в модели) | — | `204` |
+| PATCH | `/view-edges/{id}` | Собственный стиль ребра | `{style}` | `ViewEdgeDto` |
+| DELETE | `/view-edges/{id}` | Убрать ребро (связь остаётся в модели) | — | `204` |
 | GET | `/views/{id}/export` | Экспорт представления (§6.10) | `?fmt=svg\|png&scale=&outline=&background=` | `image/svg+xml` \| `image/png` |
 | GET | `/models/{id}/views/export` | Пакетный экспорт всех представлений | `?fmt=` | `application/zip` |
-| POST | `/views/{id}/auto-layout` | Авторазметка | `{strategy: "layered"\|"hierarchy"\|"compact"}` | `ViewPayload` |
+| POST | `/views/{id}/auto-layout` | Предложение авторазметки, база не меняется ([`ADR-0019`](../spec/adr/0019-auto-layout-proposal.md)) | `{strategy: "layered"\|"hierarchy"\|"compact", nodes, edges}` | `LayoutPatch` |
 | GET | `/metamodel/elements` | Каталог типов для палитры | — | `ElementTypeDto[]` |
 | GET | `/metamodel/relations` | Допустимые связи для пары типов | `?source=&target=` | `RelationTypeDto[]` |
 | POST | `/ai/review` | Ревью модели (SSE) | `{modelId}` | `text/event-stream` → `Finding[]` |
