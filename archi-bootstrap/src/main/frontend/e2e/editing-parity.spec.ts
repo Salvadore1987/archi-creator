@@ -15,8 +15,9 @@ test.describe('UI-006: паритет с Archi', () => {
 
     const at = await box(node!.id);
     await drag(page, { x: at.x + at.width / 2, y: at.y + at.height / 2 }, { x: at.x + at.width / 2 + 100, y: at.y + at.height / 2 + 60 });
+    // Под нагрузкой отпускание обрабатывается не сразу — ждём правку, а не читаем мгновенно.
+    await expect.poll(() => nodeState<number>(page, viewId, node!.id, 'x')).not.toBe(node!.x);
     const moved = await nodeState<number>(page, viewId, node!.id, 'x');
-    expect(moved).not.toBe(node!.x);
 
     await page.locator(`[data-row="${node!.elementId}"]`).first().click();
     await page.getByTestId('prop-name').fill('Переименован на холсте');

@@ -616,6 +616,10 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
         onlyRenderVisibleElements
         attributionPosition="bottom-left"
         elevateNodesOnSelect={false}
+        // Порядок слоёв задаёт глубина вложенности, и только она: React Flow в режиме
+        // по умолчанию добавляет к уровню ребра уровень вложенного конца, и ребро
+        // к вложенному узлу встаёт над соседями и перехватывает клики по ним.
+        zIndexMode="manual"
       >
         {navigator && (
           <MiniMap

@@ -111,3 +111,20 @@ test('UI-004: родитель едет с детьми; вынос возвра
   expect(await editorState<string | undefined>(page, `s.doc.loadedViews['${viewId}'].nodes['${child.id}'].parentId`)).toBeUndefined();
   expect(await editorState<number>(page, 'Object.keys(s.doc.relationships).length')).toBe(relationships - 1);
 });
+
+test('UI-004: ребро к вложенному узлу не поднимается над узлами уровня этого узла', async ({ page }) => {
+  const api = await openModel(page);
+  const viewId = await openView(page, api, '01 ');
+  const view = api.views[viewId]!;
+  const depth = (id: unknown): number => {
+    const node = view.nodes.find((n) => n.id === id);
+    return node?.parentId ? 1 + depth(node.parentId) : 0;
+  };
+  const nested = view.edges.find((e) => depth(e.sourceId) > 0 || depth(e.targetId) > 0)!;
+  expect(nested).toBeDefined();
+  const expected = Math.max(depth(nested.sourceId), depth(nested.targetId));
+  const zIndex = await page
+    .locator(`[data-testid="canvas"][data-view="${viewId}"] .react-flow__edge[data-id="${nested.id}"]`)
+    .evaluate((edge) => getComputedStyle(edge.closest('svg')!).zIndex);
+  expect(Number(zIndex)).toBe(expected);
+});
