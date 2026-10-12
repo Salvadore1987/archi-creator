@@ -976,18 +976,18 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 5.1 Домен (`archi-advisor-domain`)
 
-- ⬜ `AdvisorSession` со state machine `REQUESTED → STREAMING → COMPLETED`,
+- ✅ `AdvisorSession` со state machine `REQUESTED → STREAMING → COMPLETED`,
       `REJECTED` только из `REQUESTED` — отказ принимается до расхода токенов
       (`INV-ADV-002`)
-- ⬜ `TokenBudget` по паре (`workspaceId`, `period`), `OK → WARNING → EXHAUSTED`;
+- ✅ `TokenBudget` по паре (`workspaceId`, `period`), `OK → WARNING → EXHAUSTED`;
       расход не уменьшается, возврат только повышением лимита (`INV-ADV-006`)
-- ⬜ `Finding` с обязательной ссылкой на объект модели (`INV-ADV-008`, FR-23)
-- ⬜ `AuditEntry` — ровно одна на сессию, включая отклонённые (`INV-ADV-001`,
+- ✅ `Finding` с обязательной ссылкой на объект модели (`INV-ADV-008`, FR-23)
+- ✅ `AuditEntry` — ровно одна на сессию, включая отклонённые (`INV-ADV-001`,
       FR-27)
-- ⬜ `ModelContext` как анти-коррупционный слой с обязательным флагом
+- ✅ `ModelContext` как анти-коррупционный слой с обязательным флагом
       `truncated` (`INV-ADV-007`)
-- ⬜ `ModelPlan`, `AdvisorAnswer`, `ElementRef`, `TokenUsage`, `BudgetPeriod`
-- ⬜ Результат помощника структурно не может содержать команд изменения модели
+- ✅ `ModelPlan`, `AdvisorAnswer`, `ElementRef`, `TokenUsage`, `BudgetPeriod`
+- ✅ Результат помощника структурно не может содержать команд изменения модели
       (`INV-ADV-004`)
 
 ### 5.2 Сценарии и адаптеры
