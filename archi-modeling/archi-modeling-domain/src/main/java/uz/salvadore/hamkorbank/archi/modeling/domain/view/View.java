@@ -30,6 +30,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.Names;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Relationship;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ViewRef;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.AutoLayout;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutGraph;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutProposal;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutStrategy;
 
 /**
  * Представление — отдельный агрегат: открывается
@@ -352,6 +356,15 @@ public final class View {
             }
         }
         removed.forEach(edges::remove);
+    }
+
+    /**
+     * Предложение авторазметки для графа представления в том виде, в каком он у автора
+     * правки, с несохранёнными узлами. Представление не меняется.
+     */
+    public LayoutProposal proposeLayout(LayoutGraph graph, LayoutStrategy strategy) {
+        requireEditable();
+        return AutoLayout.propose(graph, strategy);
     }
 
     // ── Собственные поля ────────────────────────────────────────────

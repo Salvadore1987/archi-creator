@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.AutoLayoutRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.BendpointDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.CreateViewRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EditEdgeRequest;
@@ -49,6 +50,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeKind;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutGraph;
 
 /** Представления: payload, геометрия, размещение. */
 @RestController
@@ -57,6 +59,9 @@ public class ViewController {
 
     /** Поля запроса по их именам в JSON — в сообщении о том, чего не хватает. */
     private static final String EDGE_FIELDS = "relationshipId, sourceId, targetId";
+    private static final String LAYOUT_NODES = "nodes";
+    private static final String LAYOUT_NODE_ID = "nodes[].id";
+    private static final String LAYOUT_EDGE_FIELDS = "edges[].id, edges[].sourceId, edges[].targetId";
 
     private final ModelQueryService queries;
     private final ViewService views;
@@ -91,6 +96,13 @@ public class ViewController {
                 .forEach(e -> edges.put(ViewEdgeId.of(e.id()), bendpoints(e.bendpoints())));
         views.saveLayout(actor, ViewId.of(id), nodes, edges);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Предложение авторазметки; база не меняется. */
+    @PostMapping("/views/{id}/auto-layout")
+    public LayoutPatch autoLayout(EditorIdentity actor, @PathVariable UUID id, @RequestBody AutoLayoutRequest request) {
+        return DtoMapper.layoutPatch(views.proposeLayout(actor, ViewId.of(id), Optional.ofNullable(request.strategy()),
+                layoutGraph(request)));
     }
 
     /**
@@ -160,6 +172,27 @@ public class ViewController {
     private static List<Bendpoint> bendpoints(List<BendpointDto> points) {
         return Optional.ofNullable(points).orElse(List.of()).stream()
                 .map(b -> new Bendpoint(b.startX(), b.startY(), b.endX(), b.endY())).toList();
+    }
+
+    private static LayoutGraph layoutGraph(AutoLayoutRequest request) {
+        if (request.nodes() == null) {
+            throw ModelingException.invalid(Message.of(ModelingMessages.FIELD_MISSING, LAYOUT_NODES));
+        }
+        List<LayoutGraph.Node> nodes = request.nodes().stream().map(n -> {
+            if (n.id() == null) {
+                throw ModelingException.invalid(Message.of(ModelingMessages.FIELD_MISSING, LAYOUT_NODE_ID));
+            }
+            return new LayoutGraph.Node(n.id(), Optional.ofNullable(n.parentId()),
+                    Optional.ofNullable(n.conceptType()).map(ContentController::archiType),
+                    bounds(n.x(), n.y(), n.width(), n.height()));
+        }).toList();
+        List<LayoutGraph.Edge> edges = Optional.ofNullable(request.edges()).orElse(List.of()).stream().map(e -> {
+            if (e.id() == null || e.sourceId() == null || e.targetId() == null) {
+                throw ModelingException.invalid(Message.of(ModelingMessages.FIELDS_MISSING, LAYOUT_EDGE_FIELDS));
+            }
+            return new LayoutGraph.Edge(e.id(), e.sourceId(), e.targetId());
+        }).toList();
+        return new LayoutGraph(nodes, edges);
     }
 
     /** Вид узла по имени из контракта; нет — узел элемента. */

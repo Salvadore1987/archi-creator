@@ -180,4 +180,15 @@ public final class Dtos {
     /** Геометрия после перемещений: узлы и точки перегиба одной транзакцией. */
     public record LayoutPatch(List<NodeBounds> nodes, List<EdgeBendpoints> edges) {
     }
+
+    /** Граф представления как он в браузере — с несохранёнными узлами. */
+    public record AutoLayoutRequest(String strategy, List<LayoutNode> nodes, List<LayoutEdge> edges) {
+    }
+
+    /** @param conceptType тип элемента узла; нет — группа, заметка или иное */
+    public record LayoutNode(UUID id, UUID parentId, String conceptType, int x, int y, int width, int height) {
+    }
+
+    public record LayoutEdge(UUID id, UUID sourceId, UUID targetId) {
+    }
 }

@@ -84,6 +84,7 @@ public final class ModelingMessages {
     public static final String ACL_ENTRY_FORMAT = "modeling.request.acl-entry";
     public static final String ARCHI_TYPE_REQUESTED = "modeling.request.archi-type";
     public static final String NODE_KIND_REQUESTED = "modeling.request.node-kind";
+    public static final String LAYOUT_STRATEGY_REQUESTED = "modeling.request.layout-strategy";
     public static final String FIELD_MISSING = "modeling.request.field-missing";
     public static final String FIELDS_MISSING = "modeling.request.fields-missing";
     public static final String ITEMS_EMPTY = "modeling.request.items-empty";

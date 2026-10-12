@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
+import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
@@ -30,6 +31,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeKind;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutGraph;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutProposal;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutStrategy;
 
 /** Представления и размещение на них элементов и связей. */
 public final class ViewService {
@@ -214,6 +218,22 @@ public final class ViewService {
             view.removeEdge(edgeId);
             kernel.views.save(view);
             return null;
+        }));
+    }
+
+    /**
+     * Предложение авторазметки по графу из браузера; база не меняется. Стратегия —
+     * имя из контракта, по умолчанию раскладка по слоям.
+     */
+    public LayoutProposal proposeLayout(EditorIdentity actor, ViewId viewId, Optional<String> strategyName,
+                                        LayoutGraph graph) {
+        LayoutStrategy strategy = strategyName.map(name -> LayoutStrategy.named(name).orElseThrow(() ->
+                ModelingException.invalid(Message.of(ModelingMessages.LAYOUT_STRATEGY_REQUESTED, name))))
+                .orElse(LayoutStrategy.LAYERED);
+        return kernel.run(Operation.AUTO_LAYOUT_VIEW, actor, () -> kernel.unitOfWork.read(() -> {
+            View view = loadView(viewId);
+            kernel.visibleHeader(view.modelId(), actor, AclAccess.WRITE);
+            return view.proposeLayout(graph, strategy);
         }));
     }
 

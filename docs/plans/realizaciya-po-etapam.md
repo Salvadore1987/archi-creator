@@ -816,7 +816,7 @@ UC-MDL-001…007 и UC-IXC-001…002 работают через REST, импо�
       домен `View`, `ViewService`, REST, `ViewEditingIT` (в том числе выгрузка
       в `.archimate`: стиль, группа и заметка пишутся из столбцов, `INV-IXC-005`)
 - ✅ Перенос узла в контейнер и флаг `nesting` у допустимых связей
-- ⬜ Авторазметка: алгоритм в `archi-modeling-domain` (слои ArchiMate сверху
+- ✅ Авторазметка: алгоритм в `archi-modeling-domain` (слои ArchiMate сверху
       вниз, упорядочение по барицентрам против пересечений; `layered`, `hierarchy`,
       `compact`), `AutoLayoutService`, endpoint. Юнит-тесты: детерминированность,
       отсутствие наложений, порядок слоёв (§9.2)

@@ -153,6 +153,54 @@ class ViewEditingIT extends ApiTest {
                 .andExpect(jsonPath("$.parentId").doesNotExist());
     }
 
+    @Test
+    @DisplayName("ADR-0019: авторазметка отвечает предложением по графу из браузера и ничего не пишет")
+    void autoLayoutProposesWithoutWriting() throws Exception {
+        UUID model = lockedModel(architect(), "Авторазметка");
+        UUID component = element(architect(), model, "ApplicationComponent", "АБС");
+        UUID view = id(mvc.perform(post("/api/v1/models/" + model + "/views").with(architect())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Слои\"}"))
+                .andExpect(status().isCreated()).andReturn());
+        UUID appNode = id(mvc.perform(post("/api/v1/views/" + view + "/nodes").with(architect())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"elementId\":\"" + component + "\",\"x\":0,\"y\":0}"))
+                .andExpect(status().isCreated()).andReturn());
+        UUID unsaved = UUID.randomUUID();
+        String graph = "{\"strategy\":\"layered\",\"nodes\":[{\"id\":\"" + appNode
+                + "\",\"conceptType\":\"archimate:ApplicationComponent\",\"x\":0,\"y\":0,\"width\":120,\"height\":55},"
+                + "{\"id\":\"" + unsaved + "\",\"conceptType\":\"archimate:BusinessProcess\",\"x\":0,\"y\":0,"
+                + "\"width\":120,\"height\":55}],\"edges\":[{\"id\":\"" + UUID.randomUUID() + "\",\"sourceId\":\""
+                + appNode + "\",\"targetId\":\"" + unsaved + "\"}]}";
+
+        var proposal = mvc.perform(post("/api/v1/views/" + view + "/auto-layout").with(architect())
+                        .contentType(MediaType.APPLICATION_JSON).content(graph))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nodes.length()").value(2))
+                .andExpect(jsonPath("$.edges[0].bendpoints.length()").value(0))
+                .andReturn();
+        int businessY = ((Number) read(proposal, "$.nodes[?(@.id == '" + unsaved + "')].y", 0)).intValue();
+        int appY = ((Number) read(proposal, "$.nodes[?(@.id == '" + appNode + "')].y", 0)).intValue();
+        assertTrue(businessY < appY, "бизнес выше приложений");
+
+        mvc.perform(get("/api/v1/views/" + view).with(architect()))
+                .andExpect(jsonPath("$.nodes.length()").value(1))
+                .andExpect(jsonPath("$.nodes[0].x").value(0))
+                .andExpect(jsonPath("$.nodes[0].y").value(0));
+        mvc.perform(post("/api/v1/views/" + view + "/auto-layout").with(architect())
+                        .contentType(MediaType.APPLICATION_JSON).content(graph.replace("layered", "spiral")))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("MDL_INVALID_INPUT"));
+        mvc.perform(post("/api/v1/views/" + view + "/auto-layout").with(viewer())
+                        .contentType(MediaType.APPLICATION_JSON).content(graph))
+                .andExpect(status().isForbidden());
+    }
+
+    private static Object read(org.springframework.test.web.servlet.MvcResult result, String path, int index)
+            throws Exception {
+        java.util.List<Object> values = read(result, path);
+        return values.get(index);
+    }
+
     private void saveVersion(UUID model) throws Exception {
         mvc.perform(post("/api/v1/models/" + model + "/versions").with(architect())
                         .header("Idempotency-Key", UUID.randomUUID().toString())
