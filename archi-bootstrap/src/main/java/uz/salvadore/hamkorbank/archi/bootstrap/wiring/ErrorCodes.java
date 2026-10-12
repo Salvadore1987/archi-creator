@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.wiring;
 
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationNotPermittedException;
@@ -14,6 +15,7 @@ public final class ErrorCodes {
         return switch (failure) {
             case ModelingException m -> m.code();
             case InterchangeException i -> i.code();
+            case AdvisorException a -> a.code();
             case RelationNotPermittedException r -> r.code();
             default -> failure.getClass().getSimpleName();
         };

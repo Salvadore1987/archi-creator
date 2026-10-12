@@ -80,6 +80,38 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
+/**
+ * Запрос с потоковым ответом (SSE помощника): тело читает вызывающий. Отказ до
+ * потока — тот же `ApiError`, что и у обычного запроса.
+ */
+export async function requestStream(path: string, options: RequestOptions = {}): Promise<Response> {
+  const headers: Record<string, string> = {
+    Accept: 'text/event-stream, application/problem+json',
+    'Accept-Language': UI_LOCALE,
+    'Content-Type': 'application/json',
+  };
+  const token = await tokenSource();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  if (options.idempotencyKey) {
+    headers['Idempotency-Key'] = options.idempotencyKey;
+  }
+  const response = await fetch(BASE + path, {
+    method: options.method ?? 'POST',
+    headers,
+    body: JSON.stringify(options.body ?? {}),
+    signal: options.signal,
+  });
+  if (response.status === 401) {
+    onUnauthorized();
+  }
+  if (!response.ok) {
+    throw new ApiError(response.status, await problemOf(response));
+  }
+  return response;
+}
+
 async function problemOf(response: Response): Promise<Problem> {
   try {
     const parsed = (await response.json()) as Problem;

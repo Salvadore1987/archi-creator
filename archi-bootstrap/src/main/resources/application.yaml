@@ -71,6 +71,11 @@ spring:
     locale: ru
     locale-resolver: accept-header
 
+  mvc:
+    async:
+      # Поток помощника: документация по модели идёт до пяти минут.
+      request-timeout: 330s
+
   servlet:
     multipart:
       # Импорт .archimate идёт файлом; предел — 50 МБ.
@@ -116,10 +121,26 @@ archi:
     retention-enabled: false
   ai:
     # Ключ живёт только на сервере и в браузер не попадает.
-    # Пустой ключ = ИИ выключен, приложение стартует без него.
+    # Пустой ключ = помощник отвечает «недоступен», приложение стартует без него.
     api-key: ${ANTHROPIC_API_KEY:}
-    model: claude-sonnet-5
-    base-url: https://api.anthropic.com
+    model: ${ARCHI_AI_MODEL:claude-sonnet-5}
+    base-url: ${ARCHI_AI_BASE_URL:https://api.anthropic.com}
+    # Глубина рассуждения: меньше — быстрее первые токены.
+    effort: medium
+    timeout: 180s
+    # Повторы только до первого токена: после него пользователь уже видит ответ.
+    max-retries: 2
+    max-output-tokens: 16000
+    # Верхняя граница контекста одного запроса и доля области, ниже которой
+    # усечённый контекст не отправляется (413 с предложением выбрать представление).
+    max-context-tokens: 120000
+    min-coverage: 0.25
+    # Лимит пространства, которому администратор его не задал.
+    default-monthly-token-limit: 5000000
+    user-requests-per-minute: 5
+    workspace-requests-per-minute: 20
+    # Месяц бюджета начинается с первого числа по этому поясу.
+    budget-zone: ${ARCHI_AI_BUDGET_ZONE:Asia/Tashkent}
   web:
     cors:
       # Пустой список = CORS закрыт. В dev список расширяется

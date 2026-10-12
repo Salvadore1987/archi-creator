@@ -43,6 +43,7 @@
         <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
         <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
         <archunit.version>1.5.1</archunit.version>
+        <anthropic-java.version>2.71.0</anthropic-java.version>
         <depgraph-maven-plugin.version>4.0.5</depgraph-maven-plugin.version>
 
         <!--
@@ -73,6 +74,22 @@
                 ArchUnit держит то, что сборкой не держится: изоляцию контекстов
                 друг от друга. Версия здесь, подключение — в archi-bootstrap.
             -->
+            <!--
+                Аннотации JetBrains приходят дважды: 13.0 — от kotlin-stdlib клиента Anthropic,
+                17.0.0 — от duct-tape в Testcontainers. Это метаданные компиляции, на работу
+                не влияют; версия закреплена старшая, чтобы граф не показывал конфликта.
+            -->
+            <dependency>
+                <groupId>org.jetbrains</groupId>
+                <artifactId>annotations</artifactId>
+                <version>17.0.0</version>
+            </dependency>
+            <!-- Клиент Anthropic API — только в archi-bootstrap, за портом LlmPort помощника. -->
+            <dependency>
+                <groupId>com.anthropic</groupId>
+                <artifactId>anthropic-java</artifactId>
+                <version>${anthropic-java.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.tngtech.archunit</groupId>
                 <artifactId>archunit-junit5</artifactId>

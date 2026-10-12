@@ -1,6 +1,6 @@
 ---
 version: 0.1
-last_modified: 2026-09-22
+last_modified: 2026-10-12
 bounded_context: advisor
 target_module: archi-advisor-domain
 ---
@@ -167,6 +167,7 @@ value_objects:
       - { name: function,      type: AdvisorFunction, constraints: [not_null] }
       - { name: elements,      type: List<ContextElement>, constraints: [not_null] }
       - { name: relationships, type: List<ContextRelation>, constraints: [not_null] }
+      - { name: views,         type: List<ContextView>, constraints: [not_null], note: "структура представлений без геометрии" }
       - { name: tokenEstimate, type: Int,   constraints: [not_null, non_negative] }
       - { name: truncated,     type: Boolean, constraints: [not_null] }
     note: |
@@ -187,6 +188,15 @@ value_objects:
       - { name: archiType, type: String, constraints: [not_null] }
       - { name: sourceArchiId, type: String, constraints: [not_null] }
       - { name: targetArchiId, type: String, constraints: [not_null] }
+
+  ContextView:
+    composite:
+      - { name: archiId,         type: String,       constraints: [not_null] }
+      - { name: name,            type: String,       constraints: [not_null] }
+      - { name: elementArchiIds, type: List<String>, constraints: [not_null], note: "элементы, размещённые на представлении" }
+    note: |
+      Без геометрии: помощнику нужно, что где размещено (элементы вне
+      представлений — находка ревью), а не координаты.
 
   ElementRef:
     composite:
@@ -219,6 +229,7 @@ value_objects:
       - { name: archiType,  type: String, constraints: [not_null] }
       - { name: sourceName, type: String, constraints: [not_null] }
       - { name: targetName, type: String, constraints: [not_null] }
+      - { name: permitted,  type: Boolean, constraints: [not_null], note: "false — связь недопустима по матрице, требует внимания (UC-ADV-002)" }
 
   AdvisorAnswer:
     composite:

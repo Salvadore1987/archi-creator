@@ -1,6 +1,6 @@
 ---
 version: 1.0
-last_modified: 2026-09-28
+last_modified: 2026-10-12
 bounded_context: advisor
 use_case: UC-ADV-002
 requirements: [FR-22, FR-24, FR-25, FR-26]
@@ -73,6 +73,7 @@ stages: ["5"]
 
 | Проверка | Тест |
 |---|---|
-| План не применяется | `ModelPlanTest#planIsNeverApplied` |
+| План не применяется | `AdvisorResultTest#planIsNeverApplied`, `AdvisorIT#planArrivesAsStructure` |
+| Связь плана сверяется с матрицей | `ExplainElementTest#planIsCheckedAgainstMetamodel` |
 | Допустимые связи из матрицы | `ExplainElementTest#allowedRelationsComeFromMatrix` |
 | Усечение помечается | `ModelContextTest#truncatedContextIsFlagged` |

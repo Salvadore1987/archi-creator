@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
+import { AdvisorPanel } from '../advisor/AdvisorPanel';
+import { useAdvisor } from '../advisor/store';
+import { useAdvisorStatus } from '../advisor/useAdvisorStatus';
 import { api } from '../api/endpoints';
 import type { Me } from '../api/types';
 import type { AuthMode } from '../auth/session';
@@ -18,12 +21,13 @@ import { useShortcuts } from './useShortcuts';
 
 /**
  * Главный экран — четыре панели: слева дерево и палитра, в центре вкладки
- * представлений и холст, справа свойства и описание, снизу статус-строка.
+ * представлений и холст, справа свойства, описание и помощник, снизу статус-строка.
  */
 export function Editor({ modelId, me, auth }: { modelId: string; me?: Me; auth: AuthMode }) {
   const tree = useQuery({ queryKey: ['model', modelId], queryFn: () => api.openModel(modelId), staleTime: Infinity });
   const findings = useQuery({ queryKey: ['findings', modelId], queryFn: () => api.validate(modelId) });
   const versions = useQuery({ queryKey: ['versions', modelId], queryFn: () => api.versions(modelId) });
+  const advisor = useAdvisorStatus(tree.data?.model.workspaceId);
   const loaded = useEditor((s) => s.doc?.model.id === modelId);
   const load = useEditor((s) => s.load);
   const close = useEditor((s) => s.close);
@@ -35,6 +39,7 @@ export function Editor({ modelId, me, auth }: { modelId: string; me?: Me; auth: 
     if (tree.data) load(tree.data);
   }, [tree.data, load]);
   useEffect(() => close, [close]);
+  useEffect(() => () => useAdvisor.getState().reset(), [modelId]);
   useEffect(() => setRoles(roles), [roles, setRoles]);
   useEffect(() => {
     if (findings.data) useEditor.getState().setFindings(findings.data);
@@ -72,6 +77,12 @@ export function Editor({ modelId, me, auth }: { modelId: string; me?: Me; auth: 
         </main>
         <aside className="side side--r">
           <Inspector defaultTab={editor ? 'properties' : 'description'} />
+          {advisor && (
+            <>
+              <div className="split" />
+              <AdvisorPanel status={advisor} />
+            </>
+          )}
         </aside>
       </div>
       <StatusBar />

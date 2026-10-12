@@ -7,6 +7,7 @@ import { paletteDragData, DRAG_PALETTE_TYPE } from '../canvas/palette-drag';
 import { shapeOf } from '../canvas/shapes';
 import { layerToken } from '../canvas/style';
 import { layerName, t, typeName } from '../i18n';
+import { useAdvisor } from '../advisor/store';
 import { useEditor } from '../model/store';
 import './palette.css';
 
@@ -36,12 +37,20 @@ export function Palette() {
     return id ? s.doc?.elements[id]?.layer : undefined;
   });
   const canEdit = useCanEdit();
+  const planFilter = useAdvisor((s) => s.paletteFilter);
+  const clearPlanFilter = useAdvisor((s) => s.clearPaletteFilter);
   const [layer, setLayer] = useState('APPLICATION');
   useEffect(() => {
     if (selectedLayer && LAYERS.includes(selectedLayer)) setLayer(selectedLayer);
   }, [selectedLayer]);
 
   const items = useMemo<PaletteItem[]>(() => {
+    // План помощника сужает палитру до своих типов, во всех слоях сразу: схему собирает архитектор.
+    if (planFilter) {
+      return (types.data ?? [])
+        .filter((type) => type.supported && planFilter.includes(type.archiType))
+        .map((type) => ({ archiType: type.archiType, layer: type.layer, defaultName: typeName(type.archiType) }));
+    }
     const elements = (types.data ?? [])
       .filter((type) => type.supported && type.layer === layer)
       // Соединитель в Archi безымянный.
@@ -51,7 +60,7 @@ export function Palette() {
       ...ANNOTATIONS.map((a) => ({ ...a, layer: 'OTHER', defaultName: a.kind === 'GROUP' ? typeName(a.archiType) : '' })),
       ...elements,
     ];
-  }, [types.data, layer]);
+  }, [types.data, layer, planFilter]);
 
   return (
     <section className="palette-panel" data-testid="palette">
@@ -60,6 +69,14 @@ export function Palette() {
         <span className="spacer" />
         <span className="palette__hint">{t('palette.hint')}</span>
       </div>
+      {planFilter ? (
+        <div className="layer-switch" data-testid="palette-plan-filter">
+          <span className="chip">{t('palette.planFilter')}</span>
+          <button type="button" className="btn btn--small" onClick={clearPlanFilter}>
+            {t('palette.planFilterReset')}
+          </button>
+        </div>
+      ) : (
       <div className="layer-switch">
         {LAYERS.map((value) => (
           <button
@@ -72,6 +89,7 @@ export function Palette() {
           </button>
         ))}
       </div>
+      )}
       <div className="palette scroll">
         {items.map((type) => (
           <div

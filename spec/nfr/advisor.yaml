@@ -1,6 +1,6 @@
 ---
 version: 0.1
-last_modified: 2026-09-22
+last_modified: 2026-10-12
 bounded_context: advisor
 target_module: archi-bootstrap
 ---
@@ -73,13 +73,22 @@ rate_limits:
   context:
     max_tokens: 120000
     on_overflow: truncate_and_flag   # INV-ADV-007
+    min_coverage: 0.25               # меньше — 413 CONTEXT_TOO_LARGE
+    estimate: chars_div_4            # оценка до обращения: токенизатора на сервере нет
+    note: |
+      Усечение идёт по слоям ArchiMate снизу вверх (технологии и реализация
+      уходят первыми), контекст помечается truncated. Если после усечения
+      в нём меньше min_coverage элементов области, запрос отклоняется с 413
+      и предложением выбрать представление: ревью четверти модели читалось бы
+      как ревью модели. Подсказка (ExplainElement) — элемент и соседи на два
+      шага, при переполнении — на один.
   note: |
     Один пользователь — одна сессия за раз: параллельные обращения одного
     архитектора не дают ему ничего, кроме удвоенного счёта.
 
 budget:
   # FR-51…FR-53. Значения по умолчанию для нового рабочего пространства.
-  default_monthly_token_limit: 5000000
+  default_monthly_token_limit: 5000000   # и для workspace.ai_monthly_token_limit IS NULL
   warning_threshold_percent: 80        # FR-51 — предупреждение
   stop_threshold_percent: 100          # FR-52 — остановка
   period: calendar_month
@@ -141,7 +150,11 @@ storage:
     audit_entries: 3y
     note: |
       Аудит живёт дольше сессий: он про расход и доступ, а не про
-      содержание. Содержимое запросов и ответов не хранится вовсе.
+      содержание. Запрос не хранится: ни ModelContext, ни промпт, ни описание
+      пользователя — от запроса остаётся отпечаток (SHA-256 параметров), по
+      которому повтор с тем же ключом отличается от конфликта (INV-ADV-003).
+      Результат сессии — находки, план, ответ — хранится вместе с ней: это поля
+      агрегата, и повтор отдаёт их без нового обращения к внешнему API.
 
 messaging:
   in_process:
@@ -152,12 +165,14 @@ messaging:
 security:
   authentication: jwt_bearer
   authorization:
-    ReviewModel:           [ARCHITECT, ADMIN]
+    ReviewModel:           [VIEWER, ARCHITECT, ADMIN]   # UC-ADV-001, UI-015
     ExplainElement:        [VIEWER, ARCHITECT, ADMIN]
     PlanModel:             [ARCHITECT, ADMIN]
     GenerateDocumentation: [VIEWER, ARCHITECT, ADMIN]
     SetTokenBudget:        [ADMIN]
     ToggleAdvisor:         [ADMIN]
+    ViewTokenUsage:        [ADMIN]                       # FR-53
+    AdvisorStatus:         [VIEWER, ARCHITECT, ADMIN]    # показать или скрыть панель
   secrets:
     - name: ANTHROPIC_API_KEY
       storage: переменная окружения на сервере (docs/archi-creator.md §10.3)

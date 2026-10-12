@@ -1,5 +1,7 @@
 import { request } from './http';
 import type {
+  AdvisorSettings,
+  AdvisorStatus,
   AutoLayoutRequest,
   Bendpoint,
   Element,
@@ -15,6 +17,7 @@ import type {
   Relationship,
   RelationType,
   SaveResult,
+  TokenUsageReport,
   Style,
   UiConfig,
   Uuid,
@@ -140,4 +143,10 @@ export const api = {
       edges: Array<{ id: Uuid; bendpoints: Bendpoint[] }>;
     },
   ) => request<void>(`/views/${viewId}/layout`, { method: 'PUT', body }),
+
+  advisorStatus: (workspaceId: Uuid) => request<AdvisorStatus>(`/ai/status?workspaceId=${workspaceId}`),
+  advisorSettings: () => request<AdvisorSettings>('/ai/settings'),
+  changeAdvisorSettings: (settings: AdvisorSettings) =>
+    request<AdvisorSettings>('/ai/settings', { method: 'PUT', body: settings }),
+  advisorUsage: () => request<TokenUsageReport>('/ai/usage'),
 };
