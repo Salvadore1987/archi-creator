@@ -10,7 +10,20 @@ import { layerName, t, typeName } from '../i18n';
 import { useEditor } from '../model/store';
 import './palette.css';
 
-const LAYERS = ['BUSINESS', 'APPLICATION', 'TECHNOLOGY'];
+const LAYERS = ['BUSINESS', 'APPLICATION', 'TECHNOLOGY', 'OTHER'];
+
+/** Объекты представления без элемента модели — в «Прочем», рядом с соединителем. */
+const ANNOTATIONS = [
+  { archiType: 'archimate:Group', kind: 'GROUP' as const },
+  { archiType: 'archimate:Note', kind: 'NOTE' as const },
+];
+
+interface PaletteItem {
+  archiType: string;
+  layer: string;
+  kind?: 'GROUP' | 'NOTE';
+  defaultName: string;
+}
 
 /**
  * Палитра типов фазы 1 из каталога сервера. Слой переключается сам на слой
@@ -28,10 +41,17 @@ export function Palette() {
     if (selectedLayer && LAYERS.includes(selectedLayer)) setLayer(selectedLayer);
   }, [selectedLayer]);
 
-  const items = useMemo(
-    () => (types.data ?? []).filter((type) => type.supported && type.kind === 'ELEMENT' && type.layer === layer),
-    [types.data, layer],
-  );
+  const items = useMemo<PaletteItem[]>(() => {
+    const elements = (types.data ?? [])
+      .filter((type) => type.supported && type.layer === layer)
+      // Соединитель в Archi безымянный.
+      .map((type) => ({ archiType: type.archiType, layer: type.layer, defaultName: type.kind === 'JUNCTION' ? '' : typeName(type.archiType) }));
+    if (layer !== 'OTHER') return elements;
+    return [
+      ...ANNOTATIONS.map((a) => ({ ...a, layer: 'OTHER', defaultName: a.kind === 'GROUP' ? typeName(a.archiType) : '' })),
+      ...elements,
+    ];
+  }, [types.data, layer]);
 
   return (
     <section className="palette-panel" data-testid="palette">
@@ -63,7 +83,7 @@ export function Palette() {
               event.dataTransfer.effectAllowed = 'copy';
               event.dataTransfer.setData(
                 DRAG_PALETTE_TYPE,
-                paletteDragData({ archiType: type.archiType, layer: type.layer, defaultName: typeName(type.archiType) }),
+                paletteDragData({ archiType: type.archiType, layer: type.layer, defaultName: type.defaultName, kind: type.kind }),
               );
             }}
           >

@@ -86,8 +86,22 @@ function isAncestor(view: ViewDoc, ancestor: Uuid, id: Uuid): boolean {
   return false;
 }
 
-/** Размещение существующего элемента — узел в корне представления. */
-export function placeElement(view: ViewDoc, elementId: Uuid, x: number, y: number, size = { width: 120, height: 55 }): Edit & { nodeId: Uuid } {
+/** Следующая позиция в корне представления или в содержимом контейнера. */
+function nextOrderIn(view: ViewDoc, parentId?: Uuid): number {
+  return parentId
+    ? nextOrderInEndpoint(view, parentId)
+    : nextSortOrder(Object.values(view.nodes).filter((n) => !n.parentId).map((n) => n.sortOrder));
+}
+
+/** Размещение существующего элемента — узел в корне представления или в контейнере. */
+export function placeElement(
+  view: ViewDoc,
+  elementId: Uuid,
+  x: number,
+  y: number,
+  size = { width: 120, height: 55 },
+  parentId?: Uuid,
+): Edit & { nodeId: Uuid } {
   const id = uuidv7();
   const node: ViewNode = {
     id,
@@ -99,9 +113,56 @@ export function placeElement(view: ViewDoc, elementId: Uuid, x: number, y: numbe
     y: Math.round(y),
     width: size.width,
     height: size.height,
-    sortOrder: nextSortOrder(Object.values(view.nodes).filter((n) => !n.parentId).map((n) => n.sortOrder)),
+    sortOrder: nextOrderIn(view, parentId),
   };
+  if (parentId) node.parentId = parentId;
   return { nodeId: id, changes: [{ entity: 'node', id, viewId: view.id, before: null, after: node }], affected: [elementId] };
+}
+
+/** Группа или заметка — узел без элемента модели; подпись у группы, текст у заметки. */
+export function placeAnnotation(
+  view: ViewDoc,
+  kind: 'GROUP' | 'NOTE',
+  text: string,
+  x: number,
+  y: number,
+  parentId?: Uuid,
+): Edit & { nodeId: Uuid } {
+  const id = uuidv7();
+  const node: ViewNode = {
+    id,
+    archiId: newArchiId(),
+    archiType: kind === 'GROUP' ? 'archimate:Group' : 'archimate:Note',
+    kind,
+    x: Math.round(x),
+    y: Math.round(y),
+    width: kind === 'GROUP' ? 400 : 185,
+    height: kind === 'GROUP' ? 140 : 80,
+    sortOrder: nextOrderIn(view, parentId),
+  };
+  if (parentId) node.parentId = parentId;
+  if (kind === 'GROUP') node.label = text;
+  else if (text) node.content = text;
+  return { nodeId: id, changes: [{ entity: 'node', id, viewId: view.id, before: null, after: node }], affected: [id] };
+}
+
+/** Подпись группы или текст заметки. */
+export function editNodeText(view: ViewDoc, nodeId: Uuid, patch: { label?: string; content?: string }): Edit {
+  const before = view.nodes[nodeId];
+  if (!before) return { changes: [], affected: [] };
+  const after: ViewNode = { ...before };
+  if (patch.label !== undefined) {
+    if (patch.label) after.label = patch.label;
+    else delete after.label;
+  }
+  if (patch.content !== undefined) {
+    if (patch.content) after.content = patch.content;
+    else delete after.content;
+  }
+  if ((after.label ?? '') === (before.label ?? '') && (after.content ?? '') === (before.content ?? '')) {
+    return { changes: [], affected: [] };
+  }
+  return { changes: [{ entity: 'node', id: nodeId, viewId: view.id, before, after }], affected: [nodeId] };
 }
 
 /** Корневая папка слоя: новый элемент кладётся только в поддерево своего корня. */
@@ -129,6 +190,8 @@ export function createAndPlace(
   name: string,
   x: number,
   y: number,
+  size = { width: 120, height: 55 },
+  parentId?: Uuid,
 ): (Edit & { elementId: Uuid }) | null {
   const folder = layerRoot(doc, layer);
   if (!folder) return null;
@@ -147,7 +210,7 @@ export function createAndPlace(
         .map((item) => item.sortOrder),
     ),
   };
-  const placed = placeElement(view, element.id, x, y);
+  const placed = placeElement(view, element.id, x, y, size, parentId);
   return {
     elementId: element.id,
     changes: [{ entity: 'element', id: element.id, before: null, after: element }, ...placed.changes],
@@ -451,9 +514,7 @@ export function nestNodes(view: ViewDoc, moves: Array<{ id: Uuid; parentId?: Uui
     if (!sameParent) {
       after.parentId = parentId;
       if (!parentId) delete after.parentId;
-      after.sortOrder = parentId
-        ? nextOrderInEndpoint(working, parentId)
-        : nextSortOrder(Object.values(working.nodes).filter((n) => !n.parentId).map((n) => n.sortOrder));
+      after.sortOrder = nextOrderIn(working, parentId);
     }
     changes.push({ entity: 'node', id, viewId: view.id, before, after });
     working = { ...working, nodes: { ...working.nodes, [id]: after } };

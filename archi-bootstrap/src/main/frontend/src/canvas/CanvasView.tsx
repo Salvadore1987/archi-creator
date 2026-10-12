@@ -13,7 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api/endpoints';
 import type { RelationType, Uuid, ViewNode } from '../api/types';
-import { applyChanges, type Change, type ViewDoc } from '../model/doc';
+import { applyChanges, type Change, type ModelDoc, type ViewDoc } from '../model/doc';
 import { Icon } from '../app/Icon';
 import { useCanEdit } from '../app/session';
 import { useToast } from '../app/toast';
@@ -26,6 +26,7 @@ import {
   impliedRelationship,
   moveNodes,
   nestNodes,
+  placeAnnotation,
   placeElement,
   removeFromView,
   resizeNode,
@@ -45,6 +46,7 @@ import {
   type ArchiFlowNode,
 } from './flowModel';
 import { DRAG_PALETTE_TYPE, parsePaletteDrag } from './palette-drag';
+import { effectiveSize } from './shapes';
 import { CanvasTools } from './CanvasTools';
 import { RelationPicker, type RelationChoice } from './RelationPicker';
 import tokens from 'virtual:design-tokens';
@@ -348,31 +350,43 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
     const edit = nestNodes(before.loadedViews[viewId]!, moves);
     const changes: Change[] = [...edit.changes];
     const affected = [...edit.affected];
-    const parentElement = container?.elementId ? before.elements[container.elementId] : undefined;
-    if (parentElement) {
-      let working = applyChanges(before, changes);
-      for (const move of moves) {
-        const child = before.loadedViews[viewId]!.nodes[move.id];
-        const childElement = child?.elementId ? before.elements[child.elementId] : undefined;
-        if (!childElement || (child!.parentId ?? undefined) === move.parentId) continue;
-        const options = await queries.fetchQuery({
-          queryKey: ['metamodel', 'relations', parentElement.archiType, childElement.archiType],
-          queryFn: () => api.relationTypes(parentElement.archiType, childElement.archiType),
-          staleTime: Infinity,
-        });
-        const implied = options.find((o) => o.nesting);
-        if (!implied) continue;
-        const relation = impliedRelationship(working, parentElement.id, childElement.id, implied.archiType);
-        changes.push(...relation.changes);
-        affected.push(...relation.affected);
-        working = applyChanges(working, relation.changes);
-      }
-    }
+    const children = moves
+      .filter((m) => (before.loadedViews[viewId]!.nodes[m.id]!.parentId ?? undefined) !== m.parentId)
+      .map((m) => before.loadedViews[viewId]!.nodes[m.id]!.elementId)
+      .filter((id): id is Uuid => !!id);
+    const implied = await impliedChanges(applyChanges(before, changes), container, children);
+    changes.push(...implied.changes);
+    affected.push(...implied.affected);
     setNodes((list) => list.map((n) => (n.className ? { ...n, className: undefined } : n)));
     const name = container
       ? (container.elementId ? before.elements[container.elementId]?.name : container.label) ?? ''
       : '';
     perform(container ? t('tree_ops.nestOp', { n: moves.length, name }) : t('tree_ops.unnestOp', { n: moves.length }), changes, affected);
+  };
+
+  /** Связи, которые подразумевает вложение элементов в элемент-контейнер; тип называет сервер. */
+  const impliedChanges = async (working: ModelDoc, container: ViewNode | undefined, childElementIds: Uuid[]) => {
+    const changes: Change[] = [];
+    const affected: Uuid[] = [];
+    const parent = container?.elementId ? working.elements[container.elementId] : undefined;
+    if (!parent) return { changes, affected };
+    let doc = working;
+    for (const childId of childElementIds) {
+      const child = doc.elements[childId];
+      if (!child) continue;
+      const options = await queries.fetchQuery({
+        queryKey: ['metamodel', 'relations', parent.archiType, child.archiType],
+        queryFn: () => api.relationTypes(parent.archiType, child.archiType),
+        staleTime: Infinity,
+      });
+      const nesting = options.find((o) => o.nesting);
+      if (!nesting) continue;
+      const relation = impliedRelationship(doc, parent.id, child.id, nesting.archiType);
+      changes.push(...relation.changes);
+      affected.push(...relation.affected);
+      doc = applyChanges(doc, relation.changes);
+    }
+    return { changes, affected };
   };
 
   const onKeyDown = (event: React.KeyboardEvent) => {
@@ -397,15 +411,26 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
     }
   };
 
-  const onDrop = (event: React.DragEvent) => {
+  // Отпущенное над контейнером ложится внутрь него, как в Archi; элемент в элементе
+  // получает подразумеваемую связь той же операцией.
+  const onDrop = async (event: React.DragEvent) => {
     if (!canEdit) return;
     event.preventDefault();
     const point = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
     const snapTo = (v: number) => (snap ? Math.round(v / GRID) * GRID : Math.round(v));
-    const x = snapTo(point.x - 60);
-    const y = snapTo(point.y - 27);
     const current = useEditor.getState().doc!;
     const currentView = current.loadedViews[viewId]!;
+    const container = containerAt(currentView, point, new Set());
+    const origin = container ? absolutePosition(currentView, container.id) : { x: 0, y: 0 };
+    const at = (size: { width: number; height: number }) => ({
+      x: snapTo(point.x - size.width / 2 - origin.x),
+      y: snapTo(point.y - size.height / 2 - origin.y),
+    });
+    const placeWithImplied = async (label: string, edit: { changes: Change[]; affected: Uuid[] }, elementId: Uuid) => {
+      const implied = await impliedChanges(applyChanges(current, edit.changes), container, [elementId]);
+      perform(label, [...edit.changes, ...implied.changes], [...edit.affected, ...implied.affected]);
+      select([elementId], 'canvas');
+    };
     const elementId = event.dataTransfer.getData(DRAG_ELEMENT);
     if (elementId) {
       const existing = Object.values(currentView.nodes).find((n) => n.elementId === elementId);
@@ -417,19 +442,28 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
       }
       const element = current.elements[elementId];
       if (!element) return;
-      const edit = placeElement(currentView, elementId, x, y);
-      perform(t('tree_ops.placeOp', { name: element.name }), edit.changes, edit.affected);
-      select([elementId], 'canvas');
+      const size = effectiveSize(element.archiType, -1, -1);
+      const { x, y } = at(size);
+      const edit = placeElement(currentView, elementId, x, y, size, container?.id);
+      await placeWithImplied(t('tree_ops.placeOp', { name: element.name }), edit, elementId);
       return;
     }
     const paletteType = parsePaletteDrag(event.dataTransfer.getData(DRAG_PALETTE_TYPE));
-    if (paletteType) {
-      const name = paletteType.defaultName;
-      const edit = createAndPlace(current, currentView, paletteType.archiType, paletteType.layer, name, x, y);
-      if (!edit) return;
-      perform(t('tree_ops.createOp', { name }), edit.changes, edit.affected);
-      select([edit.elementId], 'canvas');
+    if (!paletteType) return;
+    if (paletteType.kind) {
+      const size = effectiveSize(paletteType.archiType, -1, -1);
+      const { x, y } = at(size);
+      const edit = placeAnnotation(currentView, paletteType.kind, paletteType.defaultName, x, y, container?.id);
+      perform(t('tree_ops.createOp', { name: paletteType.defaultName || typeName(paletteType.archiType) }), edit.changes, edit.affected);
+      select([edit.nodeId], 'canvas');
+      return;
     }
+    const size = effectiveSize(paletteType.archiType, -1, -1);
+    const { x, y } = at(size);
+    const name = paletteType.defaultName;
+    const edit = createAndPlace(current, currentView, paletteType.archiType, paletteType.layer, name, x, y, size, container?.id);
+    if (!edit) return;
+    await placeWithImplied(t('tree_ops.createOp', { name: name || typeName(paletteType.archiType) }), edit, edit.elementId);
   };
 
   return (
@@ -440,7 +474,7 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
       data-view={viewId}
       onKeyDown={onKeyDown}
       onDragOver={onDragOver}
-      onDrop={onDrop}
+      onDrop={(event) => void onDrop(event)}
     >
       <ReactFlow
         nodes={nodes}

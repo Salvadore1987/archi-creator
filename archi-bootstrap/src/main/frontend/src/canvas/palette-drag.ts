@@ -5,6 +5,8 @@ export interface PaletteDrag {
   archiType: string;
   layer: string;
   defaultName: string;
+  /** Группа и заметка — узлы без элемента модели. */
+  kind?: 'GROUP' | 'NOTE';
 }
 
 export function paletteDragData(drag: PaletteDrag): string {

@@ -132,6 +132,10 @@ export const ru = {
     renameOp: 'Переименование «{from}» → «{to}»',
     documentationOp: 'Документация «{name}»',
     propertiesOp: 'Свойства «{name}»',
+    groupLabel: 'Подпись группы',
+    noteText: 'Текст заметки',
+    groupLabelOp: 'Подпись группы «{name}»',
+    noteTextOp: 'Текст заметки',
   },
   description: {
     noDocumentation: 'Документации нет. {type}, {path}.',

@@ -107,4 +107,61 @@ test.describe('UI-006: паритет с Archi', () => {
     const free = await nodeState<number>(page, viewId, node!.id, 'x');
     expect(free % 20).not.toBe(0);
   });
+
+  test('группы, заметки, соединители: с палитры «Прочее», заметка внутри группы, подпись и текст правятся', async ({ page }) => {
+    const api = await openModel(page);
+    const viewId = await openView(page, api, '03 ');
+    const { canvas } = canvasOf(page, viewId);
+    await focusChrome(page);
+    await page.keyboard.press('ControlOrMeta+-');
+    await page.keyboard.press('ControlOrMeta+-');
+    const pane = (await canvas.boundingBox())!;
+    await page.getByTestId('palette').getByRole('button', { name: 'Прочее' }).click();
+
+    await page.locator('.pal[data-archi-type="archimate:Group"]').dragTo(canvas, {
+      targetPosition: { x: pane.width - 260, y: pane.height - 170 },
+    });
+    const groupId = await editorState<string>(
+      page,
+      `Object.values(s.doc.loadedViews['${viewId}'].nodes).find((n) => n.kind === 'GROUP' && n.label === 'Группа').id`,
+    );
+    await page.getByTestId('prop-label').fill('Контур подписи');
+    await page.getByTestId('prop-label').press('Enter');
+    await expect(canvasOf(page, viewId).node(groupId)).toContainText('Контур подписи');
+
+    const group = (await canvasOf(page, viewId).box(groupId));
+    await page.locator('.pal[data-archi-type="archimate:Note"]').dragTo(canvas, {
+      targetPosition: { x: group.x - pane.x + 60, y: group.y - pane.y + 50 },
+    });
+    const note = await editorState<{ id: string; parentId?: string }>(
+      page,
+      `Object.values(s.doc.loadedViews['${viewId}'].nodes).find((n) => n.kind === 'NOTE')`,
+    );
+    expect(note.parentId).toBe(groupId);
+    await page.getByTestId('prop-content').fill('Строка 1\nСтрока 2');
+    await page.getByTestId('prop-content').blur();
+    await expect(canvasOf(page, viewId).node(note.id)).toContainText('Строка 1');
+
+    await page.locator('.pal[data-archi-type="archimate:Junction"]').dragTo(canvas, {
+      targetPosition: { x: pane.width - 60, y: 40 },
+    });
+    const junction = await editorState<{ archiType: string; name: string; folderId: string }>(
+      page,
+      `Object.values(s.doc.elements).find((e) => e.archiType === 'archimate:Junction')`,
+    );
+    expect(junction.name).toBe('');
+    const junctionNode = await editorState<{ width: number; height: number }>(
+      page,
+      `Object.values(s.doc.loadedViews['${viewId}'].nodes).find((n) => s.doc.elements[n.elementId]?.archiType === 'archimate:Junction')`,
+    );
+    expect([junctionNode.width, junctionNode.height]).toEqual([15, 15]);
+
+    await page.getByTestId('save').click();
+    await expect(page.getByTestId('save')).toBeHidden();
+    const placed = api.writes().filter((c) => c.method === 'POST' && c.path === `/views/${viewId}/nodes`).map((c) => c.body as Record<string, unknown>);
+    expect(placed.find((b) => b.kind === 'GROUP')).toMatchObject({ label: 'Группа' });
+    expect(placed.find((b) => b.kind === 'NOTE')).toMatchObject({ parentId: groupId });
+    expect(api.writes().find((c) => c.method === 'PATCH' && c.path === `/view-nodes/${groupId}`)?.body).toEqual({ label: 'Контур подписи' });
+    expect(api.writes().find((c) => c.method === 'PATCH' && c.path === `/view-nodes/${note.id}`)?.body).toEqual({ content: 'Строка 1\nСтрока 2' });
+  });
 });
