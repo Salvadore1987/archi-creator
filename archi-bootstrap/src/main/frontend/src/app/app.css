@@ -3,6 +3,40 @@
   переключателя нет. Цвета холста и фигур — из токенов спецификации
   (virtual:design-tokens.css), здесь только корпус.
 */
+
+/*
+  Шрифт интерфейса и подписей на холсте — Inter из токенов. Файлы общие
+  с сервером: он печатает подписи экспорта тем же выпуском шрифта (TTF рядом),
+  иначе перенос строк на холсте и в файле разошёлся бы.
+*/
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@shared-ui/fonts/Inter-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('@shared-ui/fonts/Inter-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('@shared-ui/fonts/Inter-SemiBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('@shared-ui/fonts/Inter-Bold.woff2') format('woff2');
+}
 :root {
   --ink-900: #0d0f12;
   --ink-850: #121519;
