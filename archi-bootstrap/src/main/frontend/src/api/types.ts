@@ -203,6 +203,22 @@ export interface RelationType {
   archiType: string;
   type: string;
   byDefault: boolean;
+  /** Эту связь подразумевает вложение цели в источник. */
+  nesting?: boolean;
+}
+
+export type LayoutStrategy = 'layered' | 'hierarchy' | 'compact';
+
+/** Граф представления для авторазметки — в том виде, в каком он в браузере. */
+export interface AutoLayoutRequest {
+  strategy: LayoutStrategy;
+  nodes: Array<{ id: Uuid; parentId?: Uuid; conceptType?: string; x: number; y: number; width: number; height: number }>;
+  edges: Array<{ id: Uuid; sourceId: Uuid; targetId: Uuid }>;
+}
+
+export interface LayoutPatch {
+  nodes: Array<{ id: Uuid; x: number; y: number; width: number; height: number }>;
+  edges: Array<{ id: Uuid; bendpoints: Bendpoint[] }>;
 }
 
 export type Role = 'VIEWER' | 'ARCHITECT' | 'ADMIN';

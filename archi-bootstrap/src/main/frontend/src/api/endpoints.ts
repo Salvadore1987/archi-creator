@@ -1,10 +1,12 @@
 import { request } from './http';
 import type {
+  AutoLayoutRequest,
   Bendpoint,
   Element,
   ElementType,
   Finding,
   Folder,
+  LayoutPatch,
   LockInfo,
   Me,
   ModelSummary,
@@ -13,6 +15,7 @@ import type {
   Relationship,
   RelationType,
   SaveResult,
+  Style,
   UiConfig,
   Uuid,
   VersionInfo,
@@ -98,7 +101,10 @@ export const api = {
     body: {
       id: Uuid;
       archiId: string;
-      elementId: Uuid;
+      kind?: 'GROUP' | 'NOTE';
+      elementId?: Uuid;
+      label?: string;
+      content?: string;
       x: number;
       y: number;
       width: number;
@@ -107,6 +113,15 @@ export const api = {
     },
   ) => request<ViewNode>(`/views/${viewId}/nodes`, { method: 'POST', body }),
   removeNode: (nodeId: Uuid) => request<void>(`/view-nodes/${nodeId}`, { method: 'DELETE' }),
+  editNode: (nodeId: Uuid, body: { label?: string; content?: string; style?: Style }) =>
+    request<ViewNode>(`/view-nodes/${nodeId}`, { method: 'PATCH', body }),
+  moveNodeToParent: (nodeId: Uuid, body: { parentId?: Uuid; x: number; y: number }) =>
+    request<ViewNode>(`/view-nodes/${nodeId}/parent`, { method: 'PUT', body }),
+  editEdge: (edgeId: Uuid, body: { style: Style }) =>
+    request<ViewEdge>(`/view-edges/${edgeId}`, { method: 'PATCH', body }),
+  removeEdge: (edgeId: Uuid) => request<void>(`/view-edges/${edgeId}`, { method: 'DELETE' }),
+  autoLayout: (viewId: Uuid, body: AutoLayoutRequest) =>
+    request<LayoutPatch>(`/views/${viewId}/auto-layout`, { method: 'POST', body }),
   placeEdge: (
     viewId: Uuid,
     body: {

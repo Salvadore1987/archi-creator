@@ -93,7 +93,12 @@ export const ru = {
     opaque: 'Тип не поддержан: только перемещение',
     loading: 'Открытие представления…',
     alreadyPlaced: 'Элемент уже на этом представлении',
-    groupRemoval: 'группы и заметки с представления пока не убираются',
+    connectHint: 'Протяните к другому элементу, чтобы нарисовать связь',
+    relationTitle: '{source} → {target}',
+    relationDefault: 'по умолчанию',
+    relationNone: 'Матрица ArchiMate не допускает связи «{source}» → «{target}»',
+    relationEndpoint: 'Связь соединяет элементы и связи модели',
+    relationDrawn: 'Эта связь уже нарисована',
   },
   props: {
     tabProperties: 'Свойства',
@@ -198,6 +203,7 @@ export const ru = {
     createOp: 'Создан «{name}»',
     moveNodeOp: 'Перемещено на холсте: {n}',
     resizeOp: 'Изменён размер «{name}»',
+    connectOp: 'Связь «{type}»: {source} → {target}',
     removeFromViewOp: 'Убрано с представления: {n}',
     copied: 'Имя скопировано',
     undoToast: 'Отменить',
@@ -218,10 +224,8 @@ export const ru = {
   },
   unsupported: {
     viewCreateDelete: 'создание и удаление представлений не поддержано',
-    groupNotePlacement: 'размещение группы и заметки не поддержано',
-    nodeReparent: 'перенос узла в другой контейнер не поддержан',
+    nodeKindPlacement: 'размещение объекта этого вида не поддержано',
     edgeWithoutRelationship: 'соединение без связи модели не поддержано',
-    edgeRemoval: 'удаление ребра без его связи или узла не поддержано',
   },
 };
 

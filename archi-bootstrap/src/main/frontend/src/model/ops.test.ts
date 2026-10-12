@@ -3,7 +3,7 @@ import { referenceTree, referenceViews } from '../tree/fixture';
 import { commandsFor } from './commands';
 import { applyChanges, fromTree, viewDocOf } from './doc';
 import { invert } from './history';
-import { createFolder, deleteObjects, isSystemFolder, moveItems, placeElement, removeFromView, rootOf } from './ops';
+import { createFolder, deleteObjects, drawRelationship, isSystemFolder, moveItems, placeElement, removeFromView, rootOf } from './ops';
 
 function docWithViews() {
   const doc = fromTree(referenceTree);
@@ -98,5 +98,33 @@ describe('UI-016: правка дерева', () => {
     const edit = createFolder(doc, root.id, 'Новая');
     const [command] = edit.changes.flatMap((c) => commandsFor(doc.model.id, c));
     expect(command!.describe).toBe(`create folder ${edit.folderId}`);
+  });
+});
+
+describe('UI-003: нарисованная связь', () => {
+  it('новая связь и её ребро — одна правка, на сервер две команды', () => {
+    const doc = docWithViews();
+    const view = Object.values(doc.loadedViews).find((v) => Object.values(v.nodes).filter((n) => n.elementId).length > 1)!;
+    const [a, b] = Object.values(view.nodes).filter((n) => n.elementId && !n.parentId);
+    const edit = drawRelationship(doc, view, a!.id, b!.id, 'archimate:AssociationRelationship')!;
+    expect(edit.created).toBe(true);
+    const after = applyChanges(doc, edit.changes);
+    const relationship = after.relationships[edit.relationshipId]!;
+    expect([relationship.sourceId, relationship.targetId]).toEqual([a!.elementId, b!.elementId]);
+    expect(doc.folders[relationship.folderId]!.folderType).toBe('RELATIONS');
+    const commands = edit.changes.flatMap((c) => commandsFor(doc.model.id, c)).map((c) => c.describe);
+    expect(commands).toEqual([`create relationship ${edit.relationshipId}`, expect.stringMatching(/^place edge /)]);
+  });
+
+  it('связь того же типа между той же парой не дублируется — рисуется её ребро', () => {
+    const doc = docWithViews();
+    const view = Object.values(doc.loadedViews).find((v) => Object.values(v.edges).length > 0)!;
+    const edge = Object.values(view.edges).find((e) => view.nodes[e.sourceId] && view.nodes[e.targetId])!;
+    const relationship = doc.relationships[edge.relationshipId!]!;
+    expect(drawRelationship(doc, view, edge.sourceId, edge.targetId, relationship.archiType)!.changes).toEqual([]);
+    const without = applyChanges(doc, [{ entity: 'edge', id: edge.id, viewId: view.id, before: edge, after: null }]);
+    const again = drawRelationship(without, without.loadedViews[view.id]!, edge.sourceId, edge.targetId, relationship.archiType)!;
+    expect(again.created).toBe(false);
+    expect(again.changes.map((c) => c.entity)).toEqual(['edge']);
   });
 });

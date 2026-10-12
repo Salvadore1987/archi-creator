@@ -8,14 +8,24 @@ import {
   type EdgeChange,
   type NodeChange,
 } from '@xyflow/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Uuid } from '../api/types';
+import { api } from '../api/endpoints';
+import type { RelationType, Uuid } from '../api/types';
 import { Icon } from '../app/Icon';
 import { useCanEdit } from '../app/session';
 import { useToast } from '../app/toast';
 import { useUi } from '../app/uiState';
-import { t } from '../i18n';
-import { createAndPlace, moveNodes, placeElement, removeFromView, resizeNode } from '../model/ops';
+import { t, typeName } from '../i18n';
+import {
+  conceptTypeOfEndpoint,
+  createAndPlace,
+  drawRelationship,
+  moveNodes,
+  placeElement,
+  removeFromView,
+  resizeNode,
+} from '../model/ops';
 import { useEditor } from '../model/store';
 import { DRAG_ELEMENT } from '../tree/TreePanel';
 import { ArchiEdge } from './ArchiEdge';
@@ -29,6 +39,7 @@ import {
   type ArchiFlowNode,
 } from './flowModel';
 import { DRAG_PALETTE_TYPE, parsePaletteDrag } from './palette-drag';
+import { RelationPicker, type RelationChoice } from './RelationPicker';
 import tokens from 'virtual:design-tokens';
 
 const nodeTypes = { archi: ArchiNode };
@@ -53,6 +64,9 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
   const flow = useReactFlow();
   const wrapper = useRef<HTMLDivElement>(null);
   const toast = useToast((s) => s.show);
+  const queries = useQueryClient();
+  const [connecting, setConnecting] = useState<{ sourceId: Uuid; from: Point; to: Point } | null>(null);
+  const [choice, setChoice] = useState<(RelationChoice & { sourceId: Uuid; targetId: Uuid }) | null>(null);
 
   const selected = useMemo(() => new Set(selection.ids), [selection.ids]);
   const derivedNodes = useMemo(() => toFlowNodes(view, selected, canEdit), [view, selected, canEdit]);
@@ -72,8 +86,104 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
         const edit = resizeNode(current, id, bounds);
         perform(t('tree_ops.resizeOp', { name: node?.elementId ? (doc.elements[node.elementId]?.name ?? '') : '' }), edit.changes, edit.affected);
       },
+      onConnectStart: (id, event) => {
+        const box = wrapper.current?.getBoundingClientRect();
+        const nodeBox = (event.currentTarget as HTMLElement).closest('.react-flow__node')?.getBoundingClientRect();
+        if (!box || !nodeBox) return;
+        const from = { x: nodeBox.left + nodeBox.width / 2 - box.left, y: nodeBox.top + nodeBox.height / 2 - box.top };
+        setChoice(null);
+        setConnecting({ sourceId: id, from, to: { x: event.clientX - box.left, y: event.clientY - box.top } });
+      },
     });
   }, [canEdit, viewId, perform, doc.elements]);
+
+  // Протягивание связи: линия идёт за указателем, по отпусканию над узлом или ребром
+  // появляется список типов, допустимых матрицей для пары.
+  const connectingSource = connecting?.sourceId;
+  useEffect(() => {
+    if (!connectingSource) return;
+    const move = (event: PointerEvent) => {
+      const box = wrapper.current?.getBoundingClientRect();
+      if (!box) return;
+      setConnecting((current) => current && { ...current, to: { x: event.clientX - box.left, y: event.clientY - box.top } });
+    };
+    const up = (event: PointerEvent) => {
+      setConnecting(null);
+      const target = endpointAt(event.clientX, event.clientY);
+      if (!target || target === connectingSource) return;
+      void offerRelations(connectingSource, target, event.clientX, event.clientY);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up, { once: true });
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    // offerRelations читает документ в момент отпускания.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connectingSource]);
+
+  const offerRelations = async (sourceId: Uuid, targetId: Uuid, clientX: number, clientY: number) => {
+    const current = useEditor.getState().doc!;
+    const currentView = current.loadedViews[viewId]!;
+    const sourceType = conceptTypeOfEndpoint(current, currentView, sourceId);
+    const targetType = conceptTypeOfEndpoint(current, currentView, targetId);
+    if (!sourceType || !targetType) {
+      toast(t('canvas.relationEndpoint'));
+      return;
+    }
+    const options = await queries.fetchQuery({
+      queryKey: ['metamodel', 'relations', sourceType, targetType],
+      queryFn: () => api.relationTypes(sourceType, targetType),
+      staleTime: Infinity,
+    });
+    const names = { source: nameOfEndpoint(sourceId), target: nameOfEndpoint(targetId) };
+    if (options.length === 0) {
+      toast(t('canvas.relationNone', names));
+      return;
+    }
+    const box = wrapper.current?.getBoundingClientRect();
+    if (!box) return;
+    setChoice({
+      sourceId,
+      targetId,
+      x: clientX - box.left + 4,
+      y: clientY - box.top + 4,
+      title: t('canvas.relationTitle', names),
+      options,
+    });
+  };
+
+  const nameOfEndpoint = (id: Uuid): string => {
+    const current = useEditor.getState().doc!;
+    const currentView = current.loadedViews[viewId]!;
+    const node = currentView.nodes[id];
+    if (node?.elementId) return current.elements[node.elementId]?.name ?? '';
+    const relationship = currentView.edges[id]?.relationshipId;
+    return relationship ? typeName(current.relationships[relationship]?.archiType ?? '') : '';
+  };
+
+  const pickRelation = (option: RelationType) => {
+    if (!choice) return;
+    setChoice(null);
+    const current = useEditor.getState().doc!;
+    const edit = drawRelationship(current, current.loadedViews[viewId]!, choice.sourceId, choice.targetId, option.archiType);
+    if (!edit) return;
+    if (edit.changes.length === 0) {
+      toast(t('canvas.relationDrawn'));
+    } else {
+      perform(
+        t('tree_ops.connectOp', {
+          type: typeName(option.archiType),
+          source: nameOfEndpoint(choice.sourceId),
+          target: nameOfEndpoint(choice.targetId),
+        }),
+        edit.changes,
+        edit.affected,
+      );
+    }
+    select([edit.relationshipId], 'canvas');
+  };
 
   // Выделение извне — из дерева, карточки, находки — показывает узел, если он за краем экрана.
   const lastSeq = useRef(selection.seq);
@@ -153,11 +263,7 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
     const ids = Object.values(view.nodes)
       .filter((n) => nodeSelected(n, selected))
-      .filter((n) => n.kind === 'DIAGRAM_OBJECT' || n.kind === 'OTHER')
       .map((n) => n.id);
-    if (Object.values(view.nodes).some((n) => nodeSelected(n, selected) && (n.kind === 'GROUP' || n.kind === 'NOTE'))) {
-      toast(t('errors.unsupported', { detail: t('canvas.groupRemoval') }), { tone: 'error' });
-    }
     if (ids.length === 0) return;
     event.preventDefault();
     const edit = removeFromView(view, ids);
@@ -259,9 +365,36 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
       >
         <Background variant={BackgroundVariant.Lines} gap={GRID} color="var(--paper-line)" />
       </ReactFlow>
+      {connecting && (
+        <svg className="connect-line" data-testid="connect-line">
+          <line x1={connecting.from.x} y1={connecting.from.y} x2={connecting.to.x} y2={connecting.to.y} />
+        </svg>
+      )}
+      {choice && <RelationPicker choice={choice} onPick={pickRelation} onCancel={() => setChoice(null)} />}
       <Zoomer />
     </div>
   );
+}
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+/**
+ * Узел или ребро холста под указателем. Узел сильнее ребра: полоса захвата ребра,
+ * проходящего через фигуру, не должна превращать связь с элементом в связь со связью.
+ */
+function endpointAt(clientX: number, clientY: number): Uuid | undefined {
+  const hits = document.elementsFromPoint(clientX, clientY);
+  const first = (selector: string) => {
+    for (const element of hits) {
+      const id = element.closest(selector)?.getAttribute('data-id');
+      if (id) return id;
+    }
+    return undefined;
+  };
+  return first('.react-flow__node') ?? first('.react-flow__edge');
 }
 
 function Zoomer() {

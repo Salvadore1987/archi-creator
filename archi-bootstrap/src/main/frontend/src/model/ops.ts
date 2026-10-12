@@ -1,4 +1,4 @@
-import type { Element, Folder, Property, Uuid, ViewNode } from '../api/types';
+import type { Element, Folder, Property, Relationship, Uuid, ViewEdge, ViewNode } from '../api/types';
 import { attachedEdges, descendants } from '../canvas/flowModel';
 import { attachedRelationships, type Change, type ModelDoc, type ViewDoc } from './doc';
 import { newArchiId, uuidv7 } from './ids';
@@ -316,4 +316,96 @@ export function folderIsEmpty(doc: ModelDoc, id: Uuid): boolean {
       (item) => item.folderId === id,
     )
   );
+}
+
+/** Концепт модели, который изображает конец ребра: элемент узла или связь ребра. */
+export function conceptOfEndpoint(view: ViewDoc, endpointId: Uuid): Uuid | undefined {
+  return view.nodes[endpointId]?.elementId ?? view.edges[endpointId]?.relationshipId;
+}
+
+/** Тип концепта конца — для матрицы допустимых связей. */
+export function conceptTypeOfEndpoint(doc: ModelDoc, view: ViewDoc, endpointId: Uuid): string | undefined {
+  const concept = conceptOfEndpoint(view, endpointId);
+  return concept ? (doc.elements[concept]?.archiType ?? doc.relationships[concept]?.archiType) : undefined;
+}
+
+/** Следующая позиция в содержимом конца: дети-узлы и исходящие рёбра делят одну нумерацию. */
+function nextOrderInEndpoint(view: ViewDoc, endpointId: Uuid): number {
+  return nextSortOrder([
+    ...Object.values(view.nodes).filter((n) => n.parentId === endpointId).map((n) => n.sortOrder),
+    ...Object.values(view.edges).filter((e) => e.sourceId === endpointId).map((e) => e.sortOrder),
+  ]);
+}
+
+/** Ребро связи между концами на представлении — в конце содержимого источника. */
+function edgeOf(view: ViewDoc, relationship: Relationship, sourceId: Uuid, targetId: Uuid): ViewEdge {
+  return {
+    id: uuidv7(),
+    archiId: newArchiId(),
+    archiType: 'archimate:Connection',
+    relationshipId: relationship.id,
+    sourceId,
+    targetId,
+    bendpoints: [],
+    sortOrder: nextOrderInEndpoint(view, sourceId),
+  };
+}
+
+/**
+ * Нарисовать связь между концами на представлении. Связь того же типа между той же
+ * парой уже есть — рисуется её ребро, дубль в модели не создаётся; есть и ребро —
+ * правки нет.
+ */
+export function drawRelationship(
+  doc: ModelDoc,
+  view: ViewDoc,
+  sourceEnd: Uuid,
+  targetEnd: Uuid,
+  archiType: string,
+): (Edit & { relationshipId: Uuid; created: boolean }) | null {
+  const source = conceptOfEndpoint(view, sourceEnd);
+  const target = conceptOfEndpoint(view, targetEnd);
+  const root = Object.values(doc.folders).find((f) => !f.parentId && f.folderType === 'RELATIONS');
+  if (!source || !target || !root) return null;
+  const existing = Object.values(doc.relationships).find(
+    (r) => r.archiType === archiType && r.sourceId === source && r.targetId === target,
+  );
+  if (existing) {
+    const drawn = Object.values(view.edges).some(
+      (e) => e.relationshipId === existing.id && e.sourceId === sourceEnd && e.targetId === targetEnd,
+    );
+    if (drawn) return { relationshipId: existing.id, created: false, changes: [], affected: [existing.id] };
+    const edge = edgeOf(view, existing, sourceEnd, targetEnd);
+    return {
+      relationshipId: existing.id,
+      created: false,
+      changes: [{ entity: 'edge', id: edge.id, viewId: view.id, before: null, after: edge }],
+      affected: [existing.id],
+    };
+  }
+  const relationship: Relationship = {
+    id: uuidv7(),
+    folderId: root.id,
+    archiId: newArchiId(),
+    archiType,
+    sourceId: source,
+    targetId: target,
+    properties: [],
+    supported: true,
+    sortOrder: nextSortOrder(
+      [...Object.values(doc.relationships), ...Object.values(doc.folders).map((f) => ({ ...f, folderId: f.parentId }))]
+        .filter((item) => item.folderId === root.id)
+        .map((item) => item.sortOrder),
+    ),
+  };
+  const edge = edgeOf(view, relationship, sourceEnd, targetEnd);
+  return {
+    relationshipId: relationship.id,
+    created: true,
+    changes: [
+      { entity: 'relationship', id: relationship.id, before: null, after: relationship },
+      { entity: 'edge', id: edge.id, viewId: view.id, before: null, after: edge },
+    ],
+    affected: [relationship.id, source, target],
+  };
 }

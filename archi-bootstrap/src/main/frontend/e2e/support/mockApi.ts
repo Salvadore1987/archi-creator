@@ -1,5 +1,6 @@
 import type { Page, Route } from '@playwright/test';
 import reference from '../fixtures/reference-model.json' with { type: 'json' };
+import { relationTypes } from './relationMatrix';
 
 type Json = Record<string, unknown>;
 
@@ -82,6 +83,9 @@ export class MockApi {
         return json(200, [{ versionNo: this.versionNo, author: 'e2e', createdAt: '2026-10-09T08:00:00Z', snapshotAvailable: true }]);
       if (path === `/models/${this.modelId}/lock`) return json(204);
       if (path === '/metamodel/elements') return json(200, reference.elementTypes);
+      if (path === '/metamodel/relations') {
+        return json(200, relationTypes(url.searchParams.get('source') ?? '', url.searchParams.get('target') ?? ''));
+      }
       const view = path.match(/^\/views\/([^/]+)$/);
       if (view && this.views[view[1]!]) return json(200, this.views[view[1]!]);
       return json(404, { status: 404, title: 'Not Found', code: 'MDL_NOT_FOUND' });
@@ -104,9 +108,11 @@ export class MockApi {
     if (method === 'POST' && (path.endsWith('/elements') || path.endsWith('/folders') || path.endsWith('/relationships') || path.endsWith('/nodes') || path.endsWith('/edges'))) {
       return json(201, body);
     }
-    if (method === 'PATCH' && (path.startsWith('/elements/') || path.startsWith('/relationships/'))) {
+    if (method === 'PATCH' && (path.startsWith('/elements/') || path.startsWith('/relationships/') || path.startsWith('/view-'))) {
       return json(200, body);
     }
+    if (method === 'PUT' && /^\/view-nodes\/[^/]+\/parent$/.test(path)) return json(200, body);
+    if (method === 'POST' && path.endsWith('/auto-layout')) return json(200, layered(body as LayoutRequest));
     return json(204);
   }
 }
@@ -134,4 +140,42 @@ export function editorState<T>(page: Page, pick: string): Promise<T> {
     const state = (window as unknown as { __archiEditor: { getState(): unknown } }).__archiEditor.getState();
     return new Function('s', `return (${expr})`)(state);
   }, pick) as Promise<T>;
+}
+
+type LayoutRequest = {
+  nodes: Array<{ id: string; parentId?: string; conceptType?: string; width: number; height: number }>;
+  edges: Array<{ id: string }>;
+};
+
+const BANDS = ['MOTIVATION', 'STRATEGY', 'BUSINESS', 'APPLICATION', 'TECHNOLOGY', 'PHYSICAL', 'IMPLEMENTATION', 'OTHER'];
+
+/**
+ * Раскладка подменного сервера: полосы по слоям, ряды по шесть. Алгоритм сервера
+ * проверяют его юнит-тесты; здесь важно, что интерфейс применяет ответ одним шагом.
+ */
+function layered(request: LayoutRequest) {
+  const layerOf = new Map(reference.elementTypes.map((t) => [t.archiType, t.layer]));
+  const ids = new Set(request.nodes.map((n) => n.id));
+  const roots = request.nodes.filter((n) => !n.parentId || !ids.has(n.parentId));
+  const band = (n: LayoutRequest['nodes'][number]) => BANDS.indexOf(layerOf.get(n.conceptType ?? '') ?? 'OTHER');
+  const sorted = [...roots].sort((a, b) => band(a) - band(b));
+  const nodes: Array<{ id: string; x: number; y: number; width: number; height: number }> = [];
+  let y = 24;
+  let previous = -1;
+  let column = 0;
+  let rowHeight = 0;
+  for (const node of sorted) {
+    if (band(node) !== previous || column === 6) {
+      if (previous !== -1) y += rowHeight + (band(node) !== previous ? 72 : 36);
+      previous = band(node);
+      column = 0;
+      rowHeight = 0;
+    }
+    const width = node.width > 0 ? node.width : 120;
+    const height = node.height > 0 ? node.height : 55;
+    nodes.push({ id: node.id, x: 24 + column * 200, y, width: node.width, height: node.height });
+    rowHeight = Math.max(rowHeight, height);
+    column += width > 180 ? 2 : 1;
+  }
+  return { nodes, edges: request.edges.map((e) => ({ id: e.id, bendpoints: [] })) };
 }

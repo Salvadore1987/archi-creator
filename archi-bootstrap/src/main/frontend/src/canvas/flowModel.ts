@@ -3,7 +3,8 @@ import type { Uuid, ViewEdge, ViewNode } from '../api/types';
 import type { ModelDoc, ViewDoc } from '../model/doc';
 import { effectiveSize } from './shapes';
 
-export type ArchiNodeData = { viewId: Uuid };
+/** `editable` — можно ли править представление: от него зависят полосы протягивания связи. */
+export type ArchiNodeData = { viewId: Uuid; editable: boolean };
 export type ArchiEdgeData = { viewId: Uuid };
 export type ArchiFlowNode = Node<ArchiNodeData, 'archi'>;
 export type ArchiFlowEdge = Edge<ArchiEdgeData, 'archi'>;
@@ -54,7 +55,7 @@ export function toFlowNodes(
       type: 'archi',
       position: { x: node.x, y: node.y },
       parentId: node.parentId && view.nodes[node.parentId] ? node.parentId : undefined,
-      data: { viewId: view.id },
+      data: { viewId: view.id, editable },
       width: size.width,
       height: size.height,
       selected: nodeSelected(node, selected),
