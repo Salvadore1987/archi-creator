@@ -1,6 +1,13 @@
 import type { Page, Route } from '@playwright/test';
 import reference from '../fixtures/reference-model.json' with { type: 'json' };
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { relationTypes } from './relationMatrix';
+
+/** Эталонная модель — её же отдаёт выгрузка подменного сервера. */
+export const REFERENCE_FILE = fileURLToPath(
+  new URL('../../../../../../docs/Hamkorbank_AS_IS_strict.archimate', import.meta.url),
+);
 
 type Json = Record<string, unknown>;
 
@@ -82,6 +89,9 @@ export class MockApi {
       if (path === `/models/${this.modelId}/versions`)
         return json(200, [{ versionNo: this.versionNo, author: 'e2e', createdAt: '2026-10-09T08:00:00Z', snapshotAvailable: true }]);
       if (path === `/models/${this.modelId}/lock`) return json(204);
+      if (path === `/models/${this.modelId}/export`) {
+        return route.fulfill({ status: 200, contentType: 'application/xml', body: readFileSync(REFERENCE_FILE) });
+      }
       if (path === '/metamodel/elements') return json(200, reference.elementTypes);
       if (path === '/metamodel/relations') {
         return json(200, relationTypes(url.searchParams.get('source') ?? '', url.searchParams.get('target') ?? ''));
@@ -91,6 +101,9 @@ export class MockApi {
       return json(404, { status: 404, title: 'Not Found', code: 'MDL_NOT_FOUND' });
     }
 
+    if (path === '/models/import' && method === 'POST') {
+      return json(201, { modelId: this.modelId, status: 'APPLIED' });
+    }
     if (path === `/models/${this.modelId}/lock`) {
       if (method === 'DELETE') return json(204);
       if (this.options.lockedBy) {
