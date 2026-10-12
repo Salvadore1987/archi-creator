@@ -3,6 +3,8 @@ import type { Uuid } from '../api/types';
 import { Icon, NotationIcon } from '../app/Icon';
 import { shapeOf } from '../canvas/shapes';
 import { layerToken } from '../canvas/style';
+import { useAdvisor } from '../advisor/store';
+import { useAdvisorStatus } from '../advisor/useAdvisorStatus';
 import { useOpenView } from '../canvas/useOpenView';
 import { layerName, relationVerb, t, typeName } from '../i18n';
 import { placementIndex } from '../model/doc';
@@ -25,6 +27,7 @@ export function DescriptionTab({ id }: { id: Uuid }) {
   const select = useEditor((s) => s.select);
   const openView = useOpenView();
   const [showAll, setShowAll] = useState(false);
+  const advisor = useAdvisorStatus(doc.model.workspaceId);
 
   const object = doc.elements[id] ?? doc.relationships[id];
   const element = doc.elements[id];
@@ -120,6 +123,18 @@ export function DescriptionTab({ id }: { id: Uuid }) {
             </p>
           )}
         </section>
+      )}
+
+      {element && advisor && (
+        <button
+          type="button"
+          className="btn btn--small"
+          data-testid="advisor-document"
+          disabled={advisor.budgetStatus === 'EXHAUSTED'}
+          onClick={() => void useAdvisor.getState().ask('document', { modelId: doc.model.id, elementId: element.archiId })}
+        >
+          {t('advisor.document')}
+        </button>
       )}
 
       {object.properties.length > 0 && (

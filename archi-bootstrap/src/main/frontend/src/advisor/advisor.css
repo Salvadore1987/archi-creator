@@ -1,0 +1,236 @@
+/* Панель помощника — под «Свойствами» в правой колонке. */
+.ai {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  position: relative;
+}
+.ai__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.ai__body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+.ai__idle,
+.ai__muted {
+  font-size: 11.5px;
+  color: var(--text-low);
+  line-height: 1.5;
+  margin: 0;
+}
+.ai__stream {
+  white-space: pre-wrap;
+}
+.ai__usage {
+  font-family: var(--f-mono);
+  font-size: 9.5px;
+  color: var(--text-low);
+  margin: 0;
+}
+.ai__banner {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-mid);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--warn);
+  border-radius: 6px;
+  padding: 7px 9px;
+  background: var(--ink-850);
+}
+.ai__banner--err {
+  border-left-color: var(--err);
+}
+.ai__note {
+  font-size: 11px;
+  color: var(--text-low);
+  line-height: 1.5;
+  border-top: 1px solid var(--line-soft);
+  padding: 9px 12px;
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+}
+.ai__note .icon {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+.ai__ask {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  padding: 9px 10px;
+  border-top: 1px solid var(--line-soft);
+}
+.ai__ask input {
+  flex: 1;
+  min-width: 0;
+  background: var(--ink-850);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px 10px;
+  color: var(--text-hi);
+  font: inherit;
+  font-size: 12px;
+}
+.ai__ask input:focus {
+  outline: none;
+  border-color: var(--signal);
+  box-shadow: 0 0 0 3px var(--signal-dim);
+}
+.ai__stop {
+  position: absolute;
+  right: 10px;
+  top: 6px;
+}
+.ai__ref {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--signal-2);
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.ai__md {
+  font-size: 12px;
+  color: var(--text-mid);
+  line-height: 1.55;
+}
+.ai__md h3,
+.ai__md h4,
+.plan h3,
+.plan h4 {
+  color: var(--text-hi);
+  font-size: 12px;
+  margin: 8px 0 4px;
+}
+.ai__md p,
+.ai__md ul,
+.ai__md ol {
+  margin: 0 0 6px;
+}
+.ai__md ul,
+.ai__md ol {
+  padding-left: 18px;
+}
+.ai__md code {
+  font-family: var(--f-mono);
+  font-size: 11px;
+}
+
+.finding {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--ink-850);
+  padding: 9px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-left: 2px solid var(--sev, var(--warn));
+}
+.finding__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.finding__head .icon {
+  width: 13px;
+  height: 13px;
+  color: var(--sev, var(--warn));
+  flex: 0 0 auto;
+}
+.finding__code {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--text-low);
+  margin-left: auto;
+}
+.finding__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-hi);
+}
+.finding__body {
+  font-size: 11.5px;
+  color: var(--text-mid);
+  line-height: 1.5;
+}
+.finding__fix {
+  font-size: 11.5px;
+  color: var(--text-mid);
+  line-height: 1.5;
+  border-left: 2px solid var(--line);
+  padding-left: 8px;
+}
+.finding__act {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 2px;
+}
+.finding__target {
+  font-size: 11px;
+  color: var(--text-low);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sev-error {
+  --sev: var(--err);
+}
+.sev-warning {
+  --sev: var(--warn);
+}
+.sev-info {
+  --sev: var(--text-mid);
+}
+
+.plan {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.plan__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--text-mid);
+  padding: 5px 8px;
+  background: var(--ink-850);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+.plan__row--warn {
+  border-left: 2px solid var(--err);
+}
+.plan__n {
+  font-family: var(--f-mono);
+  font-size: 9.5px;
+  color: var(--text-low);
+  width: 14px;
+  flex: 0 0 auto;
+}
+.plan__type {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  color: var(--text-low);
+}
+.plan__name {
+  color: var(--text-hi);
+}

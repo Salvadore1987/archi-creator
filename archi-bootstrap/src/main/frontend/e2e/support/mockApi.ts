@@ -21,6 +21,22 @@ export interface MockOptions {
   roles?: string[];
   /** Модель заблокирована другим пользователем. */
   lockedBy?: string;
+  /** Помощник: состояние пространства и ответы функций. Нет — `/ai/status` отвечает 404, панели нет. */
+  advisor?: AdvisorMock;
+}
+
+export interface AdvisorMock {
+  enabled?: boolean;
+  budgetStatus?: 'OK' | 'WARNING' | 'EXHAUSTED';
+  /** Ответ функции: кадры SSE или отказ problem+json. */
+  replies?: Partial<Record<'review' | 'explain' | 'plan' | 'document', AdvisorReply>>;
+}
+
+export type AdvisorReply = { frames: Array<[string, unknown]> } | { status: number; problem: Json };
+
+/** Кадры SSE в тело ответа — тот же формат, что у сервера. */
+export function sse(frames: Array<[string, unknown]>): string {
+  return frames.map(([event, data]) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`).join('');
 }
 
 /**
@@ -93,6 +109,17 @@ export class MockApi {
         return route.fulfill({ status: 200, contentType: 'application/xml', body: readFileSync(REFERENCE_FILE) });
       }
       if (path === '/metamodel/elements') return json(200, reference.elementTypes);
+      if (path === '/ai/status') {
+        const advisor = this.options.advisor;
+        if (!advisor) return json(404, { status: 404, title: 'Not Found', code: 'ADV_NOT_FOUND' });
+        return json(200, {
+          workspaceId: this.tree.model.workspaceId,
+          enabled: advisor.enabled ?? true,
+          budgetStatus: advisor.budgetStatus ?? 'OK',
+          period: '2026-10',
+          resetsAt: '2026-11-01',
+        });
+      }
       if (path === '/metamodel/relations') {
         return json(200, relationTypes(url.searchParams.get('source') ?? '', url.searchParams.get('target') ?? ''));
       }
@@ -101,6 +128,13 @@ export class MockApi {
       return json(404, { status: 404, title: 'Not Found', code: 'MDL_NOT_FOUND' });
     }
 
+    const advisorCall = path.match(/^\/ai\/(review|explain|plan|document)$/);
+    if (advisorCall && method === 'POST') {
+      const reply = this.options.advisor?.replies?.[advisorCall[1] as 'review'];
+      if (!reply) return json(503, { status: 503, title: 'Service Unavailable', code: 'ADVISOR_UNAVAILABLE' });
+      if ('problem' in reply) return json(reply.status, reply.problem);
+      return route.fulfill({ status: 200, contentType: 'text/event-stream', body: sse(reply.frames) });
+    }
     if (path === '/models/import' && method === 'POST') {
       return json(201, { modelId: this.modelId, status: 'APPLIED' });
     }

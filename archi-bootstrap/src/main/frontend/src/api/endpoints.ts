@@ -1,5 +1,6 @@
 import { request } from './http';
 import type {
+  AdvisorStatus,
   AutoLayoutRequest,
   Bendpoint,
   Element,
@@ -140,4 +141,6 @@ export const api = {
       edges: Array<{ id: Uuid; bendpoints: Bendpoint[] }>;
     },
   ) => request<void>(`/views/${viewId}/layout`, { method: 'PUT', body }),
+
+  advisorStatus: (workspaceId: Uuid) => request<AdvisorStatus>(`/ai/status?workspaceId=${workspaceId}`),
 };

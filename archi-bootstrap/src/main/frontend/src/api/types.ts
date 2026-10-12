@@ -244,4 +244,53 @@ export interface Problem {
   expiresAt?: string;
   relationships?: Uuid[];
   permitted?: string[];
+  /** Исчерпанный бюджет помощника: первый день следующего месяца. */
+  resetsAt?: string;
+  /** Превышена частота обращений к помощнику: через сколько секунд повторить. */
+  retryAfterSeconds?: number;
+}
+
+/** Ссылка помощника на объект модели: `archiId` для перехода, имя — для текста. */
+export interface ElementRef {
+  archiId: string;
+  name: string;
+}
+
+export interface AdvisorFinding {
+  id: Uuid;
+  severity: 'ERROR' | 'WARNING' | 'INFO';
+  code: string;
+  message: string;
+  targetKind: 'ELEMENT' | 'RELATIONSHIP' | 'VIEW' | 'MODEL';
+  target: ElementRef;
+  suggestion?: string;
+}
+
+/** План модели — описание, а не изменение: элементы по имени и типу. */
+export interface ModelPlan {
+  elements: Array<{ archiType: string; name: string; existingRef?: ElementRef }>;
+  relationships: Array<{ archiType: string; sourceName: string; targetName: string; permitted: boolean }>;
+  notes?: string;
+}
+
+export interface AdvisorAnswer {
+  markdown: string;
+  references: ElementRef[];
+}
+
+export interface SessionMeta {
+  sessionId: Uuid;
+  outcome: 'COMPLETED' | 'FAILED' | 'REJECTED';
+  rejectionReason?: string;
+  promptTokens: number;
+  completionTokens: number;
+  contextTruncated: boolean;
+}
+
+export interface AdvisorStatus {
+  workspaceId: Uuid;
+  enabled: boolean;
+  budgetStatus: 'OK' | 'WARNING' | 'EXHAUSTED';
+  period: string;
+  resetsAt: string;
 }
