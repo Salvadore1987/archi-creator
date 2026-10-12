@@ -48,6 +48,7 @@ import {
   type ArchiFlowNode,
 } from './flowModel';
 import { DRAG_PALETTE_TYPE, parsePaletteDrag } from './palette-drag';
+import { alignmentGuides, type GuideLine } from './guides';
 import { effectiveSize } from './shapes';
 import { CanvasTools } from './CanvasTools';
 import { RelationPicker, type RelationChoice } from './RelationPicker';
@@ -56,6 +57,8 @@ import tokens from 'virtual:design-tokens';
 const nodeTypes = { archi: ArchiNode };
 const edgeTypes = { archi: ArchiEdge };
 const GRID = parseFloat(tokens.values.grid_step ?? '20');
+/** Насколько близко, в экранных пикселях, край узла притягивается к направляющей. */
+const GUIDE_THRESHOLD = 6;
 
 /**
  * Холст одного представления. Узлы React Flow — производная документа:
@@ -331,8 +334,30 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
     return { current, ids, container: containerAt(current, point, moving) };
   };
 
+  // Направляющие: край или середина перетаскиваемого узла рядом с краем или серединой
+  // другого — показывается линия, а по отпусканию узел встаёт точно по ней. С привязкой
+  // к сетке выравнивает сетка: две привязки сразу спорили бы, куда ставить узел.
+  const [guideLines, setGuideLines] = useState<GuideLine[]>([]);
+  const guideShift = useRef({ dx: 0, dy: 0 });
+  const updateGuides = (primary: ArchiFlowNode, dragged: ArchiFlowNode[]) => {
+    const current = useEditor.getState().doc?.loadedViews[viewId];
+    const node = current?.nodes[primary.id];
+    if (!current || !node || useUi.getState().snapToGrid) return;
+    const moving = new Set([...dragged.map((n) => n.id), ...descendants(current, dragged.map((n) => n.id)).map((n) => n.id)]);
+    const parentAt = node.parentId && current.nodes[node.parentId] ? absolutePosition(current, node.parentId) : { x: 0, y: 0 };
+    const size = effectiveSize(node.archiType, node.width, node.height);
+    const rect = { x: parentAt.x + primary.position.x, y: parentAt.y + primary.position.y, ...size };
+    const others = Object.values(current.nodes)
+      .filter((n) => !moving.has(n.id))
+      .map((n) => ({ ...absolutePosition(current, n.id), ...effectiveSize(n.archiType, n.width, n.height) }));
+    const guides = alignmentGuides(rect, others, GUIDE_THRESHOLD / flow.getZoom());
+    guideShift.current = { dx: guides.dx, dy: guides.dy };
+    setGuideLines(guides.lines);
+  };
+
   const onNodeDrag = useCallback(
-    (event: MouseEvent | TouchEvent, _: ArchiFlowNode, dragged: ArchiFlowNode[]) => {
+    (event: MouseEvent | TouchEvent, primary: ArchiFlowNode, dragged: ArchiFlowNode[]) => {
+      updateGuides(primary, dragged);
       const drop = nestingDrop(event, dragged);
       const target = drop?.container?.id;
       if (target === dropTarget.current) return;
@@ -347,6 +372,9 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
   const onNodeDragStop = useCallback(
     (event: MouseEvent | TouchEvent, _: ArchiFlowNode, dragged: ArchiFlowNode[]) => {
       dropTarget.current = undefined;
+      const shift = guideShift.current;
+      guideShift.current = { dx: 0, dy: 0 };
+      setGuideLines([]);
       const drop = nestingDrop(event, dragged);
       if (!drop) return;
       const { current, ids, container } = drop;
@@ -357,7 +385,12 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
         const node = current.nodes[n.id]!;
         const oldParent = node.parentId && current.nodes[node.parentId] ? absolutePosition(current, node.parentId) : { x: 0, y: 0 };
         if ((node.parentId ?? undefined) === container?.id) {
-          return { id: n.id, parentId: container?.id, x: Math.round(n.position.x), y: Math.round(n.position.y) };
+          return {
+            id: n.id,
+            parentId: container?.id,
+            x: Math.round(n.position.x + shift.dx),
+            y: Math.round(n.position.y + shift.dy),
+          };
         }
         return {
           id: n.id,
@@ -557,6 +590,7 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
       >
         {snap && <Background variant={BackgroundVariant.Lines} gap={GRID} color="var(--paper-line)" />}
       </ReactFlow>
+      {guideLines.length > 0 && <GuideOverlay lines={guideLines} wrapper={wrapper} />}
       {connecting && (
         <svg className="connect-line" data-testid="connect-line">
           <line x1={connecting.from.x} y1={connecting.from.y} x2={connecting.to.x} y2={connecting.to.y} />
@@ -598,6 +632,26 @@ function endpointAt(clientX: number, clientY: number): Uuid | undefined {
     return undefined;
   };
   return first('.react-flow__node') ?? first('.react-flow__edge');
+}
+
+/** Направляющие поверх холста: линии в координатах холста переводятся в экранные. */
+function GuideOverlay({ lines, wrapper }: { lines: GuideLine[]; wrapper: React.RefObject<HTMLDivElement | null> }) {
+  const flow = useReactFlow();
+  const box = wrapper.current?.getBoundingClientRect();
+  if (!box) return null;
+  const at = (x: number, y: number) => {
+    const p = flow.flowToScreenPosition({ x, y });
+    return { x: p.x - box.left, y: p.y - box.top };
+  };
+  return (
+    <svg className="guide-lines" data-testid="guide-lines">
+      {lines.map((line, i) => {
+        const a = at(line.x1, line.y1);
+        const b = at(line.x2, line.y2);
+        return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} />;
+      })}
+    </svg>
+  );
 }
 
 function Zoomer() {

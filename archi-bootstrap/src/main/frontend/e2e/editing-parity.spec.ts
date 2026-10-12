@@ -256,4 +256,63 @@ test.describe('UI-006: паритет с Archi', () => {
       relationshipId: edge.relationshipId,
     });
   });
+
+  test('выравнивание и направляющие: по опорному узлу одной операцией; у края другого узла — линия и доводка', async ({ page }) => {
+    const api = await openModel(page);
+    const viewId = await openView(page, api, '03 ');
+    const [a, b, c] = rootNodes(api, viewId);
+    const { node, box } = canvasOf(page, viewId);
+    await node(a!.id).click();
+    await page.keyboard.down('ControlOrMeta');
+    await node(b!.id).click();
+    await node(c!.id).click();
+    await page.keyboard.up('ControlOrMeta');
+    await expect(page.getByTestId('align-tools')).toBeVisible();
+    await page.locator('[data-align="left"]').click();
+    await expect(page.getByTestId('undo')).toHaveAttribute('title', /Выровнять по левому краю/);
+    const anchorX = await nodeState<number>(page, viewId, c!.id, 'x');
+    expect(await nodeState<number>(page, viewId, a!.id, 'x')).toBe(anchorX);
+    expect(await nodeState<number>(page, viewId, b!.id, 'x')).toBe(anchorX);
+    expect(await editorState<number>(page, 's.history.ops.length')).toBe(1);
+
+    await page.getByTitle('Сетка и привязка').click();
+    await page.keyboard.press('ControlOrMeta+z');
+    // Выделены все три — перетаскивание повезло бы всех; оставляем один.
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('ControlOrMeta+-');
+    await page.keyboard.press('ControlOrMeta+-');
+    await expect.poll(async () => parseInt((await page.getByTestId('zoom-value').textContent())!, 10)).toBeLessThan(60);
+    await page.waitForTimeout(200);
+    // Свободное место — под самым нижним узлом; левый край a — в 3 экранных пикселях от края b.
+    const lowest = await editorState<number>(
+      page,
+      `Math.max(...Object.values(s.doc.loadedViews['${viewId}'].nodes).filter((n) => !n.parentId).map((n) => n.y + n.height))`,
+    );
+    const target = await box(b!.id);
+    await node(a!.id).click();
+    const moving = await box(a!.id);
+    const bFlow = { x: await nodeState<number>(page, viewId, b!.id, 'x'), y: await nodeState<number>(page, viewId, b!.id, 'y') };
+    const scale = target.width / (await nodeState<number>(page, viewId, b!.id, 'width'));
+    const dropY = target.y + (lowest + 60 - bFlow.y) * scale;
+    await page.mouse.move(moving.x + 5, moving.y + 5);
+    await page.mouse.down();
+    await page.mouse.move(target.x + 3 + 5, dropY + 5, { steps: 10 });
+    await expect(page.getByTestId('guide-lines')).toBeVisible();
+    await page.mouse.up();
+    await expect(page.getByTestId('guide-lines')).toHaveCount(0);
+    expect(await nodeState<string | undefined>(page, viewId, a!.id, 'parentId')).toBeUndefined();
+    // По отпусканию край или середина узла совпадает с краем или серединой другого точно.
+    const aligned = await editorState<boolean>(
+      page,
+      `(() => {
+        const nodes = Object.values(s.doc.loadedViews['${viewId}'].nodes).filter((n) => !n.parentId);
+        const a = nodes.find((n) => n.id === '${a!.id}');
+        const xs = (n) => [n.x, n.x + n.width / 2, n.x + n.width];
+        const ys = (n) => [n.y, n.y + n.height / 2, n.y + n.height];
+        const others = nodes.filter((n) => n !== a);
+        return others.some((o) => xs(a).some((v) => xs(o).includes(v)) || ys(a).some((v) => ys(o).includes(v)));
+      })()`,
+    );
+    expect(aligned).toBe(true);
+  });
 });

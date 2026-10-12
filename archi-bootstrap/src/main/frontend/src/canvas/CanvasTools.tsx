@@ -6,7 +6,10 @@ import { describeError } from '../app/errors';
 import { Icon } from '../app/Icon';
 import { useToast } from '../app/toast';
 import { t, type MessageKey } from '../i18n';
-import { applyLayoutPatch, layoutRequest } from '../model/ops';
+import type { IconName } from '../app/Icon';
+import { alignNodes, applyLayoutPatch, layoutRequest, type AlignMode } from '../model/ops';
+import { absolutePosition, nodeSelected } from './flowModel';
+import { effectiveSize } from './shapes';
 import { useEditor } from '../model/store';
 
 const STRATEGIES: Array<{ id: LayoutStrategy; label: MessageKey }> = [
@@ -14,6 +17,28 @@ const STRATEGIES: Array<{ id: LayoutStrategy; label: MessageKey }> = [
   { id: 'hierarchy', label: 'canvas.layoutHierarchy' },
   { id: 'compact', label: 'canvas.layoutCompact' },
 ];
+
+const ALIGN: Array<{ mode: AlignMode; icon: IconName; label: MessageKey }> = [
+  { mode: 'left', icon: 'align-left', label: 'canvas.alignLeft' },
+  { mode: 'center', icon: 'align-center', label: 'canvas.alignCenter' },
+  { mode: 'right', icon: 'align-right', label: 'canvas.alignRight' },
+  { mode: 'top', icon: 'align-top', label: 'canvas.alignTop' },
+  { mode: 'middle', icon: 'align-middle', label: 'canvas.alignMiddle' },
+  { mode: 'bottom', icon: 'align-bottom', label: 'canvas.alignBottom' },
+  { mode: 'width', icon: 'match-width', label: 'canvas.matchWidth' },
+  { mode: 'height', icon: 'match-height', label: 'canvas.matchHeight' },
+];
+
+/** Узлы выделения на представлении — в порядке выделения: последний служит опорным. */
+function selectedNodeIds(viewId: Uuid): Uuid[] {
+  const state = useEditor.getState();
+  const view = state.doc?.loadedViews[viewId];
+  if (!view) return [];
+  return state.selection.ids.flatMap((id) => {
+    const node = Object.values(view.nodes).find((n) => nodeSelected(n, new Set([id])));
+    return node ? [node.id] : [];
+  });
+}
 
 /**
  * Инструменты холста над представлением. Авторазметку считает сервер по графу
@@ -26,6 +51,24 @@ export function CanvasTools({ viewId, canEdit }: { viewId: Uuid; canEdit: boolea
   const [menu, setMenu] = useState(false);
   const [busy, setBusy] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  const alignable = useEditor((s) => {
+    const view = s.doc?.loadedViews[viewId];
+    if (!view || s.selection.ids.length < 2) return false;
+    const chosen = new Set(s.selection.ids);
+    return Object.values(view.nodes).filter((n) => nodeSelected(n, chosen)).length >= 2;
+  });
+
+  const align = (mode: AlignMode, label: MessageKey) => {
+    const view = useEditor.getState().doc!.loadedViews[viewId]!;
+    const edit = alignNodes(
+      view,
+      selectedNodeIds(viewId),
+      mode,
+      (n) => effectiveSize(n.archiType, n.width, n.height),
+      (id) => absolutePosition(view, id),
+    );
+    perform(t('tree_ops.alignOp', { how: t(label) }), edit.changes, edit.affected);
+  };
 
   useEffect(() => {
     if (!menu) return;
@@ -69,6 +112,22 @@ export function CanvasTools({ viewId, canEdit }: { viewId: Uuid; canEdit: boolea
         <Icon name="layout" />
         {t('canvas.autoLayout')}
       </button>
+      {alignable && (
+        <div className="canvas-tools__group" data-testid="align-tools">
+          {ALIGN.map((a) => (
+            <button
+              key={a.mode}
+              type="button"
+              className="btn btn--icon btn--small"
+              data-align={a.mode}
+              title={t(a.label)}
+              onClick={() => align(a.mode, a.label)}
+            >
+              <Icon name={a.icon} />
+            </button>
+          ))}
+        </div>
+      )}
       {menu && (
         <div className="canvas-tools__menu" role="menu">
           {STRATEGIES.map((strategy) => (

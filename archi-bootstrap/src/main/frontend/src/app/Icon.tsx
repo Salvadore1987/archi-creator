@@ -24,7 +24,15 @@ export type IconName =
   | 'target'
   | 'upload'
   | 'download'
-  | 'layout';
+  | 'layout'
+  | 'align-left'
+  | 'align-center'
+  | 'align-right'
+  | 'align-top'
+  | 'align-middle'
+  | 'align-bottom'
+  | 'match-width'
+  | 'match-height';
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {
   return (

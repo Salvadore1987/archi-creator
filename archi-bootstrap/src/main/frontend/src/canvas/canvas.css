@@ -292,6 +292,24 @@
   color: var(--edge-color);
   gap: 6px;
 }
+.canvas-tools__group {
+  display: flex;
+  gap: 1px;
+  padding-left: 4px;
+  border-left: 1px solid var(--paper-line-major);
+}
+.guide-lines {
+  position: absolute;
+  inset: 0;
+  z-index: 19;
+  pointer-events: none;
+  overflow: visible;
+}
+.guide-lines line {
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
 .canvas-tools__menu {
   position: absolute;
   top: calc(100% + 4px);

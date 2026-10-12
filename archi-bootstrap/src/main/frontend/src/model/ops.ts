@@ -797,3 +797,48 @@ function applyToView(view: ViewDoc, change: Change): ViewDoc {
   }
   return view;
 }
+
+export type AlignMode = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom' | 'width' | 'height';
+
+/**
+ * Выравнивание узлов по опорному — последнему выделенному, как в Archi. Считается
+ * в координатах холста, пишется относительно своего родителя у каждого узла.
+ */
+export function alignNodes(
+  view: ViewDoc,
+  ids: Uuid[],
+  mode: AlignMode,
+  sizeOf: (node: ViewNode) => { width: number; height: number },
+  absoluteOf: (id: Uuid) => { x: number; y: number },
+): Edit {
+  const nodes = ids.map((id) => view.nodes[id]).filter((n): n is ViewNode => !!n);
+  const anchor = nodes[nodes.length - 1];
+  if (!anchor || nodes.length < 2) return { changes: [], affected: [] };
+  const a = { ...absoluteOf(anchor.id), ...sizeOf(anchor) };
+  const changes: Change[] = [];
+  for (const node of nodes.slice(0, -1)) {
+    const at = absoluteOf(node.id);
+    const size = sizeOf(node);
+    let { x, y, width, height } = { x: at.x, y: at.y, width: node.width, height: node.height };
+    switch (mode) {
+      case 'left': x = a.x; break;
+      case 'center': x = a.x + a.width / 2 - size.width / 2; break;
+      case 'right': x = a.x + a.width - size.width; break;
+      case 'top': y = a.y; break;
+      case 'middle': y = a.y + a.height / 2 - size.height / 2; break;
+      case 'bottom': y = a.y + a.height - size.height; break;
+      case 'width': width = a.width; break;
+      case 'height': height = a.height; break;
+    }
+    const after = {
+      ...node,
+      x: Math.round(node.x + x - at.x),
+      y: Math.round(node.y + y - at.y),
+      width,
+      height,
+    };
+    if (after.x === node.x && after.y === node.y && after.width === node.width && after.height === node.height) continue;
+    changes.push({ entity: 'node', id: node.id, viewId: view.id, before: node, after });
+  }
+  return { changes, affected: changes.map((c) => (c.after as ViewNode).elementId ?? c.id) };
+}
