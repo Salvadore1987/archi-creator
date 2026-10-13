@@ -132,10 +132,13 @@ decisions:
     kind: product
     rationale_ref: docs/backend.md#35-экспорт-в-open-exchange-format
     requirements: [FR-43, FR-44]
-    anchors: [INV-IXC-006]
+    anchors: [INV-IXC-006, UC-IXC-005]
     note: |
       Импорта нет: единственный принимаемый формат остаётся `.archimate`.
       Обещание lossless относится только к нему. Этап 6a.
+      Уточнено 2026-10-13 (этап 6a): переносится всё, что OEF выражает, независимо
+      от фазы метамодели; выгрузка — zip из файла и отчёта о потерях, невалидный
+      по XSD результат — 500 IXC_OEF_SCHEMA_VIOLATION.
 
   - id: ADR-0009
     title: CSV-каталог — только экспорт

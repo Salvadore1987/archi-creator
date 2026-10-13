@@ -10,11 +10,12 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.LossEntryId;
 /**
  * Объект, часть данных которого не перенеслась в целевой формат: что именно и почему.
  *
- * @param objectKind {@code element | relationship | view | node | edge | property}
+ * @param objectKind {@code model | folder | element | relationship | view | node | edge | property}
  */
 public record LossEntry(LossEntryId id, ArchiId archiId, String objectKind, String lostAspect, String reason) {
 
-    private static final Set<String> KINDS = Set.of("element", "relationship", "view", "node", "edge", "property");
+    private static final Set<String> KINDS = Set.of("model", "folder", "element", "relationship", "view", "node", "edge",
+            "property");
 
     public LossEntry {
         Objects.requireNonNull(id, "id");

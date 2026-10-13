@@ -105,6 +105,18 @@ export class MockApi {
       if (path === `/models/${this.modelId}/versions`)
         return json(200, [{ versionNo: this.versionNo, author: 'e2e', createdAt: '2026-10-09T08:00:00Z', snapshotAvailable: true }]);
       if (path === `/models/${this.modelId}/lock`) return json(204);
+      if (path === `/models/${this.modelId}/export` && url.searchParams.get('fmt') === 'oef') {
+        // Файл OEF и отчёт собирает сервер; здесь — имя архива и число потерь в заголовке.
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/zip',
+          headers: {
+            'Content-Disposition': `attachment; filename="model-v${this.versionNo}.oef.zip"`,
+            'X-Archi-Loss-Count': '9',
+          },
+          body: 'PK',
+        });
+      }
       if (path === `/models/${this.modelId}/export`) {
         return route.fulfill({ status: 200, contentType: 'application/xml', body: readFileSync(REFERENCE_FILE) });
       }

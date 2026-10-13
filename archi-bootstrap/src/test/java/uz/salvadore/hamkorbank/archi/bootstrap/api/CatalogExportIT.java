@@ -40,9 +40,6 @@ class CatalogExportIT extends ApiTest {
             assertTrue(elements.startsWith("﻿id,type,name,layer,folder"), elements);
             assertTrue(in.getNextEntry().getName().equals("relations.csv"));
         }
-        mvc.perform(get("/api/v1/models/" + model + "/export?fmt=oef").with(viewer()))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.code").value("IXC_FORMAT_NOT_AVAILABLE"));
         mvc.perform(get("/api/v1/models/" + model + "/export?fmt=pdf").with(viewer()))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("IXC_UNKNOWN_FORMAT"));

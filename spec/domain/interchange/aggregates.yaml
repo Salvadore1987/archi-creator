@@ -152,7 +152,7 @@ entities:
     fields:
       - { name: id,        type: LossEntryId, constraints: [not_null, immutable] }
       - { name: archiId,   type: ArchiId,     constraints: [not_null] }
-      - { name: objectKind, type: String,     constraints: [not_null], note: "element | relationship | view | node | edge | property" }
+      - { name: objectKind, type: String,     constraints: [not_null], note: "model | folder | element | relationship | view | node | edge | property; model и folder добавлены 2026-10-13 (этап 6a): в OEF теряются тип корневой папки, свойства папок и атрибуты самой модели" }
       - { name: lostAspect, type: String,     constraints: [not_null], note: "что именно не перенеслось" }
       - { name: reason,    type: String,      constraints: [not_null] }
 

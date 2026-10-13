@@ -528,7 +528,7 @@ functional:
       файл проверяется по официальной XSD перед отдачей: невалидный результат
       не отдаётся, а считается ошибкой сервера. Импорта из OEF нет — единственный
       принимаемый формат остаётся `.archimate` (FR-01).
-    anchors: [INV-IXC-006]
+    anchors: [INV-IXC-006, UC-IXC-005]
     docs_ref: docs/backend.md#35-экспорт-в-open-exchange-format
 
   FR-44:
@@ -539,7 +539,7 @@ functional:
       Экспорт в OEF — best-effort, а не lossless: гарантия round-trip остаётся
       только у `.archimate` (FR-02). Каждая выгрузка сопровождается отчётом о том,
       что отображено с потерями или отброшено.
-    anchors: [INV-IXC-006]
+    anchors: [INV-IXC-006, UC-IXC-005]
     docs_ref: docs/backend.md#35-экспорт-в-open-exchange-format
 
   # ── Каталог в CSV ──────────────────────────────────────────────

@@ -10,6 +10,7 @@ import uz.salvadore.hamkorbank.archi.bootstrap.export.SharedNotation;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ViewImageService;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportService;
+import uz.salvadore.hamkorbank.archi.interchange.application.oef.OefSchema;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportPolicy;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportSessionRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeEvents;
@@ -48,8 +49,14 @@ public class InterchangeConfiguration {
 
     @Bean
     ExportService exportService(VersionService versions, InterchangeEvents events, InterchangeMetrics metrics,
-                                TextCatalog texts, Clock clock) {
-        return new ExportService(versions, events, metrics, texts, clock);
+                                TextCatalog texts, Notation notation, OefSchema oefSchema, Clock clock) {
+        return new ExportService(versions, events, metrics, texts, notation, oefSchema, clock);
+    }
+
+    /** Схема OEF компилируется один раз при старте: она неизменяема и потокобезопасна. */
+    @Bean
+    OefSchema oefSchema() {
+        return OefSchema.load();
     }
 
     /** Визуальный язык канвы читается один раз при старте: файлы в classpath не меняются. */

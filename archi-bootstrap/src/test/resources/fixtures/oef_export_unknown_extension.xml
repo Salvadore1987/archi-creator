@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate/3.1/archimate3_Diagram.xsd" identifier="id-054b740bdf40fe499e06add25ef7a09f">
+  <name xml:lang="ru">Неизвестные узлы и атрибуты</name>
+  <documentation xml:lang="ru">Фикстура неизвестных узлов и атрибутов: всё незнакомое переносится дословно.</documentation>
+  <properties>
+    <property propertyDefinitionRef="propid-1">
+      <value xml:lang="ru">Архитектурный отдел</value>
+    </property>
+  </properties>
+  <elements>
+    <element identifier="id-53f986115270259ff902bf66cf3dca2c" xsi:type="BusinessActor">
+      <name xml:lang="ru">Клиент</name>
+      <properties>
+        <property propertyDefinitionRef="propid-2">
+          <value xml:lang="ru">CRM</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-7af3a3d4e636b362cf09f15c2d17d627" xsi:type="ApplicationComponent">
+      <name xml:lang="ru">АБС</name>
+      <properties>
+        <property propertyDefinitionRef="propid-3">
+          <value xml:lang="ru">ИТ</value>
+        </property>
+      </properties>
+    </element>
+  </elements>
+  <relationships>
+    <relationship identifier="id-4c66996625029f83be8eb65af95cb722" xsi:type="Serving" source="id-7af3a3d4e636b362cf09f15c2d17d627" target="id-53f986115270259ff902bf66cf3dca2c"/>
+  </relationships>
+  <organizations>
+    <item identifier="id-c57798c70371430e4901f52146d8bdd1">
+      <label xml:lang="ru">Strategy</label>
+    </item>
+    <item identifier="id-7fdd5a12f979bb19f1ebd4be0801fd2f">
+      <label xml:lang="ru">Business</label>
+      <item identifierRef="id-53f986115270259ff902bf66cf3dca2c"/>
+    </item>
+    <item identifier="id-629bcc564eaeb1d162040c57e7b2d6c4">
+      <label xml:lang="ru">Application</label>
+      <item identifierRef="id-7af3a3d4e636b362cf09f15c2d17d627"/>
+    </item>
+    <item identifier="id-4f0625183dc5ef0a15704a55533f1d27">
+      <label xml:lang="ru">Technology &amp; Physical</label>
+    </item>
+    <item identifier="id-34db53c548ab506e868ab6f9642742ec">
+      <label xml:lang="ru">Motivation</label>
+    </item>
+    <item identifier="id-833ff64d576a2c1cc2c07827d5c88ef6">
+      <label xml:lang="ru">Implementation &amp; Migration</label>
+    </item>
+    <item identifier="id-b6c217eeb63f87d3a9a4949d094573d6">
+      <label xml:lang="ru">Other</label>
+    </item>
+    <item identifier="id-c914d79e791567767e4382d5600bf4fc">
+      <label xml:lang="ru">Relations</label>
+      <item identifierRef="id-4c66996625029f83be8eb65af95cb722"/>
+    </item>
+    <item identifier="id-506aff620d12469054c7c999b9ec4727">
+      <label xml:lang="ru">Views</label>
+      <item identifierRef="id-63e2975f737bdf3b998d96d4f41fb079"/>
+    </item>
+  </organizations>
+  <propertyDefinitions>
+    <propertyDefinition identifier="propid-1" type="string">
+      <name xml:lang="ru">model.owner</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-2" type="string">
+      <name xml:lang="ru">source</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-3" type="string">
+      <name xml:lang="ru">owner</name>
+    </propertyDefinition>
+  </propertyDefinitions>
+  <views>
+    <diagrams>
+      <view identifier="id-63e2975f737bdf3b998d96d4f41fb079" xsi:type="Diagram">
+        <name xml:lang="ru">Расширения</name>
+        <node identifier="id-0de635f21d7ffde538d3083b8070ed3d" xsi:type="Element" elementRef="id-7af3a3d4e636b362cf09f15c2d17d627" x="24" y="24" w="140" h="60"/>
+        <node identifier="id-d5152b3117b7a286c001e41d2272709c" xsi:type="Element" elementRef="id-53f986115270259ff902bf66cf3dca2c" x="300" y="24" w="140" h="60"/>
+        <node identifier="id-9339b6f33ca58e85115d4f69198f0e72" xsi:type="Label" x="24" y="160" w="140" h="60">
+          <label xml:lang="ru">Набросок</label>
+        </node>
+        <connection identifier="id-79bb243fc84a3f37ea1343680047594f" xsi:type="Relationship" relationshipRef="id-4c66996625029f83be8eb65af95cb722" source="id-0de635f21d7ffde538d3083b8070ed3d" target="id-d5152b3117b7a286c001e41d2272709c"/>
+      </view>
+    </diagrams>
+  </views>
+</model>

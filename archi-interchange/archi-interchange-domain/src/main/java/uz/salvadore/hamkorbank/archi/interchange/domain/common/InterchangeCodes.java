@@ -30,6 +30,8 @@ public final class InterchangeCodes {
     public static final String VIEW_NOT_IN_VERSION = "IXC_VIEW_NOT_IN_VERSION";
     public static final String IMAGE_TOO_LARGE = "IXC_IMAGE_TOO_LARGE";
     public static final String INVALID_EXPORT_OPTION = "IXC_INVALID_EXPORT_OPTION";
+    /** Выгрузка в OEF не прошла официальную схему — дефект сервера, файл не отдан. */
+    public static final String OEF_SCHEMA_VIOLATION = "IXC_OEF_SCHEMA_VIOLATION";
 
     private InterchangeCodes() {
     }

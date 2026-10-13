@@ -27,7 +27,7 @@ class ExportServiceFormatTest {
     private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
 
     private final ExportService service = new ExportService(null, null, InterchangeMetrics.NONE,
-            message -> message.key(), Clock.systemUTC());
+            message -> message.key(), null, null, Clock.systemUTC());
     private final EditorIdentity viewer = EditorIdentity.of("viewer", Role.VIEWER);
 
     @Test
@@ -40,11 +40,12 @@ class ExportServiceFormatTest {
     }
 
     @Test
-    @DisplayName("Известный, но не реализованный формат — отказ IXC_FORMAT_NOT_AVAILABLE")
-    void formatNotAvailable() {
+    @DisplayName("UC-IXC-005: oef обслуживается сценарием ExportOpenExchange — роль проверяется до чтения модели")
+    void openExchangeIsServedByItsUseCase() {
         InterchangeException e = assertThrows(InterchangeException.class,
-                () -> service.export(viewer, IDS.generate(), request(ExportService.FORMAT_OEF)));
-        assertEquals(InterchangeCodes.FORMAT_NOT_AVAILABLE, e.code());
+                () -> service.export(EditorIdentity.of("nobody"), IDS.generate(), request(ExportService.FORMAT_OEF)));
+        assertEquals(InterchangeCodes.ACCESS_DENIED, e.code());
+        assertEquals("ExportOpenExchange", e.details().get("operation"));
     }
 
     private static ExportRequest request(String format) {

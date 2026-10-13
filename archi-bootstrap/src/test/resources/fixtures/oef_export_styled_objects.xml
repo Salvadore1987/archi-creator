@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate/3.1/archimate3_Diagram.xsd" identifier="id-6364de820db3d8ceb8e4f8e55088d26c">
+  <name xml:lang="ru">Собственные стили объектов</name>
+  <elements>
+    <element identifier="id-2f94fadfa4017fa75de30d4f46ed19e5" xsi:type="BusinessActor">
+      <name xml:lang="ru">Клиент</name>
+    </element>
+    <element identifier="id-e3f9ac2cb3a8029c5967f04e18f307a7" xsi:type="ApplicationComponent">
+      <name xml:lang="ru">HamkorMobile</name>
+    </element>
+    <element identifier="id-ccc5bae1ce79703ef7b86159c19480df" xsi:type="ApplicationComponent">
+      <name xml:lang="ru">АБС</name>
+    </element>
+  </elements>
+  <relationships>
+    <relationship identifier="id-926ae8a2bc90382288cdab1483a03cdb" xsi:type="Serving" source="id-e3f9ac2cb3a8029c5967f04e18f307a7" target="id-2f94fadfa4017fa75de30d4f46ed19e5"/>
+    <relationship identifier="id-0be63ccd9cb0e70e58caddb7295106e5" xsi:type="Flow" source="id-e3f9ac2cb3a8029c5967f04e18f307a7" target="id-ccc5bae1ce79703ef7b86159c19480df">
+      <name xml:lang="ru">платёж</name>
+    </relationship>
+  </relationships>
+  <organizations>
+    <item identifier="id-0438d0b7d718f7d85aea86fb22562b8c">
+      <label xml:lang="ru">Strategy</label>
+    </item>
+    <item identifier="id-594f3111fa13a45c647ce66e4fa3e4f1">
+      <label xml:lang="ru">Business</label>
+      <item identifierRef="id-2f94fadfa4017fa75de30d4f46ed19e5"/>
+    </item>
+    <item identifier="id-27662110ddc8ba46c96c7ba35f959288">
+      <label xml:lang="ru">Application</label>
+      <item identifierRef="id-e3f9ac2cb3a8029c5967f04e18f307a7"/>
+      <item identifierRef="id-ccc5bae1ce79703ef7b86159c19480df"/>
+    </item>
+    <item identifier="id-e6fe110f5cb23330b1d5c72092cd93c6">
+      <label xml:lang="ru">Technology &amp; Physical</label>
+    </item>
+    <item identifier="id-399a510d91237d0e500c3f0d43266640">
+      <label xml:lang="ru">Motivation</label>
+    </item>
+    <item identifier="id-6a6d709474aa4589990073fa2518ec3e">
+      <label xml:lang="ru">Implementation &amp; Migration</label>
+    </item>
+    <item identifier="id-bcf9af91c15976103566381dfaa91264">
+      <label xml:lang="ru">Other</label>
+    </item>
+    <item identifier="id-932295df816cc5fa2ff1448f89ea9c78">
+      <label xml:lang="ru">Relations</label>
+      <item identifierRef="id-926ae8a2bc90382288cdab1483a03cdb"/>
+      <item identifierRef="id-0be63ccd9cb0e70e58caddb7295106e5"/>
+    </item>
+    <item identifier="id-fa47dc2eb9e153cc03b7837ffda5e5ff">
+      <label xml:lang="ru">Views</label>
+      <item identifierRef="id-231319074ce48620122a10edd5bb895b"/>
+    </item>
+  </organizations>
+  <views>
+    <diagrams>
+      <view identifier="id-231319074ce48620122a10edd5bb895b" xsi:type="Diagram">
+        <name xml:lang="ru">Собственные стили</name>
+        <node identifier="id-3e74f4054399b88d8d04498898b61213" xsi:type="Container" x="20" y="20" w="420" h="220">
+          <label xml:lang="ru">Внешние системы</label>
+          <style lineWidth="2">
+            <lineColor r="154" g="164" b="174"/>
+            <fillColor r="245" g="246" b="247" a="78"/>
+            <font name="Segoe UI" size="10" style="bold">
+              <color r="31" g="35" b="40"/>
+            </font>
+          </style>
+          <node identifier="id-d98400d12fe42b03447ab0ed6de50147" xsi:type="Element" elementRef="id-e3f9ac2cb3a8029c5967f04e18f307a7" x="40" y="60" w="160" h="70">
+            <style>
+              <lineColor r="0" g="51" b="102"/>
+              <fillColor r="181" g="255" b="255"/>
+              <font name="Arial" size="9" style="plain">
+                <color r="192" g="0" b="0"/>
+              </font>
+            </style>
+          </node>
+        </node>
+        <node identifier="id-4b977b44df1f4c2f6961a95641b344b8" xsi:type="Element" elementRef="id-ccc5bae1ce79703ef7b86159c19480df" x="520" y="60" w="160" h="70"/>
+        <node identifier="id-695ec75325ad07706941e291bd6da65f" xsi:type="Element" elementRef="id-2f94fadfa4017fa75de30d4f46ed19e5" x="520" y="200" w="160" h="70">
+          <style>
+            <fillColor r="255" g="255" b="181"/>
+          </style>
+        </node>
+        <node identifier="id-71ceb465a7046f0af529195ab44377db" xsi:type="Label" x="20" y="300" w="300" h="90">
+          <label xml:lang="ru">Легенда:
+красное — платёжный поток;
+зелёное — обслуживание клиента.</label>
+          <style>
+            <fillColor r="255" g="255" b="224"/>
+            <font name="Consolas" size="9" style="plain"/>
+          </style>
+        </node>
+        <connection identifier="id-9d76e00d603bb5532673206cc59710ce" xsi:type="Relationship" relationshipRef="id-0be63ccd9cb0e70e58caddb7295106e5" source="id-d98400d12fe42b03447ab0ed6de50147" target="id-4b977b44df1f4c2f6961a95641b344b8">
+          <style lineWidth="3">
+            <lineColor r="255" g="0" b="0"/>
+            <font name="Segoe UI" size="8" style="italic">
+              <color r="127" g="127" b="127"/>
+            </font>
+          </style>
+        </connection>
+        <connection identifier="id-9d963af7291f314ca83fb026a6f7e6f3" xsi:type="Relationship" relationshipRef="id-926ae8a2bc90382288cdab1483a03cdb" source="id-d98400d12fe42b03447ab0ed6de50147" target="id-695ec75325ad07706941e291bd6da65f">
+          <style>
+            <lineColor r="0" g="170" b="0"/>
+          </style>
+        </connection>
+      </view>
+    </diagrams>
+  </views>
+</model>

@@ -10,8 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Состояние репозитория
 
-**Этапы 0–6 закрыты (этапы 4, 5 и 5a — 2026-10-12, этап 6 — 2026-10-13). Следующие —
-независимые ветки 6a (экспорт в OEF), 7a (Git).**
+**Этапы 0–6 и 6a закрыты (этапы 4, 5 и 5a — 2026-10-12, этапы 6 и 6a — 2026-10-13).
+Следующая — ветка 7a (Git).**
 Собирается multi-module Maven по
 [`ADR-0001`](spec/adr/0001-maven-multi-module.md): 17 проектов в реакторе — родитель,
 три агрегатора контекстов, двенадцать модулей-слоёв, `archi-bootstrap` с классом запуска
@@ -199,13 +199,37 @@ opaque. Остаток XML у поддержанного и opaque-элемен�
 достаточно перевернуть флаг. Фаза 3, `Location` и `Grouping` по-прежнему opaque;
 проверка UI-020 идёт на `Location`.
 
-Тестов на сервере: 356 юнит-тестов (`./mvnw test`) и 72 интеграционных `*IT` на
+Что появилось на этапе 6a и где лежит:
+
+| Что | Где |
+|---|---|
+| Официальная XSD OEF 3.1 и проверка по ней без сети | `archi-interchange-application/src/main/resources/.../application/oef/*.xsd`, `OefSchema` |
+| Писатель OEF с отчётом о потерях | `archi-interchange-application/.../application/oef/OefWriter` |
+| Сценарий `ExportOpenExchange` ([`UC-IXC-005`](spec/application/interchange/usecases/export-open-exchange.md)), `GET /models/{id}/export?fmt=oef` | `ExportService.openExchange`; `500 IXC_OEF_SCHEMA_VIOLATION` — `ExportDefectException` |
+| Эталоны выгрузки и их отчёты | `archi-bootstrap/src/test/resources/fixtures/oef_export_*.{xml,losses.txt}`, `OefExportFixturesTest` |
+| Пункт меню «Экспорт» | `frontend/src/app/TopBar.tsx`; `e2e/view-export.spec.ts` |
+
+**OEF переносит всё, что умеет выразить, — независимо от фазы.** `Location` и `Grouping`
+в редакторе opaque, но в OEF у них свои типы, и они выгружаются. Не переносится то,
+чего в формате нет: остаток XML, представления не-ArchiMate, оформление без аналога.
+**Отчёт полон по построению:** у каждого вида объекта в `OefWriter` закрытый список
+переносимых атрибутов, всё прочее — запись отчёта; новый атрибут Archi попадёт в отчёт
+сам, а не пропадёт молча. Геометрия в OEF абсолютная (у нас — относительно родителя),
+точки перегиба — формулой канвы (`Routing.absoluteBendpoints`). Ответ — zip из файла
+и `loss-report.json`; имя файла в архиве — слаг в латинице, иначе системный `unzip`
+macOS и старый Проводник его не создают. Изменил писатель — пересними эталоны:
+`./mvnw -P '!frontend' -pl archi-bootstrap -am test -Dtest=OefExportFixturesTest
+-Doef.fixtures.update=true -Dsurefire.failIfNoSpecifiedTests=false` и проверь дифф.
+Сторонний инструмент под рукой — Archi: `Archi -application com.archimatetool.commandline.app
+-consoleLog -nosplash --xmlexchange.import <абсолютный путь>.xml --saveModel <out>.archimate`.
+
+Тестов на сервере: 372 юнит-теста (`./mvnw test`) и 76 интеграционных `*IT` на
 Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
 Во фронтенде: 67 юнит-тестов vitest (`npm test`, гоняется фазой `test` Maven)
-и 83 сценария Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
+и 84 сценария Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
 работа `e2e`, два потока).
 
-Ещё не заведено: метамодель фазы 3, OEF (6a), Git (7a–7c);
+Ещё не заведено: метамодель фазы 3, Git (7a–7c);
 создание и удаление представлений из дерева (API нет); предохранитель (circuit breaker)
 на Anthropic API.
 

@@ -53,7 +53,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 @RequestMapping("/api/v1")
 public class InterchangeController {
 
-    /** Число записей отчёта о потерях картинки. */
+    /** Число записей отчёта о потерях выгрузки; у {@code .archimate} — ноль. */
     static final String LOSS_COUNT = "X-Archi-Loss-Count";
 
     private final ImportService imports;
@@ -103,7 +103,7 @@ public class InterchangeController {
      * Выгрузка зафиксированной версии: {@code version} — номер, без него —
      * последняя; {@code folder} и {@code sep} — параметры каталога CSV. Какие форматы
      * доступны и чем обслуживаются, решает сервис выгрузки — адаптер только
-     * собирает запрос.
+     * собирает запрос. Число записей отчёта о потерях — в {@code X-Archi-Loss-Count}.
      */
     @GetMapping("/models/{id}/export")
     public ResponseEntity<byte[]> export(EditorIdentity actor, @PathVariable UUID id,
@@ -112,7 +112,9 @@ public class InterchangeController {
                                          @RequestParam Optional<String> folder,
                                          @RequestParam Optional<String> sep) {
         ExportService.Export export = exports.export(actor, id, new ExportRequest(fmt, version, sep, folder));
-        return artifact(export.artifact(), export.versionNo()).body(export.artifact().bytes());
+        return artifact(export.artifact(), export.versionNo())
+                .header(LOSS_COUNT, String.valueOf(export.lossCount()))
+                .body(export.artifact().bytes());
     }
 
     /**

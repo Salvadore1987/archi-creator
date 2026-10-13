@@ -17,6 +17,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 public enum InterchangeOperation {
     IMPORT_ARCHIMATE_FILE("ImportArchimateFile", Role.ARCHITECT, Role.ADMIN),
     EXPORT_ARCHIMATE("ExportArchimate", Role.VIEWER, Role.ARCHITECT, Role.ADMIN),
+    EXPORT_OPEN_EXCHANGE("ExportOpenExchange", Role.VIEWER, Role.ARCHITECT, Role.ADMIN),
     EXPORT_CATALOG_CSV("ExportCatalogCsv", Role.VIEWER, Role.ARCHITECT, Role.ADMIN),
     EXPORT_VIEW_IMAGE("ExportViewImage", Role.VIEWER, Role.ARCHITECT, Role.ADMIN),
     EXPORT_ALL_VIEW_IMAGES("ExportAllViewImages", Role.VIEWER, Role.ARCHITECT, Role.ADMIN),
