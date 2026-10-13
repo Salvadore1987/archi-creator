@@ -11,7 +11,8 @@ import { useAdvisor } from '../advisor/store';
 import { useEditor } from '../model/store';
 import './palette.css';
 
-const LAYERS = ['BUSINESS', 'APPLICATION', 'TECHNOLOGY', 'OTHER'];
+/** Порядок слоёв — как в палитре Archi. */
+const LAYERS = ['STRATEGY', 'BUSINESS', 'APPLICATION', 'TECHNOLOGY', 'MOTIVATION', 'OTHER'];
 
 /** Объекты представления без элемента модели — в «Прочем», рядом с соединителем. */
 const ANNOTATIONS = [
@@ -27,7 +28,7 @@ interface PaletteItem {
 }
 
 /**
- * Палитра типов фазы 1 из каталога сервера. Слой переключается сам на слой
+ * Палитра поддержанных типов из каталога сервера. Слой переключается сам на слой
  * выделенного элемента: чаще всего рядом с элементом ставят соседа его слоя.
  */
 export function Palette() {
