@@ -355,7 +355,7 @@ paths:
     post:
       tags: [content]
       operationId: createElement
-      summary: Элемент в папке своего слоя; тип — фазы 1 (FR-07)
+      summary: Элемент в папке своего слоя; тип — фаз 1 и 2 (FR-07, FR-08)
       x-use-case: UC-MDL-002
       x-operation: CreateElement
       parameters:

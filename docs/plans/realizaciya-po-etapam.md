@@ -1196,16 +1196,61 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 **Критерий готовности (§12):** `Capability` редактируется, а не только сохраняется.
 
-- ⬜ Каталог типов расширен слоями Motivation и Strategy (FR-08)
-- ⬜ Матрица допустимых связей дополнена парами новых типов (`INV-MDL-007`)
-- ⬜ Записи в `shapes.json` для новых типов вместо силуэта-заглушки
-      (токены слоёв `motivation` и `strategy` уже есть)
-- ⬜ Палитра, дерево и панель свойств работают с новыми типами наравне
-- ⬜ Фикстура `capability_and_location.archimate` переходит из «непрозрачные
-      объекты» в «поддержанные» **без** поломки round-trip — объект, ставший
-      поддержанным, обязан писаться так же, как читался
-- ⬜ `Layer.PHYSICAL` и `IMPLEMENTATION` остаются фазой 3 и продолжают
-      обрабатываться по FR-03
+### 6.0 Проектные решения этапа и правка спеки
+
+- ✅ **Фаза 2 включается в каталоге, а не новым кодом.** Хранение одинаково у поддержанного
+      и opaque-объекта: типизированные столбцы плюс остаток (`ADR-0017`), флаг `supported`
+      решает только, можно ли править. Матрица Archi уже содержит пары всех 14 типов
+      Motivation и Strategy — `INV-MDL-007` для них действует без правок таблицы
+- ✅ **`Location` и `Grouping` остаются вне фаз.** FR-08 их не называет, в ArchiMate 3.2
+      это составные элементы вне слоёв; решение о них — отдельным требованием, не здесь.
+      `PHYSICAL` и `IMPLEMENTATION` остаются фазой 3 и обрабатываются по FR-03
+- ✅ **Флаг `supported` в базе — снимок каталога на момент импорта**, поэтому смена фазы —
+      миграция данных `V5`: уже загруженные `Capability` иначе остались бы opaque навсегда.
+      Отвергнуто: вычислять флаг при чтении — адаптер хранения узнал бы каталог,
+      а сохранённая строка расходилась бы с тем, что отдаёт API
+- ✅ **Силуэты — прямоугольная нотация ArchiMate с угловой иконкой**, как у фазы 1.
+      Motivation — прямоугольник со срезанными углами (новый примитив `bevel`), включая
+      `Meaning` и `Value` (облако и эллипс — их иконки). Strategy: `Resource` — структура
+      (`node_radius`), `Capability`, `ValueStream`, `CourseOfAction` — поведение
+      (`node_radius_round`). Примитив `bevel` — в канве и в `Outlines` сервера одним контуром
+- ✅ Правка спеки: `UC-MDL-002` (создаётся тип фаз 1–2, отказ — фаза 3 и вне фаз),
+      `shapes-contract.yaml` (полнота — фазы 1 и 2), `UI-020` (проверка на `Location`),
+      `UC-ADV-002` (в план попадают поддержанные типы), OpenAPI, §9.1 о фикстуре
+
+### 6.1 Метамодель (`archi-modeling-domain`)
+
+- ⬜ `ConceptDefinition.supported()` — фазы 1 и 2; `ArchitectureModel.addElement` создаёт
+      `Capability`, отказывает `WorkPackage` (`TYPE_NOT_EDITABLE`)
+- ⬜ Тесты: `ArchiTypeRegistryTest` (поддержаны шесть слоёв, фаза 3 и `Location` — нет),
+      `RelationMatrixTest#phaseTwoTypesAreKnown`, `ArchitectureModelTest` (Capability
+      создаётся, WorkPackage — нет), `ModelValidator` не помечает Capability opaque
+
+### 6.2 Хранение (`archi-bootstrap`, Flyway)
+
+- ⬜ `V5__phase_two_supported.sql`: `supported = true` у элементов 14 типов фазы 2
+- ⬜ `PhaseTwoUpgradeIT`: схема до `V4`, opaque-строка Capability, миграция — строка
+      поддержана, остаток на месте; `PhaseTwoEditingIT`: импорт
+      `capability_and_location.archimate`, правка и создание Capability, связь
+      Capability ← ApplicationComponent по матрице, выгрузка с правкой, остальное без потерь
+
+### 6.3 Нотация (`shapes.json`, `icons.svg`, канва и `SvgWriter`)
+
+- ⬜ Примитив `bevel` в `shapes.ts` и `Outlines.java`; 14 записей `shapes.json`, 14 иконок
+- ⬜ `SharedShapesTest` — запись обязательна для фаз 1 и 2; `shapes.test.ts`, `SvgWriterTest`
+      (заглушка — тип фазы 3); галерея фигур и её эталоны (`-darwin`, `-linux`)
+
+### 6.4 Интерфейс
+
+- ⬜ Палитра: слои «Стратегия» и «Мотивация»; дерево и «Свойства» работают по флагу
+      `supported` и правок не требуют
+- ⬜ Фикстура E2E (`reference-model.json`) — флаги фазы 2 как у сервера;
+      `e2e/opaque-node.spec.ts` — на `Location`; `e2e/phase-two.spec.ts`: Capability
+      переименовывается в «Свойствах», ставится из палитры, связь по матрице
+
+### 6.5 Закрытие
+
+- ⬜ README, CLAUDE.md, граф зависимостей, журнал; полный `./mvnw verify` и Playwright
 
 ---
 
