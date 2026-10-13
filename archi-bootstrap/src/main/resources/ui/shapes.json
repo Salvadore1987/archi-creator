@@ -33,7 +33,8 @@
     "circle": "круг, вписанный в фигуру",
     "tab": "прямоугольник с ярлыком слева сверху: ярлык шириной в треть фигуры, не шире 120, высотой 18",
     "dog-ear": "прямоугольник с загнутым правым верхним углом 12×12",
-    "stub": "прямоугольник со скруглением радиус-токена и пунктирной обводкой"
+    "stub": "прямоугольник со скруглением радиус-токена и пунктирной обводкой",
+    "bevel": "прямоугольник со срезанными углами 8×8"
   },
   "shapes": {
     "archimate:ApplicationCollaboration": {
@@ -188,6 +189,23 @@
       },
       "radius_token": "node_radius",
       "layer": "technology"
+    },
+    "archimate:Assessment": {
+      "outline": "bevel",
+      "corner_icon": {
+        "sprite_id": "i-assessment",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 10,
+        "y": 5,
+        "width": -24,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "motivation"
     },
     "archimate:BusinessActor": {
       "outline": "rect",
@@ -359,6 +377,23 @@
       "radius_token": "node_radius_round",
       "layer": "business"
     },
+    "archimate:Capability": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-capability",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "strategy"
+    },
     "archimate:CommunicationNetwork": {
       "outline": "rect",
       "corner_icon": {
@@ -376,6 +411,23 @@
       "radius_token": "node_radius",
       "layer": "technology"
     },
+    "archimate:Constraint": {
+      "outline": "bevel",
+      "corner_icon": {
+        "sprite_id": "i-constraint",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 10,
+        "y": 5,
+        "width": -24,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "motivation"
+    },
     "archimate:Contract": {
       "outline": "rect",
       "corner_icon": {
@@ -392,6 +444,23 @@
       },
       "radius_token": "node_radius",
       "layer": "business"
+    },
+    "archimate:CourseOfAction": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-course-of-action",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "strategy"
     },
     "archimate:DataObject": {
       "outline": "rect",
@@ -443,6 +512,40 @@
       },
       "radius_token": "node_radius",
       "layer": "other"
+    },
+    "archimate:Driver": {
+      "outline": "bevel",
+      "corner_icon": {
+        "sprite_id": "i-driver",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 10,
+        "y": 5,
+        "width": -24,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "motivation"
+    },
+    "archimate:Goal": {
+      "outline": "bevel",
+      "corner_icon": {
+        "sprite_id": "i-goal",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 10,
+        "y": 5,
+        "width": -24,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "motivation"
     },
     "archimate:Group": {
       "outline": "tab",
@@ -498,6 +601,23 @@
       "radius_token": "node_radius",
       "layer": "other"
     },
+    "archimate:Meaning": {
+      "outline": "bevel",
+      "corner_icon": {
+        "sprite_id": "i-meaning",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 10,
+        "y": 5,
+        "width": -24,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "motivation"
+    },
     "archimate:Node": {
       "outline": "rect",
       "corner_icon": {
@@ -527,6 +647,23 @@
       "radius_token": "node_radius",
       "layer": "note"
     },
+    "archimate:Outcome": {
+      "outline": "bevel",
+      "corner_icon": {
+        "sprite_id": "i-outcome",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 10,
+        "y": 5,
+        "width": -24,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "motivation"
+    },
     "archimate:Path": {
       "outline": "rect",
       "corner_icon": {
@@ -543,6 +680,23 @@
       },
       "radius_token": "node_radius",
       "layer": "technology"
+    },
+    "archimate:Principle": {
+      "outline": "bevel",
+      "corner_icon": {
+        "sprite_id": "i-principle",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 10,
+        "y": 5,
+        "width": -24,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "motivation"
     },
     "archimate:Product": {
       "outline": "rect",
@@ -577,6 +731,57 @@
       },
       "radius_token": "node_radius",
       "layer": "business"
+    },
+    "archimate:Requirement": {
+      "outline": "bevel",
+      "corner_icon": {
+        "sprite_id": "i-requirement",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 10,
+        "y": 5,
+        "width": -24,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "motivation"
+    },
+    "archimate:Resource": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-resource",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "strategy"
+    },
+    "archimate:Stakeholder": {
+      "outline": "bevel",
+      "corner_icon": {
+        "sprite_id": "i-stakeholder",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 10,
+        "y": 5,
+        "width": -24,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "motivation"
     },
     "archimate:SystemSoftware": {
       "outline": "rect",
@@ -713,6 +918,40 @@
       },
       "radius_token": "node_radius_round",
       "layer": "technology"
+    },
+    "archimate:Value": {
+      "outline": "bevel",
+      "corner_icon": {
+        "sprite_id": "i-value",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 10,
+        "y": 5,
+        "width": -24,
+        "height": -10
+      },
+      "radius_token": "node_radius",
+      "layer": "motivation"
+    },
+    "archimate:ValueStream": {
+      "outline": "rect",
+      "corner_icon": {
+        "sprite_id": "i-value-stream",
+        "x": -21,
+        "y": 6,
+        "size": 14
+      },
+      "label_box": {
+        "x": 8,
+        "y": 5,
+        "width": -22,
+        "height": -10
+      },
+      "radius_token": "node_radius_round",
+      "layer": "strategy"
     }
   },
   "fallback": {

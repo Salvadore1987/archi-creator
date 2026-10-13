@@ -1244,9 +1244,16 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 6.3 Нотация (`shapes.json`, `icons.svg`, канва и `SvgWriter`)
 
-- ⬜ Примитив `bevel` в `shapes.ts` и `Outlines.java`; 14 записей `shapes.json`, 14 иконок
-- ⬜ `SharedShapesTest` — запись обязательна для фаз 1 и 2; `shapes.test.ts`, `SvgWriterTest`
-      (заглушка — тип фазы 3); галерея фигур и её эталоны (`-darwin`, `-linux`)
+- ✅ Примитив `bevel` (срез 8×8) в `shapes.ts` и `Outlines.java`; 14 записей `shapes.json`,
+      14 иконок спрайта (у `Stakeholder` — цилиндр роли, как в ArchiMate)
+- ✅ `SharedShapesTest` — запись обязательна для поддержанных типов (фазы 1 и 2);
+      `shapes.test.ts` и `OutlinesTest` сверяют путь `bevel` с одной и той же строкой;
+      заглушка в `shapes.test.ts` — `WorkPackage`. Галерея фигур показывает фазу 2
+      своими силуэтами, заглушки — типы фазы 3; эталоны `-darwin` и `-linux` пересняты
+      (Linux — в `mcr.microsoft.com/playwright:v1.64.0-noble` на копии клона без
+      `node_modules`). Серверный PNG представления 11 глазами: Capability — оранжевый
+      скруглённый прямоугольник с иконкой вместо пунктирной заглушки. Сверку экспорта
+      не задевает: на её пяти представлениях типов фазы 2 нет
 
 ### 6.4 Интерфейс
 
