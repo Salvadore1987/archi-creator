@@ -23,7 +23,7 @@
 | [`spec/application/`](spec/application/) | 11 use case'ов `UC-<BC>-NNN`: Given/When/Then, порты, отказы |
 | [`spec/ui/`](spec/ui/README.md) | Слой интерфейса: 21 правило `UI-NNN`, токены стиля, контракт геометрии фигур |
 | [`spec/contracts/`](spec/contracts/) | OpenAPI и AsyncAPI по контекстам |
-| [`spec/adr/`](spec/adr/README.md) | Регистр решений: 16 записей, четыре с разбором в формате MADR |
+| [`spec/adr/`](spec/adr/README.md) | Регистр решений: 20 записей, восемь с разбором в формате MADR |
 | [`spec/nfr/`](spec/nfr/) | SLO, latency, throughput, security по контекстам |
 
 Начинать чтение — с [`spec/README.md`](spec/README.md).
