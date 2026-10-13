@@ -72,6 +72,7 @@ public final class ModelingMessages {
     public static final String TITLE_FORBIDDEN = "modeling.problem.forbidden";
     public static final String TITLE_GONE = "modeling.problem.gone";
     public static final String TITLE_NOT_FOUND = "modeling.problem.not-found";
+    public static final String TITLE_UNAVAILABLE = "modeling.problem.unavailable";
     public static final String TITLE_UNPROCESSABLE = "modeling.problem.unprocessable";
     public static final String PROPERTY_KEY_TOO_LONG = "modeling.property.key-too-long";
     public static final String RELATION_NOT_PERMITTED = "modeling.relation.not-permitted";
@@ -112,6 +113,7 @@ public final class ModelingMessages {
     public static final String VALIDATION_RELATION_NOT_PERMITTED = "modeling.validation.relation-not-permitted";
     public static final String VALIDATION_UNKNOWN_RELATIONSHIP = "modeling.validation.unknown-relationship";
     public static final String TOO_LONG = "modeling.value.too-long";
+    public static final String VERSION_ALREADY_PUBLISHED = "modeling.version.already-published";
     public static final String COMMENT_MODEL_CREATED = "modeling.version.comment.created";
     public static final String COMMENT_ROLLBACK = "modeling.version.comment.rollback";
     public static final String GIT_SHA_INVALID = "modeling.version.git-sha-invalid";

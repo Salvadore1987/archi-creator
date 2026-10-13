@@ -1,0 +1,15 @@
+id: id-7af3a3d4e636b362cf09f15c2d17d627
+type: ApplicationComponent
+name: АБС
+folder: id-629bcc564eaeb1d162040c57e7b2d6c4
+position: 1000
+attributes:
+  profiles: id-e298955d2704e1c50f1bb9c63b0f9c8b
+properties:
+  - key: owner
+    value: ИТ
+raw_xml:
+  - <feature name="labelExpression" value="${name}&#xA;${property:owner}"/>
+content_order:
+  - raw_xml
+  - property

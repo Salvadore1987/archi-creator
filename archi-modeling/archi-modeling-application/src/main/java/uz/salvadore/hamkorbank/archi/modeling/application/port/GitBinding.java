@@ -4,7 +4,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
  * Настроен ли и доступен ли Git у рабочего пространства. От ответа зависит очистка
- * снимков. До этапа 7a реализация отвечает «нет» для всех.
+ * снимков: без доступного репозитория снимок — единственная копия.
  */
 public interface GitBinding {
 

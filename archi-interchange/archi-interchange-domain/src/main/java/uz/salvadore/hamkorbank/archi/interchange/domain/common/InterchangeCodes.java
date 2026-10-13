@@ -16,6 +16,8 @@ public final class InterchangeCodes {
     public static final String LOSS_REPORT = "INV-IXC-006";
     /** Выгружается зафиксированная версия, а не текущее состояние. */
     public static final String EXPORT_VERSION = "INV-IXC-008";
+    /** Коммит в Git не переписывает историю: расхождение не перезаписывается. */
+    public static final String GIT_HISTORY = "INV-IXC-009";
 
     public static final String NOT_FOUND = "IXC_NOT_FOUND";
     public static final String ACCESS_DENIED = "IXC_ACCESS_DENIED";
@@ -32,6 +34,10 @@ public final class InterchangeCodes {
     public static final String INVALID_EXPORT_OPTION = "IXC_INVALID_EXPORT_OPTION";
     /** Выгрузка в OEF не прошла официальную схему — дефект сервера, файл не отдан. */
     public static final String OEF_SCHEMA_VIOLATION = "IXC_OEF_SCHEMA_VIOLATION";
+    /** У рабочего пространства нет рабочей привязки к Git. */
+    public static final String GIT_NOT_BOUND = "IXC_GIT_NOT_BOUND";
+    /** Репозиторий не отвечает или отказывает в доступе; версии ждут в очереди. */
+    public static final String GIT_UNREACHABLE = "IXC_GIT_UNREACHABLE";
 
     private InterchangeCodes() {
     }

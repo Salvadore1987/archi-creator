@@ -102,6 +102,22 @@ docker compose build && docker compose up -d  # app + postgres:16 + keycloak:26
 (демонстрационные пользователи realm'а — [`deploy/keycloak/README.md`](deploy/keycloak/README.md)).
 Порты меняются переменными в `.env`, если заняты соседним проектом.
 
+**Выгрузка в Git** включается привязкой рабочего пространства к репозиторию — её
+задаёт `ADMIN`, токен лежит в переменной окружения сервера (`ARCHI_GIT_TOKEN` в `.env`),
+а в привязке — только ссылка на неё:
+
+```
+curl -X PUT http://localhost:8080/api/v1/workspaces/<id>/git-binding \
+     -H "Authorization: Bearer <токен ADMIN>" -H "Content-Type: application/json" \
+     -d '{"repoUrl":"https://gitlab.bank.uz/ea/landscape.git","tokenRef":"env:ARCHI_GIT_TOKEN",
+          "authors":[{"subject":"<sub из Keycloak>","name":"Имя Фамилия","email":"name@bank.uz"}]}'
+```
+
+С этого момента каждое сохранение версии становится коммитом в ветке привязки
+(по умолчанию `main`): модель разложена в YAML по файлу на объект, автор — архитектор,
+сообщение — комментарий к сохранению. `.archimate` на теге собирает CI-задача
+репозитория — образец [`deploy/git/gitlab-ci.yml.example`](deploy/git/gitlab-ci.yml.example).
+
 Разработка фронтенда — отдельный процесс с прокси на приложение:
 [`archi-bootstrap/src/main/frontend/README.md`](archi-bootstrap/src/main/frontend/README.md).
 
@@ -128,7 +144,13 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 
 Перерисовывается по закрытии каждого этапа — `tools/render-depgraph.py`
 ([depgraph-maven-plugin](https://github.com/ferstl/depgraph-maven-plugin),
-формат PlantUML, версии на узлах). Состояние ниже — **этап 6a** (2026-10-13).
+формат PlantUML, версии на узлах). Состояние ниже — **этап 7a** (2026-10-13).
+
+Что изменил этап 7a: в `archi-bootstrap` пришёл JGit 7.8.0 (`org.eclipse.jgit`
+с JavaEWAH и commons-codec) — адаптер порта `GitRepositoryPort`, без внешнего
+бинарника `git`. `archi-interchange-application` получил SnakeYAML (версия — из BOM
+Spring Boot) для чтения разложенного YAML; пишет его собственный эмиттер, ради
+побайтового контроля. Конфликтов версий граф не показывает.
 
 Этапы 6 и 6a графа не изменили: перерисовка дала те же файлы байт в байт. Фаза 2 метамодели —
 это каталог типов, миграция флага в базе, общая нотация и палитра; экспорт в OEF
@@ -203,7 +225,9 @@ Jackson 2 — из BOM Spring Boot); он реализует порт `LlmPort` 
   только архитектор (FR-22).
 - **Источник правды — база, а не Git.** Git-выгрузка (разложенный YAML) нужна для журнала
   и ревью; слияние — по сущностям через стабильные идентификаторы, текстовое слияние YAML
-  запрещено ([§11](docs/backend.md#11-git-интеграция-и-формат-хранения)).
+  запрещено ([§11](docs/backend.md#11-git-интеграция-и-формат-хранения)). Сервер коммитит
+  только вперёд и чужой коммит не перезаписывает: правка каталога модели не через сервер —
+  расхождение, которое разбирается импортом или слиянием (этапы 7b, 7c).
 - **Ключ Anthropic живёт только на сервере** и никогда не попадает в браузер (NFR-06).
 
 ## Этапы работ

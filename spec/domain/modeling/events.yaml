@@ -103,5 +103,11 @@ publishing:
     Для Git-выгрузки этапа 7a это НЕ допустимо: потерянное
     ModelVersionCommitted означает версию в БД без коммита в репозитории,
     а на этом расхождении строится правило очистки снимков (FR-47).
-    К этапу 7a паттерн должен смениться на `transactional_outbox`.
-    Решение не принято, ADR не заведён — см. README#незакрытые-решения.
+    Поэтому ModelVersionCommitted — исключение (ADR-0003, принят
+    2026-10-13): оно пишется в outbox_event той же транзакцией, что версия,
+    и доставляется Git-выгрузке at-least-once, по порядку версий модели.
+    Остальным потребителям оно по-прежнему приходит direct.
+  outbox:
+    events: [ModelVersionCommitted]
+    table: outbox_event
+    partition_key: modelId

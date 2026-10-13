@@ -111,6 +111,7 @@ aggregates:
       - { name: status,       type: GitBindingStatus, constraints: [not_null], default: CONFIGURED }
       - { name: lastCommitSha, type: Optional<GitSha>, constraints: [optional] }
       - { name: lastCheckedAt, type: Optional<Timestamp>, constraints: [optional] }
+      - { name: authors,      type: "List<GitAuthor>", constraints: [not_null], note: "субъект Keycloak → имя и адрес автора коммита (добавлено 2026-10-13, этап 7a)" }
     state_machine:
       initial: CONFIGURED
       transitions:

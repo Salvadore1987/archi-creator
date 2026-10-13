@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
 import uz.salvadore.hamkorbank.archi.interchange.application.mapping.ArchimateSnapshots;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotArchive;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.LockService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
@@ -51,12 +52,12 @@ class SnapshotRetentionIT extends IntegrationTest {
         jdbc.update("update model_version set created_at = created_at - interval '180 days', git_sha = ? "
                 + "where model_id = ?", "a".repeat(40), model.value());
 
-        VersionService enabledWithoutGit = new VersionService(kernel, snapshots, snapshots, workspaceId -> false,
+        VersionService enabledWithoutGit = new VersionService(kernel, snapshots, snapshots, workspaceId -> false, SnapshotArchive.NONE,
                 ZoneOffset.UTC, true);
-        VersionService enabledWithGit = new VersionService(kernel, snapshots, snapshots, workspaceId -> true,
+        VersionService enabledWithGit = new VersionService(kernel, snapshots, snapshots, workspaceId -> true, SnapshotArchive.NONE,
                 ZoneOffset.UTC, true);
 
-        assertEquals(0, versions.purgeSnapshots(), "по умолчанию очистка выключена до этапа 7a");
+        assertEquals(0, versions.purgeSnapshots(), "у пространства нет привязки к Git");
         assertEquals(0, enabledWithoutGit.purgeSnapshots(), "без Git снимок — единственная копия (FR-47)");
         assertEquals(4, snapshotsOf(model.value()));
 

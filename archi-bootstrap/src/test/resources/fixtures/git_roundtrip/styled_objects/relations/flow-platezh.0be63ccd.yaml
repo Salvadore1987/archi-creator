@@ -1,0 +1,8 @@
+# HamkorMobile → АБС
+id: id-0be63ccd9cb0e70e58caddb7295106e5
+type: FlowRelationship
+name: платёж
+source: id-e3f9ac2cb3a8029c5967f04e18f307a7
+target: id-ccc5bae1ce79703ef7b86159c19480df
+folder: id-932295df816cc5fa2ff1448f89ea9c78
+position: 2000

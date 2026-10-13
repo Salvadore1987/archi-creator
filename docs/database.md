@@ -37,7 +37,7 @@ Workspace 1──* Model 1──* ModelFolder ──* ModelFolder (вложен�
 
 | Сущность | Поля |
 |----------|------|
-| `Workspace` | `id`, `name`, `ai_enabled`, `ai_monthly_token_limit` ([§7.5](backend.md#75-лимиты-расходов)), `strict_import` (по умолчанию `false`, [§8.3](backend.md#83-строгость-импорта)), `created_at`, `git_repo_url`, `git_branch`, `git_token_ref` (все nullable, §11.6) |
+| `Workspace` | `id`, `name`, `ai_enabled`, `ai_monthly_token_limit` ([§7.5](backend.md#75-лимиты-расходов)), `strict_import` (по умолчанию `false`, [§8.3](backend.md#83-строгость-импорта)), `created_at` (настройки Git с этапа 7a — в `GitBinding`) |
 | `Model` | `id`, `workspace_id`, `archi_id` (id корня из файла), `name`, `documentation`, `archi_version` (`5.0.0`), `status` (`ACTIVE`/`DELETED`; `PURGED` строки не оставляет), `raw_xml`, `created_by`, `created_at`, `updated_at`, `version` |
 | `ModelFolder` | `id`, `model_id`, `parent_id`, `archi_id`, `name`, `folder_type` (`strategy`…`diagrams`, null у вложенных), `sort_order`, `raw_xml` |
 | `Element` | `id`, `model_id`, `folder_id`, `archi_id`, `archi_type` (`archimate:ApplicationComponent`), `layer`, `name`, `documentation`, `sort_order`, `supported` (false → opaque), `raw_xml` |
@@ -51,6 +51,8 @@ Workspace 1──* Model 1──* ModelFolder ──* ModelFolder (вложен�
 | `ModelAccessEntry` | `model_id`, `principal_type` (`USER`/`GROUP`), `principal`, `access` (`READ`/`WRITE`) — FR-29, `INV-MDL-011` |
 | `IdempotencyRecord` | `scope`, `actor`, `idem_key`, `fingerprint`, `result_ref`, `created_at` — `INV-MDL-003` |
 | `ImportSession` / `ImportFinding` | сессия импорта и её находки (`INV-IXC-002`, `INV-IXC-003`) |
+| `GitBinding` / `GitAuthor` | `workspace_id` (PK), `repo_url`, `branch`, `token_ref` (`env:ИМЯ`, не токен), `status` (`CONFIGURED`/`UNREACHABLE`/`DISABLED`), `last_commit_sha`, `last_checked_at`; авторы — `subject`, `name`, `email` по порядку (этап 7a, §11.5) |
+| `OutboxEvent` | `id`, `event_type`, `partition_key` (модель), `payload` (jsonb), `status` (`PENDING`/`DONE`/`SKIPPED`/`DIVERGED`), `attempts`, `next_attempt_at`, `last_error`, `created_at`, `processed_at` — доставка `ModelVersionCommitted` в Git (`ADR-0003`) |
 | `AiAuditLog` | `id`, `workspace_id`, `model_id`, `user`, `action`, `prompt_tokens`, `completion_tokens`, `created_at` |
 
 ### 4.2 Индексы и ограничения
@@ -116,7 +118,10 @@ PostgreSQL — источник правды. Открытие модели: о�
    сейчас и дорогое потом.
 2. **`ModelVersion.git_sha`** (nullable) — связь версии с коммитом.
 3. **`Workspace.git_repo_url`, `git_branch`, `git_token_ref`** (nullable) — настройки
-   интеграции, пустые до этапа 7.
+   интеграции, пустые до этапа 7. *На этапе 7a (миграция `V6`) переехали в свою таблицу
+   `git_binding` с состоянием доступности и последним коммитом сервера, авторы коммитов —
+   `git_author`; пустые столбцы `workspace` удалены. Очередь публикации — `outbox_event`
+   (`V7`).*
 4. **`raw_xml` действительно заполняется** для всего неподдержанного (FR-03) — иначе
    цикл БД → Git → БД потеряет данные.
 

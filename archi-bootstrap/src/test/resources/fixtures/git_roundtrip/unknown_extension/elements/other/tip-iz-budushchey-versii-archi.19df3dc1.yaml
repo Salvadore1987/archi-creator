@@ -1,0 +1,8 @@
+id: id-19df3dc10e248cb7b1f4cb91dc5a34af
+type: QuantumComponent
+name: Тип из будущей версии Archi
+folder: id-629bcc564eaeb1d162040c57e7b2d6c4
+position: 2000
+attributes:
+  qubits: 128
+documentation: "Тип, которого метамодель не знает: хранится и выгружается как есть (FR-03)."

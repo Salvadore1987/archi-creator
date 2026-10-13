@@ -1,0 +1,7 @@
+# АБС → Клиент
+id: id-4c66996625029f83be8eb65af95cb722
+type: ServingRelationship
+source: id-7af3a3d4e636b362cf09f15c2d17d627
+target: id-53f986115270259ff902bf66cf3dca2c
+folder: id-c914d79e791567767e4382d5600bf4fc
+position: 1000

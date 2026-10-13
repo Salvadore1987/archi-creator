@@ -1,0 +1,25 @@
+id: id-3a983a300ab35ca41745f730633ff872
+type: SketchModel
+name: Набросок
+folder: id-506aff620d12469054c7c999b9ec4727
+position: 2000
+children:
+  - id: id-190411bdbe3621e4428cf84eef45c637
+    type: SketchModelActor
+    attributes:
+      name: Клиент
+    bounds: {x: 24, y: 24, width: 75, height: 100}
+    connections:
+      - id: id-a779b7e44b95a5fb46f90882b09147a9
+        type: SketchModelConnection
+        attributes:
+          source: id-190411bdbe3621e4428cf84eef45c637
+          target: id-31fb94087400ab5ce0fa5d72a81c4e24
+  - id: id-31fb94087400ab5ce0fa5d72a81c4e24
+    type: SketchModelSticky
+    attributes:
+      targetConnections: id-a779b7e44b95a5fb46f90882b09147a9
+      name: Идея
+      fillColor: "#fff59d"
+    bounds: {x: 200, y: 24, width: 120, height: 80}
+    text: Платить по QR

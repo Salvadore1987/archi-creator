@@ -96,6 +96,20 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
                 contentHash, gitSha);
     }
 
+    /**
+     * Версия опубликована коммитом. Повтор с тем же коммитом ничего не меняет; другой
+     * коммит для уже опубликованной версии — нарушение: связь версии с коммитом,
+     * по которой восстанавливается снимок, не переписывается.
+     */
+    public ModelVersion publishedAs(String sha) {
+        if (gitSha.isPresent() && !gitSha.get().equals(sha)) {
+            throw new ModelingException(INVARIANT, Failure.CONFLICT,
+                    Message.of(ModelingMessages.VERSION_ALREADY_PUBLISHED, versionNo, gitSha.get()));
+        }
+        return new ModelVersion(id, modelId, versionNo, author, comment, label, createdAt, snapshot, contentHash,
+                Optional.of(sha));
+    }
+
     /** Снимок на месте; пусто — очищен, и восстановить его без Git неоткуда ({@code 410}). */
     public byte[] requireSnapshot() {
         return snapshot.map(bytes -> Arrays.copyOf(bytes, bytes.length))

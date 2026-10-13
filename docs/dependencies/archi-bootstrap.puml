@@ -76,6 +76,7 @@ rectangle "spring-aspects\n7.0.9" as org_springframework_spring_aspects_jar
 rectangle "aspectjweaver\n1.9.25.1" as org_aspectj_aspectjweaver_jar
 rectangle "archi-interchange-domain\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_interchange_domain_jar
 rectangle "archi-interchange-application\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_interchange_application_jar
+rectangle "snakeyaml\n2.6" as org_yaml_snakeyaml_jar
 rectangle "archi-interchange-adapter-rest\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar
 rectangle "archi-interchange-adapter-persistence\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_interchange_adapter_persistence_jar
 rectangle "archi-advisor-domain\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_advisor_domain_jar
@@ -91,7 +92,6 @@ rectangle "log4j-to-slf4j\n2.25.5" as org_apache_logging_log4j_log4j_to_slf4j_ja
 rectangle "log4j-api\n2.25.5" as org_apache_logging_log4j_log4j_api_jar
 rectangle "jul-to-slf4j\n2.0.18" as org_slf4j_jul_to_slf4j_jar
 rectangle "spring-boot-autoconfigure\n4.1.1" as org_springframework_boot_spring_boot_autoconfigure_jar
-rectangle "snakeyaml\n2.6" as org_yaml_snakeyaml_jar
 rectangle "spring-boot-starter-actuator\n4.1.1" as org_springframework_boot_spring_boot_starter_actuator_jar
 rectangle "spring-boot-starter-micrometer-metrics\n4.1.1" as org_springframework_boot_spring_boot_starter_micrometer_metrics_jar
 rectangle "spring-boot-micrometer-metrics\n4.1.1" as org_springframework_boot_spring_boot_micrometer_metrics_jar
@@ -159,6 +159,9 @@ rectangle "batik-i18n\n1.19" as org_apache_xmlgraphics_batik_i18n_jar
 rectangle "batik-codec\n1.19" as org_apache_xmlgraphics_batik_codec_jar
 rectangle "pdfbox-io\n3.0.8" as org_apache_pdfbox_pdfbox_io_jar
 rectangle "fontbox\n3.0.8" as org_apache_pdfbox_fontbox_jar
+rectangle "org.eclipse.jgit\n7.8.0.202609011348-r" as org_eclipse_jgit_org_eclipse_jgit_jar
+rectangle "JavaEWAH\n1.2.3" as com_googlecode_javaewah_JavaEWAH_jar
+rectangle "commons-codec\n1.21.0" as commons_codec_commons_codec_jar
 rectangle "spring-boot-starter-security\n4.1.1" as org_springframework_boot_spring_boot_starter_security_jar
 rectangle "spring-boot-security\n4.1.1" as org_springframework_boot_spring_boot_security_jar
 rectangle "spring-security-config\n7.1.1" as org_springframework_security_spring_security_config_jar
@@ -211,7 +214,6 @@ rectangle "spring-security-crypto\n7.1.1" as org_springframework_security_spring
 rectangle "spring-security-test\n7.1.1" as org_springframework_security_spring_security_test_jar<<test>>
 rectangle "testcontainers\n2.0.5" as org_testcontainers_testcontainers_jar<<test>>
 rectangle "commons-compress\n1.28.0" as org_apache_commons_commons_compress_jar<<test>>
-rectangle "commons-codec\n1.21.0" as commons_codec_commons_codec_jar<<test>>
 rectangle "commons-lang3\n3.20.0" as org_apache_commons_commons_lang3_jar<<test>>
 rectangle "duct-tape\n1.0.8" as org_rnorth_duct_tape_duct_tape_jar<<test>>
 rectangle "docker-java-api\n3.7.1" as com_github_docker_java_docker_java_api_jar<<test>>
@@ -341,6 +343,7 @@ uz_salvadore_hamkorbank_archi_interchange_domain_jar .[#ABABAB].> com_fasterxml_
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_domain_jar
 uz_salvadore_hamkorbank_archi_interchange_application_jar .[#ABABAB].> uz_salvadore_hamkorbank_archi_interchange_domain_jar
 uz_salvadore_hamkorbank_archi_interchange_application_jar .[#ABABAB].> uz_salvadore_hamkorbank_archi_modeling_application_jar
+uz_salvadore_hamkorbank_archi_interchange_application_jar -[#000000]-> org_yaml_snakeyaml_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_application_jar
 uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar .[#ABABAB].> uz_salvadore_hamkorbank_archi_interchange_application_jar
 uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar .[#ABABAB].> org_springframework_boot_spring_boot_starter_web_jar
@@ -375,7 +378,7 @@ org_springframework_boot_spring_boot_starter_jar -[#000000]-> org_springframewor
 org_springframework_boot_spring_boot_autoconfigure_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
 org_springframework_boot_spring_boot_starter_jar -[#000000]-> org_springframework_boot_spring_boot_autoconfigure_jar
 org_springframework_boot_spring_boot_starter_jar -[#000000]-> jakarta_annotation_jakarta_annotation_api_jar
-org_springframework_boot_spring_boot_starter_jar -[#000000]-> org_yaml_snakeyaml_jar
+org_springframework_boot_spring_boot_starter_jar .[#ABABAB].> org_yaml_snakeyaml_jar
 org_springframework_boot_spring_boot_starter_actuator_jar -[#000000]-> org_springframework_boot_spring_boot_starter_jar
 org_springframework_boot_spring_boot_starter_micrometer_metrics_jar .[#ABABAB].> org_springframework_boot_spring_boot_starter_jar
 org_springframework_boot_spring_boot_micrometer_metrics_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
@@ -551,6 +554,10 @@ org_apache_pdfbox_pdfbox_io_jar .[#ABABAB].> commons_logging_commons_logging_jar
 org_apache_pdfbox_fontbox_jar -[#000000]-> org_apache_pdfbox_pdfbox_io_jar
 org_apache_pdfbox_fontbox_jar -[#000000]-> commons_logging_commons_logging_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_apache_pdfbox_fontbox_jar
+org_eclipse_jgit_org_eclipse_jgit_jar -[#000000]-> com_googlecode_javaewah_JavaEWAH_jar
+org_eclipse_jgit_org_eclipse_jgit_jar -[#000000]-> org_slf4j_slf4j_api_jar
+org_eclipse_jgit_org_eclipse_jgit_jar -[#000000]-> commons_codec_commons_codec_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_eclipse_jgit_org_eclipse_jgit_jar
 org_springframework_boot_spring_boot_starter_security_jar .[#ABABAB].> org_springframework_boot_spring_boot_starter_jar
 org_springframework_boot_spring_boot_security_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
 org_springframework_security_spring_security_config_jar .[#ABABAB].> org_springframework_security_spring_security_core_jar
@@ -633,7 +640,7 @@ org_springframework_boot_spring_boot_starter_test_jar -[#000000]-> org_springfra
 org_springframework_boot_spring_boot_test_autoconfigure_jar .[#ABABAB].> org_springframework_boot_spring_boot_test_jar
 org_springframework_boot_spring_boot_starter_test_jar -[#000000]-> org_springframework_boot_spring_boot_test_autoconfigure_jar
 com_jayway_jsonpath_json_path_jar .[#ABABAB].> net_minidev_json_smart_jar
-com_jayway_jsonpath_json_path_jar -[#000000]-> org_slf4j_slf4j_api_jar
+com_jayway_jsonpath_json_path_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
 org_springframework_boot_spring_boot_starter_test_jar -[#000000]-> com_jayway_jsonpath_json_path_jar
 jakarta_xml_bind_jakarta_xml_bind_api_jar -[#000000]-> jakarta_activation_jakarta_activation_api_jar
 org_springframework_boot_spring_boot_starter_test_jar -[#000000]-> jakarta_xml_bind_jakarta_xml_bind_api_jar
@@ -709,7 +716,7 @@ org_springframework_security_spring_security_test_jar .[#ABABAB].> org_springfra
 org_springframework_security_spring_security_test_jar .[#ABABAB].> org_springframework_spring_test_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_springframework_security_spring_security_test_jar
 org_testcontainers_testcontainers_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
-org_apache_commons_commons_compress_jar -[#000000]-> commons_codec_commons_codec_jar
+org_apache_commons_commons_compress_jar .[#ABABAB].> commons_codec_commons_codec_jar
 org_apache_commons_commons_compress_jar .[#ABABAB].> commons_io_commons_io_jar
 org_apache_commons_commons_compress_jar -[#000000]-> org_apache_commons_commons_lang3_jar
 org_testcontainers_testcontainers_jar -[#000000]-> org_apache_commons_commons_compress_jar

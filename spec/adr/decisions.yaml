@@ -60,17 +60,18 @@ decisions:
 
   - id: ADR-0003
     title: Механизм публикации доменных событий
-    status: proposed
-    date: 2026-09-28
+    status: accepted
+    date: 2026-10-13
     kind: architecture
     adr_file: 0003-event-publishing.md
     affects: [modeling, interchange, advisor]
     requirements: [FR-37, FR-46]
     anchors: [INV-IXC-009]
     note: |
-      Не принято. `direct` выбран как временное состояние; Git-выгрузка
-      этапа 7a требует transactional_outbox — окно потери события там
-      ломает правило очистки снимков версий.
+      Принято при открытии этапа 7a. ModelVersionCommitted пишется в outbox
+      той же транзакцией, что версия, и доставляется Git-выгрузке
+      at-least-once; git_sha записывается вместе с закрытием записи outbox.
+      Остальные события — direct.
 
   - id: ADR-0004
     title: Компоновка главного экрана — вариант A «Панели»

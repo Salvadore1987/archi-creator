@@ -46,6 +46,7 @@
         <anthropic-java.version>2.71.0</anthropic-java.version>
         <batik.version>1.19</batik.version>
         <fontbox.version>3.0.8</fontbox.version>
+        <jgit.version>7.8.0.202609011348-r</jgit.version>
         <java-uuid-generator.version>5.2.0</java-uuid-generator.version>
         <depgraph-maven-plugin.version>4.0.5</depgraph-maven-plugin.version>
 
@@ -135,6 +136,11 @@
                 <groupId>org.apache.pdfbox</groupId>
                 <artifactId>fontbox</artifactId>
                 <version>${fontbox.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jgit</groupId>
+                <artifactId>org.eclipse.jgit</artifactId>
+                <version>${jgit.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.tngtech.archunit</groupId>

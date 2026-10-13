@@ -1,0 +1,115 @@
+package uz.salvadore.hamkorbank.archi.interchange.application.port;
+
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
+import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
+
+/**
+ * Репозиторий рабочего пространства. Ветка двигается только вперёд: push проверяет,
+ * что голова ветки та, от которой строился коммит, и без принуждения — ни force push,
+ * ни rebase, ни удаления веток через этот порт сделать нельзя.
+ *
+ * <p>Сетевой отказ — {@link Unreachable}: вызывающий откладывает работу, а не теряет её.
+ */
+public interface GitRepositoryPort {
+
+    /** Свежая голова ветки; ветки ещё нет — пусто. */
+    Optional<GitSha> fetch(Remote remote);
+
+    /** Файлы каталога в коммите — пути относительно каталога; каталога нет — пусто. */
+    SortedMap<String, byte[]> read(Remote remote, GitSha commit, String directory);
+
+    /** Один файл коммита по пути от корня; нет — пусто. */
+    Optional<byte[]> file(Remote remote, GitSha commit, String path);
+
+    /** Имена подкаталогов в коммите. */
+    List<String> directories(Remote remote, GitSha commit, String parent);
+
+    /** Достижим ли {@code ancestor} из {@code head}: история не переписана. */
+    boolean contains(Remote remote, GitSha ancestor, GitSha head);
+
+    /** Последний коммит из истории {@code head}, менявший каталог; не менял никто — пусто. */
+    Optional<Commit> lastChange(Remote remote, GitSha head, String directory);
+
+    /** Коммит из истории {@code head} с этими трейлерами — повтор после сбоя не дублирует коммит. */
+    Optional<GitSha> findByTrailers(Remote remote, GitSha head, Map<String, String> trailers);
+
+    /**
+     * Коммит поверх {@code parent}: каталог {@code directory} заменяется файлами целиком,
+     * корневые файлы — ставятся, если их ещё нет или они другие. Дерево не изменилось —
+     * {@link Unchanged}, коммита нет. Ветка ушла вперёд, пока строился коммит, —
+     * {@link Rejected}; принуждения нет.
+     */
+    PushResult push(Remote remote, Optional<GitSha> parent, CommitRequest request);
+
+    /** Адрес, ветка и учётные данные — токен живёт только на время вызова. */
+    record Remote(WorkspaceId workspace, String url, String branch, Optional<String> token) {
+
+        public Remote {
+            Objects.requireNonNull(workspace, "workspace");
+            Objects.requireNonNull(url, "url");
+            Objects.requireNonNull(branch, "branch");
+            Objects.requireNonNull(token, "token");
+        }
+
+        @Override
+        public String toString() {
+            return url + "#" + branch;
+        }
+    }
+
+    record Person(String name, String email, Instant when) {
+    }
+
+    record Commit(GitSha sha, Map<String, String> trailers) {
+
+        public Commit {
+            trailers = Map.copyOf(trailers);
+        }
+    }
+
+    record CommitRequest(String directory, SortedMap<String, byte[]> files, SortedMap<String, byte[]> rootFiles,
+                         String message, Person author, Person committer) {
+
+        public CommitRequest {
+            files = copy(files);
+            rootFiles = copy(rootFiles);
+        }
+
+        private static SortedMap<String, byte[]> copy(SortedMap<String, byte[]> files) {
+            SortedMap<String, byte[]> copy = new TreeMap<>();
+            files.forEach((path, bytes) -> copy.put(path, Arrays.copyOf(bytes, bytes.length)));
+            return copy;
+        }
+    }
+
+    sealed interface PushResult permits Pushed, Unchanged, Rejected {
+    }
+
+    /** Коммит в ветке; {@code changedFiles} — сколько путей он тронул. */
+    record Pushed(GitSha sha, int changedFiles) implements PushResult {
+    }
+
+    /** Содержимое уже в ветке: коммит не нужен, голова та же. */
+    record Unchanged(GitSha head) implements PushResult {
+    }
+
+    /** Ветка ушла вперёд между чтением и записью — повторить с новой головы. */
+    record Rejected() implements PushResult {
+    }
+
+    /** Репозиторий не ответил, отказал в доступе или в записи. */
+    final class Unreachable extends RuntimeException {
+
+        public Unreachable(String reason, Throwable cause) {
+            super(reason, cause);
+        }
+    }
+}

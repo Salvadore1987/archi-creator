@@ -10,13 +10,13 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param lockTtl              срок блокировки; клиент продлевает её повторным захватом
  * @param defaultWorkspaceName имя пространства, которое заводится при пустой базе; данные,
  *                             а не текст интерфейса, — задаётся в конфигурации
- * @param retentionEnabled     фоновая очистка снимков. Выключена до 7a:
- *                             без Git снимок — единственная копия
+ * @param retentionEnabled     фоновая очистка снимков; пространство без доступного
+ *                             Git она не трогает — там снимок единственная копия
  * @param retentionCron        расписание очистки
  */
 @ConfigurationProperties("archi.modeling")
 public record ModelingSettings(@DefaultValue("30m") Duration lockTtl,
                                String defaultWorkspaceName,
-                               @DefaultValue("false") boolean retentionEnabled,
+                               @DefaultValue("true") boolean retentionEnabled,
                                @DefaultValue("0 30 3 * * *") String retentionCron) {
 }

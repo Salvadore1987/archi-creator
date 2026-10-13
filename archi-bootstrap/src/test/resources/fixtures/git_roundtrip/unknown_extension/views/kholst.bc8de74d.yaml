@@ -1,0 +1,12 @@
+id: id-bc8de74d118ecb853d6c891d4ad0f445
+type: canvas:CanvasModel
+name: Холст
+folder: id-506aff620d12469054c7c999b9ec4727
+position: 3000
+children:
+  - id: id-3aacc65a2fb76ed2c12c89204e5a4a24
+    type: canvas:CanvasModelBlock
+    attributes:
+      borderColor: "#000000"
+    bounds: {x: 0, y: 0, width: 200, height: 100}
+    text: Проблема

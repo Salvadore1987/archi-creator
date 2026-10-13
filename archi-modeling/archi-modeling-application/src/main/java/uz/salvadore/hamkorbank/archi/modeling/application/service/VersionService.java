@@ -7,6 +7,7 @@ import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.GitBinding;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotArchive;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotReader;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotWriter;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
@@ -39,15 +40,17 @@ public final class VersionService {
     private final SnapshotWriter snapshotWriter;
     private final SnapshotReader snapshotReader;
     private final GitBinding gitBinding;
+    private final SnapshotArchive archive;
     private final SnapshotRetention retention;
     private final boolean retentionEnabled;
 
     public VersionService(ModelingKernel kernel, SnapshotWriter snapshotWriter, SnapshotReader snapshotReader,
-                          GitBinding gitBinding, ZoneId zone, boolean retentionEnabled) {
+                          GitBinding gitBinding, SnapshotArchive archive, ZoneId zone, boolean retentionEnabled) {
         this.kernel = kernel;
         this.snapshotWriter = snapshotWriter;
         this.snapshotReader = snapshotReader;
         this.gitBinding = gitBinding;
+        this.archive = archive;
         this.retention = new SnapshotRetention(zone);
         this.retentionEnabled = retentionEnabled;
     }
@@ -126,7 +129,7 @@ public final class VersionService {
     public ModelVersion rollback(EditorIdentity actor, ModelId modelId, long versionNo, Optional<String> comment) {
         return kernel.run(Operation.RESTORE_VERSION, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.writableModel(modelId, actor);
-            byte[] xml = Snapshots.gunzip(requireVersion(modelId, versionNo).requireSnapshot());
+            byte[] xml = content(model.header(), requireVersion(modelId, versionNo));
             ModelContent restored = snapshotReader.read(xml, model.header(), kernel.now());
             kernel.models.replaceContent(restored);
             return commit(restored.model(), actor,
@@ -137,7 +140,8 @@ public final class VersionService {
 
     /**
      * Снимок версии для выгрузки: указанной или последней.
-     * Удалённая модель не выгружается ({@code 409}), очищенный снимок без Git — {@code 410}.
+     * Удалённая модель не выгружается ({@code 409}); очищенный снимок возвращается из Git,
+     * а без Git — {@code 410}.
      */
     public VersionSnapshot snapshot(EditorIdentity actor, ModelId modelId, Optional<Long> versionNo) {
         return kernel.unitOfWork.read(() -> {
@@ -149,13 +153,54 @@ public final class VersionService {
                     .orElseGet(() -> kernel.versions.last(modelId)
                             .orElseThrow(() -> ModelingException.notFound(
                                     Message.of(ModelingMessages.MODEL_VERSION, modelId))));
-            return new VersionSnapshot(header, version.versionNo(), Snapshots.gunzip(version.requireSnapshot()));
+            return new VersionSnapshot(header, version.versionNo(), content(header, version));
         });
     }
 
     /**
-     * Очистка снимков по правилу ретеншена. Выключена до этапа 7a
-     * настройкой, а и включённая не тронет пространство без доступного Git.
+     * Содержимое версии: снимок из базы, а очищенный — из коммита версии. Вернуть
+     * неоткуда — {@code 410}, как и раньше.
+     */
+    private byte[] content(ModelHeader header, ModelVersion version) {
+        if (version.snapshot().isPresent()) {
+            return Snapshots.gunzip(version.requireSnapshot());
+        }
+        Optional<byte[]> restored = version.gitSha().isPresent() ? archive.restore(header, version) : Optional.empty();
+        return restored.orElseGet(() -> Snapshots.gunzip(version.requireSnapshot()));
+    }
+
+    /**
+     * Зафиксированная версия для публикации в Git — системное чтение, без актора:
+     * публикует фоновый обработчик. Модели или версии нет, снимок очищен — пусто.
+     */
+    public Optional<CommittedVersion> committed(ModelId modelId, long versionNo) {
+        return kernel.unitOfWork.read(() -> kernel.models.findHeader(modelId).flatMap(header ->
+                kernel.versions.find(modelId, versionNo).filter(v -> v.snapshot().isPresent())
+                        .map(v -> new CommittedVersion(header, v, Snapshots.gunzip(v.requireSnapshot())))));
+    }
+
+    /** Последняя опубликованная в Git версия модели. */
+    public Optional<ModelVersion> lastPublished(ModelId modelId) {
+        return kernel.unitOfWork.read(() -> kernel.versions.list(modelId).stream()
+                .filter(v -> v.gitSha().isPresent()).findFirst());
+    }
+
+    /** Связать версию с коммитом, в котором её содержимое лежит в репозитории. */
+    public void recordGitSha(ModelId modelId, long versionNo, String sha) {
+        kernel.unitOfWork.write(() -> {
+            kernel.versions.save(requireVersion(modelId, versionNo).publishedAs(sha));
+            return null;
+        });
+    }
+
+    /** Модель видна актору — её рабочее пространство; иначе «не найдено», как везде. */
+    public ModelHeader visibleModel(EditorIdentity actor, ModelId modelId) {
+        return kernel.unitOfWork.read(() -> kernel.visibleHeader(modelId, actor, AclAccess.READ));
+    }
+
+    /**
+     * Очистка снимков по правилу ретеншена. Не трогает пространство без настроенного
+     * и доступного репозитория: там снимок — единственная копия.
      *
      * @return сколько снимков очищено
      */
