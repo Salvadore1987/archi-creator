@@ -6,8 +6,9 @@ skinparam rectangle {
   BackgroundColor<<runtime>> lightBlue
   BackgroundColor<<provided>> lightGray
 }
-rectangle "archi-bootstrap\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_bootstrap_jar
 rectangle "archi-modeling-domain\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_modeling_domain_jar
+rectangle "java-uuid-generator\n5.2.0" as com_fasterxml_uuid_java_uuid_generator_jar
+rectangle "archi-bootstrap\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_bootstrap_jar
 rectangle "archi-modeling-application\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_modeling_application_jar
 rectangle "archi-modeling-adapter-rest\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_modeling_adapter_rest_jar
 rectangle "spring-boot-starter-jackson\n4.1.1" as org_springframework_boot_spring_boot_starter_jackson_jar
@@ -225,6 +226,7 @@ rectangle "junit-platform-commons\n6.0.3" as org_junit_platform_junit_platform_c
 rectangle "apiguardian-api\n1.1.2" as org_apiguardian_apiguardian_api_jar<<test>>
 rectangle "junit-jupiter-params\n6.0.3" as org_junit_jupiter_junit_jupiter_params_jar<<test>>
 rectangle "junit-jupiter-engine\n6.0.3" as org_junit_jupiter_junit_jupiter_engine_jar<<test>>
+uz_salvadore_hamkorbank_archi_modeling_domain_jar -[#000000]-> com_fasterxml_uuid_java_uuid_generator_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_modeling_domain_jar
 uz_salvadore_hamkorbank_archi_modeling_application_jar .[#ABABAB].> uz_salvadore_hamkorbank_archi_modeling_domain_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_modeling_application_jar
@@ -335,6 +337,7 @@ org_springframework_boot_spring_boot_starter_data_jpa_jar -[#000000]-> org_sprin
 org_springframework_boot_spring_boot_starter_data_jpa_jar .[#ABABAB].> org_springframework_boot_spring_boot_jdbc_jar
 uz_salvadore_hamkorbank_archi_modeling_adapter_persistence_jar -[#000000]-> org_springframework_boot_spring_boot_starter_data_jpa_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_modeling_adapter_persistence_jar
+uz_salvadore_hamkorbank_archi_interchange_domain_jar .[#ABABAB].> com_fasterxml_uuid_java_uuid_generator_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_domain_jar
 uz_salvadore_hamkorbank_archi_interchange_application_jar .[#ABABAB].> uz_salvadore_hamkorbank_archi_interchange_domain_jar
 uz_salvadore_hamkorbank_archi_interchange_application_jar .[#ABABAB].> uz_salvadore_hamkorbank_archi_modeling_application_jar
@@ -346,6 +349,7 @@ uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank
 uz_salvadore_hamkorbank_archi_interchange_adapter_persistence_jar .[#ABABAB].> uz_salvadore_hamkorbank_archi_interchange_application_jar
 uz_salvadore_hamkorbank_archi_interchange_adapter_persistence_jar .[#ABABAB].> org_springframework_boot_spring_boot_starter_data_jpa_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_adapter_persistence_jar
+uz_salvadore_hamkorbank_archi_advisor_domain_jar .[#ABABAB].> com_fasterxml_uuid_java_uuid_generator_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_advisor_domain_jar
 uz_salvadore_hamkorbank_archi_advisor_application_jar .[#ABABAB].> uz_salvadore_hamkorbank_archi_advisor_domain_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_advisor_application_jar

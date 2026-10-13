@@ -110,7 +110,7 @@ docker compose build && docker compose up -d  # app + postgres:16 + keycloak:26
 модулей нет ни Spring, ни JPA, и правило `maven-enforcer-plugin` не даёт их вернуть:
 
 ```
-archi-<bc>/archi-<bc>-domain              зависимостей нет, кроме junit (test)
+archi-<bc>/archi-<bc>-domain              только java-uuid-generator (+ junit в test)
 archi-<bc>/archi-<bc>-application         -> domain
 archi-<bc>/archi-<bc>-adapter-rest        -> application + Spring Web
 archi-<bc>/archi-<bc>-adapter-persistence -> application + Spring Data JPA
@@ -128,7 +128,13 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 
 Перерисовывается по закрытии каждого этапа — `tools/render-depgraph.py`
 ([depgraph-maven-plugin](https://github.com/ferstl/depgraph-maven-plugin),
-формат PlantUML, версии на узлах). Состояние ниже — **этап 5a** (2026-10-12).
+формат PlantUML, версии на узлах). Состояние ниже — **этап 5a** (2026-10-12)
+плюс правило об идентификаторах (2026-10-13).
+
+Что изменило правило об идентификаторах ([`ADR-0020`](spec/adr/0020-uuid-generator.md)):
+у доменных модулей трёх контекстов появилась единственная зависимость —
+`com.fasterxml.uuid:java-uuid-generator` 5.2.0, без `slf4j-api`. Через домены она
+приходит во все слои; фреймворков в домене по-прежнему нет.
 
 Что изменил этап 5a: в `archi-bootstrap` пришли Apache Batik 1.19 (`batik-transcoder`,
 `batik-codec` — растр PNG за портом `Rasterizer`) и fontbox 3.0.8 (подмножество шрифта

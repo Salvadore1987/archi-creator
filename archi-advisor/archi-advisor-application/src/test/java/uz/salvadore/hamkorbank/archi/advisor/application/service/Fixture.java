@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.application.service;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -12,7 +13,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.AdvisorEvents;
@@ -54,8 +54,8 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
 final class Fixture {
 
     static final Instant NOW = Instant.parse("2026-10-12T09:00:00Z");
-    static final WorkspaceId WORKSPACE = WorkspaceId.of(UUID.fromString("00000000-0000-7000-8000-0000000000aa"));
-    static final ModelId MODEL = ModelId.of(UUID.fromString("00000000-0000-7000-8000-0000000000bb"));
+    static final WorkspaceId WORKSPACE = WorkspaceId.of(UUIDUtil.uuid("00000000-0000-7000-8000-0000000000aa"));
+    static final ModelId MODEL = ModelId.of(UUIDUtil.uuid("00000000-0000-7000-8000-0000000000bb"));
     static final Requester ALICE = Requester.of("alice", Role.ARCHITECT);
     static final Requester VIEWER = Requester.of("victor", Role.VIEWER);
     static final String APP = "archimate:ApplicationComponent";

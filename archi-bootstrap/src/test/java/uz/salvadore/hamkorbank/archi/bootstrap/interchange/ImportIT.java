@@ -5,10 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,9 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.importing.Severity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
 class ImportIT extends IntegrationTest {
+
+    /** Идентификаторы тестовых объектов — версии 7, из той же библиотеки, что у приложения. */
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
 
     @Autowired
     ImportService imports;
@@ -67,7 +71,7 @@ class ImportIT extends IntegrationTest {
 
         assertEquals(ImportStatus.APPLIED, stored.status());
         assertThrows(IllegalImportTransitionException.class,
-                () -> stored.apply(new ModelId(UUID.randomUUID()), 1, 0, Instant.now()));
+                () -> stored.apply(new ModelId(IDS.generate()), 1, 0, Instant.now()));
     }
 
     @Test

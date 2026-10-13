@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -48,6 +50,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
  * {@code ModelImportIT}.
  */
 class DocumentMappingTest {
+
+    /** Идентификаторы тестовых объектов — версии 7, из той же библиотеки, что у приложения. */
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
 
     private static final Path ROOT = Path.of("../..").toAbsolutePath().normalize();
     private static final Instant NOW = Instant.parse("2026-10-08T10:00:00Z");
@@ -120,10 +125,10 @@ class DocumentMappingTest {
                 ROOT.resolve("archi-bootstrap/src/test/resources/fixtures/styled_objects.archimate"))));
         View view = content.views().getFirst();
         ArchiIdGenerator archiIds = new ArchiIdGenerator();
-        ViewNode group = new ViewNode(ViewNodeId.of(UUID.randomUUID()), Optional.empty(), archiIds.next(),
+        ViewNode group = new ViewNode(ViewNodeId.of(IDS.generate()), Optional.empty(), archiIds.next(),
                 DiagramType.of("archimate:Group"), Optional.empty(), new Bounds(0, 0, 400, 300), StyleOverride.NONE,
                 Optional.of("Каналы"), Optional.empty(), SortOrder.of(900_000), Optional.empty());
-        ViewNode note = new ViewNode(ViewNodeId.of(UUID.randomUUID()), Optional.empty(), archiIds.next(),
+        ViewNode note = new ViewNode(ViewNodeId.of(IDS.generate()), Optional.empty(), archiIds.next(),
                 DiagramType.of("archimate:Note"), Optional.empty(), new Bounds(10, 10, 185, 80), StyleOverride.NONE,
                 Optional.empty(), Optional.of("строка 1\nстрока 2"), SortOrder.of(901_000), Optional.empty());
         view.nodes().put(group.id(), group);
@@ -142,7 +147,7 @@ class DocumentMappingTest {
     static ModelContent decompose(ModelDocument document) {
         ArchiIdGenerator archiIds = new ArchiIdGenerator();
         return new DocumentDecomposer(UUID::randomUUID, archiIds::next).decompose(document,
-                new DocumentDecomposer.Identity(ModelId.of(UUID.randomUUID()), WorkspaceId.of(UUID.randomUUID()),
+                new DocumentDecomposer.Identity(ModelId.of(IDS.generate()), WorkspaceId.of(IDS.generate()),
                         "architect", NOW, NOW, 0));
     }
 
@@ -172,7 +177,7 @@ class DocumentMappingTest {
                 List.of(new PropertyEntry("source", "CRM", SortOrder.of(1000)),
                         new PropertyEntry("owner", "Розница", SortOrder.of(2000))), NOW);
         model.addElement(ArchiType.ofSimpleName("BusinessRole"), "Плательщик", client.folderId(),
-                ElementId.of(UUID.randomUUID()), ArchiId.of("id-new"), NOW);
+                ElementId.of(IDS.generate()), ArchiId.of("id-new"), NOW);
 
         String xml = new String(write(new DocumentAssembler().assemble(content)), StandardCharsets.UTF_8);
 

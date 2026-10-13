@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,6 +34,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 /** Идентификаторы новых объектов от клиента и ребро существующей связи. */
 class ClientIdsScenariosTest {
 
+    /** Идентификаторы тестовых объектов — версии 7, из той же библиотеки, что у приложения. */
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
+
     private static final EditorIdentity ALICE = EditorIdentity.of("alice", Role.ARCHITECT);
     private static final ArchiType COMPONENT = ArchiType.ofSimpleName("ApplicationComponent");
     private static final ArchiType ACTOR = ArchiType.ofSimpleName("BusinessActor");
@@ -49,12 +54,12 @@ class ClientIdsScenariosTest {
     @Test
     @DisplayName("ADR-0018: id и archiId от клиента ложатся буквально — у папки, элемента, связи, представления, узла")
     void clientIdsAreKeptLiterally() {
-        UUID folderId = UUID.randomUUID();
-        UUID elementId = UUID.randomUUID();
-        UUID viewId = UUID.randomUUID();
-        UUID nodeId = UUID.randomUUID();
-        UUID relationshipId = UUID.randomUUID();
-        UUID edgeId = UUID.randomUUID();
+        UUID folderId = IDS.generate();
+        UUID elementId = IDS.generate();
+        UUID viewId = IDS.generate();
+        UUID nodeId = IDS.generate();
+        UUID relationshipId = IDS.generate();
+        UUID edgeId = IDS.generate();
         ModelFolder application = ports.models.get(model).roots().get(FolderType.APPLICATION);
 
         ModelFolder folder = ports.tree.createFolder(ALICE, model, application.id(), "Ядро",
@@ -94,7 +99,7 @@ class ClientIdsScenariosTest {
     @DisplayName("ADR-0018: занятый id или archiId — 409 MDL_ID_TAKEN, недопустимый archiId — 422")
     void takenIdsAreRejected() {
         Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(),
-                RequestedIds.of(UUID.randomUUID(), "id-abs"), Optional.empty());
+                RequestedIds.of(IDS.generate(), "id-abs"), Optional.empty());
         View view = ports.viewService.create(ALICE, model, "Контекст", Optional.empty(), Optional.empty());
         ViewNode node = ports.viewService.place(ALICE, view.id(), component.id(), new Bounds(10, 10, 120, 55),
                 Optional.empty());
@@ -127,7 +132,7 @@ class ClientIdsScenariosTest {
     @Test
     @DisplayName("ADR-0018: повтор с тем же ключом идемпотентности и теми же id — тот же объект, не 409")
     void idempotentReplayWithClientIds() {
-        UUID elementId = UUID.randomUUID();
+        UUID elementId = IDS.generate();
         Element first = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(),
                 RequestedIds.of(elementId, "id-abs"), Optional.of("k-1"));
         Element replay = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(),
@@ -135,7 +140,7 @@ class ClientIdsScenariosTest {
 
         assertEquals(first.id(), replay.id());
         ModelingException otherBody = assertThrows(ModelingException.class, () -> ports.elements.create(ALICE,
-                model, COMPONENT, "АБС", Optional.empty(), RequestedIds.of(UUID.randomUUID(), "id-abs"),
+                model, COMPONENT, "АБС", Optional.empty(), RequestedIds.of(IDS.generate(), "id-abs"),
                 Optional.of("k-1")));
         assertEquals("INV-MDL-003", otherBody.code(), "другие id — другое тело команды");
     }
@@ -196,7 +201,7 @@ class ClientIdsScenariosTest {
         assertEquals(Failure.UNPROCESSABLE, reversed.failure());
 
         ModelingException foreign = assertThrows(ModelingException.class, () -> ports.viewService.placeEdge(ALICE,
-                view.id(), serving.id(), UUID.randomUUID(), a.id().value(), List.of(), RequestedIds.NONE));
+                view.id(), serving.id(), IDS.generate(), a.id().value(), List.of(), RequestedIds.NONE));
         assertEquals("INV-MDL-008", foreign.code(), "конец не на этом представлении");
     }
 

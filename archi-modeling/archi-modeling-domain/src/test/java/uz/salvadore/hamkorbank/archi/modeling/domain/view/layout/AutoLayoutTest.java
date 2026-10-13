@@ -4,6 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
+import com.fasterxml.uuid.UUIDType;
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +22,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
 
 class AutoLayoutTest {
+
+    /** Идентификаторы тестовых объектов — версии 7, из той же библиотеки, что у приложения. */
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
 
     private static final String[] TYPES = {"BusinessActor", "BusinessProcess", "ApplicationComponent",
         "ApplicationService", "DataObject", "Node", "SystemSoftware", "Device", "WorkPackage", "Goal"};
@@ -48,7 +55,7 @@ class AutoLayoutTest {
         var tech = node("Node", 0, 0);
         var app = node("ApplicationComponent", 0, 0);
         var business = node("BusinessProcess", 0, 0);
-        var wide = new LayoutGraph.Node(UUID.randomUUID(), Optional.empty(), type("ApplicationService"),
+        var wide = new LayoutGraph.Node(IDS.generate(), Optional.empty(), type("ApplicationService"),
                 new Bounds(500, 500, 300, -1));
         LayoutGraph graph = new LayoutGraph(List.of(tech, app, wide, business), List.of());
 
@@ -97,9 +104,9 @@ class AutoLayoutTest {
     @Test
     @DisplayName("UI-004: контейнер переносится целиком, дети не перечислены; группа — в полосе своего содержимого")
     void containersMoveWhole() {
-        var group = new LayoutGraph.Node(UUID.randomUUID(), Optional.empty(), Optional.empty(),
+        var group = new LayoutGraph.Node(IDS.generate(), Optional.empty(), Optional.empty(),
                 new Bounds(0, 0, 400, 140));
-        var inside = new LayoutGraph.Node(UUID.randomUUID(), Optional.of(group.id()), type("Node"),
+        var inside = new LayoutGraph.Node(IDS.generate(), Optional.of(group.id()), type("Node"),
                 new Bounds(10, 10, 120, 55));
         var business = node("BusinessProcess", 0, 0);
         var app = node("ApplicationComponent", 0, 0);
@@ -117,7 +124,7 @@ class AutoLayoutTest {
             Optional<UUID> parent = i > 10 && random.nextInt(10) == 0
                     ? Optional.of(nodes.get(random.nextInt(i)).id()) : Optional.empty();
             int width = random.nextInt(5) == 0 ? -1 : 80 + random.nextInt(200);
-            nodes.add(new LayoutGraph.Node(new UUID(0, i), parent, type(TYPES[random.nextInt(TYPES.length)]),
+            nodes.add(new LayoutGraph.Node(fixedId(0, i), parent, type(TYPES[random.nextInt(TYPES.length)]),
                     new Bounds(random.nextInt(2000), random.nextInt(2000), width, 40 + random.nextInt(80))));
         }
         List<LayoutGraph.Edge> edges = new ArrayList<>();
@@ -125,7 +132,7 @@ class AutoLayoutTest {
             UUID source = nodes.get(random.nextInt(nodeCount)).id();
             UUID target = i > 0 && random.nextInt(20) == 0 ? edges.get(random.nextInt(i)).id()
                     : nodes.get(random.nextInt(nodeCount)).id();
-            edges.add(new LayoutGraph.Edge(new UUID(1, i), source, target));
+            edges.add(new LayoutGraph.Edge(fixedId(1, i), source, target));
         }
         return new LayoutGraph(nodes, edges);
     }
@@ -152,14 +159,19 @@ class AutoLayoutTest {
     }
 
     private static LayoutGraph.Node node(String type, int x, int y) {
-        return new LayoutGraph.Node(UUID.randomUUID(), Optional.empty(), type(type), new Bounds(x, y, 120, 55));
+        return new LayoutGraph.Node(IDS.generate(), Optional.empty(), type(type), new Bounds(x, y, 120, 55));
     }
 
     private static LayoutGraph.Edge edge(LayoutGraph.Node source, LayoutGraph.Node target) {
-        return new LayoutGraph.Edge(UUID.randomUUID(), source.id(), target.id());
+        return new LayoutGraph.Edge(IDS.generate(), source.id(), target.id());
     }
 
     private static Optional<ArchiType> type(String simpleName) {
         return Optional.of(ArchiType.ofSimpleName(simpleName));
+    }
+
+    /** Детерминированный идентификатор: случайный граф воспроизводится от прогона к прогону. */
+    private static UUID fixedId(long high, long low) {
+        return UUIDUtil.constructUUID(UUIDType.TIME_BASED_EPOCH, high, low);
     }
 }

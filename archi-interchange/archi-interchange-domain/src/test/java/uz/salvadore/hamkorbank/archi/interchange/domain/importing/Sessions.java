@@ -1,12 +1,12 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.importing;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
-import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
@@ -19,7 +19,7 @@ final class Sessions {
 
     static final Instant NOW = Instant.parse("2026-10-08T09:00:00Z");
     static final UuidV7 UUIDS = new UuidV7(Clock.fixed(NOW, ZoneOffset.UTC));
-    static final WorkspaceId WORKSPACE = new WorkspaceId(UUID.fromString("0192f000-0000-7000-8000-000000000001"));
+    static final WorkspaceId WORKSPACE = new WorkspaceId(UUIDUtil.uuid("0192f000-0000-7000-8000-000000000001"));
 
     static final String VALID = """
             <?xml version="1.0" encoding="UTF-8"?>

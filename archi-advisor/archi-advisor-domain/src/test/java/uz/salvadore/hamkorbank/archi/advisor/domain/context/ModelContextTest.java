@@ -4,11 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorFunction;
 
 class ModelContextTest {
 
-    private static final ViewId VIEW = ViewId.of(UUID.fromString("00000000-0000-7000-8000-000000000001"));
+    private static final ViewId VIEW = ViewId.of(UUIDUtil.uuid("00000000-0000-7000-8000-000000000001"));
 
     /** Цепочка бизнес → приложения → технологии, по десять элементов в слое. */
     private static ModelGraph layeredGraph() {

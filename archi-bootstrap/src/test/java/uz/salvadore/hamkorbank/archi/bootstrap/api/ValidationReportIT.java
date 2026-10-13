@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,6 @@ class ValidationReportIT extends ApiTest {
     }
 
     private static UUID id(org.springframework.test.web.servlet.MvcResult result, String path) throws Exception {
-        return UUID.fromString(read(result, path));
+        return UUIDUtil.uuid(ApiTest.<String>read(result, path));
     }
 }

@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.identity;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -15,7 +16,7 @@ public record ModelId(UUID value) {
     }
 
     public static ModelId of(String value) {
-        return new ModelId(UUID.fromString(value));
+        return new ModelId(UUIDUtil.uuid(value));
     }
 
     @Override

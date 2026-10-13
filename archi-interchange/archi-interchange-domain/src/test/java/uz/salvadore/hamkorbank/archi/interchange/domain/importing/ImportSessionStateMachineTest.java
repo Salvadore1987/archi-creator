@@ -6,16 +6,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uz.salvadore.hamkorbank.archi.interchange.domain.importing.Sessions.NOW;
 import static uz.salvadore.hamkorbank.archi.interchange.domain.importing.Sessions.VALID;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 
 class ImportSessionStateMachineTest {
 
-    private static final ModelId MODEL = new ModelId(UUID.fromString("0192f000-0000-7000-8000-0000000000aa"));
+    private static final ModelId MODEL = new ModelId(UUIDUtil.uuid("0192f000-0000-7000-8000-0000000000aa"));
 
     @Test
     @DisplayName("INV-IXC-002: применить можно только из VALIDATED")

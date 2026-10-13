@@ -1,5 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.service;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
@@ -57,6 +59,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
  */
 final class InMemoryPorts {
 
+    /** Идентификаторы тестовых объектов — версии 7, из той же библиотеки, что у приложения. */
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
+
     static final Instant NOW = Instant.parse("2026-10-08T10:00:00Z");
 
     final MutableClock clock = new MutableClock(NOW);
@@ -67,7 +72,7 @@ final class InMemoryPorts {
     final Map<ModelId, ModelAccessList> acl = new HashMap<>();
     final Map<String, IdempotencyRecord> keys = new HashMap<>();
     final List<DomainEvent> published = new ArrayList<>();
-    final Workspace workspace = new Workspace(WorkspaceId.of(UUID.randomUUID()), "Банк", NOW);
+    final Workspace workspace = new Workspace(WorkspaceId.of(IDS.generate()), "Банк", NOW);
 
     final UnitOfWork unitOfWork = new UnitOfWork() {
         @Override

@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.Objects;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
@@ -16,7 +17,7 @@ public record RelationshipId(UUID value) implements ConceptRef {
     }
 
     public static RelationshipId of(String value) {
-        return new RelationshipId(UUID.fromString(value));
+        return new RelationshipId(UUIDUtil.uuid(value));
     }
 
     public static RelationshipId next(UuidV7 uuids) {

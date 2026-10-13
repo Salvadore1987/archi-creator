@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.identity;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -15,7 +16,7 @@ public record ViewId(UUID value) {
     }
 
     public static ViewId of(String value) {
-        return new ViewId(UUID.fromString(value));
+        return new ViewId(UUIDUtil.uuid(value));
     }
 
     @Override

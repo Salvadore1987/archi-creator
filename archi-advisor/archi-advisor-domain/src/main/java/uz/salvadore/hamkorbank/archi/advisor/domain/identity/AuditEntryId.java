@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.identity;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.Objects;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.UuidV7;
@@ -16,7 +17,7 @@ public record AuditEntryId(UUID value) {
     }
 
     public static AuditEntryId of(String value) {
-        return new AuditEntryId(UUID.fromString(value));
+        return new AuditEntryId(UUIDUtil.uuid(value));
     }
 
     public static AuditEntryId next(UuidV7 uuids) {

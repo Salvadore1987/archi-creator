@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.identity;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -15,7 +16,7 @@ public record WorkspaceId(UUID value) {
     }
 
     public static WorkspaceId of(String value) {
-        return new WorkspaceId(UUID.fromString(value));
+        return new WorkspaceId(UUIDUtil.uuid(value));
     }
 
     @Override

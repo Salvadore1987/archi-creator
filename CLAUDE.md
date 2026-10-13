@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 и fat jar. Код есть во всех трёх контекстах во всех четырёх слоях.
 
 ```
-archi-<bc>/archi-<bc>-domain              зависимостей нет, кроме junit (test)
+archi-<bc>/archi-<bc>-domain              только java-uuid-generator (+ junit в test)
 archi-<bc>/archi-<bc>-application         -> domain (interchange — ещё и modeling-application)
 archi-<bc>/archi-<bc>-adapter-rest        -> application + Spring Web
 archi-<bc>/archi-<bc>-adapter-persistence -> application + Spring Data JPA
@@ -283,6 +283,29 @@ jar'а в репозитории нет.
 из [§10.1](docs/archi-creator.md#101-состав): `ARCHI_APP_PORT` (8080),
 `ARCHI_DB_PORT` (5432), `ARCHI_KEYCLOAK_PORT` (8081). Занят соседним проектом —
 меняется `.env`, а не состав.
+
+## Идентификаторы: UUID только через java-uuid-generator
+
+**UUID создаются и разбираются только библиотекой `com.fasterxml.uuid:java-uuid-generator`**
+([`ADR-0020`](spec/adr/0020-uuid-generator.md)). Тип значения — по-прежнему
+`java.util.UUID`: библиотека выдаёт его же, менять сигнатуры, записи и сущности не нужно.
+
+- **Новый идентификатор** — версия 7. В коде контекстов — `UuidV7` своего домена
+  (`ElementId.next(uuids)` и т. п.): он отдаёт библиотеке часы приложения, поэтому
+  время фиксируется в тестах через `Clock`. Вне контекстов и в тестах —
+  `Generators.timeBasedEpochGenerator()`; в тестовом классе — поле
+  `IDS = Generators.timeBasedEpochGenerator()`.
+- **Строка в UUID** — `UUIDUtil.uuid(value)`, а не `UUID.fromString`.
+- **Детерминированный UUID в тесте** — `UUIDUtil.constructUUID(UUIDType.TIME_BASED_EPOCH, hi, lo)`.
+- **Запрещены** везде, тесты включительно: `UUID.randomUUID()`, `UUID.nameUUIDFromBytes(…)`,
+  `UUID.fromString(…)`, `new UUID(long, long)`. Случайная версия 4 рядом с версией 7
+  размывает «ключи монотонны», а своя сборка битов — место для ошибки в версии и варианте.
+- Версия библиотеки — в `dependencyManagement` родителя, `slf4j-api` из неё исключён:
+  доменным модулям логгер не нужен, а генератор версии 7 и разбор его не трогают.
+
+Проверяет `UuidRulesTest` (`archi-bootstrap`, пакет `architecture`): ArchUnit по байткоду
+основного кода и сканирование исходников всех модулей. Фронтенда правило не касается —
+у браузера свой генератор версии 7 (`frontend/src/model/ids.ts`).
 
 ## Комментарии в коде
 

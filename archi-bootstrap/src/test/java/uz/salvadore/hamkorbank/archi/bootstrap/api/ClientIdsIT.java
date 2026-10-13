@@ -6,6 +6,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,11 +18,14 @@ import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 /** Идентификаторы новых объектов от клиента и ребро существующей связи — через REST и базу. */
 class ClientIdsIT extends ApiTest {
 
+    /** Идентификаторы тестовых объектов — версии 7, из той же библиотеки, что у приложения. */
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
+
     @Test
     @DisplayName("ADR-0018: id и archiId от клиента сохраняются; занятые — 409 MDL_ID_TAKEN, кривой archiId — 422")
     void clientIdsOnCreate() throws Exception {
         UUID model = lockedModel(architect(), "Клиентские id");
-        UUID elementId = UUID.randomUUID();
+        UUID elementId = IDS.generate();
         String body = "{\"archiType\":\"archimate:ApplicationComponent\",\"name\":\"АБС\",\"id\":\"" + elementId
                 + "\",\"archiId\":\"id-client-abs\"}";
 
@@ -45,8 +51,9 @@ class ClientIdsIT extends ApiTest {
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("MDL_INVALID_INPUT"));
 
-        UUID folderId = UUID.randomUUID();
-        UUID root = UUID.fromString(column("select id::text from model_folder where model_id = ? and folder_type = 'RELATIONS'",
+        UUID folderId = IDS.generate();
+        UUID root = UUIDUtil.uuid(column(
+                "select id::text from model_folder where model_id = ? and folder_type = 'RELATIONS'",
                 String.class, model).getFirst());
         mvc.perform(post("/api/v1/models/" + model + "/folders").with(architect())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -63,13 +70,13 @@ class ClientIdsIT extends ApiTest {
         UUID model = lockedModel(architect(), "Рёбра");
         UUID component = element(architect(), model, "ApplicationComponent", "АБС");
         UUID data = element(architect(), model, "DataObject", "Счёт");
-        UUID relations = UUID.fromString(column(
+        UUID relations = UUIDUtil.uuid(column(
                 "select id::text from model_folder where model_id = ? and folder_type = 'RELATIONS'", String.class, model)
                 .getFirst());
         UUID view = id(mvc.perform(post("/api/v1/models/" + model + "/views").with(architect())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Контекст\"}"))
                 .andExpect(status().isCreated()).andReturn());
-        UUID cNode = UUID.randomUUID();
+        UUID cNode = IDS.generate();
         mvc.perform(post("/api/v1/views/" + view + "/nodes").with(architect())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"elementId\":\"" + component + "\",\"x\":10,\"y\":10,\"id\":\"" + cNode
@@ -83,13 +90,13 @@ class ClientIdsIT extends ApiTest {
                 .andExpect(status().isCreated()).andReturn());
         mvc.perform(post("/api/v1/views/" + view + "/nodes").with(architect())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"elementId\":\"" + data + "\",\"x\":0,\"y\":0,\"id\":\"" + UUID.randomUUID()
+                        .content("{\"elementId\":\"" + data + "\",\"x\":0,\"y\":0,\"id\":\"" + IDS.generate()
                                 + "\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(dNode.toString()));
 
-        UUID relationship = UUID.randomUUID();
-        UUID firstEdge = UUID.randomUUID();
+        UUID relationship = IDS.generate();
+        UUID firstEdge = IDS.generate();
         mvc.perform(post("/api/v1/models/" + model + "/relationships").with(architect())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"archiType\":\"archimate:AccessRelationship\",\"sourceId\":\"" + component

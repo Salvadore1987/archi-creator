@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -32,8 +33,8 @@ class ArchiIdGeneratorTest {
     @Test
     @DisplayName("INV-MDL-001: занятый в модели идентификатор пропускается")
     void takenIdIsSkipped() {
-        UUID first = UUID.fromString("00000000-0000-4000-8000-000000000001");
-        UUID second = UUID.fromString("00000000-0000-4000-8000-000000000002");
+        UUID first = UUIDUtil.uuid("00000000-0000-4000-8000-000000000001");
+        UUID second = UUIDUtil.uuid("00000000-0000-4000-8000-000000000002");
         Iterator<UUID> uuids = List.of(first, second).iterator();
         ArchiIdGenerator generator = new ArchiIdGenerator(uuids::next);
 
