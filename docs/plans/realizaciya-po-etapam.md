@@ -1231,11 +1231,16 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 6.2 Хранение (`archi-bootstrap`, Flyway)
 
-- ⬜ `V5__phase_two_supported.sql`: `supported = true` у элементов 14 типов фазы 2
-- ⬜ `PhaseTwoUpgradeIT`: схема до `V4`, opaque-строка Capability, миграция — строка
-      поддержана, остаток на месте; `PhaseTwoEditingIT`: импорт
-      `capability_and_location.archimate`, правка и создание Capability, связь
-      Capability ← ApplicationComponent по матрице, выгрузка с правкой, остальное без потерь
+- ✅ `V5__phase_two_supported.sql`: `supported = true` у элементов 14 типов фазы 2.
+      Остаток не трогается: импорт пишет его одинаково для поддержанного и opaque-элемента
+- ✅ `PhaseTwoIT` (одним классом вместо двух): Capability переименовывается — выгрузка
+      эквивалентна исходному файлу с новым именем; новая Capability создаётся, связь
+      ApplicationComponent → Capability по матрице проходит, обратное назначение — `422`;
+      `WorkPackage` и `Location` — `MDL_TYPE_NOT_EDITABLE`; миграция на строках «как до
+      этапа 6» поднимает флаг фазе 2, не трогает фазу 3 и остаток, после неё Capability правится.
+      Миграция в тесте исполняется текстом файла на импортированной модели, а не прогоном
+      Flyway с `target=4`: состояние «до» воспроизводится одним `update`, а строки
+      модели целиком руками собирать не нужно
 
 ### 6.3 Нотация (`shapes.json`, `icons.svg`, канва и `SvgWriter`)
 
