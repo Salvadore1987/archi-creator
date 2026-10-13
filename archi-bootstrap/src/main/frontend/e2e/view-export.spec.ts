@@ -38,7 +38,7 @@ test.describe('FR-41, FR-43: экспорт из меню «Экспорт»', (
     const request = page.waitForRequest((r) => r.url().includes(`/api/v1/models/${api.modelId}/export?fmt=oef`));
     await page.getByRole('menuitem', { name: 'Модель — Open Exchange (OEF), архив' }).click();
     await request;
-    expect((await zip).suggestedFilename()).toBe('model-v1-oef.zip');
+    expect((await zip).suggestedFilename()).toBe('model-v1.oef.zip');
     await expect(page.getByText('Не перенеслось в OEF: 9')).toBeVisible();
   });
 

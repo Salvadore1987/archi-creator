@@ -41,8 +41,9 @@ class OefExportIT extends ApiTest {
                 .andReturn().getResponse();
         Map<String, byte[]> files = unzip(response.getContentAsByteArray());
 
-        assertThat(files.keySet()).containsExactly("Неизвестные узлы и атрибуты-v1.xml", "loss-report.json");
-        byte[] xml = files.get("Неизвестные узлы и атрибуты-v1.xml");
+        assertThat(files.keySet()).containsExactly("neizvestnye-uzly-i-atributy-v1.xml", "loss-report.json");
+        assertThat(response.getHeader("Content-Disposition")).contains("-v1.oef.zip");
+        byte[] xml = files.get("neizvestnye-uzly-i-atributy-v1.xml");
         assertThat(SCHEMA.violation(xml)).isEmpty();
         assertThat(new String(xml, StandardCharsets.UTF_8))
                 .contains("xsi:type=\"ApplicationComponent\"", "<name xml:lang=\"ru\">АБС</name>")

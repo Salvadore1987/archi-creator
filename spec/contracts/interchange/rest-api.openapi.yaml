@@ -104,7 +104,7 @@ paths:
               schema: { type: string, format: binary }
               description: |
                 csv: elements.csv и relations.csv, UTF-8 с BOM.
-                oef: `<модель>-v<N>.xml`, проверенный по XSD 3.1, и `loss-report.json`;
+                oef: `<слаг модели>-v<N>.xml` (слаг в латинице), проверенный по XSD 3.1, и `loss-report.json`;
                 число записей отчёта — в `X-Archi-Loss-Count`.
         '404':
           description: Модели нет или она скрыта списком доступа (INV-MDL-011).

@@ -111,7 +111,7 @@ export class MockApi {
           status: 200,
           contentType: 'application/zip',
           headers: {
-            'Content-Disposition': `attachment; filename="model-v${this.versionNo}-oef.zip"`,
+            'Content-Disposition': `attachment; filename="model-v${this.versionNo}.oef.zip"`,
             'X-Archi-Loss-Count': '9',
           },
           body: 'PK',

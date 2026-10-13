@@ -32,6 +32,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportComplete
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportFormat;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportJob;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportOptions;
+import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.FileSlug;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossEntry;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossReport;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ExportJobId;
@@ -149,6 +150,8 @@ public final class ExportService {
 
     /**
      * Open Exchange Format из той же версии: zip из файла и {@code loss-report.json}.
+     * Имя файла в архиве — слаг в латинице: распаковщики, не читающие флаг UTF-8 в zip
+     * (системный {@code unzip} macOS, старый Проводник), не создают файл с кириллицей.
      * Результат проверяется по официальной схеме до отдачи; не прошёл — файл не отдаётся,
      * выгрузка — сбой, а клиент получает {@code IXC_OEF_SCHEMA_VIOLATION} как ошибку сервера.
      */
@@ -168,10 +171,10 @@ public final class ExportService {
                         Message.of(InterchangeMessages.OEF_SCHEMA_VIOLATION), violation.get());
             }
             List<LossEntry> entries = written.losses().stream().map(this::entry).toList();
-            String base = safeFileName(snapshot.model().name(), "model") + "-v" + snapshot.versionNo();
-            byte[] zip = zip(base + ".xml", written.xml(), LossReportJson.report(ExportFormat.OPEN_EXCHANGE.name(),
+            String inner = FileSlug.slug(snapshot.model().name()) + "-v" + snapshot.versionNo() + ".xml";
+            byte[] zip = zip(inner, written.xml(), LossReportJson.report(ExportFormat.OPEN_EXCHANGE.name(),
                     snapshot.versionNo(), entries).getBytes(StandardCharsets.UTF_8));
-            return deliver(job, snapshot, Artifact.of(zip, "application/zip", base + "-oef.zip"),
+            return deliver(job, snapshot, Artifact.of(zip, "application/zip", fileName(snapshot, "oef.zip")),
                     new LossReport(entries, true));
         });
     }
