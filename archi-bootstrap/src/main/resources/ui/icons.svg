@@ -88,6 +88,66 @@
     <path d="M2.5 1.5 H9.5 L13.5 5.5 V14.5 H2.5 Z M9.5 1.5 V5.5 H13.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
   </symbol>
 
+  <!-- Мотивация -->
+  <symbol id="i-stakeholder" viewBox="0 0 16 16">
+    <path d="M11.5 4.2 H4.5 A2 3.8 0 0 0 4.5 11.8 H11.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+    <ellipse cx="11.5" cy="8" rx="2" ry="3.8" fill="none" stroke="currentColor" stroke-width="1.3"/>
+  </symbol>
+  <symbol id="i-driver" viewBox="0 0 16 16">
+    <path d="M8 1.2 V14.8 M1.2 8 H14.8 M3.2 3.2 L12.8 12.8 M12.8 3.2 L3.2 12.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+    <circle cx="8" cy="8" r="4.6" fill="var(--icon-cutout, white)" stroke="currentColor" stroke-width="1.3"/>
+    <circle cx="8" cy="8" r="1.4" fill="currentColor"/>
+  </symbol>
+  <symbol id="i-assessment" viewBox="0 0 16 16">
+    <circle cx="6.5" cy="6.5" r="4.6" fill="none" stroke="currentColor" stroke-width="1.3"/>
+    <path d="M9.9 9.9 L14.3 14.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="i-goal" viewBox="0 0 16 16">
+    <circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.3"/>
+    <circle cx="8" cy="8" r="3.7" fill="none" stroke="currentColor" stroke-width="1.3"/>
+    <circle cx="8" cy="8" r="1.3" fill="currentColor"/>
+  </symbol>
+  <symbol id="i-outcome" viewBox="0 0 16 16">
+    <circle cx="7" cy="9" r="5.6" fill="none" stroke="currentColor" stroke-width="1.3"/>
+    <circle cx="7" cy="9" r="3" fill="none" stroke="currentColor" stroke-width="1.3"/>
+    <circle cx="7" cy="9" r="1.1" fill="currentColor"/>
+    <path d="M14.5 1.5 L7.6 8.4 M10.4 8.4 H7.6 V5.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-principle" viewBox="0 0 16 16">
+    <rect x="2.5" y="1.5" width="11" height="13" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/>
+    <path d="M8 4.4 V9.2 M8 11.6 v.1" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="i-requirement" viewBox="0 0 16 16">
+    <path d="M4.6 3.5 H14.5 L11.4 12.5 H1.5 Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-constraint" viewBox="0 0 16 16">
+    <path d="M4.6 3.5 H14.5 L11.4 12.5 H1.5 Z M7.6 3.5 L4.5 12.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-meaning" viewBox="0 0 16 16">
+    <path d="M4.6 12.4 A2.9 2.9 0 0 1 3.4 6.8 A3.1 3.1 0 0 1 8.3 4.3 A3.1 3.1 0 0 1 13.1 6.8 A2.8 2.8 0 0 1 11.8 12.4 Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-value" viewBox="0 0 16 16">
+    <ellipse cx="8" cy="8" rx="6.5" ry="4.2" fill="none" stroke="currentColor" stroke-width="1.3"/>
+  </symbol>
+
+  <!-- Стратегия -->
+  <symbol id="i-resource" viewBox="0 0 16 16">
+    <rect x="1.5" y="4.5" width="11.5" height="7" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.3"/>
+    <path d="M13 6.7 H14.5 V9.3 H13 M4.4 6.8 V9.2 M6.9 6.8 V9.2 M9.4 6.8 V9.2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-capability" viewBox="0 0 16 16">
+    <path d="M1.5 14.5 V10.2 H5.8 V5.9 H10.1 V1.5 H14.5 V14.5 Z M5.8 10.2 H14.5 M10.1 5.9 H14.5 M5.8 10.2 V14.5 M10.1 5.9 V14.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-value-stream" viewBox="0 0 16 16">
+    <path d="M1.5 4 H11 L14.5 8 L11 12 H1.5 L5 8 Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-course-of-action" viewBox="0 0 16 16">
+    <circle cx="10.3" cy="5.7" r="4.2" fill="none" stroke="currentColor" stroke-width="1.3"/>
+    <circle cx="10.3" cy="5.7" r="1.5" fill="currentColor"/>
+    <path d="M1.5 14.5 C1.9 11.2 3.8 9.4 7.2 8.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="1.8 1.4"/>
+    <path d="M5 7.6 L7.2 8.8 L5.8 10.9" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+
   <!-- Прочее -->
   <symbol id="i-location" viewBox="0 0 16 16">
     <path d="M8 14.2 C8 14.2 3 9.3 3 6.4 A5 5 0 0 1 13 6.4 C13 9.3 8 14.2 8 14.2 Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>

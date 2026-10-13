@@ -428,7 +428,7 @@ RFC 7807 Problem Details:
 | Фикстура | Что проверяет |
 |----------|---------------|
 | `hamkorbank_as_is.archimate` | Реальная модель: ~400 элементов, 12 представлений, вложенные группы, свойства, кириллица |
-| `capability_and_location.archimate` | Элементы вне фазы 1 (`Capability`, `Location`) проходят импорт → экспорт без потерь |
+| `capability_and_location.archimate` | Элементы фазы 2 (`Capability`, `Goal`) и вне поддержанных фаз (`WorkPackage`, `Location`) проходят импорт → экспорт без потерь; с этапа 6 Capability ещё и правится |
 | `nested_containment.archimate` | Вложенность `Group` → `DiagramObject` и относительные координаты |
 | `all_relationship_types.archimate` | Все 11 типов связей, включая `Junction` |
 | `styled_objects.archimate` | Собственные `fillColor`, `font`, `lineColor` объектов |

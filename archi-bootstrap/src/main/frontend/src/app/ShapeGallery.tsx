@@ -6,13 +6,15 @@ const LAYER_OF: Array<[RegExp, string]> = [
   [/Business|Contract|Representation|Product/, 'BUSINESS'],
   [/Application|DataObject/, 'APPLICATION'],
   [/Technology|Node|Device|SystemSoftware|Path|CommunicationNetwork|Artifact/, 'TECHNOLOGY'],
+  [/Resource|Capability|ValueStream|CourseOfAction/, 'STRATEGY'],
+  [/Stakeholder|Driver|Assessment|Goal|Outcome|Principle|Requirement|Constraint|Meaning|Value/, 'MOTIVATION'],
 ];
 
-/** Типы вне фазы 1 — рисуются заглушкой. */
+/** Типы фазы 3 — рисуются заглушкой. */
 const STUBS: Array<[string, string]> = [
-  ['archimate:Capability', 'STRATEGY'],
-  ['archimate:Goal', 'MOTIVATION'],
+  ['archimate:Equipment', 'PHYSICAL'],
   ['archimate:WorkPackage', 'IMPLEMENTATION'],
+  ['archimate:Plateau', 'IMPLEMENTATION'],
 ];
 
 /** Образец собственного стиля объекта из файла Archi: заливка и шрифт сильнее токена слоя. */

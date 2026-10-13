@@ -98,8 +98,8 @@ final class RenderingFixtures {
               <folder name="Technology" id="id-ft" type="technology">
                 <element xsi:type="archimate:Node" name="Сервер" id="id-srv"/>
               </folder>
-              <folder name="Motivation" id="id-fm" type="motivation">
-                <element xsi:type="archimate:Goal" name="Цель" id="id-goal"/>
+              <folder name="Implementation &amp; Migration" id="id-fm" type="implementation_migration">
+                <element xsi:type="archimate:WorkPackage" name="Цель" id="id-goal"/>
               </folder>
               <folder name="Relations" id="id-fr" type="relations">
                 <element xsi:type="archimate:CompositionRelationship" name="состоит" id="id-r1" source="id-abs" target="id-gw"/>

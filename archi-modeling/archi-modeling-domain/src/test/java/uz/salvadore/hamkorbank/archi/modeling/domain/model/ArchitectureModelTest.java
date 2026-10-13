@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
 
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -58,15 +59,35 @@ class ArchitectureModelTest {
     }
 
     @Test
-    @DisplayName("FR-07: тип фазы 2 создать нельзя — он opaque до своей фазы")
-    void phaseTwoTypeIsNotCreatable() {
+    @DisplayName("FR-08: тип фазы 3 создать нельзя — он opaque до своей фазы")
+    void phaseThreeTypeIsNotCreatable() {
         ArchitectureModel model = Models.empty();
 
-        ModelingException phase2 = assertThrows(ModelingException.class,
-                () -> Models.element(model, "Capability", FolderType.STRATEGY, "Платежи"));
+        ModelingException phase3 = assertThrows(ModelingException.class,
+                () -> Models.element(model, "WorkPackage", FolderType.IMPLEMENTATION_MIGRATION, "Внедрение СМП"));
 
-        assertEquals(ModelingCodes.TYPE_NOT_EDITABLE, phase2.code());
-        assertEquals(Failure.UNPROCESSABLE, phase2.failure());
+        assertEquals(ModelingCodes.TYPE_NOT_EDITABLE, phase3.code());
+        assertEquals(Failure.UNPROCESSABLE, phase3.failure());
+    }
+
+    @Test
+    @DisplayName("FR-08: Capability создаётся в папке Strategy, правится и связывается по матрице")
+    void capabilityIsEditable() {
+        ArchitectureModel model = Models.empty();
+        Element capability = Models.element(model, "Capability", FolderType.STRATEGY, "Платежи");
+        Element goal = Models.element(model, "Goal", FolderType.MOTIVATION, "Платёж за 10 секунд");
+        Element component = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
+
+        Element renamed = model.updateElement(capability.id(), "Мгновенные платежи", Optional.of("Уровень 1"),
+                List.of(), NOW);
+        Relationship realizes = Models.relate(model, "RealizationRelationship", component.id(), capability.id());
+        Models.relate(model, "RealizationRelationship", capability.id(), goal.id());
+
+        assertTrue(capability.supported());
+        assertEquals("Мгновенные платежи", renamed.name());
+        assertEquals(capability.id(), realizes.target());
+        assertThrows(RelationNotPermittedException.class,
+                () -> Models.relate(model, "AssignmentRelationship", capability.id(), component.id()));
     }
 
     @Test

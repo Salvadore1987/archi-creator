@@ -5,7 +5,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.Size;
 
 /**
- * Контуры шести примитивов {@code shapes.json} — те же пути, что рисует канва.
+ * Контуры семи примитивов {@code shapes.json} — те же пути, что рисует канва.
  * Контур отступает внутрь на половину толщины обводки, иначе край обрезается.
  */
 final class Outlines {
@@ -14,6 +14,7 @@ final class Outlines {
     private static final double TAB_HEIGHT = 18;
     private static final double TAB_MAX_WIDTH = 120;
     private static final double DOG_EAR = 12;
+    private static final double BEVEL = 8;
     private static final double INSET = 0.5;
 
     private Outlines() {
@@ -44,6 +45,12 @@ final class Outlines {
             case "dog-ear" -> "M" + n(x0) + " " + n(y0) + " H" + n(x1 - DOG_EAR) + " L" + n(x1) + " " + n(y0 + DOG_EAR)
                     + " V" + n(y1) + " H" + n(x0) + " Z M" + n(x1 - DOG_EAR) + " " + n(y0) + " V" + n(y0 + DOG_EAR)
                     + " H" + n(x1);
+            case "bevel" -> {
+                double c = Math.min(BEVEL, Math.min(w / 2, h / 2));
+                yield "M" + n(x0 + c) + " " + n(y0) + " H" + n(x1 - c) + " L" + n(x1) + " " + n(y0 + c) + " V" + n(y1 - c)
+                        + " L" + n(x1 - c) + " " + n(y1) + " H" + n(x0 + c) + " L" + n(x0) + " " + n(y1 - c)
+                        + " V" + n(y0 + c) + " Z";
+            }
             default -> roundedRect(x0, y0, w, h, radius);
         };
     }

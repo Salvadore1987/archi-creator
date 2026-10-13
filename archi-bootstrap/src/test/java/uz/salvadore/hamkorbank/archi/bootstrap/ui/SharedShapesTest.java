@@ -14,8 +14,8 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
+import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ConceptDefinition;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ConceptKind;
-import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.MetamodelPhase;
 
 /**
  * Геометрия фигур и спрайт иконок, общие для канвы и серверного писателя SVG,
@@ -26,11 +26,11 @@ class SharedShapesTest {
     private static final Pattern SYMBOL = Pattern.compile("<symbol id=\"([^\"]+)\"");
 
     @Test
-    @DisplayName("UI-019: у каждого типа фазы 1 есть запись в shapes.json")
-    void everyPhaseOneElementHasShape() throws IOException {
+    @DisplayName("UI-019, FR-08: у каждого поддержанного типа — фаз 1 и 2 — есть запись в shapes.json")
+    void everySupportedElementHasShape() throws IOException {
         JsonNode shapes = read("ui/shapes.json").get("shapes");
         List<String> missing = ArchiTypeRegistry.archimate32().concepts(ConceptKind.ELEMENT).stream()
-                .filter(c -> c.phase().filter(p -> p == MetamodelPhase.PHASE_1).isPresent())
+                .filter(ConceptDefinition::supported)
                 .map(c -> c.type().toString())
                 .filter(type -> !shapes.has(type))
                 .toList();

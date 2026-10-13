@@ -42,14 +42,31 @@ describe('UI-019: фигуры по общей геометрии', () => {
 });
 
 describe('UI-020: тип без записи — заглушка, а не пропуск', () => {
-  it('фаза 2 рисуется пунктирным силуэтом заглушки', () => {
-    expect(hasOwnShape('archimate:Goal')).toBe(false);
-    expect(shapeOf('archimate:Goal').outline).toBe('stub');
-    expect(shapeOf('archimate:Goal').dash).toBeTruthy();
+  it('фаза 3 рисуется пунктирным силуэтом заглушки', () => {
+    expect(hasOwnShape('archimate:WorkPackage')).toBe(false);
+    expect(shapeOf('archimate:WorkPackage').outline).toBe('stub');
+    expect(shapeOf('archimate:WorkPackage').dash).toBeTruthy();
   });
 
   it('цвет заглушки — слой самого элемента', () => {
-    expect(paintOf(shapeOf('archimate:Goal'), 'MOTIVATION').fill).toBe('var(--layer-motivation)');
+    expect(paintOf(shapeOf('archimate:Equipment'), 'PHYSICAL').fill).toBe('var(--layer-technology)');
+  });
+});
+
+describe('FR-08: фаза 2 рисуется своими силуэтами', () => {
+  it('мотивация — прямоугольник со срезанными углами, тот же путь, что у сервера (OutlinesTest)', () => {
+    const goal = shapeOf('archimate:Goal');
+    expect(goal.outline).toBe('bevel');
+    expect(outlinePath(goal, { width: 120, height: 55 })).toBe(
+      'M8.5 0.5 H111.5 L119.5 8.5 V46.5 L111.5 54.5 H8.5 L0.5 46.5 V8.5 Z',
+    );
+    expect(paintOf(goal, 'MOTIVATION').fill).toBe('var(--layer-motivation)');
+  });
+
+  it('способность — поведение, скруглена сильнее ресурса', () => {
+    expect(radiusOf(shapeOf('archimate:Capability'))).toBeGreaterThan(radiusOf(shapeOf('archimate:Resource')));
+    expect(shapeOf('archimate:Capability').corner_icon?.sprite_id).toBe('i-capability');
+    expect(paintOf(shapeOf('archimate:Capability'), 'STRATEGY').fill).toBe('var(--layer-strategy)');
   });
 });
 

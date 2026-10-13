@@ -20,6 +20,6 @@ public record ConceptDefinition(ArchiType type, ConceptKind kind, Layer layer, O
 
     /** Редактируется ли тип в текущей фазе. Неподдержанный хранится как opaque. */
     public boolean supported() {
-        return phase.filter(p -> p == MetamodelPhase.PHASE_1).isPresent();
+        return phase.filter(MetamodelPhase::supported).isPresent();
     }
 }

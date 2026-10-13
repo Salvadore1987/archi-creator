@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
@@ -46,22 +47,34 @@ class ArchiTypeRegistryTest {
     }
 
     @Test
-    @DisplayName("FR-07: в фазе 1 редактируются ровно Business, Application и Technology")
-    void phaseOneCoversThreeLayers() {
+    @DisplayName("FR-07, FR-08: в фазах 1 и 2 редактируются Business, Application, Technology, Motivation и Strategy")
+    void phasesOneAndTwoCoverFiveLayers() {
         Set<Layer> supportedLayers = registry.concepts(ConceptKind.ELEMENT).stream()
                 .filter(ConceptDefinition::supported)
                 .map(ConceptDefinition::layer)
                 .collect(Collectors.toSet());
 
-        assertEquals(Set.of(Layer.BUSINESS, Layer.APPLICATION, Layer.TECHNOLOGY), supportedLayers);
+        assertEquals(Set.of(Layer.BUSINESS, Layer.APPLICATION, Layer.TECHNOLOGY, Layer.MOTIVATION, Layer.STRATEGY),
+                supportedLayers);
     }
 
     @Test
-    @DisplayName("FR-08: Capability и Location хранятся, но в фазе 1 не редактируются")
+    @DisplayName("FR-08: Capability и Goal редактируются — фаза 2 поддержана")
+    void phaseTwoElementsAreSupported() {
+        for (String type : List.of("Capability", "Resource", "ValueStream", "CourseOfAction", "Stakeholder",
+                "Driver", "Assessment", "Goal", "Outcome", "Principle", "Requirement", "Constraint", "Meaning",
+                "Value")) {
+            assertTrue(registry.isSupported(ArchiType.ofSimpleName(type)), type);
+        }
+    }
+
+    @Test
+    @DisplayName("FR-08: фаза 3, Location и Grouping хранятся, но не редактируются")
     void outOfPhaseElementsAreKnownButOpaque() {
-        assertTrue(registry.find(ArchiType.ofSimpleName("Capability")).isPresent());
-        assertFalse(registry.isSupported(ArchiType.ofSimpleName("Capability")));
-        assertFalse(registry.isSupported(ArchiType.ofSimpleName("Location")));
+        for (String type : List.of("WorkPackage", "Plateau", "Equipment", "Facility", "Location", "Grouping")) {
+            assertTrue(registry.find(ArchiType.ofSimpleName(type)).isPresent(), type);
+            assertFalse(registry.isSupported(ArchiType.ofSimpleName(type)), type);
+        }
     }
 
     @Test

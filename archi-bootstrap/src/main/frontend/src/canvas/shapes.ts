@@ -11,7 +11,7 @@ export interface ShapeEntry {
   dash?: string;
 }
 
-export type Primitive = 'rect' | 'stadium' | 'circle' | 'tab' | 'dog-ear' | 'stub';
+export type Primitive = 'rect' | 'stadium' | 'circle' | 'tab' | 'dog-ear' | 'bevel' | 'stub';
 
 interface ShapesFile {
   default_size: Size;
@@ -38,6 +38,7 @@ const SHAPES = shapesJson as unknown as ShapesFile;
 const TAB_HEIGHT = 18;
 const TAB_MAX_WIDTH = 120;
 const DOG_EAR = 12;
+const BEVEL = 8;
 
 /** Силуэт по xsi:type; тип без записи — заглушка с настоящим именем. */
 export function shapeOf(archiType: string): ShapeEntry {
@@ -100,6 +101,10 @@ export function outlinePath(entry: ShapeEntry, size: Size, inset = 0.5): string 
     }
     case 'dog-ear':
       return `M${x0} ${y0} H${x1 - DOG_EAR} L${x1} ${y0 + DOG_EAR} V${y1} H${x0} Z M${x1 - DOG_EAR} ${y0} V${y0 + DOG_EAR} H${x1}`;
+    case 'bevel': {
+      const c = Math.min(BEVEL, w / 2, h / 2);
+      return `M${x0 + c} ${y0} H${x1 - c} L${x1} ${y0 + c} V${y1 - c} L${x1 - c} ${y1} H${x0 + c} L${x0} ${y1 - c} V${y0 + c} Z`;
+    }
     case 'rect':
     case 'stub':
     default:

@@ -1,8 +1,8 @@
 ---
 version: 1.0
-last_modified: 2026-09-28
+last_modified: 2026-10-13
 layer: ui
-requirements: [FR-41, FR-42]
+requirements: [FR-08, FR-41, FR-42]
 anchors: [UI-019]
 ---
 
@@ -82,8 +82,9 @@ icon_sprite:
 
 completeness:
   rule: |
-    Для каждого ArchiType фазы 1 (Business, Application, Technology) запись
-    обязательна. Типы фаз 2 и 3 до их поддержки рисуются силуэтом заглушки
+    Для каждого ArchiType фаз 1 и 2 (Business, Application, Technology,
+    Motivation, Strategy) запись обязательна. Типы фазы 3 и типы вне фаз
+    (Location, Grouping) до их поддержки рисуются обводкой заглушки
     и остаются перемещаемыми, но семантически не редактируются (UI-020, FR-03).
 
 docs_ref: docs/backend.md#610-экспорт-представлений
