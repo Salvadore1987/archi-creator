@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,5 +23,17 @@ public final class Dtos {
     }
 
     public record ImportSettings(boolean strictImport) {
+    }
+
+    /** Субъект Keycloak и автор коммита от его имени. */
+    public record GitAuthorDto(String subject, String name, String email) {
+    }
+
+    /** Настройка привязки: ссылка на секрет, а не токен. */
+    public record GitBindingSettingsDto(String repoUrl, String branch, String tokenRef, List<GitAuthorDto> authors) {
+    }
+
+    public record GitBindingDto(String repoUrl, String branch, String tokenRef, String status, String lastCommitSha,
+                                Instant lastCheckedAt, List<GitAuthorDto> authors) {
     }
 }

@@ -1536,7 +1536,7 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 1. ✅ `spec`: ADR-0003 принят, `events.yaml`, `UC-IXC-003`, контракт и роли
 2. ✅ `feat(interchange)`: писатель и читатель YAML, позиции, эталон (7a.1)
-3. ⬜ `feat(git)`: `GitBinding`, V6, настройка привязки через API
+3. ✅ `feat(git)`: `GitBinding`, V6, настройка привязки через API (`GitBindingIT`)
 4. ⬜ `feat(git)`: outbox, публикация на JGit, `git_sha`, расхождение (7a.2)
 5. ⬜ `feat(modeling)`: ретеншен с Git и восстановление снимка (7a.3)
 6. ⬜ `test`: интеграционные `GitExportIT`, `GitRoundTripIT`, ретеншен (7a.4)

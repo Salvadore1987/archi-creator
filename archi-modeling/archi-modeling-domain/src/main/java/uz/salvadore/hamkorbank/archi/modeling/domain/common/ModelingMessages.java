@@ -72,6 +72,7 @@ public final class ModelingMessages {
     public static final String TITLE_FORBIDDEN = "modeling.problem.forbidden";
     public static final String TITLE_GONE = "modeling.problem.gone";
     public static final String TITLE_NOT_FOUND = "modeling.problem.not-found";
+    public static final String TITLE_UNAVAILABLE = "modeling.problem.unavailable";
     public static final String TITLE_UNPROCESSABLE = "modeling.problem.unprocessable";
     public static final String PROPERTY_KEY_TOO_LONG = "modeling.property.key-too-long";
     public static final String RELATION_NOT_PERMITTED = "modeling.relation.not-permitted";

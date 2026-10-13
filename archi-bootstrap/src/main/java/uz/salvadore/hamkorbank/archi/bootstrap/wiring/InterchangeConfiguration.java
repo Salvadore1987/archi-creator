@@ -9,8 +9,10 @@ import uz.salvadore.hamkorbank.archi.bootstrap.export.InterTypesetter;
 import uz.salvadore.hamkorbank.archi.bootstrap.export.SharedNotation;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ViewImageService;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingService;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.oef.OefSchema;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportPolicy;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportSessionRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeEvents;
@@ -51,6 +53,12 @@ public class InterchangeConfiguration {
     ExportService exportService(VersionService versions, InterchangeEvents events, InterchangeMetrics metrics,
                                 TextCatalog texts, Notation notation, OefSchema oefSchema, Clock clock) {
         return new ExportService(versions, events, metrics, texts, notation, oefSchema, clock);
+    }
+
+    @Bean
+    GitBindingService gitBindingService(GitBindingRepository bindings, UnitOfWork unitOfWork,
+                                        InterchangeMetrics metrics, Clock clock) {
+        return new GitBindingService(bindings, unitOfWork, metrics, clock);
     }
 
     /** Схема OEF компилируется один раз при старте: она неизменяема и потокобезопасна. */

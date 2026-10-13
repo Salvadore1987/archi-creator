@@ -265,8 +265,8 @@ paths:
             при первой публикации, а не здесь: настройка не ждёт сети.
           content:
             application/json: { schema: { $ref: '#/components/schemas/GitBinding' } }
-        '400':
-          description: Адрес, ветка или ссылка на секрет не того формата — `IXC_INVALID_REQUEST`.
+        '422':
+          description: Адрес, ветка, ссылка на секрет или автор не того формата — `IXC_INVALID_REQUEST`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '403':

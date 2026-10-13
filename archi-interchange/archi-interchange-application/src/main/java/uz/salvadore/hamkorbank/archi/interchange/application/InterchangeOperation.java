@@ -21,7 +21,9 @@ public enum InterchangeOperation {
     EXPORT_CATALOG_CSV("ExportCatalogCsv", Role.VIEWER, Role.ARCHITECT, Role.ADMIN),
     EXPORT_VIEW_IMAGE("ExportViewImage", Role.VIEWER, Role.ARCHITECT, Role.ADMIN),
     EXPORT_ALL_VIEW_IMAGES("ExportAllViewImages", Role.VIEWER, Role.ARCHITECT, Role.ADMIN),
-    CONFIGURE_IMPORT_POLICY("ConfigureImportPolicy", Role.ADMIN);
+    CONFIGURE_IMPORT_POLICY("ConfigureImportPolicy", Role.ADMIN),
+    PUSH_MODEL_TO_GIT("PushModelToGit", Role.ARCHITECT, Role.ADMIN),
+    CONFIGURE_GIT_BINDING("ConfigureGitBinding", Role.ADMIN);
 
     private final String useCase;
     private final Set<Role> roles;

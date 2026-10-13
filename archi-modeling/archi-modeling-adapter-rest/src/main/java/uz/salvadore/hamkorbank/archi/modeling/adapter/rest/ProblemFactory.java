@@ -30,6 +30,7 @@ public final class ProblemFactory {
             case UNPROCESSABLE -> HttpStatus.UNPROCESSABLE_CONTENT;
             case FORBIDDEN -> HttpStatus.FORBIDDEN;
             case GONE -> HttpStatus.GONE;
+            case UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
         };
     }
 
@@ -52,6 +53,7 @@ public final class ProblemFactory {
             case UNPROCESSABLE_CONTENT -> ModelingMessages.TITLE_UNPROCESSABLE;
             case FORBIDDEN -> ModelingMessages.TITLE_FORBIDDEN;
             case GONE -> ModelingMessages.TITLE_GONE;
+            case SERVICE_UNAVAILABLE -> ModelingMessages.TITLE_UNAVAILABLE;
             case BAD_REQUEST -> ModelingMessages.TITLE_BAD_REQUEST;
             default -> null;
         });
