@@ -179,17 +179,12 @@ public final class ViewImageService {
                     entry(zip, file, picture.bytes());
                     List<LossEntry> entries = entries(picture.losses());
                     all.addAll(entries);
-                    report.append(first ? "" : ",").append("{\"archiId\":").append(json(view.archiId().value()))
-                            .append(",\"name\":").append(json(view.attribute("name").orElse("")))
-                            .append(",\"file\":").append(json(file)).append(",\"entries\":[");
-                    for (int i = 0; i < entries.size(); i++) {
-                        LossEntry e = entries.get(i);
-                        report.append(i == 0 ? "" : ",").append("{\"archiId\":").append(json(e.archiId().value()))
-                                .append(",\"objectKind\":").append(json(e.objectKind()))
-                                .append(",\"lostAspect\":").append(json(e.lostAspect()))
-                                .append(",\"reason\":").append(json(e.reason())).append('}');
-                    }
-                    report.append("]}");
+                    report.append(first ? "" : ",").append("{\"archiId\":")
+                            .append(LossReportJson.string(view.archiId().value()))
+                            .append(",\"name\":").append(LossReportJson.string(view.attribute("name").orElse("")))
+                            .append(",\"file\":").append(LossReportJson.string(file)).append(",\"entries\":");
+                    LossReportJson.entries(report, entries);
+                    report.append('}');
                     first = false;
                 }
                 report.append("]}\n");
@@ -290,27 +285,5 @@ public final class ViewImageService {
         zip.putNextEntry(entry);
         zip.write(bytes);
         zip.closeEntry();
-    }
-
-    private static String json(String value) {
-        StringBuilder out = new StringBuilder("\"");
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            switch (c) {
-                case '"' -> out.append("\\\"");
-                case '\\' -> out.append("\\\\");
-                case '\n' -> out.append("\\n");
-                case '\r' -> out.append("\\r");
-                case '\t' -> out.append("\\t");
-                default -> {
-                    if (c < 0x20) {
-                        out.append(String.format(java.util.Locale.ROOT, "\\u%04x", (int) c));
-                    } else {
-                        out.append(c);
-                    }
-                }
-            }
-        }
-        return out.append('"').toString();
     }
 }

@@ -1367,11 +1367,21 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 6a.3 Сценарий и REST
 
-- ⬜ `ExportService.openExchange`: роль, снимок, писатель, проверка, `ExportJob`
-      с отчётом; `fmt=oef` больше не `IXC_FORMAT_NOT_AVAILABLE`
-- ⬜ Фикстуры `oef_export_*.xml`: валидность по XSD, ожидаемые объекты на месте,
-      отчёт содержит ожидаемые позиции
-- ⬜ `OefExportIT#lossReportListsRawFragments`
+- ✅ `ExportService.openExchange`: роль, снимок, писатель, проверка, `ExportJob`
+      с отчётом; `fmt=oef` больше не `IXC_FORMAT_NOT_AVAILABLE`. Схема и нотация —
+      бины, схема компилируется один раз при старте. `X-Archi-Loss-Count` теперь
+      у всех выгрузок модели (у `.archimate` — `0`): контроллер не ветвится по формату
+- ✅ Невалидный результат — `ExportDefectException` → `500 IXC_OEF_SCHEMA_VIOLATION`
+      в `InterchangeProblemHandler`; подробность нарушения — в журнал, клиенту — текст
+      по ключу, `ExportJob` — `FAILED`. `Failure` modeling не расширялся: дефект
+      сервера — не класс отказа сценария. `OefSchemaViolationIT` подменяет схему
+      на отвергающую всё (`OefSchema.of`)
+- ✅ Фикстуры `oef_export_*.xml` и `oef_export_*.losses.txt` для четырёх фикстур:
+      валидность по XSD, совпадение с писателем, отчёт с ожидаемыми позициями
+      (`OefExportFixturesTest`, пересъёмка `-Doef.fixtures.update=true`)
+- ✅ `OefExportIT#lossReportListsRawFragments`, `#repeatedExportIsIdenticalAndLocalized`,
+      `#referenceModelExportsThroughApi`. Сборка JSON отчёта — общая с пакетом картинок
+      (`LossReportJson`)
 
 ### 6a.4 Интерфейс
 

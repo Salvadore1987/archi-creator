@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate/3.1/archimate3_Diagram.xsd" identifier="id-51f9c0febdf9947bc0a6221dc3d39336">
+  <name xml:lang="ru">Вложенность и относительные координаты</name>
+  <elements>
+    <element identifier="id-cccef779d73ee589dd85b1636c68637b" xsi:type="ApplicationComponent">
+      <name xml:lang="ru">HamkorMobile</name>
+    </element>
+    <element identifier="id-17fd47a7f024091120031db846daf212" xsi:type="ApplicationComponent">
+      <name xml:lang="ru">Интернет-банк</name>
+    </element>
+    <element identifier="id-e2890613294fa7b8c0ab5d88f01e8517" xsi:type="ApplicationComponent">
+      <name xml:lang="ru">Шина</name>
+    </element>
+    <element identifier="id-5c0fc5719ebb55ee4af035a1241b9d57" xsi:type="ApplicationComponent">
+      <name xml:lang="ru">АБС</name>
+    </element>
+    <element identifier="id-7539bfec437be4288c43782829748bc1" xsi:type="ApplicationInterface">
+      <name xml:lang="ru">API платежей</name>
+    </element>
+    <element identifier="id-597e006dbbe1c865b5b91c4cc0f4dccb" xsi:type="Node">
+      <name xml:lang="ru">Сервер приложений</name>
+    </element>
+    <element identifier="id-9b897f32c8fc7bd071e33015c7c15093" xsi:type="SystemSoftware">
+      <name xml:lang="ru">JVM</name>
+    </element>
+  </elements>
+  <relationships>
+    <relationship identifier="id-479237ab9aca22463e51771d6a12f953" xsi:type="Composition" source="id-5c0fc5719ebb55ee4af035a1241b9d57" target="id-7539bfec437be4288c43782829748bc1"/>
+    <relationship identifier="id-73b987ec947884e74ef0d14f92f064f5" xsi:type="Composition" source="id-597e006dbbe1c865b5b91c4cc0f4dccb" target="id-9b897f32c8fc7bd071e33015c7c15093"/>
+    <relationship identifier="id-f8dcaa5bb744d71630ce647805dd738e" xsi:type="Flow" source="id-cccef779d73ee589dd85b1636c68637b" target="id-e2890613294fa7b8c0ab5d88f01e8517"/>
+    <relationship identifier="id-53fca09458473cddd9c0fee96b542c64" xsi:type="Flow" source="id-e2890613294fa7b8c0ab5d88f01e8517" target="id-5c0fc5719ebb55ee4af035a1241b9d57"/>
+  </relationships>
+  <organizations>
+    <item identifier="id-d3cfb34ee282f55eb745492b885b735f">
+      <label xml:lang="ru">Strategy</label>
+    </item>
+    <item identifier="id-a22a15b71d64f1a5cb8b4ccb7e68fa55">
+      <label xml:lang="ru">Business</label>
+    </item>
+    <item identifier="id-d1fbe42242fcc07a8c67a4b6085d909f">
+      <label xml:lang="ru">Application</label>
+      <item identifier="id-212a44d2c3b7381232e7b1c84f58c90d">
+        <label xml:lang="ru">Каналы</label>
+        <item identifier="id-0b16a101f7e367729bdc72cfb609b7eb">
+          <label xml:lang="ru">Мобильные</label>
+          <item identifierRef="id-cccef779d73ee589dd85b1636c68637b"/>
+        </item>
+        <item identifierRef="id-17fd47a7f024091120031db846daf212"/>
+      </item>
+      <item identifierRef="id-e2890613294fa7b8c0ab5d88f01e8517"/>
+      <item identifierRef="id-5c0fc5719ebb55ee4af035a1241b9d57"/>
+      <item identifierRef="id-7539bfec437be4288c43782829748bc1"/>
+    </item>
+    <item identifier="id-4def0fda209f5bec4cd6631eb02ac513">
+      <label xml:lang="ru">Technology &amp; Physical</label>
+      <item identifierRef="id-597e006dbbe1c865b5b91c4cc0f4dccb"/>
+      <item identifierRef="id-9b897f32c8fc7bd071e33015c7c15093"/>
+    </item>
+    <item identifier="id-122f1a899bc65f238980b9336ad5b60d">
+      <label xml:lang="ru">Motivation</label>
+    </item>
+    <item identifier="id-c86071eb79e85aa0d05dc992073d66b4">
+      <label xml:lang="ru">Implementation &amp; Migration</label>
+    </item>
+    <item identifier="id-f96d87afdcbdf760668187d69d2367f9">
+      <label xml:lang="ru">Other</label>
+    </item>
+    <item identifier="id-638d291968e2068eadb85ab0befd69ca">
+      <label xml:lang="ru">Relations</label>
+      <item identifierRef="id-479237ab9aca22463e51771d6a12f953"/>
+      <item identifierRef="id-73b987ec947884e74ef0d14f92f064f5"/>
+      <item identifierRef="id-f8dcaa5bb744d71630ce647805dd738e"/>
+      <item identifierRef="id-53fca09458473cddd9c0fee96b542c64"/>
+    </item>
+    <item identifier="id-37ba2ed93d287d9dfd8487d684826dbf">
+      <label xml:lang="ru">Views</label>
+      <item identifier="id-ad90e44c8b34234facecb53ef20132e2">
+        <label xml:lang="ru">Контекст</label>
+        <item identifierRef="id-b2a39634d58d085df5d969f51ce34124"/>
+      </item>
+    </item>
+  </organizations>
+  <views>
+    <diagrams>
+      <view identifier="id-b2a39634d58d085df5d969f51ce34124" xsi:type="Diagram">
+        <name xml:lang="ru">Вложенность</name>
+        <node identifier="id-9f7589db08646945b3f54524beb2c90c" xsi:type="Container" x="20" y="20" w="520" h="320">
+          <label xml:lang="ru">Каналы</label>
+          <node identifier="id-945827918f44b60b3d3271ba9f831894" xsi:type="Container" x="30" y="50" w="240" h="140">
+            <label xml:lang="ru">Мобильные</label>
+            <node identifier="id-9e2c761aa58843ccc9a605c097a34224" xsi:type="Element" elementRef="id-cccef779d73ee589dd85b1636c68637b" x="40" y="80" w="150" h="60"/>
+          </node>
+          <node identifier="id-529162a19d02ca2682c7c51fd875904e" xsi:type="Element" elementRef="id-17fd47a7f024091120031db846daf212" x="300" y="50" w="150" h="60"/>
+        </node>
+        <node identifier="id-7e5f5f09e23d144aeaa14fedf21e424b" xsi:type="Element" elementRef="id-e2890613294fa7b8c0ab5d88f01e8517" x="600" y="80" w="150" h="60"/>
+        <node identifier="id-af0b05024af8218572d9db51fe25d630" xsi:type="Element" elementRef="id-5c0fc5719ebb55ee4af035a1241b9d57" x="600" y="220" w="260" h="140">
+          <node identifier="id-cd1676d90a73f0b66adbe770da66aa3c" xsi:type="Element" elementRef="id-7539bfec437be4288c43782829748bc1" x="612" y="260" w="110" h="50"/>
+        </node>
+        <node identifier="id-fd3d60f69f9462868f7a6414ac9d05c8" xsi:type="Element" elementRef="id-597e006dbbe1c865b5b91c4cc0f4dccb" x="20" y="400" w="300" h="160">
+          <node identifier="id-e79d1a3487649ad1fa0cdede58eb051b" xsi:type="Element" elementRef="id-9b897f32c8fc7bd071e33015c7c15093" x="40" y="440" w="120" h="55"/>
+        </node>
+        <connection identifier="id-af1767f6b11f3d27d687051c1228eefe" xsi:type="Relationship" relationshipRef="id-f8dcaa5bb744d71630ce647805dd738e" source="id-9e2c761aa58843ccc9a605c097a34224" target="id-7e5f5f09e23d144aeaa14fedf21e424b">
+          <bendpoint x="315" y="110"/>
+          <bendpoint x="395" y="170"/>
+        </connection>
+        <connection identifier="id-8b1c2e4fce1ecc01c851fdb93f4ad40f" xsi:type="Relationship" relationshipRef="id-53fca09458473cddd9c0fee96b542c64" source="id-7e5f5f09e23d144aeaa14fedf21e424b" target="id-af0b05024af8218572d9db51fe25d630"/>
+      </view>
+    </diagrams>
+  </views>
+</model>

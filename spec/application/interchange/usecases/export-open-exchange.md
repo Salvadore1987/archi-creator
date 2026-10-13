@@ -86,3 +86,5 @@ stages: ["6a"]
 | Остаток XML — в отчёте | `OefWriterTest#rawFragmentsAreListedAsLosses` |
 | Эталон проходит XSD | `OefWriterTest#referenceModelIsSchemaValid` |
 | Выгрузка через API: схема, объекты, отчёт | `OefExportIT#lossReportListsRawFragments` |
+| Эталоны `oef_export_*.xml` и их отчёты | `OefExportFixturesTest#exportMatchesFixture` |
+| Невалидный результат не отдаётся | `OefSchemaViolationIT#invalidResultIsServerError` |

@@ -305,11 +305,11 @@ public final class OefWriter {
                 out.append("    <relationship identifier=\"").append(attr(identifier(id, "relationship")))
                         .append("\" xsi:type=\"").append(type).append("\" source=\"")
                         .append(attr(ref(relationship.attribute("source").orElse("")))).append("\" target=\"")
-                        .append(attr(ref(relationship.attribute("target").orElse("")))).append('"').append(extra)
-                        .append(">\n");
-                relationship.attribute("name").filter(n -> !n.isEmpty()).ifPresent(n -> langString(out, 3, "name", n));
-                conceptBody(out, relationship, "relationship");
-                out.append("    </relationship>\n");
+                        .append(attr(ref(relationship.attribute("target").orElse("")))).append('"').append(extra);
+                StringBuilder body = new StringBuilder();
+                relationship.attribute("name").filter(n -> !n.isEmpty()).ifPresent(n -> langString(body, 3, "name", n));
+                conceptBody(body, relationship, "relationship");
+                close(out, body, 2, "relationship");
             }
             return section("relationships", out);
         }

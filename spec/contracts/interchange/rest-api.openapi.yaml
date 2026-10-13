@@ -96,7 +96,8 @@ paths:
         '200':
           description: |
             Файл версии; побайтово тот же при повторе (INV-IXC-004). Номер версии —
-            в заголовке `X-Archi-Version-No`, отпечаток — в `ETag`.
+            в заголовке `X-Archi-Version-No`, отпечаток — в `ETag`, число записей
+            отчёта о потерях — в `X-Archi-Loss-Count` (у archimate — 0).
           content:
             application/xml: { schema: { type: string, format: binary } }
             application/zip:

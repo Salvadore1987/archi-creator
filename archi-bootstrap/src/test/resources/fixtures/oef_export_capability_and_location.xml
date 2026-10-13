@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate/3.1/archimate3_Diagram.xsd" identifier="id-3662b00b8b285fd001992805c4348297">
+  <name xml:lang="ru">Элементы вне фазы 1</name>
+  <elements>
+    <element identifier="id-93a748286134aab1727abbbe1251cb44" xsi:type="Capability">
+      <name xml:lang="ru">Расчётно-кассовое обслуживание</name>
+      <documentation xml:lang="ru">Способность банка вести счета и платежи клиентов.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-1">
+          <value xml:lang="ru">1</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-dc76abec4317f30dd5cbd0251fe9358f" xsi:type="Capability">
+      <name xml:lang="ru">Платежи</name>
+    </element>
+    <element identifier="id-c56d450477118faf91e4bdda33348684" xsi:type="ValueStream">
+      <name xml:lang="ru">Открытие счёта</name>
+    </element>
+    <element identifier="id-d51cfaa0a412d344865ac8732e1e9317" xsi:type="Resource">
+      <name xml:lang="ru">Процессинговый центр</name>
+    </element>
+    <element identifier="id-f5ed5b7005d52c4834d7c01a6e424b6b" xsi:type="CourseOfAction">
+      <name xml:lang="ru">Переход на мгновенные платежи</name>
+    </element>
+    <element identifier="id-adb95d88320396deeb11cc8da1f9326d" xsi:type="BusinessProcess">
+      <name xml:lang="ru">Перевод между счетами</name>
+    </element>
+    <element identifier="id-1152ef4bfd473b83abfa87e05948c724" xsi:type="ApplicationComponent">
+      <name xml:lang="ru">АБС</name>
+    </element>
+    <element identifier="id-446d0e91813fdcd45f8cbba042816e31" xsi:type="Node">
+      <name xml:lang="ru">Кластер АБС</name>
+    </element>
+    <element identifier="id-569be9902e4f39beec9d1160363ed8e9" xsi:type="Equipment">
+      <name xml:lang="ru">Банкомат</name>
+    </element>
+    <element identifier="id-be4f616332e5666b90c4c7963c686368" xsi:type="Facility">
+      <name xml:lang="ru">ЦОД Ташкент</name>
+    </element>
+    <element identifier="id-c60c38d332b450b562146ca33f98e816" xsi:type="Stakeholder">
+      <name xml:lang="ru">Розничный клиент</name>
+    </element>
+    <element identifier="id-93724eabcafd5aa4def99547f25fa994" xsi:type="Driver">
+      <name xml:lang="ru">Требование регулятора</name>
+    </element>
+    <element identifier="id-f5bb3d28aa12f6d69ba322ffcc124944" xsi:type="Goal">
+      <name xml:lang="ru">Платёж за 10 секунд</name>
+    </element>
+    <element identifier="id-a65c269f5102443a7c84c3cb830b23d7" xsi:type="Requirement">
+      <name xml:lang="ru">Доступность 99,9 %</name>
+    </element>
+    <element identifier="id-21698ec1f78a9e10351505dbd81c8969" xsi:type="Principle">
+      <name xml:lang="ru">Единый счёт клиента</name>
+    </element>
+    <element identifier="id-97438352805998157689fab016128581" xsi:type="WorkPackage">
+      <name xml:lang="ru">Внедрение СМП</name>
+    </element>
+    <element identifier="id-0ebe4b4a7fc3ded412ccbfb44919b200" xsi:type="Deliverable">
+      <name xml:lang="ru">Шлюз СМП</name>
+    </element>
+    <element identifier="id-e7d78c2be56ffbcb78d7093cfe96cb19" xsi:type="Plateau">
+      <name xml:lang="ru">TO BE 2027</name>
+    </element>
+    <element identifier="id-227eae3fd1854b9eceac531a6abeed13" xsi:type="Gap">
+      <name xml:lang="ru">Нет мгновенных платежей</name>
+    </element>
+    <element identifier="id-f1242c944e322090489e973fa35cdcd1" xsi:type="Location">
+      <name xml:lang="ru">Ташкент</name>
+      <properties>
+        <property propertyDefinitionRef="propid-2">
+          <value xml:lang="ru">UZ-TK</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-bb60cdc539da2234fd482f162b9c08ae" xsi:type="Grouping">
+      <name xml:lang="ru">Платёжный контур</name>
+    </element>
+  </elements>
+  <relationships>
+    <relationship identifier="id-a2328f25707491adf00228e3e2e99531" xsi:type="Composition" source="id-93a748286134aab1727abbbe1251cb44" target="id-dc76abec4317f30dd5cbd0251fe9358f"/>
+    <relationship identifier="id-0e0c1438cc9acb8344196458e1e0f4cb" xsi:type="Realization" source="id-1152ef4bfd473b83abfa87e05948c724" target="id-dc76abec4317f30dd5cbd0251fe9358f"/>
+    <relationship identifier="id-cf311521d6341dae22aef0bd53fda530" xsi:type="Assignment" source="id-d51cfaa0a412d344865ac8732e1e9317" target="id-dc76abec4317f30dd5cbd0251fe9358f"/>
+    <relationship identifier="id-c41820beabd0e835af2abd646ca02e62" xsi:type="Aggregation" source="id-f1242c944e322090489e973fa35cdcd1" target="id-446d0e91813fdcd45f8cbba042816e31"/>
+    <relationship identifier="id-81d91562e69e6b24a8a2b162911c5a0f" xsi:type="Aggregation" source="id-f1242c944e322090489e973fa35cdcd1" target="id-be4f616332e5666b90c4c7963c686368"/>
+    <relationship identifier="id-19d3f6a2c3d9aafa11f649b374abb278" xsi:type="Influence" source="id-93724eabcafd5aa4def99547f25fa994" target="id-f5bb3d28aa12f6d69ba322ffcc124944" modifier="++"/>
+    <relationship identifier="id-966d5198743c4778011f889ff5710538" xsi:type="Realization" source="id-a65c269f5102443a7c84c3cb830b23d7" target="id-f5bb3d28aa12f6d69ba322ffcc124944"/>
+    <relationship identifier="id-7afe549c466352566ab11d4802957b26" xsi:type="Association" source="id-c60c38d332b450b562146ca33f98e816" target="id-f5bb3d28aa12f6d69ba322ffcc124944"/>
+    <relationship identifier="id-3cb63c769cd8d9e5b0cb1c58612a62ab" xsi:type="Realization" source="id-97438352805998157689fab016128581" target="id-0ebe4b4a7fc3ded412ccbfb44919b200"/>
+    <relationship identifier="id-7c3657b785fedf998e4549300d22d82b" xsi:type="Association" source="id-227eae3fd1854b9eceac531a6abeed13" target="id-e7d78c2be56ffbcb78d7093cfe96cb19"/>
+    <relationship identifier="id-c0ce5997cd67eb4d7a063704f512e7cb" xsi:type="Aggregation" source="id-bb60cdc539da2234fd482f162b9c08ae" target="id-1152ef4bfd473b83abfa87e05948c724"/>
+    <relationship identifier="id-52c334e51b108ec059f0132fcbe96e84" xsi:type="Serving" source="id-adb95d88320396deeb11cc8da1f9326d" target="id-c56d450477118faf91e4bdda33348684"/>
+    <relationship identifier="id-712541b5b638b88a6eb13ce8970854ad" xsi:type="Realization" source="id-f5ed5b7005d52c4834d7c01a6e424b6b" target="id-dc76abec4317f30dd5cbd0251fe9358f"/>
+  </relationships>
+  <organizations>
+    <item identifier="id-8bc6f656e51a1b9fbea3dec9bac0fb0c">
+      <label xml:lang="ru">Strategy</label>
+      <item identifierRef="id-93a748286134aab1727abbbe1251cb44"/>
+      <item identifierRef="id-dc76abec4317f30dd5cbd0251fe9358f"/>
+      <item identifierRef="id-c56d450477118faf91e4bdda33348684"/>
+      <item identifierRef="id-d51cfaa0a412d344865ac8732e1e9317"/>
+      <item identifierRef="id-f5ed5b7005d52c4834d7c01a6e424b6b"/>
+    </item>
+    <item identifier="id-2e584426c6c497c3afa37d1db632c50b">
+      <label xml:lang="ru">Business</label>
+      <item identifierRef="id-adb95d88320396deeb11cc8da1f9326d"/>
+    </item>
+    <item identifier="id-cdfd827fd94f5bbf8fdb82428a7ac886">
+      <label xml:lang="ru">Application</label>
+      <item identifierRef="id-1152ef4bfd473b83abfa87e05948c724"/>
+    </item>
+    <item identifier="id-faa0d2a0a550cdd46ff239688b27bb8e">
+      <label xml:lang="ru">Technology &amp; Physical</label>
+      <item identifierRef="id-446d0e91813fdcd45f8cbba042816e31"/>
+      <item identifierRef="id-569be9902e4f39beec9d1160363ed8e9"/>
+      <item identifierRef="id-be4f616332e5666b90c4c7963c686368"/>
+    </item>
+    <item identifier="id-85e262a1513b93037b5da6ae31274eb1">
+      <label xml:lang="ru">Motivation</label>
+      <item identifierRef="id-c60c38d332b450b562146ca33f98e816"/>
+      <item identifierRef="id-93724eabcafd5aa4def99547f25fa994"/>
+      <item identifierRef="id-f5bb3d28aa12f6d69ba322ffcc124944"/>
+      <item identifierRef="id-a65c269f5102443a7c84c3cb830b23d7"/>
+      <item identifierRef="id-21698ec1f78a9e10351505dbd81c8969"/>
+    </item>
+    <item identifier="id-036977429653e6f0b4ce01b7aebea2fe">
+      <label xml:lang="ru">Implementation &amp; Migration</label>
+      <item identifierRef="id-97438352805998157689fab016128581"/>
+      <item identifierRef="id-0ebe4b4a7fc3ded412ccbfb44919b200"/>
+      <item identifierRef="id-e7d78c2be56ffbcb78d7093cfe96cb19"/>
+      <item identifierRef="id-227eae3fd1854b9eceac531a6abeed13"/>
+    </item>
+    <item identifier="id-dbbefc1fc5d0a05acbb22747a67fda00">
+      <label xml:lang="ru">Other</label>
+      <item identifierRef="id-f1242c944e322090489e973fa35cdcd1"/>
+      <item identifierRef="id-bb60cdc539da2234fd482f162b9c08ae"/>
+    </item>
+    <item identifier="id-78bdf1a97f97154556d409ee74298b5c">
+      <label xml:lang="ru">Relations</label>
+      <item identifierRef="id-a2328f25707491adf00228e3e2e99531"/>
+      <item identifierRef="id-0e0c1438cc9acb8344196458e1e0f4cb"/>
+      <item identifierRef="id-cf311521d6341dae22aef0bd53fda530"/>
+      <item identifierRef="id-c41820beabd0e835af2abd646ca02e62"/>
+      <item identifierRef="id-81d91562e69e6b24a8a2b162911c5a0f"/>
+      <item identifierRef="id-19d3f6a2c3d9aafa11f649b374abb278"/>
+      <item identifierRef="id-966d5198743c4778011f889ff5710538"/>
+      <item identifierRef="id-7afe549c466352566ab11d4802957b26"/>
+      <item identifierRef="id-3cb63c769cd8d9e5b0cb1c58612a62ab"/>
+      <item identifierRef="id-7c3657b785fedf998e4549300d22d82b"/>
+      <item identifierRef="id-c0ce5997cd67eb4d7a063704f512e7cb"/>
+      <item identifierRef="id-52c334e51b108ec059f0132fcbe96e84"/>
+      <item identifierRef="id-712541b5b638b88a6eb13ce8970854ad"/>
+    </item>
+    <item identifier="id-406795aa324dc316c391a2d822b8e6b8">
+      <label xml:lang="ru">Views</label>
+      <item identifierRef="id-057bfd0905487546608f733ecc616378"/>
+    </item>
+  </organizations>
+  <propertyDefinitions>
+    <propertyDefinition identifier="propid-1" type="string">
+      <name xml:lang="ru">level</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-2" type="string">
+      <name xml:lang="ru">region</name>
+    </propertyDefinition>
+  </propertyDefinitions>
+  <views>
+    <diagrams>
+      <view identifier="id-057bfd0905487546608f733ecc616378" xsi:type="Diagram" viewpoint="Capability Map">
+        <name xml:lang="ru">Карта способностей и размещение</name>
+        <node identifier="id-b24911eb8b1e09c3f3866c408d8d4861" xsi:type="Element" elementRef="id-93a748286134aab1727abbbe1251cb44" x="24" y="24" w="420" h="200">
+          <node identifier="id-5c76111ccc4c37bbb670c99618c8b2b5" xsi:type="Element" elementRef="id-dc76abec4317f30dd5cbd0251fe9358f" x="48" y="72" w="160" h="60"/>
+        </node>
+        <node identifier="id-ab6e0db8311829863ad4b329897eadb9" xsi:type="Element" elementRef="id-1152ef4bfd473b83abfa87e05948c724" x="500" y="72" w="140" h="55"/>
+        <node identifier="id-85ceb0cbf89c967e188c6bed9132d371" xsi:type="Element" elementRef="id-d51cfaa0a412d344865ac8732e1e9317" x="500" y="200" w="140" h="55"/>
+        <node identifier="id-2acfae2a9bcd418729114948d58721d5" xsi:type="Element" elementRef="id-f1242c944e322090489e973fa35cdcd1" x="24" y="300" w="420" h="160">
+          <node identifier="id-bf5a34b22263a9987d6ad12c76e79f51" xsi:type="Element" elementRef="id-446d0e91813fdcd45f8cbba042816e31" x="48" y="348" w="160" h="60"/>
+          <node identifier="id-6a2ef76a3e84f5e015f6bd4e1198fade" xsi:type="Element" elementRef="id-be4f616332e5666b90c4c7963c686368" x="244" y="348" w="160" h="60"/>
+        </node>
+        <node identifier="id-808d9906b0bbccf9a06e206361aa0039" xsi:type="Element" elementRef="id-f5bb3d28aa12f6d69ba322ffcc124944" x="700" y="24" w="140" h="55"/>
+        <connection identifier="id-32561d0536d37c59f1cd8886fa4615bb" xsi:type="Relationship" relationshipRef="id-0e0c1438cc9acb8344196458e1e0f4cb" source="id-ab6e0db8311829863ad4b329897eadb9" target="id-5c76111ccc4c37bbb670c99618c8b2b5"/>
+        <connection identifier="id-21650796a9e65f48011b492e7c9aeb0a" xsi:type="Relationship" relationshipRef="id-cf311521d6341dae22aef0bd53fda530" source="id-85ceb0cbf89c967e188c6bed9132d371" target="id-5c76111ccc4c37bbb670c99618c8b2b5"/>
+      </view>
+    </diagrams>
+  </views>
+</model>

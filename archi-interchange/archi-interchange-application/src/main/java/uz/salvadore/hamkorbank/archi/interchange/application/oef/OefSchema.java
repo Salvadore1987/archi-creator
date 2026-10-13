@@ -46,6 +46,11 @@ public final class OefSchema {
         this.schema = schema;
     }
 
+    /** Схема значением — для проверки того, как сценарий обходится с невалидным результатом. */
+    public static OefSchema of(Schema schema) {
+        return new OefSchema(schema);
+    }
+
     public static OefSchema load() {
         SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
         try {
