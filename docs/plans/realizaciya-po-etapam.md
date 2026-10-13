@@ -1332,8 +1332,10 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 6a.1 Схема и проверка
 
-- ⬜ XSD в ресурсах `archi-interchange-application`, `OefSchema` — проверка
+- ✅ XSD в ресурсах `archi-interchange-application`, `OefSchema` — проверка
       по ним без сети; тест: валидный образец проходит, нарушение ловится
+      (`OefSchemaTest`). Адрес схемы, которого нет среди ресурсов, — ошибка загрузки,
+      а не запрос в сеть: резолвер отдаёт только свои четыре файла
 
 ### 6a.2 Писатель (`archi-interchange-application`, пакет `oef`)
 
