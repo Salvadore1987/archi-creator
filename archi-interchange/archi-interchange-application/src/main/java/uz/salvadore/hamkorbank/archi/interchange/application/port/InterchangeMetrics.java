@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.port;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -23,6 +24,13 @@ public interface InterchangeMetrics {
 
     /** {@code interchange_export_loss_entries_total{format, object_kind}}; ноль — тоже отсчёт. */
     default void exportLosses(String format, int entries) {
+    }
+
+    /**
+     * {@code interchange_git_push_duration_seconds{outcome}}: попытка публикации версии,
+     * с сетью; исход — {@code done}, {@code retry}, {@code diverged}, {@code error}.
+     */
+    default void gitPush(String outcome, Duration duration) {
     }
 
     InterchangeMetrics NONE = new InterchangeMetrics() {

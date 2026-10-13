@@ -36,4 +36,9 @@ public final class Dtos {
     public record GitBindingDto(String repoUrl, String branch, String tokenRef, String status, String lastCommitSha,
                                 Instant lastCheckedAt, List<GitAuthorDto> authors) {
     }
+
+    /** Состояние модели в Git: опубликовано всё, ждёт или встало на расхождении. */
+    public record ModelGitStatusDto(UUID modelId, String state, int pending, Long versionNo, String gitSha,
+                                    Long divergedVersionNo) {
+    }
 }

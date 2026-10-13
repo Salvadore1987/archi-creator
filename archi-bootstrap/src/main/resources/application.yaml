@@ -119,6 +119,12 @@ archi:
     # Очистка снимков версий выключена до этапа 7a:
     # без Git снимок — единственная копия содержимого.
     retention-enabled: false
+  git:
+    # Bare-клоны репозиториев рабочих пространств — кэш: потеря стоит одного fetch.
+    cache-dir: ${ARCHI_GIT_CACHE_DIR:${java.io.tmpdir}/archi-git}
+    committer-name: ${ARCHI_GIT_COMMITTER_NAME:Archi Creator}
+    committer-email: ${ARCHI_GIT_COMMITTER_EMAIL:archi-creator@localhost}
+    poll-interval: 10s
   ai:
     # Ключ живёт только на сервере и в браузер не попадает.
     # Пустой ключ = помощник отвечает «недоступен», приложение стартует без него.

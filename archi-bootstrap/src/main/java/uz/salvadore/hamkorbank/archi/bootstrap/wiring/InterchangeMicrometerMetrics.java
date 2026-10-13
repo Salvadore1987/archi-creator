@@ -3,6 +3,8 @@ package uz.salvadore.hamkorbank.archi.bootstrap.wiring;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -55,5 +57,10 @@ public final class InterchangeMicrometerMetrics implements InterchangeMetrics {
     public void exportLosses(String format, int entries) {
         Counter.builder("interchange.export.loss.entries").tag("format", format).tag("object_kind", "any")
                 .register(registry).increment(entries);
+    }
+
+    @Override
+    public void gitPush(String outcome, Duration duration) {
+        Timer.builder("interchange.git.push.duration").tag("outcome", outcome).register(registry).record(duration);
     }
 }

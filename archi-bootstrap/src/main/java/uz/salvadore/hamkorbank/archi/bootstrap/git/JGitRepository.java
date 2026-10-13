@@ -1,0 +1,362 @@
+package uz.salvadore.hamkorbank.archi.bootstrap.git;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import org.eclipse.jgit.dircache.DirCache;
+import org.eclipse.jgit.dircache.DirCacheBuilder;
+import org.eclipse.jgit.dircache.DirCacheEntry;
+import org.eclipse.jgit.errors.MissingObjectException;
+import org.eclipse.jgit.lib.CommitBuilder;
+import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.FileMode;
+import org.eclipse.jgit.lib.NullProgressMonitor;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectInserter;
+import org.eclipse.jgit.lib.PersonIdent;
+import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.RefUpdate;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.revwalk.FooterLine;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevTree;
+import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.transport.FetchConnection;
+import org.eclipse.jgit.transport.RefSpec;
+import org.eclipse.jgit.transport.RemoteRefUpdate;
+import org.eclipse.jgit.transport.Transport;
+import org.eclipse.jgit.transport.URIish;
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
+import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.AndTreeFilter;
+import org.eclipse.jgit.treewalk.filter.PathFilter;
+import org.eclipse.jgit.treewalk.filter.TreeFilter;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
+import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
+
+/**
+ * Репозиторий рабочего пространства на JGit, без внешнего бинарника. Локально —
+ * bare-клон на пространство в каталоге кэша: {@code fetch} перед каждой операцией,
+ * коммит собирается в памяти, без рабочего дерева, и уходит push'ем с ожидаемой
+ * прежней головой. Принуждения нет нигде: ветка двигается только вперёд.
+ */
+public final class JGitRepository implements GitRepositoryPort {
+
+    private static final String TRACKING = "refs/remotes/archi/";
+    private static final int TRAILER_SEARCH_DEPTH = 1000;
+
+    private final Path cacheDir;
+    private final String username;
+    private final Duration timeout;
+    private final Map<WorkspaceId, Object> locks = new ConcurrentHashMap<>();
+
+    public JGitRepository(Path cacheDir, String username, Duration timeout) {
+        this.cacheDir = cacheDir;
+        this.username = username;
+        this.timeout = timeout;
+    }
+
+    @Override
+    public Optional<GitSha> fetch(Remote remote) {
+        synchronized (lock(remote)) {
+            try (Repository repo = open(remote)) {
+                String branchRef = Constants.R_HEADS + remote.branch();
+                Optional<Ref> advertised;
+                try (Transport transport = transport(repo, remote); FetchConnection connection = transport.openFetch()) {
+                    advertised = Optional.ofNullable(connection.getRef(branchRef));
+                }
+                if (advertised.isEmpty()) {
+                    return Optional.empty();
+                }
+                try (Transport transport = transport(repo, remote)) {
+                    transport.fetch(NullProgressMonitor.INSTANCE,
+                            List.of(new RefSpec("+" + branchRef + ":" + TRACKING + remote.branch())));
+                }
+                return Optional.of(sha(advertised.get().getObjectId()));
+            } catch (IOException | URISyntaxException e) {
+                throw unreachable(e);
+            }
+        }
+    }
+
+    @Override
+    public SortedMap<String, byte[]> read(Remote remote, GitSha commit, String directory) {
+        synchronized (lock(remote)) {
+            SortedMap<String, byte[]> files = new TreeMap<>();
+            try (Repository repo = open(remote); RevWalk walk = new RevWalk(repo); TreeWalk tree = new TreeWalk(repo)) {
+                tree.addTree(walk.parseCommit(id(commit)).getTree());
+                tree.setRecursive(true);
+                tree.setFilter(PathFilter.create(directory));
+                String prefix = directory + "/";
+                while (tree.next()) {
+                    files.put(tree.getPathString().substring(prefix.length()),
+                            repo.open(tree.getObjectId(0)).getBytes());
+                }
+                return files;
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+    }
+
+    @Override
+    public Optional<byte[]> file(Remote remote, GitSha commit, String path) {
+        synchronized (lock(remote)) {
+            try (Repository repo = open(remote); RevWalk walk = new RevWalk(repo);
+                 TreeWalk tree = TreeWalk.forPath(repo, path, walk.parseCommit(id(commit)).getTree())) {
+                if (tree == null || tree.getFileMode(0).getObjectType() != Constants.OBJ_BLOB) {
+                    return Optional.empty();
+                }
+                return Optional.of(repo.open(tree.getObjectId(0)).getBytes());
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+    }
+
+    @Override
+    public List<String> directories(Remote remote, GitSha commit, String parent) {
+        synchronized (lock(remote)) {
+            try (Repository repo = open(remote); RevWalk walk = new RevWalk(repo);
+                 TreeWalk found = TreeWalk.forPath(repo, parent, walk.parseCommit(id(commit)).getTree())) {
+                if (found == null || found.getFileMode(0) != FileMode.TREE) {
+                    return List.of();
+                }
+                List<String> names = new ArrayList<>();
+                try (TreeWalk children = new TreeWalk(repo)) {
+                    children.addTree(found.getObjectId(0));
+                    while (children.next()) {
+                        if (children.getFileMode(0) == FileMode.TREE) {
+                            names.add(children.getNameString());
+                        }
+                    }
+                }
+                return names;
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+    }
+
+    @Override
+    public boolean contains(Remote remote, GitSha ancestor, GitSha head) {
+        synchronized (lock(remote)) {
+            try (Repository repo = open(remote); RevWalk walk = new RevWalk(repo)) {
+                return walk.isMergedInto(walk.parseCommit(id(ancestor)), walk.parseCommit(id(head)));
+            } catch (MissingObjectException missing) {
+                return false;
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+    }
+
+    @Override
+    public Optional<Commit> lastChange(Remote remote, GitSha head, String directory) {
+        synchronized (lock(remote)) {
+            try (Repository repo = open(remote); RevWalk walk = new RevWalk(repo)) {
+                walk.setTreeFilter(AndTreeFilter.create(PathFilter.create(directory), TreeFilter.ANY_DIFF));
+                walk.markStart(walk.parseCommit(id(head)));
+                RevCommit last = walk.next();
+                return Optional.ofNullable(last).map(c -> new Commit(sha(c), trailers(c)));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+    }
+
+    @Override
+    public Optional<GitSha> findByTrailers(Remote remote, GitSha head, Map<String, String> trailers) {
+        synchronized (lock(remote)) {
+            try (Repository repo = open(remote); RevWalk walk = new RevWalk(repo)) {
+                walk.markStart(walk.parseCommit(id(head)));
+                int seen = 0;
+                for (RevCommit commit : walk) {
+                    if (trailers(commit).entrySet().containsAll(trailers.entrySet())) {
+                        return Optional.of(sha(commit));
+                    }
+                    if (++seen >= TRAILER_SEARCH_DEPTH) {
+                        break;
+                    }
+                }
+                return Optional.empty();
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+    }
+
+    @Override
+    public PushResult push(Remote remote, Optional<GitSha> parent, CommitRequest request) {
+        synchronized (lock(remote)) {
+            try (Repository repo = open(remote); ObjectInserter inserter = repo.newObjectInserter();
+                 RevWalk walk = new RevWalk(repo)) {
+                Optional<RevTree> parentTree = parent.isPresent()
+                        ? Optional.of(walk.parseCommit(id(parent.get())).getTree()) : Optional.empty();
+                ObjectId tree = tree(repo, inserter, parentTree, request);
+                if (parentTree.isPresent() && tree.equals(parentTree.get())) {
+                    return new Unchanged(parent.get());
+                }
+                ObjectId commit = inserter.insert(commit(tree, parent, request));
+                inserter.flush();
+                int changed = changedPaths(repo, parentTree, walk.parseTree(tree));
+                String branchRef = Constants.R_HEADS + remote.branch();
+                RemoteRefUpdate update = new RemoteRefUpdate(repo, commit.name(), branchRef, false, null,
+                        parent.map(JGitRepository::id).orElse(ObjectId.zeroId()));
+                try (Transport transport = transport(repo, remote)) {
+                    org.eclipse.jgit.transport.PushResult result = transport.push(NullProgressMonitor.INSTANCE,
+                            List.of(update));
+                    RemoteRefUpdate.Status status = result.getRemoteUpdate(branchRef).getStatus();
+                    switch (status) {
+                        case OK -> {
+                            RefUpdate tracking = repo.updateRef(TRACKING + remote.branch());
+                            tracking.setNewObjectId(commit);
+                            tracking.forceUpdate();
+                            return new Pushed(sha(commit), changed);
+                        }
+                        case REJECTED_NONFASTFORWARD, REJECTED_REMOTE_CHANGED -> {
+                            return new Rejected();
+                        }
+                        default -> throw new Unreachable(status + ": "
+                                + Optional.ofNullable(result.getRemoteUpdate(branchRef).getMessage()).orElse(""),
+                                null);
+                    }
+                }
+            } catch (IOException | URISyntaxException e) {
+                throw unreachable(e);
+            }
+        }
+    }
+
+    /** Дерево родителя без каталога модели и заменяемых корневых файлов, плюс новые файлы. */
+    private static ObjectId tree(Repository repo, ObjectInserter inserter, Optional<RevTree> parentTree,
+                                 CommitRequest request) throws IOException {
+        DirCache index = DirCache.newInCore();
+        DirCacheBuilder builder = index.builder();
+        String prefix = request.directory() + "/";
+        Set<String> rootPaths = request.rootFiles().keySet();
+        if (parentTree.isPresent()) {
+            try (TreeWalk walk = new TreeWalk(repo)) {
+                walk.addTree(parentTree.get());
+                walk.setRecursive(true);
+                while (walk.next()) {
+                    String path = walk.getPathString();
+                    if (path.startsWith(prefix) || rootPaths.contains(path)) {
+                        continue;
+                    }
+                    DirCacheEntry entry = new DirCacheEntry(path);
+                    entry.setFileMode(walk.getFileMode(0));
+                    entry.setObjectId(walk.getObjectId(0));
+                    builder.add(entry);
+                }
+            }
+        }
+        Map<String, byte[]> files = new HashMap<>();
+        request.files().forEach((path, bytes) -> files.put(prefix + path, bytes));
+        files.putAll(request.rootFiles());
+        for (Map.Entry<String, byte[]> file : files.entrySet()) {
+            DirCacheEntry entry = new DirCacheEntry(file.getKey());
+            entry.setFileMode(FileMode.REGULAR_FILE);
+            entry.setObjectId(inserter.insert(Constants.OBJ_BLOB, file.getValue()));
+            builder.add(entry);
+        }
+        builder.finish();
+        return index.writeTree(inserter);
+    }
+
+    private static CommitBuilder commit(ObjectId tree, Optional<GitSha> parent, CommitRequest request) {
+        CommitBuilder commit = new CommitBuilder();
+        commit.setTreeId(tree);
+        parent.ifPresent(p -> commit.setParentId(id(p)));
+        commit.setAuthor(person(request.author()));
+        commit.setCommitter(person(request.committer()));
+        commit.setMessage(request.message());
+        return commit;
+    }
+
+    private static PersonIdent person(Person person) {
+        return new PersonIdent(person.name(), person.email(), person.when(), ZoneOffset.UTC);
+    }
+
+    private static int changedPaths(Repository repo, Optional<RevTree> before, RevTree after) throws IOException {
+        if (before.isEmpty()) {
+            int count = 0;
+            try (TreeWalk walk = new TreeWalk(repo)) {
+                walk.addTree(after);
+                walk.setRecursive(true);
+                while (walk.next()) {
+                    count++;
+                }
+            }
+            return count;
+        }
+        int count = 0;
+        try (TreeWalk walk = new TreeWalk(repo)) {
+            walk.addTree(before.get());
+            walk.addTree(after);
+            walk.setRecursive(true);
+            walk.setFilter(TreeFilter.ANY_DIFF);
+            while (walk.next()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static Map<String, String> trailers(RevCommit commit) {
+        Map<String, String> trailers = new HashMap<>();
+        for (FooterLine line : commit.getFooterLines()) {
+            trailers.put(line.getKey(), line.getValue().strip());
+        }
+        return trailers;
+    }
+
+    private Repository open(Remote remote) throws IOException {
+        Path dir = cacheDir.resolve(remote.workspace().value() + ".git");
+        Files.createDirectories(cacheDir);
+        Repository repo = new FileRepositoryBuilder().setGitDir(dir.toFile()).setBare().build();
+        if (!repo.getObjectDatabase().exists()) {
+            repo.create(true);
+        }
+        return repo;
+    }
+
+    private Transport transport(Repository repo, Remote remote) throws IOException, URISyntaxException {
+        Transport transport = Transport.open(repo, new URIish(remote.url()));
+        transport.setTimeout((int) timeout.toSeconds());
+        remote.token().ifPresent(token ->
+                transport.setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, token)));
+        return transport;
+    }
+
+    private Object lock(Remote remote) {
+        return locks.computeIfAbsent(remote.workspace(), w -> new Object());
+    }
+
+    private static Unreachable unreachable(Exception e) {
+        return new Unreachable(e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+    }
+
+    private static ObjectId id(GitSha sha) {
+        return ObjectId.fromString(sha.value());
+    }
+
+    private static GitSha sha(ObjectId id) {
+        return GitSha.of(id.name());
+    }
+}

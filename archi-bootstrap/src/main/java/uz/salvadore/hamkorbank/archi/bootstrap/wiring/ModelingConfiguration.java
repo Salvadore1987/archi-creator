@@ -12,6 +12,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.transaction.PlatformTransactionManager;
 import uz.salvadore.hamkorbank.archi.interchange.application.mapping.ArchimateSnapshots;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.DomainEventPublisher;
@@ -62,9 +63,10 @@ public class ModelingConfiguration {
         return new AfterCommitEventPublisher(publisher);
     }
 
+    /** Зафиксированная версия — ещё и в outbox, той же транзакцией: её ждёт выгрузка в Git. */
     @Bean
-    DomainEventPublisher modelingEvents(AfterCommitEventPublisher publisher) {
-        return publisher::publish;
+    DomainEventPublisher modelingEvents(AfterCommitEventPublisher publisher, GitOutbox outbox, Clock clock) {
+        return new OutboxEventPublisher(publisher, outbox, clock);
     }
 
     @Bean

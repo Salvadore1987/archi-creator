@@ -154,6 +154,35 @@ public final class VersionService {
     }
 
     /**
+     * Зафиксированная версия для публикации в Git — системное чтение, без актора:
+     * публикует фоновый обработчик. Модели или версии нет, снимок очищен — пусто.
+     */
+    public Optional<CommittedVersion> committed(ModelId modelId, long versionNo) {
+        return kernel.unitOfWork.read(() -> kernel.models.findHeader(modelId).flatMap(header ->
+                kernel.versions.find(modelId, versionNo).filter(v -> v.snapshot().isPresent())
+                        .map(v -> new CommittedVersion(header, v, Snapshots.gunzip(v.requireSnapshot())))));
+    }
+
+    /** Последняя опубликованная в Git версия модели. */
+    public Optional<ModelVersion> lastPublished(ModelId modelId) {
+        return kernel.unitOfWork.read(() -> kernel.versions.list(modelId).stream()
+                .filter(v -> v.gitSha().isPresent()).findFirst());
+    }
+
+    /** Связать версию с коммитом, в котором её содержимое лежит в репозитории. */
+    public void recordGitSha(ModelId modelId, long versionNo, String sha) {
+        kernel.unitOfWork.write(() -> {
+            kernel.versions.save(requireVersion(modelId, versionNo).publishedAs(sha));
+            return null;
+        });
+    }
+
+    /** Модель видна актору — её рабочее пространство; иначе «не найдено», как везде. */
+    public ModelHeader visibleModel(EditorIdentity actor, ModelId modelId) {
+        return kernel.unitOfWork.read(() -> kernel.visibleHeader(modelId, actor, AclAccess.READ));
+    }
+
+    /**
      * Очистка снимков по правилу ретеншена. Выключена до этапа 7a
      * настройкой, а и включённая не тронет пространство без доступного Git.
      *

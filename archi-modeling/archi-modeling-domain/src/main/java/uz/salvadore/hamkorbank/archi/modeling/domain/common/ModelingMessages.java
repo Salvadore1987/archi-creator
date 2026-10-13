@@ -113,6 +113,7 @@ public final class ModelingMessages {
     public static final String VALIDATION_RELATION_NOT_PERMITTED = "modeling.validation.relation-not-permitted";
     public static final String VALIDATION_UNKNOWN_RELATIONSHIP = "modeling.validation.unknown-relationship";
     public static final String TOO_LONG = "modeling.value.too-long";
+    public static final String VERSION_ALREADY_PUBLISHED = "modeling.version.already-published";
     public static final String COMMENT_MODEL_CREATED = "modeling.version.comment.created";
     public static final String COMMENT_ROLLBACK = "modeling.version.comment.rollback";
     public static final String GIT_SHA_INVALID = "modeling.version.git-sha-invalid";

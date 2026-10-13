@@ -1494,26 +1494,31 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 - ✅ Обратная сборка: `GitYamlReader` даёт тот же документ и те же байты
       `.archimate` на эталоне и всех фикстурах (`GitYamlWriterTest#documentSurvivesYaml`);
       эталоны деревьев — `fixtures/git_roundtrip/<фикстура>/`
-- ⬜ `.gitattributes`: для `models/**` текстовое слияние отключено (`INV-IXC-010`)
+- ✅ `.gitattributes`: для `models/**` текстовое слияние отключено (`INV-IXC-010`)
 - ⬜ Сгенерированный `.archimate` в репозиторий **не** кладётся; вместо него
       CI-задача, собирающая его артефактом на теге
 
 ### 7a.2 Механика
 
-- ⬜ Агрегат `GitBinding` (`CONFIGURED`/`UNREACHABLE`/`DISABLED`), настройки
+- ✅ Агрегат `GitBinding` (`CONFIGURED`/`UNREACHABLE`/`DISABLED`), настройки
       в рабочем пространстве, `SecretRef` + `SecretResolver` — токен в домене
       не появляется
-- ⬜ `GitRepositoryPort` на JGit без внешнего бинарника; bare-клон кэшируется,
+- ✅ `GitRepositoryPort` на JGit без внешнего бинарника; bare-клон кэшируется,
       `fetch` перед каждой операцией
-- ⬜ `UC-IXC-003`: коммит на сохранение версии; автор — архитектор (соответствие
+- ✅ `UC-IXC-003`: коммит на сохранение версии; автор — архитектор (соответствие
       Keycloak → git identity в настройках), сообщение — комментарий
       к сохранению, трейлеры `Archi-Model-Id` и `Archi-Version`
-- ⬜ Только fast-forward: force push, rebase и удаление веток запрещены
+- ✅ Только fast-forward: force push, rebase и удаление веток запрещены
       (`INV-IXC-009`)
-- ⬜ Сдвинувшийся HEAD: сохранение в БД проходит, экспорт помечается как
+- ✅ Сдвинувшийся HEAD: сохранение в БД проходит, экспорт помечается как
       расхождение и требует 7b или 7c; чужой коммит не перезаписывается (FR-37)
-- ⬜ `git_sha` пишется в `ModelVersion` (`ModelVersionUpdater`)
-- ⬜ Один репозиторий на рабочее пространство, каталог на модель
+- ✅ `git_sha` пишется в `ModelVersion` (`ModelVersionUpdater`)
+- ✅ Один репозиторий на рабочее пространство, каталог на модель
+- ✅ Outbox: `outbox_event` (V7) пишется той же транзакцией, что версия
+      (`OutboxEventPublisher`); обработчик — `GitPublishingService.publishPending`
+      по расписанию `archi.git.poll-interval`; `POST /models/{id}/git/push` —
+      очередь модели сейчас, в том числе после разбора расхождения
+- ✅ `.gitattributes`: правило `models/** -merge` ставится, не затирая чужих строк
 
 ### 7a.3 Ретеншен включается
 
@@ -1526,7 +1531,8 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 - ✅ `GitYamlWriterTest#writingTwiceProducesIdenticalBytes`,
       `#exportIsByteStable`, `#folderIsFieldNotDirectory`
-- ⬜ `GitPublisherTest#pushIsAlwaysFastForward`
+- ✅ `GitPublisherTest#pushIsAlwaysFastForward` (и ещё семь сценариев: расхождение,
+      переписанная история, повтор по трейлерам, недоступный репозиторий)
 - ⬜ `GitExportIT#repeatedExportProducesNoDiff`, `#historyIsAppendOnly`
 - ⬜ Фикстура `git_roundtrip`: цикл БД → YAML → БД → `.archimate` даёт исходный
       файл (FR-40, [§9.1](../backend.md#91-golden-file-тесты-round-trip--критический-контур))
@@ -1537,7 +1543,7 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 1. ✅ `spec`: ADR-0003 принят, `events.yaml`, `UC-IXC-003`, контракт и роли
 2. ✅ `feat(interchange)`: писатель и читатель YAML, позиции, эталон (7a.1)
 3. ✅ `feat(git)`: `GitBinding`, V6, настройка привязки через API (`GitBindingIT`)
-4. ⬜ `feat(git)`: outbox, публикация на JGit, `git_sha`, расхождение (7a.2)
+4. ✅ `feat(git)`: outbox, публикация на JGit, `git_sha`, расхождение (7a.2)
 5. ⬜ `feat(modeling)`: ретеншен с Git и восстановление снимка (7a.3)
 6. ⬜ `test`: интеграционные `GitExportIT`, `GitRoundTripIT`, ретеншен (7a.4)
 7. ⬜ `docs`: CI-задача `.archimate` на теге, README, CLAUDE.md, граф, журнал

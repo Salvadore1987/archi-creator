@@ -5,7 +5,10 @@ import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitAuthorDto;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitBindingDto;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitBindingSettingsDto;
+import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ModelGitStatusDto;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingSettings;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.PublishedVersions;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
 
@@ -26,5 +29,11 @@ final class GitDtoMapper {
                 binding.status().name(), binding.lastCommitSha().map(GitSha::value).orElse(null),
                 binding.lastCheckedAt().orElse(null),
                 binding.authors().stream().map(a -> new GitAuthorDto(a.subject(), a.name(), a.email())).toList());
+    }
+
+    static ModelGitStatusDto status(GitPublishingService.ModelGitStatus status) {
+        return new ModelGitStatusDto(status.model().value(), status.state().name(), status.pending(),
+                status.last().map(PublishedVersions.Published::versionNo).orElse(null),
+                status.last().map(p -> p.sha().value()).orElse(null), status.divergedVersionNo().orElse(null));
     }
 }
