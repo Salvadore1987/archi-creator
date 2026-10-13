@@ -170,6 +170,9 @@ rectangle "xml-apis-ext\n1.3.04" as xml_apis_xml_apis_ext_jar_compile
 rectangle "batik-codec\n1.19" as org_apache_xmlgraphics_batik_codec_jar_compile
 rectangle "fontbox\n3.0.8" as org_apache_pdfbox_fontbox_jar_compile
 rectangle "pdfbox-io\n3.0.8" as org_apache_pdfbox_pdfbox_io_jar_compile
+rectangle "org.eclipse.jgit\n7.8.0.202609011348-r" as org_eclipse_jgit_org_eclipse_jgit_jar_compile
+rectangle "JavaEWAH\n1.2.3" as com_googlecode_javaewah_JavaEWAH_jar_compile
+rectangle "commons-codec\n1.21.0" as commons_codec_commons_codec_jar_compile
 rectangle "spring-boot-security\n4.1.1" as org_springframework_boot_spring_boot_security_jar_compile
 rectangle "spring-security-config\n7.1.1" as org_springframework_security_spring_security_config_jar_compile
 rectangle "spring-boot-starter-security\n4.1.1" as org_springframework_boot_spring_boot_starter_security_jar_compile
@@ -217,7 +220,6 @@ rectangle "spring-security-crypto\n7.1.1" as org_springframework_security_spring
 rectangle "spring-security-test\n7.1.1" as org_springframework_security_spring_security_test_jar_test<<test>>
 rectangle "spring-security-web\n7.1.1" as org_springframework_security_spring_security_web_jar_compile
 rectangle "commons-compress\n1.28.0" as org_apache_commons_commons_compress_jar_test<<test>>
-rectangle "commons-codec\n1.21.0" as commons_codec_commons_codec_jar_test<<test>>
 rectangle "commons-lang3\n3.20.0" as org_apache_commons_commons_lang3_jar_test<<test>>
 rectangle "testcontainers\n2.0.5" as org_testcontainers_testcontainers_jar_test<<test>>
 rectangle "duct-tape\n1.0.8" as org_rnorth_duct_tape_duct_tape_jar_test<<test>>
@@ -335,6 +337,7 @@ uz_salvadore_hamkorbank_archi_interchange_domain_jar_compile -[#000000]-> com_fa
 uz_salvadore_hamkorbank_archi_interchange_domain_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_interchange_application_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_domain_jar_compile
 uz_salvadore_hamkorbank_archi_interchange_application_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_modeling_application_jar_compile
+uz_salvadore_hamkorbank_archi_interchange_application_jar_compile -[#000000]-> org_yaml_snakeyaml_jar_compile
 uz_salvadore_hamkorbank_archi_interchange_application_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_application_jar_compile
 uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_web_jar_compile
@@ -428,6 +431,10 @@ uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_apache_xmlg
 org_apache_pdfbox_fontbox_jar_compile -[#000000]-> org_apache_pdfbox_pdfbox_io_jar_compile
 org_apache_pdfbox_fontbox_jar_compile -[#000000]-> commons_logging_commons_logging_jar_compile
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_apache_pdfbox_fontbox_jar_compile
+org_eclipse_jgit_org_eclipse_jgit_jar_compile -[#000000]-> com_googlecode_javaewah_JavaEWAH_jar_compile
+org_eclipse_jgit_org_eclipse_jgit_jar_compile -[#000000]-> org_slf4j_slf4j_api_jar_compile
+org_eclipse_jgit_org_eclipse_jgit_jar_compile -[#000000]-> commons_codec_commons_codec_jar_compile
+uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_eclipse_jgit_org_eclipse_jgit_jar_compile
 org_springframework_boot_spring_boot_security_jar_compile -[#000000]-> org_springframework_security_spring_security_config_jar_compile
 org_springframework_boot_spring_boot_starter_security_jar_compile -[#000000]-> org_springframework_boot_spring_boot_security_jar_compile
 org_springframework_spring_aop_jar_compile -[#000000]-> org_springframework_spring_beans_jar_compile
@@ -454,7 +461,6 @@ com_tngtech_archunit_archunit_junit5_jar_test -[#000000]-> com_tngtech_archunit_
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> com_tngtech_archunit_archunit_junit5_jar_test
 org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_springframework_boot_spring_boot_test_jar_test
 org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_springframework_boot_spring_boot_test_autoconfigure_jar_test
-com_jayway_jsonpath_json_path_jar_test -[#000000]-> org_slf4j_slf4j_api_jar_compile
 org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> com_jayway_jsonpath_json_path_jar_test
 org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> jakarta_xml_bind_jakarta_xml_bind_api_jar_runtime
 net_minidev_accessors_smart_jar_test -[#000000]-> org_ow2_asm_asm_jar_test
@@ -486,7 +492,6 @@ org_springframework_security_spring_security_core_jar_compile -[#000000]-> org_s
 org_springframework_security_spring_security_test_jar_test -[#000000]-> org_springframework_security_spring_security_core_jar_compile
 org_springframework_security_spring_security_test_jar_test -[#000000]-> org_springframework_security_spring_security_web_jar_compile
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_springframework_security_spring_security_test_jar_test
-org_apache_commons_commons_compress_jar_test -[#000000]-> commons_codec_commons_codec_jar_test
 org_apache_commons_commons_compress_jar_test -[#000000]-> org_apache_commons_commons_lang3_jar_test
 org_testcontainers_testcontainers_jar_test -[#000000]-> org_apache_commons_commons_compress_jar_test
 org_testcontainers_testcontainers_jar_test -[#000000]-> org_rnorth_duct_tape_duct_tape_jar_test

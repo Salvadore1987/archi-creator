@@ -10,8 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Состояние репозитория
 
-**Этапы 0–6 и 6a закрыты (этапы 4, 5 и 5a — 2026-10-12, этапы 6 и 6a — 2026-10-13).
-Следующая — ветка 7a (Git).**
+**Этапы 0–6, 6a и 7a закрыты (этапы 4, 5 и 5a — 2026-10-12, этапы 6, 6a и 7a — 2026-10-13).
+Следующий — этап 7b (импорт состояния из Git по ссылке).**
 Собирается multi-module Maven по
 [`ADR-0001`](spec/adr/0001-maven-multi-module.md): 17 проектов в реакторе — родитель,
 три агрегатора контекстов, двенадцать модулей-слоёв, `archi-bootstrap` с классом запуска
@@ -223,13 +223,45 @@ macOS и старый Проводник его не создают. Измен�
 Сторонний инструмент под рукой — Archi: `Archi -application com.archimatetool.commandline.app
 -consoleLog -nosplash --xmlexchange.import <абсолютный путь>.xml --saveModel <out>.archimate`.
 
-Тестов на сервере: 372 юнит-теста (`./mvnw test`) и 76 интеграционных `*IT` на
+Что появилось на этапе 7a и где лежит:
+
+| Что | Где |
+|---|---|
+| Разложенный YAML: писатель, обратная сборка, наследуемые позиции, эталоны | `archi-interchange-application/.../application/git/` (`GitYamlWriter`, `GitYamlReader`, `PositionPlan`); `fixtures/git_roundtrip/` |
+| Привязка пространства к репозиторию: агрегат, `SecretRef`, авторы | `archi-interchange-domain/.../domain/git/`, миграция `V6__git_binding.sql`, `GitBindingService` |
+| Публикация версии коммитом ([`UC-IXC-003`](spec/application/interchange/usecases/commit-version-to-git.md)), расхождение, повтор по трейлерам | `GitPublishingService`; порты `GitRepositoryPort`, `GitOutbox`, `PublishedVersions`, `SecretResolver` |
+| Outbox зафиксированных версий ([`ADR-0003`](spec/adr/0003-event-publishing.md)) | `outbox_event` (`V7__outbox.sql`), `JpaGitOutbox`, `bootstrap/wiring/OutboxEventPublisher` |
+| JGit, секреты из окружения, мост к версиям, проход очереди | `archi-bootstrap/.../bootstrap/git/`, `wiring/GitConfiguration`; `archi.git.*` |
+| REST: `PUT/GET/DELETE /workspaces/{id}/git-binding`, `POST /models/{id}/git/push` | `GitController` |
+| Ретеншен с Git, восстановление очищенного снимка из коммита | `VersionService` + порт `SnapshotArchive`; `GitSnapshotArchive` |
+| CI-задача `.archimate` на теге в репозитории выгрузки | `deploy/git/gitlab-ci.yml.example` |
+| Тесты | `GitYamlWriterTest`, `GitPublisherTest` (JGit без Docker); `GitExportIT`, `GitRetentionIT`, `GitRoundTripIT`, `GitBindingIT` |
+
+**YAML — обратимое кодирование снимка версии, а не таблиц.** Из дерева коммита
+собирается тот же документ и те же байты `.archimate`; на этом стоит восстановление
+очищенного снимка, и оно сверяется с `content_hash` версии. Порядок атрибутов
+и содержимого — часть формата (`attribute_order`, `content_order`, если не как в Archi);
+«сортировка свойств» — порядок документа, не алфавит. **Позиции наследуются из HEAD**:
+снимок не несёт разреженного `sort_order`, поэтому вставка встаёт в промежуток,
+а соседи сохраняют числа. Изменил писатель — пересними эталоны:
+`./mvnw -P '!frontend' -pl archi-interchange/archi-interchange-application -am test
+-Dtest=GitYamlWriterTest -Dgit.fixtures.update=true -Dsurefire.failIfNoSpecifiedTests=false`.
+
+**Версия попадает в Git через outbox, а не событием в памяти.** `ModelVersionCommitted`
+пишется в `outbox_event` той же транзакцией, что версия; `git_sha` — вместе с закрытием
+записи. Ветка двигается только вперёд (push с ожидаемой головой, без принуждения).
+Расхождение — чужой коммит в каталоге модели или переписанная история; чужое вне
+каталога ложится под наш коммит. Токена нет ни в базе, ни в домене — `env:ИМЯ`.
+Каталог модели — `models/<слаг>.<8 hex от ModelId>/`, при переименовании не двигается.
+
+Тестов на сервере: 401 юнит-тест (`./mvnw test`) и 87 интеграционных `*IT` на
 Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
 Во фронтенде: 67 юнит-тестов vitest (`npm test`, гоняется фазой `test` Maven)
 и 84 сценария Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
 работа `e2e`, два потока).
 
-Ещё не заведено: метамодель фазы 3, Git (7a–7c);
+Ещё не заведено: метамодель фазы 3, импорт из Git и слияние (7b, 7c), экран привязки
+к Git и состояния выгрузки в интерфейсе (есть только API);
 создание и удаление представлений из дерева (API нет); предохранитель (circuit breaker)
 на Anthropic API.
 

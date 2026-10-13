@@ -88,6 +88,11 @@ services:
       ARCHI_OIDC_PUBLIC_ISSUER_URI: ${ARCHI_OIDC_PUBLIC_ISSUER_URI:-http://localhost:${ARCHI_KEYCLOAK_PORT:-8081}/realms/archi}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8081/realms/archi/protocol/openid-connect/certs
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Токен доступа к репозиторию выгрузки в Git. Привязка пространства хранит
+      # не токен, а ссылку на эту переменную: env:ARCHI_GIT_TOKEN.
+      ARCHI_GIT_TOKEN: ${ARCHI_GIT_TOKEN:-}
+      ARCHI_GIT_COMMITTER_NAME: ${ARCHI_GIT_COMMITTER_NAME:-Archi Creator}
+      ARCHI_GIT_COMMITTER_EMAIL: ${ARCHI_GIT_COMMITTER_EMAIL:-archi-creator@localhost}
     ports:
       - "${ARCHI_APP_PORT:-8080}:8080"
     healthcheck:
