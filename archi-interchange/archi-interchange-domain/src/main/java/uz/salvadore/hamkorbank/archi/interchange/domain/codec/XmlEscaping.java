@@ -9,12 +9,12 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.codec;
  * обязан нормализовать их буквальные копии в пробел, и значение не пережило бы
  * второго чтения. Возврат каретки в тексте — по той же причине.
  */
-final class XmlEscaping {
+public final class XmlEscaping {
 
     private XmlEscaping() {
     }
 
-    static String attribute(String value) {
+    public static String attribute(String value) {
         StringBuilder out = new StringBuilder(value.length() + 8);
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);
@@ -32,7 +32,7 @@ final class XmlEscaping {
         return out.toString();
     }
 
-    static String text(String value) {
+    public static String text(String value) {
         StringBuilder out = new StringBuilder(value.length() + 8);
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);

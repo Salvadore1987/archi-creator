@@ -8,7 +8,7 @@ import java.util.List;
  * ортогонально. Расхождение здесь видно сразу — линия на экране и в файле шла бы
  * разными путями, поэтому алгоритм повторяет канву шаг в шаг.
  */
-final class Routing {
+public final class Routing {
 
     /** Петля связи узла с самим собой выступает вправо на столько. */
     private static final double LOOP = 24;
@@ -16,25 +16,25 @@ final class Routing {
     private Routing() {
     }
 
-    record Point(double x, double y) {
+    public record Point(double x, double y) {
     }
 
-    record Rect(double x, double y, double width, double height) {
+    public record Rect(double x, double y, double width, double height) {
 
-        Point center() {
+        public Point center() {
             return new Point(x + width / 2, y + height / 2);
         }
     }
 
     /** Точка перегиба Archi: смещения от центров источника и цели. */
-    record Bendpoint(double startX, double startY, double endX, double endY) {
+    public record Bendpoint(double startX, double startY, double endX, double endY) {
     }
 
     /**
      * Абсолютные точки перегиба. Каждая хранится двумя смещениями — от центра
      * источника и от центра цели — и смешивается с весом (i + 1) / (n + 1).
      */
-    static List<Point> absoluteBendpoints(Rect source, Rect target, List<Bendpoint> bendpoints) {
+    public static List<Point> absoluteBendpoints(Rect source, Rect target, List<Bendpoint> bendpoints) {
         Point sc = source.center();
         Point tc = target.center();
         int n = bendpoints.size();

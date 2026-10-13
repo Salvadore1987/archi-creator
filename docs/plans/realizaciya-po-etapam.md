@@ -1339,14 +1339,31 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 6a.2 Писатель (`archi-interchange-application`, пакет `oef`)
 
-- ⬜ `OefWriter` по таблице соответствий [§3.5](../backend.md#35-экспорт-в-open-exchange-format):
+- ✅ `OefWriter` по таблице соответствий [§3.5](../backend.md#35-экспорт-в-open-exchange-format):
       папки → `organizations`/`item`, свойства → `propertyDefinitions` +
       `propertyDefinitionRef`, `name`/`documentation` с `xml:lang="ru"`,
-      геометрия → `view`/`node`/`connection`, стиль → `style`
-- ⬜ Отчёт о потерях (FR-44, `INV-IXC-006`): остаток `raw_xml` не переносится вовсе,
-      атрибуты стиля без аналога, тип корневой папки в OEF не выражается
-- ⬜ `OefWriterTest#rawFragmentsAreListedAsLosses` и остальные юнит-тесты писателя;
-      эталон `docs/Hamkorbank_AS_IS_strict.archimate` проходит XSD
+      геометрия → `view`/`node`/`connection`, стиль → `style`. Размеры по умолчанию —
+      из `Notation` (та же, что у SVG); перевод точек перегиба —
+      `Routing.absoluteBendpoints`, открытый для этого из пакета `rendering`
+- ✅ Отчёт о потерях (FR-44, `INV-IXC-006`): остаток `raw_xml` не переносится вовсе,
+      атрибуты стиля без аналога, тип корневой папки в OEF не выражается. Узел без
+      аналога не выгружается, а его вложенные поднимаются к ближайшему выгруженному
+      предку — координаты абсолютные, картинка не меняется. `LossEntry` получил виды
+      `model` и `folder`; `XmlEscaping` открыт для писателя OEF
+- ✅ `OefWriterTest#rawFragmentsAreListedAsLosses` и остальные юнит-тесты писателя;
+      эталон `docs/Hamkorbank_AS_IS_strict.archimate` и все фикстуры проходят XSD.
+      В эталоне теряется только тип девяти корневых папок
+- ✅ **Предварительная проверка Archi 5.9** (`Archi -application com.archimatetool.commandline.app
+      --xmlexchange.import <файл> --saveModel <out>`): все шесть выгрузок — эталон и
+      пять фикстур — Archi проверил по XSD и импортировал. Эталон после круга
+      «наш OEF → Archi»: типы, свойства (620), документация (467), папки (50) и все
+      `bounds` совпадают, точки перегиба легли в те же абсолютные точки.
+      **Расхождение, которое не потеря:** Archi при импорте сам дорисовал 61 линию —
+      все между вложенными объектами (связь, выраженная вложенностью, у Archi при
+      импорте становится линией). В нашем файле этих линий нет и быть не должно:
+      `NestingRelationship` в OEF — тоже линия с идентификатором, а в модели её нет.
+      Идентификаторы папок Archi при импорте не сохраняет — это его выбор, в файле
+      они есть
 
 ### 6a.3 Сценарий и REST
 
