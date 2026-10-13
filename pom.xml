@@ -46,6 +46,7 @@
         <anthropic-java.version>2.71.0</anthropic-java.version>
         <batik.version>1.19</batik.version>
         <fontbox.version>3.0.8</fontbox.version>
+        <java-uuid-generator.version>5.2.0</java-uuid-generator.version>
         <depgraph-maven-plugin.version>4.0.5</depgraph-maven-plugin.version>
 
         <!--
@@ -91,6 +92,22 @@
                 <groupId>com.anthropic</groupId>
                 <artifactId>anthropic-java</artifactId>
                 <version>${anthropic-java.version}</version>
+            </dependency>
+            <!--
+                UUID проекта создаются и разбираются только этой библиотекой. Объявленный
+                ею slf4j-api исключён: генератор версии 7 и разбор строки логгер не трогают,
+                а доменным модулям он не нужен.
+            -->
+            <dependency>
+                <groupId>com.fasterxml.uuid</groupId>
+                <artifactId>java-uuid-generator</artifactId>
+                <version>${java-uuid-generator.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <!--
                 commons-io приходит двумя версиями: 2.17.0 от xmlgraphics-commons (Batik)

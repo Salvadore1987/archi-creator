@@ -1,23 +1,35 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.identity;
 
-import java.security.SecureRandom;
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
+import com.fasterxml.uuid.UUIDClock;
 import java.time.Clock;
 import java.util.Objects;
 import java.util.UUID;
 
 /**
- * UUID версии 7 (RFC 9562): 48 бит миллисекунд Unix-времени, затем случайные биты.
- * Генерируется приложением, а не базой: монотонен по времени, поэтому
- * первичный ключ на нём не дробит индекс.
+ * UUID версии 7 (RFC 9562): 48 бит миллисекунд Unix-времени, затем счётчик и случайные
+ * биты. Генерируется приложением, а не базой: монотонен по времени, поэтому первичный
+ * ключ на нём не дробит индекс.
+ *
+ * <p>Значение собирает java-uuid-generator — собственной сборки битов в проекте нет.
+ * Класс лишь отдаёт библиотеке часы приложения: тесты фиксируют время через {@link Clock},
+ * а в пределах одной миллисекунды библиотека сохраняет порядок счётчиком.
+ *
+ * <p>Своя обёртка, а не общая с modeling и advisor: доменные модули друг от друга не зависят.
  */
 public final class UuidV7 {
 
-    private static final SecureRandom RANDOM = new SecureRandom();
-
-    private final Clock clock;
+    private final NoArgGenerator generator;
 
     public UuidV7(Clock clock) {
-        this.clock = Objects.requireNonNull(clock, "clock");
+        Objects.requireNonNull(clock, "clock");
+        this.generator = Generators.timeBasedEpochGenerator(null, new UUIDClock() {
+            @Override
+            public long currentTimeMillis() {
+                return clock.millis();
+            }
+        });
     }
 
     public static UuidV7 systemUtc() {
@@ -25,16 +37,6 @@ public final class UuidV7 {
     }
 
     public UUID next() {
-        long millis = clock.millis();
-        byte[] random = new byte[10];
-        RANDOM.nextBytes(random);
-        long high = (millis & 0xFFFF_FFFF_FFFFL) << 16
-                | 0x7000L
-                | ((random[0] & 0x0FL) << 8) | (random[1] & 0xFFL);
-        long low = 0x8000_0000_0000_0000L | ((random[2] & 0x3FL) << 56);
-        for (int i = 3; i < 10; i++) {
-            low |= (random[i] & 0xFFL) << (8 * (9 - i));
-        }
-        return new UUID(high, low);
+        return generator.generate();
     }
 }

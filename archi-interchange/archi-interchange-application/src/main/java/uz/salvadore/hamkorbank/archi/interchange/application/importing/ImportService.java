@@ -83,7 +83,7 @@ public final class ImportService {
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
             WorkspaceId workspace = new WorkspaceId(workspaceId);
-            String key = idempotencyKey.filter(k -> !k.isBlank()).orElseGet(() -> UUID.randomUUID().toString());
+            String key = idempotencyKey.filter(k -> !k.isBlank()).orElseGet(() -> uuids.next().toString());
             ImportRequest request = request(workspace, fileName, content, key, actor);
             return unitOfWork.write(() -> {
                 ImportIntake.Intake intake = intake(request);
