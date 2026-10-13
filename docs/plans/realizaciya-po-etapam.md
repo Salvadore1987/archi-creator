@@ -1539,9 +1539,12 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 - ✅ `GitPublisherTest#pushIsAlwaysFastForward` (и ещё семь сценариев: расхождение,
       переписанная история, повтор по трейлерам, недоступный репозиторий)
 - ✅ `GitExportIT#repeatedExportProducesNoDiff`, `#historyIsAppendOnly`
-- ⬜ Фикстура `git_roundtrip`: цикл БД → YAML → БД → `.archimate` даёт исходный
-      файл (FR-40, [§9.1](../backend.md#91-golden-file-тесты-round-trip--критический-контур))
-- ⬜ `SnapshotRetentionIT#purgeIsDisabledWithoutGitBinding`
+- ✅ Фикстура `git_roundtrip`: цикл БД → YAML → БД → `.archimate` даёт исходный
+      файл (FR-40, [§9.1](../backend.md#91-golden-file-тесты-round-trip--критический-контур)) —
+      эталоны деревьев `fixtures/git_roundtrip/` и `GitRoundTripIT#databaseToGitToDatabaseIsLossless`
+      на эталонной модели: из дерева коммита — те же байты, что выгрузка версии
+- ✅ `SnapshotRetentionIT#purgeIsDisabledWithoutGitBinding` (остался, теперь без
+      привязки, а не «до этапа 7a») и `GitRetentionIT` с настоящим репозиторием
 
 ### 7a.5 Порядок коммитов
 
@@ -1551,7 +1554,7 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 4. ✅ `feat(git)`: outbox, публикация на JGit, `git_sha`, расхождение (7a.2)
 5. ✅ `feat(modeling)`: ретеншен с Git и восстановление снимка (7a.3) — вместе
    с `GitExportIT` и `GitRetentionIT`, которые проверяют и механику 7a.2
-6. ⬜ `test`: интеграционные `GitExportIT`, `GitRoundTripIT`, ретеншен (7a.4)
+6. ✅ `test`: `GitRoundTripIT` — критерий этапа (7a.4)
 7. ⬜ `docs`: CI-задача `.archimate` на теге, README, CLAUDE.md, граф, журнал
 
 ---
