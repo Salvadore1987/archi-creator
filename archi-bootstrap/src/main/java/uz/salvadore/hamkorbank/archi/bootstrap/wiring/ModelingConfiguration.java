@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.wiring;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.time.ZoneId;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
@@ -11,12 +12,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.transaction.PlatformTransactionManager;
+import uz.salvadore.hamkorbank.archi.bootstrap.git.GitSnapshotArchive;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService;
 import uz.salvadore.hamkorbank.archi.interchange.application.mapping.ArchimateSnapshots;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.DomainEventPublisher;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.GitBinding;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.IdempotencyRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelAccessListRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelLockRepository;
@@ -74,10 +76,10 @@ public class ModelingConfiguration {
         return new ModelingMicrometerMetrics(registry);
     }
 
-    /** До этапа 7a Git не настроен ни у кого: снимки не чистятся. */
+    /** Доступность репозитория и восстановление очищенного снимка — через публикацию в Git. */
     @Bean
-    GitBinding gitBinding() {
-        return workspaceId -> false;
+    GitSnapshotArchive gitSnapshotArchive(ObjectProvider<GitPublishingService> publishing) {
+        return new GitSnapshotArchive(publishing::getObject);
     }
 
     @Bean
@@ -99,9 +101,9 @@ public class ModelingConfiguration {
     }
 
     @Bean
-    VersionService versionService(ModelingKernel kernel, ArchimateSnapshots snapshots, GitBinding gitBinding,
+    VersionService versionService(ModelingKernel kernel, ArchimateSnapshots snapshots, GitSnapshotArchive git,
                                   ModelingSettings settings) {
-        return new VersionService(kernel, snapshots, snapshots, gitBinding, ZoneId.systemDefault(),
+        return new VersionService(kernel, snapshots, snapshots, git, git, ZoneId.systemDefault(),
                 settings.retentionEnabled());
     }
 

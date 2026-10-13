@@ -32,6 +32,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMet
 import uz.salvadore.hamkorbank.archi.interchange.application.port.PublishedVersions;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.SecretResolver;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
@@ -173,6 +174,64 @@ public final class GitPublishingService {
             return new ModelGitStatus(model, diverged ? ModelGitStatus.State.DIVERGED : ModelGitStatus.State.PENDING,
                     open, last, diverged ? Optional.of(head.get().versionNo()) : Optional.empty());
         });
+    }
+
+    /**
+     * Настроен ли и доступен ли репозиторий пространства — живой проверкой, с записью
+     * исхода в привязку. От ответа зависит очистка снимков: лучше не очистить, чем
+     * очистить без копии.
+     */
+    public boolean reachable(WorkspaceId workspace) {
+        Optional<GitBinding> binding = unitOfWork.read(() -> bindings.find(workspace)).filter(GitBinding::writable);
+        if (binding.isEmpty()) {
+            return false;
+        }
+        boolean reachable;
+        try {
+            repository.fetch(remote(binding.get()));
+            reachable = true;
+        } catch (Unreachable e) {
+            reachable = false;
+        }
+        Instant at = clock.instant();
+        boolean result = reachable;
+        unitOfWork.write(() -> bindings.find(workspace).filter(GitBinding::writable)
+                .ifPresent(b -> bindings.save(result ? b.checked(at) : b.unreachable(at))));
+        return reachable;
+    }
+
+    /**
+     * Снимок версии из её коммита: каталог модели, собранный обратно в {@code .archimate}.
+     * Совпадение с отпечатком версии обязательно — иначе это не тот снимок, и он не отдаётся.
+     *
+     * @return пусто — привязки нет или каталога модели в коммите нет
+     */
+    public Optional<byte[]> restore(WorkspaceId workspace, ModelId model, long versionNo, GitSha sha,
+                                    String contentHash) {
+        Optional<GitBinding> binding = unitOfWork.read(() -> bindings.find(workspace));
+        if (binding.isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            Remote remote = remote(binding.get());
+            repository.fetch(remote);
+            String suffix = "." + shortId(model);
+            Optional<String> directory = repository.directories(remote, sha, MODELS_DIR).stream()
+                    .filter(name -> name.endsWith(suffix)).sorted().findFirst();
+            if (directory.isEmpty()) {
+                return Optional.empty();
+            }
+            byte[] xml = new ArchiXmlWriter().write(reader.read(
+                    repository.read(remote, sha, MODELS_DIR + "/" + directory.get())));
+            if (!ContentHash.of(xml).value().equals(contentHash)) {
+                throw new InterchangeException(InterchangeCodes.EXPORT_VERSION, Failure.CONFLICT,
+                        Message.of(InterchangeMessages.GIT_SNAPSHOT_MISMATCH, versionNo, sha), Map.of());
+            }
+            return Optional.of(xml);
+        } catch (Unreachable e) {
+            throw new InterchangeException(InterchangeCodes.GIT_UNREACHABLE, Failure.UNAVAILABLE,
+                    Message.of(InterchangeMessages.GIT_UNREACHABLE, binding.get().repoUrl()), Map.of());
+        }
     }
 
     /** Очередь одной модели по порядку, пока записи закрываются. */

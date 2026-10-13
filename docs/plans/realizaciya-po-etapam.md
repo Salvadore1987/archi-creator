@@ -1522,10 +1522,15 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 7a.3 Ретеншен включается
 
-- ⬜ Очистка снимков включается только для рабочего пространства с настроенным
-      и доступным репозиторием (FR-47, `INV-MDL-010`)
-- ⬜ Восстановление снимка из Git по `git_sha` прозрачно для пользователя
-      (FR-46, `VersionSnapshotReader`)
+- ✅ Очистка снимков включается только для рабочего пространства с настроенным
+      и доступным репозиторием (FR-47, `INV-MDL-010`): `archi.modeling.retention-enabled`
+      теперь `true`, доступность — живой `fetch` с записью исхода в привязку
+      (`GitPublishingService.reachable`); `GitRetentionIT`
+- ✅ Восстановление снимка из Git по `git_sha` прозрачно для пользователя
+      (FR-46): порт modeling `SnapshotArchive` (в плане — `VersionSnapshotReader`),
+      каталог модели из коммита собирается обратно и сверяется с `content_hash`
+      версии; не совпал — `409`, репозиторий недоступен — `503`, вернуть неоткуда —
+      `410`, как раньше; `GitExportIT#purgedSnapshotIsRestoredFromGit`
 
 ### 7a.4 Тесты
 
@@ -1533,7 +1538,7 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
       `#exportIsByteStable`, `#folderIsFieldNotDirectory`
 - ✅ `GitPublisherTest#pushIsAlwaysFastForward` (и ещё семь сценариев: расхождение,
       переписанная история, повтор по трейлерам, недоступный репозиторий)
-- ⬜ `GitExportIT#repeatedExportProducesNoDiff`, `#historyIsAppendOnly`
+- ✅ `GitExportIT#repeatedExportProducesNoDiff`, `#historyIsAppendOnly`
 - ⬜ Фикстура `git_roundtrip`: цикл БД → YAML → БД → `.archimate` даёт исходный
       файл (FR-40, [§9.1](../backend.md#91-golden-file-тесты-round-trip--критический-контур))
 - ⬜ `SnapshotRetentionIT#purgeIsDisabledWithoutGitBinding`
@@ -1544,7 +1549,8 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 2. ✅ `feat(interchange)`: писатель и читатель YAML, позиции, эталон (7a.1)
 3. ✅ `feat(git)`: `GitBinding`, V6, настройка привязки через API (`GitBindingIT`)
 4. ✅ `feat(git)`: outbox, публикация на JGit, `git_sha`, расхождение (7a.2)
-5. ⬜ `feat(modeling)`: ретеншен с Git и восстановление снимка (7a.3)
+5. ✅ `feat(modeling)`: ретеншен с Git и восстановление снимка (7a.3) — вместе
+   с `GitExportIT` и `GitRetentionIT`, которые проверяют и механику 7a.2
 6. ⬜ `test`: интеграционные `GitExportIT`, `GitRoundTripIT`, ретеншен (7a.4)
 7. ⬜ `docs`: CI-задача `.archimate` на теге, README, CLAUDE.md, граф, журнал
 

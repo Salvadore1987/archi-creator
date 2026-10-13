@@ -20,6 +20,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.DomainEventPublisher;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.GitBinding;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotArchive;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.IdempotencyRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelAccessListRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
@@ -305,7 +306,7 @@ final class InMemoryPorts {
             Message::toString, clock, Duration.ofMinutes(30));
     final VersionService versionService = new VersionService(kernel, snapshotWriter, (xml, current, now) -> {
         throw new UnsupportedOperationException();
-    }, noGit, ZoneOffset.UTC, false);
+    }, noGit, SnapshotArchive.NONE, ZoneOffset.UTC, false);
     final ModelLifecycleService lifecycle = new ModelLifecycleService(kernel, workspaceRepository, versionService);
     final ModelQueryService queries = new ModelQueryService(kernel);
     final LockService lockService = new LockService(kernel);

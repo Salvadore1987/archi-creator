@@ -112,11 +112,20 @@ paths:
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '409':
-          description: Модель удалена — `MODEL_DELETED`.
+          description: |
+            Модель удалена — `MODEL_DELETED`; снимок, собранный из коммита версии, не совпал
+            с её отпечатком — `INV-IXC-008` (не тот снимок не отдаётся).
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '410':
-          description: Снимок версии очищен, Git не настроен (FR-47).
+          description: |
+            Снимок версии очищен, а вернуть его неоткуда: привязки к Git нет
+            или в коммите версии нет каталога модели (FR-47). С привязкой очищенный
+            снимок собирается из коммита прозрачно (FR-46).
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '503':
+          description: Снимок очищен, а репозиторий недоступен — `IXC_GIT_UNREACHABLE`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '500':
