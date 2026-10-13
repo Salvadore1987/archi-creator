@@ -1,0 +1,46 @@
+folders:
+  - id: id-0438d0b7d718f7d85aea86fb22562b8c
+    name: Strategy
+    position: 1000
+    attributes:
+      type: strategy
+  - id: id-594f3111fa13a45c647ce66e4fa3e4f1
+    name: Business
+    position: 2000
+    attributes:
+      type: business
+  - id: id-27662110ddc8ba46c96c7ba35f959288
+    name: Application
+    position: 3000
+    attributes:
+      type: application
+  - id: id-e6fe110f5cb23330b1d5c72092cd93c6
+    name: Technology & Physical
+    position: 4000
+    attributes:
+      type: technology
+  - id: id-399a510d91237d0e500c3f0d43266640
+    name: Motivation
+    position: 5000
+    attributes:
+      type: motivation
+  - id: id-6a6d709474aa4589990073fa2518ec3e
+    name: Implementation & Migration
+    position: 6000
+    attributes:
+      type: implementation_migration
+  - id: id-bcf9af91c15976103566381dfaa91264
+    name: Other
+    position: 7000
+    attributes:
+      type: other
+  - id: id-932295df816cc5fa2ff1448f89ea9c78
+    name: Relations
+    position: 8000
+    attributes:
+      type: relations
+  - id: id-fa47dc2eb9e153cc03b7837ffda5e5ff
+    name: Views
+    position: 9000
+    attributes:
+      type: diagrams

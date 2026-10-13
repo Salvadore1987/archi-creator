@@ -1,0 +1,41 @@
+id: id-63e2975f737bdf3b998d96d4f41fb079
+type: ArchimateDiagramModel
+name: Расширения
+folder: id-506aff620d12469054c7c999b9ec4727
+position: 1000
+children:
+  - id: id-0de635f21d7ffde538d3083b8070ed3d
+    type: DiagramObject
+    attributes:
+      archimateElement: id-7af3a3d4e636b362cf09f15c2d17d627
+    bounds: {x: 24, y: 24, width: 140, height: 60}
+    connections:
+      - id: id-79bb243fc84a3f37ea1343680047594f
+        type: Connection
+        attributes:
+          source: id-0de635f21d7ffde538d3083b8070ed3d
+          target: id-d5152b3117b7a286c001e41d2272709c
+          archimateRelationship: id-4c66996625029f83be8eb65af95cb722
+    raw_xml:
+      - <feature name="iconVisible" value="false"/>
+    content_order:
+      - bounds
+      - raw_xml
+      - connection
+  - id: id-d5152b3117b7a286c001e41d2272709c
+    type: DiagramObject
+    attributes:
+      targetConnections: id-79bb243fc84a3f37ea1343680047594f
+      archimateElement: id-53f986115270259ff902bf66cf3dca2c
+    bounds: {x: 300, y: 24, width: 140, height: 60}
+  - id: id-9339b6f33ca58e85115d4f69198f0e72
+    type: DiagramModelReference
+    attributes:
+      model: id-3a983a300ab35ca41745f730633ff872
+    bounds: {x: 24, y: 160, width: 140, height: 60}
+  - id: id-97ca8c3a679cb3760a5e5932f5918a01
+    type: QuantumShape
+    attributes:
+      archimateElement: id-19df3dc10e248cb7b1f4cb91dc5a34af
+      spin: up
+    bounds: {x: 300, y: 160, width: 140, height: 60}

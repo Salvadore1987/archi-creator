@@ -1,0 +1,16 @@
+id: id-53f986115270259ff902bf66cf3dca2c
+type: BusinessActor
+name: Клиент
+folder: id-7fdd5a12f979bb19f1ebd4be0801fd2f
+position: 1000
+attributes:
+  vendor:owner: Розница
+properties:
+  - key: source
+    value: CRM
+raw_xml:
+  - |-
+    <vendor:lineage system="CRM" table="clients">
+            <vendor:step order="1">выгрузка</vendor:step>
+            <vendor:step order="2">очистка &amp; дедупликация</vendor:step>
+          </vendor:lineage>

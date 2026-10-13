@@ -1,0 +1,24 @@
+format_version: 1
+id: id-054b740bdf40fe499e06add25ef7a09f
+name: Неизвестные узлы и атрибуты
+attributes:
+  xmlns:xsi: http://www.w3.org/2001/XMLSchema-instance
+  xmlns:archimate: http://www.archimatetool.com/archimate
+  xmlns:canvas: http://www.archimatetool.com/canvas
+  xmlns:vendor: urn:example:vendor
+  version: 5.0.0
+items:
+  - position: 10000
+    purpose: "Фикстура неизвестных узлов и атрибутов: всё незнакомое переносится дословно."
+  - position: 11000
+    property:
+      key: model.owner
+      value: Архитектурный отдел
+  - position: 12000
+    raw_xml: <profile name="Банковская система" id="id-e298955d2704e1c50f1bb9c63b0f9c8b" conceptType="ApplicationComponent"/>
+  - position: 13000
+    raw_xml: |-
+      <vendor:metadata generator="vendor-tool 3.1">
+          <!-- комментарий внутри непрозрачного фрагмента сохраняется -->
+          <vendor:entry key="exported" value="2026-10-01"/>
+        </vendor:metadata>
