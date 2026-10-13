@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { openModel, openView } from './support/mockApi';
 
-test.describe('FR-41: экспорт картинок из меню «Экспорт»', () => {
+test.describe('FR-41, FR-43: экспорт из меню «Экспорт»', () => {
   test('читатель выгружает открытое представление в SVG и PNG, имя файла — от сервера', async ({ page }) => {
     const api = await openModel(page, { roles: ['VIEWER'] });
     const viewId = await openView(page, api, '01');
@@ -29,6 +29,17 @@ test.describe('FR-41: экспорт картинок из меню «Экспо
     await page.getByRole('menuitem', { name: 'Все представления — PNG, архив' }).click();
     await request;
     expect((await zip).suggestedFilename()).toBe('views-v1.zip');
+  });
+
+  test('FR-43, FR-44: модель выгружается в Open Exchange архивом, число потерь — в сообщении', async ({ page }) => {
+    const api = await openModel(page, { roles: ['VIEWER'] });
+    await page.getByTestId('export-menu').click();
+    const zip = page.waitForEvent('download');
+    const request = page.waitForRequest((r) => r.url().includes(`/api/v1/models/${api.modelId}/export?fmt=oef`));
+    await page.getByRole('menuitem', { name: 'Модель — Open Exchange (OEF), архив' }).click();
+    await request;
+    expect((await zip).suggestedFilename()).toBe('model-v1-oef.zip');
+    await expect(page.getByText('Не перенеслось в OEF: 9')).toBeVisible();
   });
 
   test('при несохранённых правках меню предупреждает, что выгружается сохранённая версия', async ({ page }) => {

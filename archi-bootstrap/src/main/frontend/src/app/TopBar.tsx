@@ -48,8 +48,12 @@ export function TopBar({ me, auth }: { me?: Me; auth: AuthMode }) {
   const activeViewId = useEditor((s) => s.activeViewId);
   const [exportMenu, setExportMenu] = useState<{ x: number; y: number } | null>(null);
 
-  /** Файл берёт имя из ответа сервера: там версия и слаг представления. */
-  const download = async (fetchFile: () => Promise<Response>, fallbackName: string) => {
+  /**
+   * Файл берёт имя из ответа сервера: там версия и слаг представления.
+   * `lossNotice` — текст о потерях выгрузки, если сервер их насчитал.
+   */
+  const download = async (fetchFile: () => Promise<Response>, fallbackName: string,
+    lossNotice?: (count: number) => string) => {
     try {
       const response = await fetchFile();
       const blob = await response.blob();
@@ -59,6 +63,8 @@ export function TopBar({ me, auth }: { me?: Me; auth: AuthMode }) {
       link.download = fileNameOf(response) ?? fallbackName;
       link.click();
       URL.revokeObjectURL(url);
+      const losses = Number(response.headers.get('X-Archi-Loss-Count') ?? 0);
+      if (lossNotice && losses > 0) useToast.getState().show(lossNotice(losses));
     } catch (error) {
       useToast.getState().show(describeError(error), { tone: 'error' });
     }
@@ -66,6 +72,11 @@ export function TopBar({ me, auth }: { me?: Me; auth: AuthMode }) {
 
   const exportItems: MenuItem[] = [
     { label: t('topbar.exportModel'), icon: 'download', run: () => void download(() => api.exportModel(model.id), `${model.name}.archimate`) },
+    {
+      label: t('topbar.exportOef'),
+      icon: 'download',
+      run: () => void download(() => api.exportModel(model.id, 'oef'), `${model.name}-oef.zip`, (n) => t('topbar.exportOefLosses', { n })),
+    },
     ...(activeViewId
       ? ([
           { label: t('topbar.exportViewSvg'), icon: 'view', run: () => void download(() => api.exportViewImage(activeViewId, 'svg'), `${model.name}.svg`) },

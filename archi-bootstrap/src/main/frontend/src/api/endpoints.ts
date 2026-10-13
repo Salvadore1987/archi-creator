@@ -29,6 +29,8 @@ import type {
 } from './types';
 
 export type ImageFormat = 'svg' | 'png';
+/** Формат выгрузки модели; `oef` — Open Exchange архивом с отчётом о потерях. */
+export type ModelFormat = 'archimate' | 'oef';
 
 export const api = {
   uiConfig: () => request<UiConfig>('/ui-config'),
@@ -46,7 +48,8 @@ export const api = {
       idempotencyKey: key,
     });
   },
-  exportModel: (modelId: Uuid) => request<Response>(`/models/${modelId}/export`, { raw: true }),
+  exportModel: (modelId: Uuid, fmt?: ModelFormat) =>
+    request<Response>(`/models/${modelId}/export${fmt ? `?fmt=${fmt}` : ''}`, { raw: true }),
   /** Картинка представления из последней сохранённой версии; умолчания параметров — у сервера. */
   exportViewImage: (viewId: Uuid, fmt: ImageFormat, scale?: number) =>
     request<Response>(`/views/${viewId}/export?fmt=${fmt}${scale ? `&scale=${scale}` : ''}`, { raw: true }),

@@ -53,6 +53,8 @@ export const ru = {
     exportTitle: 'Экспорт сохранённой версии',
     exportUnsaved: 'Несохранённые правки в файл не попадут — выгружается сохранённая версия',
     exportModel: 'Модель .archimate',
+    exportOef: 'Модель — Open Exchange (OEF), архив',
+    exportOefLosses: 'Не перенеслось в OEF: {n} — подробности в loss-report.json внутри архива',
     exportViewSvg: 'Представление — SVG',
     exportViewPng: 'Представление — PNG',
     exportViewPng2x: 'Представление — PNG ×2',
