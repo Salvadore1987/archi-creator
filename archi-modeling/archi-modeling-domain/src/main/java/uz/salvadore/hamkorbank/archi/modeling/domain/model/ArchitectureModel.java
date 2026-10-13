@@ -343,8 +343,8 @@ public final class ArchitectureModel {
     // ── Элементы ────────────────────────────────────────────────────
 
     /**
-     * Новый элемент в папке своего слоя. Тип — поддержанный фазой 1: тип фазы 2
-     * и 3 создать нельзя, импортированный остаётся opaque.
+     * Новый элемент в папке своего слоя. Тип — поддержанный текущей фазой: тип фазы 3
+     * и тип вне фаз создать нельзя, импортированный остаётся opaque.
      */
     public Element addElement(ArchiType archiType, String elementName, FolderId folderId, ElementId newId,
                               ArchiId newArchiId, Instant now) {

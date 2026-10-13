@@ -28,7 +28,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
  *
  * <p>Фазы: в фазе 1 Business, Application, Technology, все
  * связи и {@code Junction}; Motivation и Strategy — фаза 2; Physical и
- * Implementation &amp; Migration — фаза 3.
+ * Implementation &amp; Migration — фаза 3. Редактируются фазы 1 и 2.
  */
 public final class ArchiTypeRegistry {
 

@@ -1220,11 +1220,14 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 6.1 Метамодель (`archi-modeling-domain`)
 
-- ⬜ `ConceptDefinition.supported()` — фазы 1 и 2; `ArchitectureModel.addElement` создаёт
+- ✅ `ConceptDefinition.supported()` — фазы 1 и 2; `ArchitectureModel.addElement` создаёт
       `Capability`, отказывает `WorkPackage` (`TYPE_NOT_EDITABLE`)
-- ⬜ Тесты: `ArchiTypeRegistryTest` (поддержаны шесть слоёв, фаза 3 и `Location` — нет),
-      `RelationMatrixTest#phaseTwoTypesAreKnown`, `ArchitectureModelTest` (Capability
-      создаётся, WorkPackage — нет), `ModelValidator` не помечает Capability opaque
+- ✅ Тесты: `ArchiTypeRegistryTest` (поддержаны шесть слоёв, фаза 3 и `Location` — нет),
+      тройки фазы 2 в `relation-matrix-cases.csv` (выписаны из гл. 6–7 ArchiMate 3.2;
+      что матрица знает все типы каталога, держал `catalogAndMatrixAgree` и раньше),
+      `ArchitectureModelTest` (Capability создаётся, правится и связывается, WorkPackage — нет).
+      Заглушку в `SvgWriterTest` изображает `WorkPackage` вместо `Goal`. Флаг opaque
+      валидатор берёт из строки, а не из каталога — его проверяет `PhaseTwoUpgradeIT` (6.2)
 
 ### 6.2 Хранение (`archi-bootstrap`, Flyway)
 

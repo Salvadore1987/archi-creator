@@ -34,3 +34,17 @@ ApplicationService,ApplicationComponent,COMPOSITION,false
 ApplicationComponent,BusinessActor,SPECIALIZATION,false
 Artifact,Node,ASSIGNMENT,false
 DataObject,DataObject,TRIGGERING,false
+# Фаза 2: Strategy (гл. 7) и Motivation (гл. 6).
+ApplicationComponent,Capability,REALIZATION,true
+BusinessProcess,Capability,REALIZATION,true
+Resource,Capability,ASSIGNMENT,true
+Capability,ValueStream,SERVING,true
+Capability,Capability,AGGREGATION,true
+Driver,Goal,INFLUENCE,true
+Requirement,Goal,REALIZATION,true
+Outcome,Goal,REALIZATION,true
+Stakeholder,Driver,ASSOCIATION,true
+Value,Capability,ASSOCIATION,true
+Goal,ApplicationComponent,REALIZATION,false
+Goal,BusinessActor,ASSIGNMENT,false
+Capability,ApplicationComponent,ASSIGNMENT,false
