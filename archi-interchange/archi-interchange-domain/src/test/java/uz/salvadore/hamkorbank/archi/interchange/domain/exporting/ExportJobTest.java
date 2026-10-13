@@ -4,13 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
@@ -21,6 +22,9 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.UuidV7;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
 class ExportJobTest {
+
+    /** Идентификаторы тестовых объектов — версии 7, из той же библиотеки, что у приложения. */
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
 
     private static final Instant NOW = Instant.parse("2026-10-08T09:00:00Z");
     private static final UuidV7 UUIDS = new UuidV7(Clock.fixed(NOW, ZoneOffset.UTC));
@@ -89,8 +93,8 @@ class ExportJobTest {
     }
 
     private static ExportJob job(ExportFormat format, long version) {
-        return ExportJob.request(ExportJobId.next(UUIDS), new WorkspaceId(UUID.randomUUID()),
-                new ModelId(UUID.randomUUID()), Optional.empty(), format, ExportOptions.none(), version,
+        return ExportJob.request(ExportJobId.next(UUIDS), new WorkspaceId(IDS.generate()),
+                new ModelId(IDS.generate()), Optional.empty(), format, ExportOptions.none(), version,
                 "architect", NOW);
     }
 

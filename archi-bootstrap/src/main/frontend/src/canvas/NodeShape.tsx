@@ -81,7 +81,7 @@ export const NodeShape = memo(function NodeShape(props: NodeShapeProps) {
               textAlign: align,
               justifyContent: align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center',
               // Шрифта из файла Archi может не быть в системе — запасное семейство то же, что у токена.
-              fontFamily: paint.font ? `"${paint.font.family}", system-ui, sans-serif` : undefined,
+              fontFamily: paint.font ? `"${paint.font.family}", "Inter", system-ui, sans-serif` : undefined,
               fontSize: paint.font ? `${paint.font.sizePt}pt` : undefined,
               fontWeight: paint.font?.bold ? 700 : undefined,
               fontStyle: paint.font?.italic ? 'italic' : undefined,

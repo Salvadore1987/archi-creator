@@ -10,8 +10,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static uz.salvadore.hamkorbank.archi.bootstrap.roundtrip.XmlEquivalence.assertXmlEquivalent;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -25,6 +26,9 @@ import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
  */
 class RoundTripApiIT extends ApiTest {
 
+    /** Идентификаторы тестовых объектов — версии 7, из той же библиотеки, что у приложения. */
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
+
     @Test
     @DisplayName("§12, INV-IXC-005: импорт → БД → экспорт через API даёт исходный файл")
     void importStoreExportThroughApi() throws Exception {
@@ -33,7 +37,7 @@ class RoundTripApiIT extends ApiTest {
         String modelId = read(mvc.perform(multipart("/api/v1/models/import")
                         .file(new MockMultipartFile("file", "Hamkorbank_AS_IS_strict.archimate", "application/xml",
                                 original))
-                        .header("Idempotency-Key", "roundtrip-" + UUID.randomUUID())
+                        .header("Idempotency-Key", "roundtrip-" + IDS.generate())
                         .with(architect()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("APPLIED"))

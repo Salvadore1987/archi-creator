@@ -132,7 +132,12 @@ public final class ExportService {
     }
 
     private static String fileName(VersionSnapshot snapshot, String extension) {
-        String base = snapshot.model().name().replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_").strip();
-        return (base.isEmpty() ? "model" : base) + "-v" + snapshot.versionNo() + "." + extension;
+        return safeFileName(snapshot.model().name(), "model") + "-v" + snapshot.versionNo() + "." + extension;
+    }
+
+    /** Имя без символов, недопустимых в имени файла; пустое — {@code fallback}. */
+    static String safeFileName(String name, String fallback) {
+        String base = name.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_").strip();
+        return base.isEmpty() ? fallback : base;
     }
 }

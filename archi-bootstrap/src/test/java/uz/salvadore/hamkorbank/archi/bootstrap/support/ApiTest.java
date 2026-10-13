@@ -4,6 +4,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import com.jayway.jsonpath.JsonPath;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -60,7 +61,7 @@ public abstract class ApiTest extends IntegrationTest {
     }
 
     protected static UUID id(MvcResult result) throws Exception {
-        return UUID.fromString(read(result, "$.id"));
+        return UUIDUtil.uuid(ApiTest.<String>read(result, "$.id"));
     }
 
     protected static <T> T read(MvcResult result, String path) throws Exception {

@@ -2,6 +2,9 @@ package uz.salvadore.hamkorbank.archi.bootstrap.advisor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -30,6 +33,9 @@ import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
 @ActiveProfiles("dev")
 class AdvisorStreamingIT extends IntegrationTest {
 
+    /** Идентификаторы тестовых объектов — версии 7, из той же библиотеки, что у приложения. */
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
+
     @LocalServerPort
     int port;
 
@@ -52,16 +58,16 @@ class AdvisorStreamingIT extends IntegrationTest {
         String created = client.send(HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + "/api/v1/models"))
                 .header("Content-Type", "application/json")
-                .header("Idempotency-Key", "stream-model-" + UUID.randomUUID())
+                .header("Idempotency-Key", "stream-model-" + IDS.generate())
                 .POST(HttpRequest.BodyPublishers.ofString("{\"name\":\"Поток\"}"))
                 .build(), HttpResponse.BodyHandlers.ofString()).body();
-        UUID model = UUID.fromString(com.jayway.jsonpath.JsonPath.read(created, "$.id"));
+        UUID model = UUIDUtil.uuid(com.jayway.jsonpath.JsonPath.<String>read(created, "$.id"));
 
         long started = System.nanoTime();
         HttpResponse<InputStream> response = client.send(HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + "/api/v1/ai/review"))
                 .header("Content-Type", "application/json")
-                .header("Idempotency-Key", "stream-" + UUID.randomUUID())
+                .header("Idempotency-Key", "stream-" + IDS.generate())
                 .POST(HttpRequest.BodyPublishers.ofString("{\"modelId\":\"" + model + "\"}"))
                 .build(), HttpResponse.BodyHandlers.ofInputStream());
 

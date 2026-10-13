@@ -4,7 +4,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.UUID;
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -17,10 +18,13 @@ import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
  */
 class LocalizedProblemIT extends ApiTest {
 
+    /** Идентификаторы тестовых объектов — версии 7, из той же библиотеки, что у приложения. */
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
+
     @Test
     @DisplayName("UI-021: отказ по-английски при Accept-Language: en, код тот же")
     void englishByAcceptLanguage() throws Exception {
-        mvc.perform(get("/api/v1/models/" + UUID.randomUUID()).with(architect())
+        mvc.perform(get("/api/v1/models/" + IDS.generate()).with(architect())
                         .header(HttpHeaders.ACCEPT_LANGUAGE, "en-US"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("MDL_NOT_FOUND"))
@@ -31,11 +35,11 @@ class LocalizedProblemIT extends ApiTest {
     @Test
     @DisplayName("UI-021: без Accept-Language и для неизвестного языка — по-русски")
     void russianByDefault() throws Exception {
-        mvc.perform(get("/api/v1/models/" + UUID.randomUUID()).with(architect()))
+        mvc.perform(get("/api/v1/models/" + IDS.generate()).with(architect()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Не найдено"))
                 .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.startsWith("Не найдено: модель ")));
-        mvc.perform(get("/api/v1/models/" + UUID.randomUUID()).with(architect())
+        mvc.perform(get("/api/v1/models/" + IDS.generate()).with(architect())
                         .header(HttpHeaders.ACCEPT_LANGUAGE, "de"))
                 .andExpect(jsonPath("$.title").value("Не найдено"));
     }

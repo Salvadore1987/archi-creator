@@ -16,10 +16,17 @@
     <description>
         Доменная модель modeling: агрегаты, сущности, value objects, инварианты.
 
-        Зависимостей, кроме тестовых, здесь нет и быть не должно: это и есть
-        гарантия чистоты домена. Правило enforcer'а ниже останавливает возврат Spring
-        и JPA, если кто-то попробует.
+        Единственная зависимость — генератор UUID; фреймворков здесь нет
+        и быть не должно: это и есть гарантия чистоты домена. Правило enforcer'а ниже
+        останавливает возврат Spring и JPA, если кто-то попробует.
     </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.fasterxml.uuid</groupId>
+            <artifactId>java-uuid-generator</artifactId>
+        </dependency>
+    </dependencies>
 
     <build>
         <plugins>

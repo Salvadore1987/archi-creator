@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.Objects;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
@@ -16,7 +17,7 @@ public record ViewEdgeId(UUID value) implements ViewEndpoint {
     }
 
     public static ViewEdgeId of(String value) {
-        return new ViewEdgeId(UUID.fromString(value));
+        return new ViewEdgeId(UUIDUtil.uuid(value));
     }
 
     public static ViewEdgeId next(UuidV7 uuids) {

@@ -9,6 +9,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +21,9 @@ import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 
 /** Правка представления — группы, заметки, стиль, рёбра — через REST, базу и выгрузку. */
 class ViewEditingIT extends ApiTest {
+
+    /** Идентификаторы тестовых объектов — версии 7, из той же библиотеки, что у приложения. */
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
 
     @Test
     @DisplayName("UC-MDL-008: группа, заметка и стиль пишутся из столбцов; удалённое ребро не выгружается, связь — да")
@@ -79,7 +85,7 @@ class ViewEditingIT extends ApiTest {
                                 + "\",\"targetId\":\"" + actor + "\",\"view\":{\"viewId\":\"" + view
                                 + "\",\"sourceNodeId\":\"" + cNode + "\",\"targetNodeId\":\"" + aNode + "\"}}"))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        UUID edge = UUID.fromString(com.jayway.jsonpath.JsonPath.read(serving, "$.edgeId"));
+        UUID edge = UUIDUtil.uuid(com.jayway.jsonpath.JsonPath.<String>read(serving, "$.edgeId"));
         mvc.perform(patch("/api/v1/view-edges/" + edge).with(architect())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"style\":{\"lineColor\":\"#00aa00\"}}"))
                 .andExpect(status().isOk())
@@ -165,11 +171,11 @@ class ViewEditingIT extends ApiTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"elementId\":\"" + component + "\",\"x\":0,\"y\":0}"))
                 .andExpect(status().isCreated()).andReturn());
-        UUID unsaved = UUID.randomUUID();
+        UUID unsaved = IDS.generate();
         String graph = "{\"strategy\":\"layered\",\"nodes\":[{\"id\":\"" + appNode
                 + "\",\"conceptType\":\"archimate:ApplicationComponent\",\"x\":0,\"y\":0,\"width\":120,\"height\":55},"
                 + "{\"id\":\"" + unsaved + "\",\"conceptType\":\"archimate:BusinessProcess\",\"x\":0,\"y\":0,"
-                + "\"width\":120,\"height\":55}],\"edges\":[{\"id\":\"" + UUID.randomUUID() + "\",\"sourceId\":\""
+                + "\"width\":120,\"height\":55}],\"edges\":[{\"id\":\"" + IDS.generate() + "\",\"sourceId\":\""
                 + appNode + "\",\"targetId\":\"" + unsaved + "\"}]}";
 
         var proposal = mvc.perform(post("/api/v1/views/" + view + "/auto-layout").with(architect())
@@ -203,7 +209,7 @@ class ViewEditingIT extends ApiTest {
 
     private void saveVersion(UUID model) throws Exception {
         mvc.perform(post("/api/v1/models/" + model + "/versions").with(architect())
-                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .header("Idempotency-Key", IDS.generate().toString())
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().is2xxSuccessful());
     }

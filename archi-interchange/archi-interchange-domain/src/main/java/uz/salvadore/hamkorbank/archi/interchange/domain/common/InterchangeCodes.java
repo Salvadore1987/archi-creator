@@ -27,6 +27,9 @@ public final class InterchangeCodes {
     public static final String UNKNOWN_FORMAT = "IXC_UNKNOWN_FORMAT";
     public static final String UNKNOWN_ELEMENT_TYPE = "IXC_UNKNOWN_ELEMENT_TYPE";
     public static final String FILE_TOO_LARGE = "IXC_FILE_TOO_LARGE";
+    public static final String VIEW_NOT_IN_VERSION = "IXC_VIEW_NOT_IN_VERSION";
+    public static final String IMAGE_TOO_LARGE = "IXC_IMAGE_TOO_LARGE";
+    public static final String INVALID_EXPORT_OPTION = "IXC_INVALID_EXPORT_OPTION";
 
     private InterchangeCodes() {
     }

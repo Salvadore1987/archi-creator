@@ -30,6 +30,8 @@ import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportRes
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportSettings;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportService;
+import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ImageRequest;
+import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ViewImageService;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportReport;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
@@ -51,14 +53,19 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 @RequestMapping("/api/v1")
 public class InterchangeController {
 
+    /** Число записей отчёта о потерях картинки. */
+    static final String LOSS_COUNT = "X-Archi-Loss-Count";
+
     private final ImportService imports;
     private final ExportService exports;
+    private final ViewImageService images;
     private final WorkspaceService workspaces;
     private final TextCatalog text;
 
-    public InterchangeController(ImportService imports, ExportService exports, WorkspaceService workspaces,
-                                 TextCatalog text) {
+    public InterchangeController(ImportService imports, ExportService exports, ViewImageService images,
+                                 WorkspaceService workspaces, TextCatalog text) {
         this.text = text;
+        this.images = images;
         this.imports = imports;
         this.exports = exports;
         this.workspaces = workspaces;
@@ -104,7 +111,35 @@ public class InterchangeController {
                                          @RequestParam Optional<Long> version,
                                          @RequestParam Optional<String> folder,
                                          @RequestParam Optional<String> sep) {
-        return artifact(exports.export(actor, id, new ExportRequest(fmt, version, sep, folder)));
+        ExportService.Export export = exports.export(actor, id, new ExportRequest(fmt, version, sep, folder));
+        return artifact(export.artifact(), export.versionNo()).body(export.artifact().bytes());
+    }
+
+    /**
+     * Картинка представления из зафиксированной версии: {@code fmt} — {@code svg} или
+     * {@code png}, {@code scale}, {@code outline}, {@code background}, {@code version}.
+     * Допустимые значения и умолчания решает сервис картинок; число записей отчёта
+     * о потерях — в {@code X-Archi-Loss-Count}.
+     */
+    @GetMapping("/views/{id}/export")
+    public ResponseEntity<byte[]> exportView(EditorIdentity actor, @PathVariable UUID id,
+                                             @RequestParam Optional<String> fmt,
+                                             @RequestParam Optional<Integer> scale,
+                                             @RequestParam Optional<Boolean> outline,
+                                             @RequestParam Optional<String> background,
+                                             @RequestParam Optional<Long> version) {
+        return image(images.viewImage(actor, id, new ImageRequest(fmt, scale, outline, background, version)));
+    }
+
+    /** Все представления модели одним архивом из одной версии. */
+    @GetMapping("/models/{id}/views/export")
+    public ResponseEntity<byte[]> exportAllViews(EditorIdentity actor, @PathVariable UUID id,
+                                                 @RequestParam Optional<String> fmt,
+                                                 @RequestParam Optional<Integer> scale,
+                                                 @RequestParam Optional<Boolean> outline,
+                                                 @RequestParam Optional<String> background,
+                                                 @RequestParam Optional<Long> version) {
+        return image(images.allViewImages(actor, id, new ImageRequest(fmt, scale, outline, background, version)));
     }
 
     @GetMapping("/workspaces/{id}/import-settings")
@@ -118,16 +153,20 @@ public class InterchangeController {
         return new ImportSettings(imports.strictImport(id));
     }
 
-    static ResponseEntity<byte[]> artifact(ExportService.Export export) {
-        Artifact artifact = export.artifact();
+    private static ResponseEntity<byte[]> image(ViewImageService.ImageExport export) {
+        return artifact(export.artifact(), export.versionNo())
+                .header(LOSS_COUNT, String.valueOf(export.lossCount()))
+                .body(export.artifact().bytes());
+    }
+
+    private static ResponseEntity.BodyBuilder artifact(Artifact artifact, long versionNo) {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(artifact.mediaType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
                         .filename(artifact.fileName(), java.nio.charset.StandardCharsets.UTF_8).build().toString())
-                .header("X-Archi-Version-No", String.valueOf(export.versionNo()))
+                .header("X-Archi-Version-No", String.valueOf(versionNo))
                 .eTag("\"" + artifact.hash().value() + "\"")
-                .lastModified(Instant.EPOCH)
-                .body(artifact.bytes());
+                .lastModified(Instant.EPOCH);
     }
 
     private UUID workspace(Optional<UUID> requested) {

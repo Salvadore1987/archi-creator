@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.Objects;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
@@ -16,7 +17,7 @@ public record FolderId(UUID value) {
     }
 
     public static FolderId of(String value) {
-        return new FolderId(UUID.fromString(value));
+        return new FolderId(UUIDUtil.uuid(value));
     }
 
     public static FolderId next(UuidV7 uuids) {

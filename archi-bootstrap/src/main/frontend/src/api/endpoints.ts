@@ -28,6 +28,8 @@ import type {
   ViewSummary,
 } from './types';
 
+export type ImageFormat = 'svg' | 'png';
+
 export const api = {
   uiConfig: () => request<UiConfig>('/ui-config'),
   me: () => request<Me>('/me'),
@@ -45,6 +47,11 @@ export const api = {
     });
   },
   exportModel: (modelId: Uuid) => request<Response>(`/models/${modelId}/export`, { raw: true }),
+  /** Картинка представления из последней сохранённой версии; умолчания параметров — у сервера. */
+  exportViewImage: (viewId: Uuid, fmt: ImageFormat, scale?: number) =>
+    request<Response>(`/views/${viewId}/export?fmt=${fmt}${scale ? `&scale=${scale}` : ''}`, { raw: true }),
+  exportAllViewImages: (modelId: Uuid, fmt: ImageFormat) =>
+    request<Response>(`/models/${modelId}/views/export?fmt=${fmt}`, { raw: true }),
 
   openModel: (modelId: Uuid) => request<ModelTree>(`/models/${modelId}`),
   openView: (viewId: Uuid) => request<ViewPayload>(`/views/${viewId}`),

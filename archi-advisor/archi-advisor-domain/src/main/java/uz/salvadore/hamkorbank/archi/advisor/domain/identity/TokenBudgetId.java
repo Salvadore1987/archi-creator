@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.identity;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.Objects;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.UuidV7;
@@ -16,7 +17,7 @@ public record TokenBudgetId(UUID value) {
     }
 
     public static TokenBudgetId of(String value) {
-        return new TokenBudgetId(UUID.fromString(value));
+        return new TokenBudgetId(UUIDUtil.uuid(value));
     }
 
     public static TokenBudgetId next(UuidV7 uuids) {

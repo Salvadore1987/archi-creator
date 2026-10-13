@@ -31,4 +31,19 @@ class UuidV7Test {
 
         assertTrue(Long.compareUnsigned(earlier.getMostSignificantBits(), later.getMostSignificantBits()) < 0);
     }
+
+    @Test
+    @DisplayName("в одной миллисекунде значения различны и растут — порядок держит счётчик библиотеки")
+    void sameMillisecondStaysOrdered() {
+        UuidV7 uuids = new UuidV7(Clock.fixed(Instant.parse("2026-10-13T09:00:00Z"), ZoneOffset.UTC));
+        UUID previous = uuids.next();
+        for (int i = 0; i < 1_000; i++) {
+            UUID next = uuids.next();
+            assertTrue(Long.compareUnsigned(previous.getMostSignificantBits(), next.getMostSignificantBits()) < 0
+                    || previous.getMostSignificantBits() == next.getMostSignificantBits()
+                    && Long.compareUnsigned(previous.getLeastSignificantBits(), next.getLeastSignificantBits()) < 0,
+                    previous + " → " + next);
+            previous = next;
+        }
+    }
 }

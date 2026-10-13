@@ -10,15 +10,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Состояние репозитория
 
-**Этапы 0–5 закрыты (этапы 4 и 5 — 2026-10-12). Следующие — независимые ветки
-5a (экспорт картинок), 6 (метамодель фазы 2), 7a (Git).**
+**Этапы 0–5 и 5a закрыты (этапы 4, 5 и 5a — 2026-10-12). Следующие — независимые
+ветки 6 (метамодель фазы 2), 7a (Git).**
 Собирается multi-module Maven по
 [`ADR-0001`](spec/adr/0001-maven-multi-module.md): 17 проектов в реакторе — родитель,
 три агрегатора контекстов, двенадцать модулей-слоёв, `archi-bootstrap` с классом запуска
 и fat jar. Код есть во всех трёх контекстах во всех четырёх слоях.
 
 ```
-archi-<bc>/archi-<bc>-domain              зависимостей нет, кроме junit (test)
+archi-<bc>/archi-<bc>-domain              только java-uuid-generator (+ junit в test)
 archi-<bc>/archi-<bc>-application         -> domain (interchange — ещё и modeling-application)
 archi-<bc>/archi-<bc>-adapter-rest        -> application + Spring Web
 archi-<bc>/archi-<bc>-adapter-persistence -> application + Spring Data JPA
@@ -156,13 +156,40 @@ API и до открытия потока; расход списывается �
 `ANTHROPIC_API_KEY` помощник отвечает `503`, остальное приложение работает.
 Поток отдаёт `SseEmitter`: `StreamingResponseBody` в Spring 7 не сбрасывает кадры.
 
-Тестов на сервере: 314 юнит-тестов (`./mvnw test`) и 65 интеграционных `*IT` на
+Что появилось на этапе 5a и где лежит:
+
+| Что | Где |
+|---|---|
+| Писатель SVG по визуальному языку канвы: силуэты, токены, иконки, маршрут связей, перенос подписи, отчёт о потерях | `archi-interchange-application/.../application/rendering/` (`SvgWriter`, `LabelLayout`, `Routing`) |
+| Сценарии `ExportViewImage`, `ExportAllViewImages` ([`UC-IXC-004`](spec/application/interchange/usecases/export-view-image.md)), порты `Typesetter`, `Rasterizer` | `ViewImageService`; `.../application/port/` |
+| REST: `GET /views/{id}/export`, `GET /models/{id}/views/export` | `InterchangeController` |
+| Нотация из classpath, шрифт Inter на AWT, подмножество глифов (fontbox), растр (Batik) | `archi-bootstrap/.../bootstrap/export/` |
+| Шрифт Inter 4.1 (TTF — сервер, WOFF2 — канва, OFL) | `archi-bootstrap/src/main/resources/ui/fonts/` |
+| Имена файлов пакета `<слаг>.<8 hex>` (их же возьмёт Git) | `archi-interchange-domain/.../exporting/FileSlug` |
+| Меню «Экспорт» в верхней панели | `frontend/src/app/TopBar.tsx`; `e2e/view-export.spec.ts` |
+| Сверка канвы и экспорта | `frontend/visual/export-parity.spec.ts`, эталоны сервера — `frontend/visual/export-parity/`, их актуальность — `ExportParityFixturesTest` |
+
+**Картинка строится из снимка версии, а не из таблиц** — как `.archimate` и CSV: правка
+после сохранения в неё не попадает, пакет не смешивает версии. **PNG растеризуется из
+SVG с подписями в кривых**: Batik не зависит от шрифтов образа. Писатель печатает SVG 1.1
+без CSS (наконечники, ореол подписи, иконки — явной геометрией), чтобы файл одинаково
+читали браузер, Batik, Inkscape и Word. **Раскладка подписи повторяет браузер** до
+мелочей — половина межстрочного зазора вниз до пикселя, высота строки до 1/64 px,
+многоточие после выровненной строки; правка в `LabelLayout` или `SvgWriter` без
+прогона сверки почти наверняка её сломает. Изменил писатель — пересними эталоны:
+`./mvnw -P '!frontend' -pl archi-bootstrap -am test -Dtest=ExportParityFixturesTest
+-Dexport.parity.update=true -Dsurefire.failIfNoSpecifiedTests=false`, затем
+`npx playwright test visual/export-parity.spec.ts`. Сверка запускает Chromium
+с `--font-render-hinting=none`: в Linux без него ширины глифов целые, и переносы
+расходятся и с macOS/Windows, и с сервером.
+
+Тестов на сервере: 337 юнит-тестов (`./mvnw test`) и 69 интеграционных `*IT` на
 Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
 Во фронтенде: 65 юнит-тестов vitest (`npm test`, гоняется фазой `test` Maven)
-и 73 сценария Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
+и 81 сценарий Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
 работа `e2e`, два потока).
 
-Ещё не заведено: экспорт картинок (5a), метамодель фазы 2 (6), OEF (6a), Git (7a–7c);
+Ещё не заведено: метамодель фазы 2 (6), OEF (6a), Git (7a–7c);
 создание и удаление представлений из дерева (API нет); предохранитель (circuit breaker)
 на Anthropic API.
 
@@ -256,6 +283,29 @@ jar'а в репозитории нет.
 из [§10.1](docs/archi-creator.md#101-состав): `ARCHI_APP_PORT` (8080),
 `ARCHI_DB_PORT` (5432), `ARCHI_KEYCLOAK_PORT` (8081). Занят соседним проектом —
 меняется `.env`, а не состав.
+
+## Идентификаторы: UUID только через java-uuid-generator
+
+**UUID создаются и разбираются только библиотекой `com.fasterxml.uuid:java-uuid-generator`**
+([`ADR-0020`](spec/adr/0020-uuid-generator.md)). Тип значения — по-прежнему
+`java.util.UUID`: библиотека выдаёт его же, менять сигнатуры, записи и сущности не нужно.
+
+- **Новый идентификатор** — версия 7. В коде контекстов — `UuidV7` своего домена
+  (`ElementId.next(uuids)` и т. п.): он отдаёт библиотеке часы приложения, поэтому
+  время фиксируется в тестах через `Clock`. Вне контекстов и в тестах —
+  `Generators.timeBasedEpochGenerator()`; в тестовом классе — поле
+  `IDS = Generators.timeBasedEpochGenerator()`.
+- **Строка в UUID** — `UUIDUtil.uuid(value)`, а не `UUID.fromString`.
+- **Детерминированный UUID в тесте** — `UUIDUtil.constructUUID(UUIDType.TIME_BASED_EPOCH, hi, lo)`.
+- **Запрещены** везде, тесты включительно: `UUID.randomUUID()`, `UUID.nameUUIDFromBytes(…)`,
+  `UUID.fromString(…)`, `new UUID(long, long)`. Случайная версия 4 рядом с версией 7
+  размывает «ключи монотонны», а своя сборка битов — место для ошибки в версии и варианте.
+- Версия библиотеки — в `dependencyManagement` родителя, `slf4j-api` из неё исключён:
+  доменным модулям логгер не нужен, а генератор версии 7 и разбор его не трогают.
+
+Проверяет `UuidRulesTest` (`archi-bootstrap`, пакет `architecture`): ArchUnit по байткоду
+основного кода и сканирование исходников всех модулей. Фронтенда правило не касается —
+у браузера свой генератор версии 7 (`frontend/src/model/ids.ts`).
 
 ## Комментарии в коде
 
@@ -417,7 +467,7 @@ Co-Authored-By: …
 | [`spec/application/<bc>/usecases/`](spec/application/) | Use case'ы `UC-<BC>-NNN`: Given/When/Then, порты, отказы |
 | [`spec/ui/`](spec/ui/README.md) | Слой интерфейса: правила `UI-NNN`, токены стиля, контракт геометрии фигур |
 | [`spec/contracts/<bc>/`](spec/contracts/) | OpenAPI и AsyncAPI |
-| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 19 записей, семь с файлами MADR |
+| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 20 записей, восемь с файлами MADR |
 | [`spec/nfr/<bc>.yaml`](spec/nfr/) | SLO, latency, throughput, security по контекстам |
 
 Правила при правке `spec/`:

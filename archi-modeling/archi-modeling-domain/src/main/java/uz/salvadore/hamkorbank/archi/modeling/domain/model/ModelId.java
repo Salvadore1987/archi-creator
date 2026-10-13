@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.Objects;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
@@ -16,7 +17,7 @@ public record ModelId(UUID value) {
     }
 
     public static ModelId of(String value) {
-        return new ModelId(UUID.fromString(value));
+        return new ModelId(UUIDUtil.uuid(value));
     }
 
     public static ModelId next(UuidV7 uuids) {

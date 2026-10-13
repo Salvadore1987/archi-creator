@@ -44,6 +44,9 @@
         <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
         <archunit.version>1.5.1</archunit.version>
         <anthropic-java.version>2.71.0</anthropic-java.version>
+        <batik.version>1.19</batik.version>
+        <fontbox.version>3.0.8</fontbox.version>
+        <java-uuid-generator.version>5.2.0</java-uuid-generator.version>
         <depgraph-maven-plugin.version>4.0.5</depgraph-maven-plugin.version>
 
         <!--
@@ -89,6 +92,49 @@
                 <groupId>com.anthropic</groupId>
                 <artifactId>anthropic-java</artifactId>
                 <version>${anthropic-java.version}</version>
+            </dependency>
+            <!--
+                UUID проекта создаются и разбираются только этой библиотекой. Объявленный
+                ею slf4j-api исключён: генератор версии 7 и разбор строки логгер не трогают,
+                а доменным модулям он не нужен.
+            -->
+            <dependency>
+                <groupId>com.fasterxml.uuid</groupId>
+                <artifactId>java-uuid-generator</artifactId>
+                <version>${java-uuid-generator.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-api</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <!--
+                commons-io приходит двумя версиями: 2.17.0 от xmlgraphics-commons (Batik)
+                и 2.20.0 от commons-compress (Testcontainers). Ближе к корню старшая не
+                оказывается, поэтому версия закреплена здесь — новая из двух, совместима
+                с обеими.
+            -->
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>2.20.0</version>
+            </dependency>
+            <!-- Растр и шрифт экспорта картинок — только в archi-bootstrap, за портами Rasterizer и Typesetter. -->
+            <dependency>
+                <groupId>org.apache.xmlgraphics</groupId>
+                <artifactId>batik-transcoder</artifactId>
+                <version>${batik.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.xmlgraphics</groupId>
+                <artifactId>batik-codec</artifactId>
+                <version>${batik.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.pdfbox</groupId>
+                <artifactId>fontbox</artifactId>
+                <version>${fontbox.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.tngtech.archunit</groupId>

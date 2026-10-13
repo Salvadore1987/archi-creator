@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.identity;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.Objects;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.UuidV7;
@@ -16,7 +17,7 @@ public record AdvisorSessionId(UUID value) {
     }
 
     public static AdvisorSessionId of(String value) {
-        return new AdvisorSessionId(UUID.fromString(value));
+        return new AdvisorSessionId(UUIDUtil.uuid(value));
     }
 
     public static AdvisorSessionId next(UuidV7 uuids) {

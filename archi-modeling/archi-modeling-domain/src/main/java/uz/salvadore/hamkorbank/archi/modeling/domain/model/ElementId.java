@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.Objects;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
@@ -16,7 +17,7 @@ public record ElementId(UUID value) implements ConceptRef {
     }
 
     public static ElementId of(String value) {
-        return new ElementId(UUID.fromString(value));
+        return new ElementId(UUIDUtil.uuid(value));
     }
 
     public static ElementId next(UuidV7 uuids) {

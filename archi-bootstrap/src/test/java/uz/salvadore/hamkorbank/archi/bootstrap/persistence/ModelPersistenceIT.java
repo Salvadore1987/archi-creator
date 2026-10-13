@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,6 +31,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 
 class ModelPersistenceIT extends IntegrationTest {
+
+    /** Идентификаторы тестовых объектов — версии 7, из той же библиотеки, что у приложения. */
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
 
     @Autowired
     ModelLifecycleService lifecycle;
@@ -56,7 +61,7 @@ class ModelPersistenceIT extends IntegrationTest {
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update("""
                 insert into element (id, model_id, folder_id, archi_id, archi_type, layer, name, sort_order, supported)
                 values (?, ?, ?, ?, 'archimate:ApplicationComponent', 'APPLICATION', 'Двойник', 9000, true)
-                """, UUID.randomUUID(), model.value(), folder, element.archiId().value()));
+                """, IDS.generate(), model.value(), folder, element.archiId().value()));
     }
 
     @Test

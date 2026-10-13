@@ -108,6 +108,28 @@ export class MockApi {
       if (path === `/models/${this.modelId}/export`) {
         return route.fulfill({ status: 200, contentType: 'application/xml', body: readFileSync(REFERENCE_FILE) });
       }
+      // Картинки печатает сервер; здесь важно только, что запрос ушёл и файл назван ответом.
+      const image = /^\/views\/([^/]+)\/export$/.exec(path);
+      if (image) {
+        const fmt = url.searchParams.get('fmt') ?? 'svg';
+        return route.fulfill({
+          status: 200,
+          contentType: fmt === 'png' ? 'image/png' : 'image/svg+xml',
+          headers: {
+            'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(`view-v${this.versionNo}.${fmt}`)}`,
+            'X-Archi-Loss-Count': '0',
+          },
+          body: '<svg xmlns="http://www.w3.org/2000/svg"/>',
+        });
+      }
+      if (path === `/models/${this.modelId}/views/export`) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/zip',
+          headers: { 'Content-Disposition': `attachment; filename="views-v${this.versionNo}.zip"` },
+          body: 'PK',
+        });
+      }
       if (path === '/metamodel/elements') return json(200, reference.elementTypes);
       if (path === '/ai/settings' && this.options.advisor) {
         return json(200, { enabled: this.options.advisor.enabled ?? true, monthlyTokenLimit: 5000000 });

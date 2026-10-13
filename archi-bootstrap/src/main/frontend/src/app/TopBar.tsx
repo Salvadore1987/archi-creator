@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Me } from '../api/types';
 import { api } from '../api/endpoints';
 import { signOut, type AuthMode } from '../auth/session';
@@ -12,6 +13,15 @@ import { useToast } from './toast';
 import { useUi } from './uiState';
 import { FOCUS_TREE_SEARCH } from './useShortcuts';
 import { UserBadge } from './UserBadge';
+import { ContextMenu, type MenuItem } from '../tree/TreeDialogs';
+
+/** Имя файла из `Content-Disposition`: сначала UTF-8 (`filename*`), потом простое. */
+function fileNameOf(response: Response): string | undefined {
+  const header = response.headers.get('Content-Disposition') ?? '';
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (encoded) return decodeURIComponent(encoded[1]!);
+  return /filename="([^"]+)"/i.exec(header)?.[1];
+}
 
 export function TopBar({ me, auth }: { me?: Me; auth: AuthMode }) {
   const model = useEditor((s) => s.doc!.model);
@@ -35,20 +45,37 @@ export function TopBar({ me, auth }: { me?: Me; auth: AuthMode }) {
     navigateToModel(null);
   };
 
-  const exportModel = async () => {
+  const activeViewId = useEditor((s) => s.activeViewId);
+  const [exportMenu, setExportMenu] = useState<{ x: number; y: number } | null>(null);
+
+  /** Файл берёт имя из ответа сервера: там версия и слаг представления. */
+  const download = async (fetchFile: () => Promise<Response>, fallbackName: string) => {
     try {
-      const response = await api.exportModel(model.id);
+      const response = await fetchFile();
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${model.name}.archimate`;
+      link.download = fileNameOf(response) ?? fallbackName;
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {
       useToast.getState().show(describeError(error), { tone: 'error' });
     }
   };
+
+  const exportItems: MenuItem[] = [
+    { label: t('topbar.exportModel'), icon: 'download', run: () => void download(() => api.exportModel(model.id), `${model.name}.archimate`) },
+    ...(activeViewId
+      ? ([
+          { label: t('topbar.exportViewSvg'), icon: 'view', run: () => void download(() => api.exportViewImage(activeViewId, 'svg'), `${model.name}.svg`) },
+          { label: t('topbar.exportViewPng'), icon: 'view', run: () => void download(() => api.exportViewImage(activeViewId, 'png'), `${model.name}.png`) },
+          { label: t('topbar.exportViewPng2x'), icon: 'view', run: () => void download(() => api.exportViewImage(activeViewId, 'png', 2), `${model.name}.png`) },
+        ] satisfies MenuItem[])
+      : []),
+    { label: t('topbar.exportAllSvg'), icon: 'folder', run: () => void download(() => api.exportAllViewImages(model.id, 'svg'), `${model.name}-svg.zip`) },
+    { label: t('topbar.exportAllPng'), icon: 'folder', run: () => void download(() => api.exportAllViewImages(model.id, 'png'), `${model.name}-png.zip`) },
+  ];
 
   return (
     <header className="topbar">
@@ -122,10 +149,28 @@ export function TopBar({ me, auth }: { me?: Me; auth: AuthMode }) {
         {t('topbar.search')}
         <span className="kbd">{t('topbar.searchKey')}</span>
       </button>
-      <button type="button" className="btn btn--ghost" onClick={() => void exportModel()}>
+      <button
+        type="button"
+        className="btn btn--ghost"
+        data-testid="export-menu"
+        title={unsaved > 0 ? t('topbar.exportUnsaved') : undefined}
+        onClick={(event) => {
+          const box = event.currentTarget.getBoundingClientRect();
+          setExportMenu({ x: box.left, y: box.bottom + 4 });
+        }}
+      >
         <Icon name="download" />
         {t('topbar.export')}
       </button>
+      {exportMenu && (
+        <ContextMenu
+          x={exportMenu.x}
+          y={exportMenu.y}
+          title={unsaved > 0 ? t('topbar.exportUnsaved') : t('topbar.exportTitle')}
+          items={exportItems}
+          onClose={() => setExportMenu(null)}
+        />
+      )}
       {/* Кнопка остаётся на месте и во время отправки — «Сохранение…», а не исчезновение. */}
       {editorRole && lock.kind === 'mine' && (unsaved > 0 || versionPending || saving) && (
         <button type="button" className="btn btn--primary" data-testid="save" disabled={saving} onClick={() => void save()}>

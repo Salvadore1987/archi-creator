@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.identity;
 
+import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.Objects;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.UuidV7;
@@ -16,7 +17,7 @@ public record FindingId(UUID value) {
     }
 
     public static FindingId of(String value) {
-        return new FindingId(UUID.fromString(value));
+        return new FindingId(UUIDUtil.uuid(value));
     }
 
     public static FindingId next(UuidV7 uuids) {
