@@ -126,7 +126,10 @@ messaging:
   in_process:
     publication: after_commit
     delivery_guarantee: at_least_once
-    note: См. domain/interchange/events.yaml#publishing. Для GitSnapshotCommitted требуется outbox к этапу 7a.
+    note: |
+      См. domain/interchange/events.yaml#publishing. Выгрузку в Git запускает
+      ModelVersionCommitted из outbox_event (ADR-0003): at-least-once,
+      по порядку версий модели.
 
 security:
   authentication: jwt_bearer

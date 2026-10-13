@@ -117,8 +117,8 @@ messaging:
     publication: after_commit
     delivery_guarantee: at_least_once
     note: |
-      См. domain/modeling/events.yaml#publishing. Смена на
-      transactional_outbox требуется к этапу 7a.
+      См. domain/modeling/events.yaml#publishing. ModelVersionCommitted
+      пишется ещё и в outbox_event той же транзакцией (ADR-0003).
 
 security:
   authentication: jwt_bearer    # Keycloak 26, OIDC (FR-28)

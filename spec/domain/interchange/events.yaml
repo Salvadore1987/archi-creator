@@ -91,7 +91,11 @@ events:
       - { name: changedFileCount, type: Int,    required: true }
       - { name: occurredAt,  type: Timestamp,   required: true }
     consumers:
-      - { context: modeling, action: Записать gitSha в ModelVersion и разрешить очистку снимка по правилу ретеншена }
+      - { context: interchange, action: Записать метрику публикации }
+    note: |
+      gitSha записывается в ModelVersion не потребителем события, а той же
+      транзакцией, что закрывает запись outbox (ADR-0003): событие сообщает
+      о свершившемся, а не просит его довершить.
     routing:
       channel: interchange.events.v1
       partition_key: modelId
@@ -108,10 +112,9 @@ publishing:
   delivery_guarantee: at_least_once
   ordering_guarantee: per_partition_key
   note: |
-    `direct` — временное состояние. Для GitSnapshotCommitted оно
-    недопустимо уже к этапу 7a: потерянное событие означает коммит в
-    репозитории, о котором версия не знает. Дальше по цепочке это
-    разрешает очистить снимок, полагаясь на связь, которой нет, —
-    то есть уничтожить единственную копию содержимого.
-    К этапу 7a паттерн должен смениться на `transactional_outbox`.
-    Решение не принято, ADR не заведён — см. README#незакрытые-решения.
+    `direct` — и для GitSnapshotCommitted тоже (ADR-0003, принят
+    2026-10-13). Звено цепочки — не это событие, а ModelVersionCommitted:
+    оно идёт через outbox (domain/modeling/events.yaml). Существенное
+    действие GitSnapshotCommitted — запись gitSha в версию — выполняется
+    одной транзакцией с закрытием записи outbox, до публикации; потеря
+    уведомления после неё связи версии с коммитом не теряет.

@@ -10,8 +10,9 @@ info:
     Каждая операция ссылается на use case в `x-use-case` и на строку таблицы
     доступа в `x-operation` (spec/nfr/interchange.yaml#security.authorization).
     Наполнено на этапе 2 (2026-10-08), картинки представлений — этап 5a
-    (2026-10-12); операции этапов 6a и 7a–7c
-    перечислены в конце раздела `paths` и появятся вместе со своими use case'ами.
+    (2026-10-12), OEF — этап 6a, привязка к Git и публикация — этап 7a
+    (2026-10-13); операции этапов 7b и 7c перечислены в конце раздела `paths`
+    и появятся вместе со своими use case'ами.
 
 servers:
   - url: /api/v1
@@ -229,13 +230,101 @@ paths:
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 
+  /workspaces/{id}/git-binding:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [interchange]
+      operationId: gitBinding
+      summary: Привязка рабочего пространства к репозиторию (FR-37)
+      x-use-case: UC-IXC-003
+      x-operation: ConfigureGitBinding
+      responses:
+        '200':
+          description: Текущая привязка; токена в ответе нет — только ссылка на секрет.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/GitBinding' } }
+        '404':
+          description: Привязки нет — `IXC_NOT_FOUND`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+    put:
+      tags: [interchange]
+      operationId: configureGitBinding
+      summary: Настроить привязку; заменяет прежнюю (только ADMIN)
+      x-use-case: UC-IXC-003
+      x-operation: ConfigureGitBinding
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/GitBindingSettings' } }
+      responses:
+        '200':
+          description: |
+            Привязка в состоянии `CONFIGURED`. Доступность репозитория проверяется
+            при первой публикации, а не здесь: настройка не ждёт сети.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/GitBinding' } }
+        '400':
+          description: Адрес, ветка или ссылка на секрет не того формата — `IXC_INVALID_REQUEST`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '403':
+          description: Не ADMIN.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+    delete:
+      tags: [interchange]
+      operationId: disableGitBinding
+      summary: Снять привязку — `DISABLED`, терминально (только ADMIN)
+      description: |
+        Коммиты в репозитории не трогаются. С этого момента очистка снимков
+        в пространстве не идёт (FR-47).
+      x-use-case: UC-IXC-003
+      x-operation: ConfigureGitBinding
+      responses:
+        '204': { description: Привязка снята. }
+        '404':
+          description: Привязки нет.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+
+  /models/{id}/git/push:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [interchange]
+      operationId: pushModelToGit
+      summary: Опубликовать ожидающие версии модели сейчас (UC-IXC-003)
+      description: |
+        Публикация идёт и сама — после каждого сохранения, из outbox. Этот вызов
+        не создаёт версию, а догоняет очередь немедленно, например после
+        восстановления доступа к репозиторию. Ответ — состояние модели в Git.
+      x-use-case: UC-IXC-003
+      x-operation: PushModelToGit
+      responses:
+        '200':
+          description: Очередь модели пройдена или остановлена расхождением.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ModelGitStatus' } }
+        '404':
+          description: Модели нет или она скрыта списком доступа.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '409':
+          description: У рабочего пространства нет рабочей привязки — `IXC_GIT_NOT_BOUND`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '503':
+          description: Репозиторий недоступен — `IXC_GIT_UNREACHABLE`; версии ждут в очереди.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+
 # ───────────────────────────────────────────────────────────────────
 # Появятся со своими use case'ами:
 #
-#   POST /models/{id}/git/push          этап 7a
 #   POST /models/{id}/git/pull          этап 7b
 #   POST /models/{id}/git/merge         этап 7c
-#   PUT  /workspaces/{id}/git-binding   этап 7a
 #
 # Импорта из OEF и CSV в этом списке нет и не будет: единственный
 # принимаемый формат — .archimate (FR-01, docs/backend.md §3.5).
@@ -320,6 +409,62 @@ components:
         findings:
           type: array
           items: { $ref: '#/components/schemas/ImportFinding' }
+
+    GitBindingSettings:
+      type: object
+      required: [repoUrl, tokenRef]
+      properties:
+        repoUrl:  { type: string, maxLength: 1000, examples: ["https://gitlab.bank.uz/ea/landscape.git"] }
+        branch:   { type: string, maxLength: 200, default: main }
+        tokenRef:
+          type: string
+          description: |
+            Ссылка на секрет, а не сам токен (NFR-06): `env:<ИМЯ>` — переменная
+            окружения сервера.
+          examples: ["env:ARCHI_GIT_TOKEN"]
+        authors:
+          type: array
+          description: Соответствие субъекта Keycloak автору коммита.
+          items: { $ref: '#/components/schemas/GitAuthor' }
+
+    GitAuthor:
+      type: object
+      required: [subject, name, email]
+      properties:
+        subject: { type: string }
+        name:    { type: string }
+        email:   { type: string }
+
+    GitBinding:
+      type: object
+      required: [repoUrl, branch, tokenRef, status, authors]
+      properties:
+        repoUrl:       { type: string }
+        branch:        { type: string }
+        tokenRef:      { type: string }
+        status:        { type: string, enum: [CONFIGURED, UNREACHABLE, DISABLED] }
+        lastCommitSha: { type: string, pattern: '^[0-9a-f]{40}$' }
+        lastCheckedAt: { type: string, format: date-time }
+        authors:
+          type: array
+          items: { $ref: '#/components/schemas/GitAuthor' }
+
+    ModelGitStatus:
+      type: object
+      required: [modelId, state, pending]
+      properties:
+        modelId:   { type: string, format: uuid }
+        state:
+          type: string
+          enum: [SYNCED, PENDING, DIVERGED]
+          description: |
+            SYNCED — все версии в репозитории; PENDING — версии ждут публикации;
+            DIVERGED — каталог модели в ветке изменён не сервером (FR-37),
+            очередь стоит до импорта (7b) или слияния (7c).
+        pending:   { type: integer, description: "Сколько версий ждут публикации." }
+        versionNo: { type: integer, format: int64, description: "Последняя опубликованная версия." }
+        gitSha:    { type: string, pattern: '^[0-9a-f]{40}$' }
+        divergedVersionNo: { type: integer, format: int64 }
 
     ImportSettings:
       type: object
