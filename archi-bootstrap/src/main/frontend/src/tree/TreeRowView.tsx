@@ -5,6 +5,12 @@ import { shapeOf } from '../canvas/shapes';
 import { layerToken } from '../canvas/style';
 import type { TreeRow } from './buildTree';
 
+/**
+ * Поле переименования получает фокус, не сдвигая список: строка у края видна
+ * частично, и прокрутка «в зону видимости» дёрнула бы дерево под курсором.
+ */
+const focusInPlace = (input: HTMLInputElement | null) => input?.focus({ preventScroll: true });
+
 export interface RowMarkers {
   views: number;
   finding: boolean;
@@ -79,7 +85,7 @@ export const TreeRowView = memo(function TreeRowView({ row, selected, lead, drop
         <input
           className="tr__edit"
           defaultValue={row.name}
-          autoFocus
+          ref={focusInPlace}
           onFocus={(event) => event.target.select()}
           onKeyDown={(event) => {
             event.stopPropagation();
