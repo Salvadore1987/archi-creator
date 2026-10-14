@@ -61,6 +61,11 @@ jobs:
       - name: Строки кода без текста и якорей
         run: tools/check-string-literals.py
 
+      # Числа требований записаны в application.yaml числом: правка одной
+      # стороны без другой разводит спеку и конфигурацию молча.
+      - name: Конфигурация совпадает с spec/nfr
+        run: tools/check-nfr-config.py
+
   # Гейт сообщений коммитов. Хук .githooks/commit-msg живёт на машине
   # разработчика и обходится --no-verify; этот гейт не обходится.
   commits:
