@@ -94,7 +94,7 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
 
 ### ADR-0023 — события создаёт агрегат
 
-- [ ] **5. Проверка в сборке.** ArchUnit в `archi-bootstrap/.../architecture/`:
+- [x] **5. Проверка в сборке.** ArchUnit в `archi-bootstrap/.../architecture/`:
       конструкторы реализаций `DomainEvent` вызываются только из классов
       `..domain..` своего контекста. У interchange маркера нет — завести
       `interchange.domain.common.DomainEvent` и пометить им события контекста
@@ -102,11 +102,17 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
       на `VersionService` и `GitPublishingService`. `GitSnapshotCommitted` — в исключениях
       поимённо с причиной (Р-1); после этого проверка падает только на `VersionService`.
       Коммит — проверка вместе с задачей 6, иначе сборка красная.
-- [ ] **6. `ModelVersionCommitted` создаёт агрегат.** `ModelVersion.next` возвращает версию
+- [x] **6. `ModelVersionCommitted` создаёт агрегат.** `ModelVersion.next` возвращает версию
       вместе с событием (по образцу `Created<ViewNode>`); данные, которых у версии нет
       (`workspaceId`, число элементов и связей), — аргументами. `VersionService` публикует
       полученное событие, сам его не собирает. Юнит-тест `ModelVersion` на событие; публикация
       прежняя — в outbox той же транзакцией, `GitExportIT` и round-trip зелёные.
+      Сделано: `ModelVersion.next` заменена на `commit`, возвращающую `Committed(version, event)`
+      (образец `Created<ViewNode>` из плана не подошёл — это признак «создан или был», а не
+      носитель события); размер модели — `ModelVersion.ModelSize`. Маркер `DomainEvent`
+      заведён в interchange. `DomainEventOriginTest` на старом коде падал ровно на
+      `VersionService:104`. Юнит-тесты (461), `Git*IT`, `MergeRequestIT`,
+      `SnapshotRetentionIT`, `RoundTripApiIT` зелёные.
 
 ### ADR-0024 — транзакция портом
 

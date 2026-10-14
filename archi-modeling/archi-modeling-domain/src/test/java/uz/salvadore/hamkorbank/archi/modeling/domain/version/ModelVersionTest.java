@@ -9,13 +9,16 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommitted;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Models;
+import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 class ModelVersionTest {
 
     static final String HASH = "a".repeat(64);
     static final ModelId MODEL = ModelId.next(Models.UUIDS);
+    static final WorkspaceId WORKSPACE = WorkspaceId.next(Models.UUIDS);
 
     @Test
     @DisplayName("INV-MDL-010: номера версий строго возрастают и не переиспользуются")
@@ -33,6 +36,26 @@ class ModelVersionTest {
     }
 
     @Test
+    @DisplayName("ADR-0023: событие о фиксации рождается вместе с версией и описывает её")
+    void commitBringsItsEvent() {
+        ModelVersion first = version(Optional.empty());
+        ModelVersion.Committed committed = ModelVersion.commit(Optional.of(first), VersionId.next(Models.UUIDS), MODEL,
+                WORKSPACE, "architect-1", Optional.of("  "), Models.NOW, new byte[] {1}, HASH,
+                new ModelVersion.ModelSize(12, 7));
+
+        ModelVersionCommitted event = committed.event();
+        assertEquals(MODEL, event.modelId());
+        assertEquals(WORKSPACE, event.workspaceId());
+        assertEquals(committed.version().versionNo(), event.versionNo());
+        assertEquals(2, event.versionNo());
+        assertEquals("architect-1", event.author());
+        assertEquals(Optional.empty(), event.comment(), "пустой комментарий не попадает ни в версию, ни в событие");
+        assertEquals(12, event.elementCount());
+        assertEquals(7, event.relationshipCount());
+        assertEquals(Models.NOW, event.occurredAt());
+    }
+
+    @Test
     @DisplayName("FR-47: очищенный снимок без Git — 410, восстанавливать неоткуда")
     void purgedSnapshotIsGone() {
         ModelVersion first = version(Optional.empty());
@@ -47,7 +70,8 @@ class ModelVersionTest {
     }
 
     static ModelVersion version(Optional<ModelVersion> last) {
-        return ModelVersion.next(last, VersionId.next(Models.UUIDS), MODEL, "architect-1", Optional.of("правка"),
-                Models.NOW, new byte[] {1, 2, 3}, HASH);
+        return ModelVersion.commit(last, VersionId.next(Models.UUIDS), MODEL, WORKSPACE, "architect-1",
+                Optional.of("правка"), Models.NOW, new byte[] {1, 2, 3}, HASH, new ModelVersion.ModelSize(0, 0))
+                .version();
     }
 }
