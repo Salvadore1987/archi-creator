@@ -93,6 +93,10 @@ input,
 textarea {
   font: inherit;
 }
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--ok);
+}
 .icon-sprite {
   position: absolute;
   width: 0;
