@@ -1637,7 +1637,7 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 7b.2 Отчёт об изменениях
 
-- ⬜ `ModelChanges.between(до, после)` в домене interchange: объекты по `archiId`,
+- ✅ `ModelChanges.between(до, после)` в домене interchange: объекты по `archiId`,
       поля, свёртка представлений, порядок; `ModelChangesTest`
 
 ### 7b.3 Разрешение ссылки
