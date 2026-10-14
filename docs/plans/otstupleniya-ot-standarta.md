@@ -21,7 +21,7 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
 
 ## Решения, нужные от владельца
 
-- [x] **Р-1. События вне агрегата** (`ADR-0023`). ADR говорит «событие создаёт
+- ✅ **Р-1. События вне агрегата** (`ADR-0023`). ADR говорит «событие создаёт
       бизнес-метод агрегата», а в коде два исключения: `VersionService:102` создаёт
       `ModelVersionCommitted`, `GitPublishingService:383` — `GitSnapshotCommitted`.
       Варианты: **(а)** перенести создание в агрегат — `ModelVersion` при фиксации
@@ -35,7 +35,7 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
       и возвращает вместе с версией. `GitSnapshotCommitted` остаётся в сервисе: это факт
       внешней системы (коммит в Git состоялся), а не переход агрегата, и публикуется
       даже без записи привязки. Исключение записано в `ADR-0023` (редакция 1.1).
-- [x] **Р-2. Пул соединений interchange** (`ADR-0026`). `spec/nfr/interchange.yaml` требует
+- ✅ **Р-2. Пул соединений interchange** (`ADR-0026`). `spec/nfr/interchange.yaml` требует
       отдельный пул (8 соединений, таймаут запроса 120 с), приложение работает на общем
       (20 и 15 с). Варианты: **(а)** второй пул; **(б)** править спеку. **Рекомендация —
       (б):** импорт пишет таблицы modeling внутри транзакции `UnitOfWork` modeling
@@ -51,13 +51,13 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
 
 ### ADR-0021 — стиль исходников
 
-- [x] **1. `.editorconfig`.** UTF-8, LF, без табуляций; Java — отступ 4, `max_line_length = 120`.
+- ✅ **1. `.editorconfig`.** UTF-8, LF, без табуляций; Java — отступ 4, `max_line_length = 120`.
       Остальные типы файлов — по тому, как они написаны сейчас (проверить фронтенд, YAML,
       SQL, XML), а не по Java.
       Сделано: Java, XML, SQL, Python — 4; TS, CSS, JSON, YAML — 2; эталоны и фикстуры
       (`*.archimate`, `fixtures/`, `export-parity/`, `*-snapshots/`) исключены целиком —
       там нет перевода строки в конце, и редактор не должен его добавлять.
-- [x] **2. Длина строки и табуляция в сборке** вместе с правкой 59 строк длиннее 120
+- ✅ **2. Длина строки и табуляция в сборке** вместе с правкой 59 строк длиннее 120
       (35 файлов). Checkstyle (`LineLength` 120, `FileTabCharacter`) в `pluginManagement`
       родителя, фаза `validate`, нарушение роняет сборку; версия пинится. Сначала прогон
       без правок — ждём ровно 59 нарушений, — затем правка и зелёная сборка в одном
@@ -71,7 +71,7 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
 
 ### ADR-0022 — контракт ошибок
 
-- [x] **3. `X-Trace-Id` в контрактах.** Заголовок отдаётся на каждом ответе
+- ✅ **3. `X-Trace-Id` в контрактах.** Заголовок отдаётся на каждом ответе
       (`RequestCorrelationFilter`), но ни в одном из трёх `spec/contracts/*/rest-api.openapi.yaml`
       не описан. Завести общий `components.headers.XTraceId` и сослаться на него
       из ответов `Problem` и успешных; `docs/backend.md` §8.1 — RFC 9457 вместо 7807,
@@ -81,7 +81,7 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
       исправлен скрытый дефект: 14 однострочных ответов `{ description: …, … }` YAML
       читал обрезанными по первой запятой («Модель в DELETED» вместо полной фразы) —
       развёрнуты в блок.
-- [x] **4. Тест на заголовок.** Интеграционный: `X-Trace-Id` есть на успешном ответе
+- ✅ **4. Тест на заголовок.** Интеграционный: `X-Trace-Id` есть на успешном ответе
       и на `problem+json`, совпадает с `traceparent`, если тот пришёл. Сначала поискать
       существующий (`grep X-Trace-Id` в тестах) — если есть, задача сводится к проверке
       покрытия обоих случаев.
@@ -94,7 +94,7 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
 
 ### ADR-0023 — события создаёт агрегат
 
-- [x] **5. Проверка в сборке.** ArchUnit в `archi-bootstrap/.../architecture/`:
+- ✅ **5. Проверка в сборке.** ArchUnit в `archi-bootstrap/.../architecture/`:
       конструкторы реализаций `DomainEvent` вызываются только из классов
       `..domain..` своего контекста. У interchange маркера нет — завести
       `interchange.domain.common.DomainEvent` и пометить им события контекста
@@ -102,7 +102,7 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
       на `VersionService` и `GitPublishingService`. `GitSnapshotCommitted` — в исключениях
       поимённо с причиной (Р-1); после этого проверка падает только на `VersionService`.
       Коммит — проверка вместе с задачей 6, иначе сборка красная.
-- [x] **6. `ModelVersionCommitted` создаёт агрегат.** `ModelVersion.next` возвращает версию
+- ✅ **6. `ModelVersionCommitted` создаёт агрегат.** `ModelVersion.next` возвращает версию
       вместе с событием (по образцу `Created<ViewNode>`); данные, которых у версии нет
       (`workspaceId`, число элементов и связей), — аргументами. `VersionService` публикует
       полученное событие, сам его не собирает. Юнит-тест `ModelVersion` на событие; публикация
@@ -116,7 +116,7 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
 
 ### ADR-0024 — транзакция портом
 
-- [x] **7. Проверка в сборке.** Enforcer держит только `domain` и `application`. ArchUnit
+- ✅ **7. Проверка в сборке.** Enforcer держит только `domain` и `application`. ArchUnit
       на все модули: нет `org.springframework.transaction.annotation.Transactional`
       и `jakarta.transaction.Transactional`; `TransactionTemplate`
       и `PlatformTransactionManager` — только в `bootstrap.wiring`. Нарушений сейчас нет:
@@ -124,13 +124,13 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
       Сделано: `TransactionBoundaryTest` — нет `@Transactional` (Spring и Jakarta) ни на классе,
       ни на методе; пакеты `org.springframework.transaction..` и `jakarta.transaction..` —
       только в `bootstrap.wiring`. Временный класс в `bootstrap.web` ронял оба правила.
-- [x] **8. Ссылка в `CLAUDE.md`.** Абзац «Application-слои без Spring: транзакция —
+- ✅ **8. Ссылка в `CLAUDE.md`.** Абзац «Application-слои без Spring: транзакция —
       порт `UnitOfWork`…» получает ссылку на `ADR-0024`, как у остальных решений; текст
       не дублируется.
 
 ### ADR-0025 — Logback и ECS
 
-- [x] **9. Один бэкенд логов.** Правило enforcer `bannedDependencies` в `archi-bootstrap`:
+- ✅ **9. Один бэкенд логов.** Правило enforcer `bannedDependencies` в `archi-bootstrap`:
       `org.apache.logging.log4j:log4j-core` и `spring-boot-starter-log4j2` запрещены —
       два бэкенда на classpath SLF4J разрешает предупреждением и молча выбирает один.
       Проверку доказать временной зависимостью.
@@ -142,7 +142,7 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
 
 ### ADR-0026 — значения требований в YAML
 
-- [x] **10. Имя пространства по умолчанию — ключ локали.** `archi.modeling.default-workspace-name`
+- ✅ **10. Имя пространства по умолчанию — ключ локали.** `archi.modeling.default-workspace-name`
       (русский текст в YAML) → ключ в `messages*.properties`, текст через `TextCatalog`
       на языке по умолчанию (на старте запроса нет). Это данные: имя пишется в базу один
       раз, у существующих баз не меняется. `tools/check-string-literals.py` YAML
@@ -155,7 +155,7 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
       установки, поэтому стало переменной `ARCHI_DEFAULT_WORKSPACE_NAME` (по `ADR-0026` —
       значение стенда), а не исчезло. Язык на старте — `spring.web.locale`: запроса нет,
       а системная локаль сервера не в счёт; `DefaultWorkspaceIT` зелёный и в JVM с `en`.
-- [x] **11. Пул interchange по Р-2.** `spec/nfr/interchange.yaml`: `storage` — общий пул
+- ✅ **11. Пул interchange по Р-2.** `spec/nfr/interchange.yaml`: `storage` — общий пул
       приложения (20, 15 с) вместо отдельного, с причиной; новое требование — предел
       одновременных импортов и таймаут запроса импорта (`timeout` у сценария импорта уже
       120 с). В коде: предел — в `ImportService` (отказ сверх предела — код из `InterchangeCodes`,
@@ -169,7 +169,7 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
       запроса — подсказка JPA для запросов, а запись документа идёт вставками при сбросе
       транзакции; импорт референсной модели и `LoadProfileIT` проходят с общими 15 с.
       Реестр требований не затронут.
-- [x] **12. Сверка YAML со `spec/nfr/`** — `tools/check-nfr-config.py`: закрытая таблица
+- ✅ **12. Сверка YAML со `spec/nfr/`** — `tools/check-nfr-config.py`: закрытая таблица
       «ключ `application.yaml` ↔ путь в `spec/nfr/<bc>.yaml`» (пул, таймаут запроса,
       частота и контекст помощника, срок блокировки), гейт в работе `spec` CI. До задачи 11
       проверка обязана упасть на пуле interchange; после — зелёная. Скрипт — в список
@@ -180,7 +180,7 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
 
 ### Учёт
 
-- [x] **13.** Отметки в этом плане и в `code-review.md`; в регистре решений поле
+- ✅ **13.** Отметки в этом плане и в `code-review.md`; в регистре решений поле
       `implemented` у ADR-0021…ADR-0026 по мере закрытия их задач.
 
 ## Отменённые варианты
