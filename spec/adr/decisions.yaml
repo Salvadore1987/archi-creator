@@ -305,3 +305,14 @@ decisions:
     requirements: []
     note: |
       Дополняет ADR-0003 (доставка) решением о создании событий; отступление от стандарта Java/Spring (§3.3.6.6, прил. D №6).
+
+  - id: ADR-0024
+    title: Транзакция — порт UnitOfWork, application-слой без Spring
+    status: accepted
+    date: 2026-10-14
+    kind: architecture
+    adr_file: 0024-unit-of-work.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    note: |
+      Записывает решение этапа 2, жившее только в CLAUDE.md; отступление от стандарта Java/Spring (§4.8.1).
