@@ -51,9 +51,12 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
 
 ### ADR-0021 — стиль исходников
 
-- [ ] **1. `.editorconfig`.** UTF-8, LF, без табуляций; Java — отступ 4, `max_line_length = 120`.
+- [x] **1. `.editorconfig`.** UTF-8, LF, без табуляций; Java — отступ 4, `max_line_length = 120`.
       Остальные типы файлов — по тому, как они написаны сейчас (проверить фронтенд, YAML,
       SQL, XML), а не по Java.
+      Сделано: Java, XML, SQL, Python — 4; TS, CSS, JSON, YAML — 2; эталоны и фикстуры
+      (`*.archimate`, `fixtures/`, `export-parity/`, `*-snapshots/`) исключены целиком —
+      там нет перевода строки в конце, и редактор не должен его добавлять.
 - [ ] **2. Длина строки и табуляция в сборке** вместе с правкой 59 строк длиннее 120
       (35 файлов). Checkstyle (`LineLength` 120, `FileTabCharacter`) в `pluginManagement`
       родителя, фаза `validate`, нарушение роняет сборку; версия пинится. Сначала прогон
