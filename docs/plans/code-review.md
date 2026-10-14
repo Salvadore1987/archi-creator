@@ -107,8 +107,9 @@ Logback и ECS; нарушения (D-02 покрытие Javadoc, D-14…D-17) 
       же, убран (`b295ade`): он копировал регистр; отступления помечены полем
       `deviates_from` в `decisions.yaml`
 - [ ] Что ADR требуют сделать в коде и сборке — план
-      [`otstupleniya-ot-standarta.md`](otstupleniya-ot-standarta.md); два решения в нём
-      ждут владельца (события вне агрегата, пул interchange)
+      [`otstupleniya-ot-standarta.md`](otstupleniya-ot-standarta.md); два решения владельца
+      в нём приняты 2026-10-14 (события вне агрегата — смешанно, пул interchange — правка
+      спеки с пределом импортов)
 
 ## Этапы
 
