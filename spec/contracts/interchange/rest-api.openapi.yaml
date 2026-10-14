@@ -80,7 +80,9 @@ paths:
         '409':
           headers:
             X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
-          description: Ключ уже использован для другого файла (INV-IXC-003).
+          description: |
+            Ключ уже использован для другого файла (INV-IXC-003) или в пространство
+            уже идёт импорт (`IXC_IMPORT_BUSY`): импорты в пространство последовательны.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '413':

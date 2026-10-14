@@ -25,6 +25,8 @@ public final class InterchangeCodes {
     public static final String ACCESS_DENIED = "IXC_ACCESS_DENIED";
     public static final String INVALID_REQUEST = "IXC_INVALID_REQUEST";
     public static final String IDEMPOTENCY_CONFLICT = "IXC_IDEMPOTENCY_CONFLICT";
+    /** В рабочее пространство уже идёт импорт: импорты в одно пространство последовательны. */
+    public static final String IMPORT_BUSY = "IXC_IMPORT_BUSY";
     public static final String CORRUPT_DOCUMENT = "IXC_CORRUPT_DOCUMENT";
     public static final String STRICT_IMPORT_REJECTED = "IXC_STRICT_IMPORT_REJECTED";
     public static final String FORMAT_NOT_AVAILABLE = "IXC_FORMAT_NOT_AVAILABLE";

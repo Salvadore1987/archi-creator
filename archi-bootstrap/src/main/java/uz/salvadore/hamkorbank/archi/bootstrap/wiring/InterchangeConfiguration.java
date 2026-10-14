@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.wiring;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import uz.salvadore.hamkorbank.archi.bootstrap.export.BatikRasterizer;
@@ -29,6 +30,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService
 
 /** Сценарии interchange — бинами. Транзакция — общая с modeling. */
 @Configuration
+@EnableConfigurationProperties(InterchangeSettings.class)
 public class InterchangeConfiguration {
 
     @Bean
@@ -44,9 +46,9 @@ public class InterchangeConfiguration {
     @Bean
     ImportService importService(ImportSessionRepository sessions, ImportPolicy policy, ModelImportService models,
                                 UnitOfWork unitOfWork, InterchangeEvents events, InterchangeMetrics metrics,
-                                TextCatalog texts, Clock clock) {
+                                TextCatalog texts, Clock clock, InterchangeSettings settings) {
         return new ImportService(sessions, policy, models, new StaxArchiDocumentReader(), unitOfWork, events, metrics,
-                texts, clock);
+                texts, clock, settings.maxParallelImportsPerWorkspace());
     }
 
     @Bean

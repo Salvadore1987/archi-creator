@@ -104,6 +104,7 @@ public final class InterchangeMessages {
     public static final String IDEMPOTENCY_KEY_REUSED = "interchange.import.idempotency-key-reused";
     public static final String IMPORT_IN_PROGRESS = "interchange.import.in-progress";
     public static final String IMPORT_KEY_REUSED = "interchange.import.key-reused";
+    public static final String IMPORT_WORKSPACE_BUSY = "interchange.import.workspace-busy";
     public static final String REJECTED_CORRUPT = "interchange.import.rejected-corrupt";
     public static final String REJECTED_STRICT = "interchange.import.rejected-strict";
     public static final String RELATION_NOT_PERMITTED = "interchange.import.relation-not-permitted";
