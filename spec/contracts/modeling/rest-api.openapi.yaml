@@ -24,6 +24,9 @@ info:
     Остаток XML (`raw_xml`, ADR-0017) наружу не отдаётся: это внутренний формат
     interchange.
 
+    Каждый ответ, успешный и ошибочный, несёт заголовок `X-Trace-Id`
+    (`components.headers.XTraceId`) — по нему запрос находится в журнале сервера.
+
 servers:
   - url: /api/v1
     description: Относительный путь; приложение и фронтенд отдаются одним артефактом.
@@ -55,6 +58,8 @@ paths:
       x-use-case: UC-MDL-001
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Пространства; первое заводится при старте на пустой базе.
           content:
             application/json:
@@ -72,6 +77,8 @@ paths:
             description: "Без него — первое пространство." }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Удалённые видит только ADMIN.
           content:
             application/json:
@@ -96,6 +103,8 @@ paths:
                 workspaceId: { type: string, format: uuid }
       responses:
         '201':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Модель создана; повтор ключа с тем же телом — та же модель (INV-MDL-003).
           content:
             application/json: { schema: { $ref: '#/components/schemas/ModelSummary' } }
@@ -113,6 +122,8 @@ paths:
       x-operation: OpenModel
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Списки — в порядке sort_order.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ModelTree' } }
@@ -134,6 +145,8 @@ paths:
                 documentation: { type: string, description: "Пустая строка снимает документацию." }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Изменено.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ModelSummary' } }
@@ -145,7 +158,10 @@ paths:
       x-use-case: UC-MDL-001
       x-operation: DeleteModel
       responses:
-        '204': { description: Модель в DELETED, блокировка снята. }
+        '204':
+          description: Модель в DELETED, блокировка снята.
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
         '409': { $ref: '#/components/responses/Conflict409' }
 
   /models/{id}/restore:
@@ -158,6 +174,8 @@ paths:
       x-operation: RestoreModel
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Восстановлена.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ModelSummary' } }
@@ -173,7 +191,10 @@ paths:
       x-use-case: UC-MDL-001
       x-operation: PurgeModel
       responses:
-        '204': { description: Модель уничтожена вместе с версиями. }
+        '204':
+          description: Модель уничтожена вместе с версиями.
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
         '403': { $ref: '#/components/responses/Forbidden403' }
         '422': { $ref: '#/components/responses/UnprocessableEntity422' }
 
@@ -187,10 +208,15 @@ paths:
       x-operation: OpenModel
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Модель заблокирована.
           content:
             application/json: { schema: { $ref: '#/components/schemas/LockInfo' } }
-        '204': { description: Блокировки нет. }
+        '204':
+          description: Блокировки нет.
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
     post:
       tags: [models]
       operationId: acquireLock
@@ -199,6 +225,8 @@ paths:
       x-operation: AcquireLock
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Блокировка у автора до expiresAt.
           content:
             application/json: { schema: { $ref: '#/components/schemas/LockInfo' } }
@@ -210,7 +238,10 @@ paths:
       x-use-case: UC-MDL-005
       x-operation: ReleaseLock
       responses:
-        '204': { description: Снята или её не было. }
+        '204':
+          description: Снята или её не было.
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
         '403': { $ref: '#/components/responses/Forbidden403' }
 
   /models/{id}/versions:
@@ -223,6 +254,8 @@ paths:
       x-operation: ListVersions
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: От новых к старым.
           content:
             application/json:
@@ -244,10 +277,14 @@ paths:
                 comment: { type: string, maxLength: 1000 }
       responses:
         '201':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Создана новая версия.
           content:
             application/json: { schema: { $ref: '#/components/schemas/SaveResult' } }
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Изменений нет или повтор ключа — версия не создаётся, отдаётся последняя.
           content:
             application/json: { schema: { $ref: '#/components/schemas/SaveResult' } }
@@ -272,6 +309,8 @@ paths:
                 comment: { type: string }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Новая версия с содержимым старой.
           content:
             application/json: { schema: { $ref: '#/components/schemas/VersionInfo' } }
@@ -298,6 +337,8 @@ paths:
                 label: { type: string, maxLength: 100, description: "Пустая — снять метку." }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Помечена.
           content:
             application/json: { schema: { $ref: '#/components/schemas/VersionInfo' } }
@@ -312,6 +353,8 @@ paths:
       x-operation: ValidateModel
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Находки, сначала ERROR.
           content:
             application/json:
@@ -327,6 +370,8 @@ paths:
       x-operation: OpenModel
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Пустой — модель открыта по ролям.
           content:
             application/json:
@@ -344,6 +389,8 @@ paths:
             schema: { type: array, items: { $ref: '#/components/schemas/AclEntry' } }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Новый список.
           content:
             application/json:
@@ -375,6 +422,8 @@ paths:
                 archiId:   { $ref: '#/components/schemas/ClientArchiId' }
       responses:
         '201':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Создан.
           content:
             application/json: { schema: { $ref: '#/components/schemas/Element' } }
@@ -395,6 +444,8 @@ paths:
           application/json: { schema: { $ref: '#/components/schemas/ElementPatch' } }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Изменён.
           content:
             application/json: { schema: { $ref: '#/components/schemas/Element' } }
@@ -405,7 +456,10 @@ paths:
       x-use-case: UC-MDL-006
       x-operation: DeleteElement
       responses:
-        '204': { description: Удалён вместе с размещениями на представлениях. }
+        '204':
+          description: Удалён вместе с размещениями на представлениях.
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
         '409': { $ref: '#/components/responses/Conflict409' }
 
   /models/{id}/relationships:
@@ -455,10 +509,14 @@ paths:
                     edgeArchiId:  { $ref: '#/components/schemas/ClientArchiId' }
       responses:
         '201':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Создана.
           content:
             application/json: { schema: { $ref: '#/components/schemas/Relationship' } }
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Дубль того же типа между той же парой — существующая связь; `id`, `archiId`,
             `folderId`, `accessType`, `directed` из запроса к ней не применяются.
@@ -466,6 +524,8 @@ paths:
             application/json: { schema: { $ref: '#/components/schemas/Relationship' } }
         '409': { $ref: '#/components/responses/Conflict409' }
         '422':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             `RELATION_NOT_PERMITTED` с перечнем допустимых в `permitted` (INV-MDL-007),
             конец из другой модели (INV-MDL-004), папка не из поддерева Relations
@@ -487,6 +547,8 @@ paths:
           application/json: { schema: { $ref: '#/components/schemas/ElementPatch' } }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Изменена.
           content:
             application/json: { schema: { $ref: '#/components/schemas/Relationship' } }
@@ -497,7 +559,10 @@ paths:
       x-use-case: UC-MDL-003
       x-operation: DeleteRelationship
       responses:
-        '204': { description: Удалена. }
+        '204':
+          description: Удалена.
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
         '409': { $ref: '#/components/responses/Conflict409' }
 
   /models/{id}/folders:
@@ -524,6 +589,8 @@ paths:
                 archiId:   { $ref: '#/components/schemas/ClientArchiId' }
       responses:
         '201':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Создана в конце родителя (INV-MDL-005).
           content:
             application/json: { schema: { $ref: '#/components/schemas/Folder' } }
@@ -546,7 +613,10 @@ paths:
           application/json:
             schema: { type: object, required: [name], properties: { name: { type: string } } }
       responses:
-        '204': { description: Переименовано. }
+        '204':
+          description: Переименовано.
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
 
   /models/{id}/tree/move:
     parameters: [ { $ref: '#/components/parameters/ModelId' } ]
@@ -567,7 +637,10 @@ paths:
                 targetFolderId: { type: string, format: uuid }
                 itemIds:        { type: array, items: { type: string, format: uuid } }
       responses:
-        '204': { description: Перенесено целиком. }
+        '204':
+          description: Перенесено целиком.
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
         '422': { $ref: '#/components/responses/UnprocessableEntity422' }
 
   /models/{id}/tree/delete:
@@ -588,7 +661,10 @@ paths:
               properties:
                 itemIds: { type: array, items: { type: string, format: uuid } }
       responses:
-        '204': { description: Удалено целиком. }
+        '204':
+          description: Удалено целиком.
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
         '409': { $ref: '#/components/responses/Conflict409' }
         '422': { $ref: '#/components/responses/UnprocessableEntity422' }
 
@@ -616,6 +692,8 @@ paths:
                 archiId:   { $ref: '#/components/schemas/ClientArchiId' }
       responses:
         '201':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Создано.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ViewSummary' } }
@@ -632,6 +710,8 @@ paths:
       x-operation: OpenView
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Узлы и рёбра в порядке sort_order.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ViewPayload' } }
@@ -649,7 +729,10 @@ paths:
         content:
           application/json: { schema: { $ref: '#/components/schemas/LayoutPatch' } }
       responses:
-        '204': { description: Сохранено. }
+        '204':
+          description: Сохранено.
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
 
   /views/{id}/nodes:
     parameters: [ { in: path, name: id, required: true, schema: { type: string, format: uuid } } ]
@@ -685,10 +768,14 @@ paths:
                   description: Свободен и в модели, и на представлении. У уже размещённого элемента не применяется.
       responses:
         '201':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Узел.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ViewNode' } }
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Элемент уже размещён на представлении — его узел, без изменений.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ViewNode' } }
@@ -724,16 +811,22 @@ paths:
                 bendpoints:     { type: array, items: { $ref: '#/components/schemas/Bendpoint' } }
       responses:
         '201':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Ребро в конце содержимого источника (INV-MDL-005).
           content:
             application/json: { schema: { $ref: '#/components/schemas/ViewEdge' } }
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Ребро этой связи между теми же концами уже есть — оно, без изменений.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ViewEdge' } }
         '404': { $ref: '#/components/responses/NotFound404' }
         '409': { $ref: '#/components/responses/Conflict409' }
         '422':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Конец не на этом представлении или не изображает конец связи (INV-MDL-008),
             представление не редактируется (`MDL_TYPE_NOT_EDITABLE`), недопустимый `archiId`.
@@ -754,6 +847,8 @@ paths:
           application/json: { schema: { $ref: '#/components/schemas/AutoLayoutRequest' } }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Новые `bounds` узлов верхнего уровня и пустые точки перегиба всех рёбер графа.
             Дети контейнеров не перечислены: их координаты относительны родителю и не меняются.
@@ -784,6 +879,8 @@ paths:
                   description: Заменяет стиль целиком; пустой объект — стиля нет, действует токен слоя.
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Узел после правки.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ViewNode' } }
@@ -797,7 +894,10 @@ paths:
       x-use-case: UC-MDL-002
       x-operation: SaveViewLayout
       responses:
-        '204': { description: Узел, вложенные узлы и их рёбра убраны. }
+        '204':
+          description: Узел, вложенные узлы и их рёбра убраны.
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
 
   /view-nodes/{id}/parent:
     parameters: [ { in: path, name: id, required: true, schema: { type: string, format: uuid } } ]
@@ -820,12 +920,16 @@ paths:
                 y:        { type: integer }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Узел в конце содержимого нового родителя; дети едут вместе с ним.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ViewNode' } }
         '404': { $ref: '#/components/responses/NotFound404' }
         '409': { $ref: '#/components/responses/Conflict409' }
         '422':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Родитель внутри переносимого узла или не на этом представлении (INV-MDL-008).
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
@@ -850,6 +954,8 @@ paths:
                   description: Заменяет стиль целиком; пустой объект — стиля нет.
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Ребро после правки.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ViewEdge' } }
@@ -862,7 +968,10 @@ paths:
       x-use-case: UC-MDL-008
       x-operation: SaveViewLayout
       responses:
-        '204': { description: Ребро и рёбра, концом которых оно служит, убраны. }
+        '204':
+          description: Ребро и рёбра, концом которых оно служит, убраны.
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
         '404': { $ref: '#/components/responses/NotFound404' }
 
   /metamodel/elements:
@@ -873,6 +982,8 @@ paths:
       x-use-case: UC-MDL-002
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Типы элементов и Junction.
           content:
             application/json:
@@ -889,6 +1000,8 @@ paths:
         - { in: query, name: target, required: true, schema: { type: string } }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Пусто — матрица не допускает ни одной.
           content:
             application/json:
@@ -905,10 +1018,15 @@ paths:
         `ARCHITECT`. `displayName` — claim `name`, иначе `preferred_username`, иначе `subject`.
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Пользователь.
           content:
             application/json: { schema: { $ref: '#/components/schemas/CurrentUser' } }
-        '401': { description: Нет токена или он недействителен. }
+        '401':
+          description: Нет токена или он недействителен.
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
 
   /ui-config:
     get:
@@ -918,6 +1036,8 @@ paths:
       security: []
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             В `prod` — объект `oidc`. В `dev` — `{}`: входа нет, запросы идут без токена
             и приходят от заглушки `ARCHITECT`.
@@ -927,6 +1047,14 @@ paths:
 # Импорт и экспорт принадлежат BC interchange: contracts/interchange/rest-api.openapi.yaml.
 
 components:
+  headers:
+    XTraceId:
+      description: |
+        Идентификатор трассировки запроса — на каждом ответе, успешном и ошибочном.
+        Берётся из входящего `traceparent` (W3C), без него — новый; тем же значением
+        помечены записи журнала сервера. В тело ответа не входит.
+      schema: { type: string, pattern: '^[0-9a-f]{32}$' }
+
 
   securitySchemes:
     bearerAuth:
@@ -956,7 +1084,7 @@ components:
     Problem:
       type: object
       description: |
-        RFC 7807 Problem Details + поле `code` (docs/backend.md §8.1). Дополнительные поля
+        RFC 9457 Problem Details + поле `code` (docs/backend.md §8.1). Дополнительные поля
         по ситуации: `lockOwner` и `expiresAt` у чужой блокировки, `relationships` у удаления
         связанного элемента, `permitted` у недопустимой связи.
       required: [type, title, status, code]
@@ -1334,16 +1462,22 @@ components:
   responses:
 
     NotFound404:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
       description: Объекта нет — или он скрыт списком доступа модели (INV-MDL-011).
       content:
         application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 
     Forbidden403:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
       description: Роль не даёт права на операцию (FR-28) либо список доступа даёт только чтение.
       content:
         application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 
     Conflict409:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
       description: |
         Блокировки нет или она чужая, конкурентное сохранение (INV-MDL-006), повтор
         Idempotency-Key с другим телом (INV-MDL-003), удаление связанного элемента
@@ -1353,6 +1487,8 @@ components:
         application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 
     UnprocessableEntity422:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
       description: |
         Нарушение бизнес-правила: недопустимая связь (INV-MDL-007), тип не той фазы,
         папка чужой модели или не того корня (INV-MDL-009), запрещённый переход (INV-MDL-002).
@@ -1360,6 +1496,8 @@ components:
         application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 
     Gone410:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
       description: Снимок версии очищен по ретеншену, а Git не настроен — восстанавливать неоткуда (FR-47).
       content:
         application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }

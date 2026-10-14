@@ -14,6 +14,9 @@ info:
     (2026-10-13), импорт по ссылке — этап 7b, слияние предложения — этап 7c
     (2026-10-14).
 
+    Каждый ответ, успешный и ошибочный, несёт заголовок `X-Trace-Id`
+    (`components.headers.XTraceId`) — по нему запрос находится в журнале сервера.
+
 servers:
   - url: /api/v1
     description: Относительный путь; приложение и фронтенд отдаются одним артефактом.
@@ -49,28 +52,40 @@ paths:
                 file: { type: string, format: binary, description: "До 50 МБ (spec/nfr/interchange.yaml)." }
       responses:
         '201':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Модель создана с версией 1; нарушения матрицы — в `findings` (мягкий режим).
           content:
             application/json: { schema: { $ref: '#/components/schemas/ImportReport' } }
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Повтор ключа — результат первой попытки (INV-IXC-003).
           content:
             application/json: { schema: { $ref: '#/components/schemas/ImportReport' } }
         '400':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Повреждённые данные — невалидный XML, битая ссылка, дубль id, связь без конца —
             отказ в любом режиме (FR-50). `code: IXC_CORRUPT_DOCUMENT`, находки — в `findings`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '403':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Импорт доступен ARCHITECT и ADMIN.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '409':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Ключ уже использован для другого файла (INV-IXC-003).
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '413':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Файл больше предела — отказ до чтения тела.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
@@ -95,6 +110,8 @@ paths:
             description: "Только csv: разделитель; ';' — для русской локали Excel." }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Файл версии; побайтово тот же при повторе (INV-IXC-004). Номер версии —
             в заголовке `X-Archi-Version-No`, отпечаток — в `ETag`, число записей
@@ -108,16 +125,22 @@ paths:
                 oef: `<слаг модели>-v<N>.xml` (слаг в латинице), проверенный по XSD 3.1, и `loss-report.json`;
                 число записей отчёта — в `X-Archi-Loss-Count`.
         '404':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Модели нет или она скрыта списком доступа (INV-MDL-011).
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '409':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Модель удалена — `MODEL_DELETED`; снимок, собранный из коммита версии, не совпал
             с её отпечатком — `INV-IXC-008` (не тот снимок не отдаётся).
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '410':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Снимок версии очищен, а вернуть его неоткуда: привязки к Git нет
             или в коммите версии нет каталога модели (FR-47). С привязкой очищенный
@@ -125,10 +148,14 @@ paths:
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '503':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Снимок очищен, а репозиторий недоступен — `IXC_GIT_UNREACHABLE`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '500':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Только oef: результат не прошёл официальную XSD — `IXC_OEF_SCHEMA_VIOLATION`.
             Файл не отдаётся, это ошибка сервера, а не запроса (FR-43).
@@ -153,6 +180,8 @@ paths:
             description: "Номер версии; без него — последняя." }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Картинка; номер версии — в `X-Archi-Version-No`, число записей отчёта
             о потерях — в `X-Archi-Loss-Count` (INV-IXC-006), отпечаток — в `ETag`.
@@ -160,10 +189,14 @@ paths:
             image/svg+xml: { schema: { type: string, format: binary } }
             image/png: { schema: { type: string, format: binary } }
         '404':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Представления нет, оно скрыто списком доступа или его нет в версии — `IXC_VIEW_NOT_IN_VERSION`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '410':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Снимок версии очищен, Git не настроен (FR-47).
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
@@ -186,6 +219,8 @@ paths:
             description: "Номер версии; без него — последняя." }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Zip: файл `<слаг>.<8 hex>.<ext>` на представление и `loss-report.json`
             (схема `LossReport` на каждое представление). Все файлы — из одной версии,
@@ -193,14 +228,20 @@ paths:
           content:
             application/zip: { schema: { type: string, format: binary } }
         '404':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Модели нет или она скрыта списком доступа (INV-MDL-011).
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '409':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Модель удалена — `MODEL_DELETED`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '410':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Снимок версии очищен, Git не настроен (FR-47).
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
@@ -216,6 +257,8 @@ paths:
       x-use-case: UC-IXC-001
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Текущее значение.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ImportSettings' } }
@@ -231,10 +274,14 @@ paths:
           application/json: { schema: { $ref: '#/components/schemas/ImportSettings' } }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Новое значение.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ImportSettings' } }
         '403':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Не ADMIN.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
@@ -250,10 +297,14 @@ paths:
       x-operation: ConfigureGitBinding
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Текущая привязка; токена в ответе нет — только ссылка на секрет.
           content:
             application/json: { schema: { $ref: '#/components/schemas/GitBinding' } }
         '404':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Привязки нет — `IXC_NOT_FOUND`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
@@ -269,16 +320,22 @@ paths:
           application/json: { schema: { $ref: '#/components/schemas/GitBindingSettings' } }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Привязка в состоянии `CONFIGURED`. Доступность репозитория проверяется
             при первой публикации, а не здесь: настройка не ждёт сети.
           content:
             application/json: { schema: { $ref: '#/components/schemas/GitBinding' } }
         '422':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Адрес, ветка, ссылка на секрет или автор не того формата — `IXC_INVALID_REQUEST`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '403':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Не ADMIN.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
@@ -292,8 +349,13 @@ paths:
       x-use-case: UC-IXC-003
       x-operation: ConfigureGitBinding
       responses:
-        '204': { description: Привязка снята. }
+        '204':
+          description: Привязка снята.
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
         '404':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Привязки нет.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
@@ -313,18 +375,26 @@ paths:
       x-operation: PushModelToGit
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Очередь модели пройдена или остановлена расхождением.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ModelGitStatus' } }
         '404':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Модели нет или она скрыта списком доступа.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '409':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: У рабочего пространства нет рабочей привязки — `IXC_GIT_NOT_BOUND`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '503':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Репозиторий недоступен — `IXC_GIT_UNREACHABLE`; версии ждут в очереди.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
@@ -349,24 +419,34 @@ paths:
           application/json: { schema: { $ref: '#/components/schemas/GitPullPreviewRequest' } }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Отчёт; находки разбора и методологии — в `findings`.
           content:
             application/json: { schema: { $ref: '#/components/schemas/GitPullPreview' } }
         '404':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Модели нет или она скрыта; ссылки нет в репозитории — `IXC_GIT_REF_NOT_FOUND`;
             в коммите нет каталога модели — `IXC_GIT_MODEL_NOT_IN_REF`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '409':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: У рабочего пространства нет рабочей привязки — `IXC_GIT_NOT_BOUND`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '422':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Ссылка пуста или недопустима — `IXC_INVALID_REQUEST`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '503':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Репозиторий недоступен — `IXC_GIT_UNREACHABLE`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
@@ -390,20 +470,28 @@ paths:
           application/json: { schema: { $ref: '#/components/schemas/GitPullRequest' } }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Применено; `created = false` — содержимое совпало с текущим, версии нет.
           content:
             application/json: { schema: { $ref: '#/components/schemas/GitPullResult' } }
         '404':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Модели нет; коммита нет в репозитории — `IXC_GIT_REF_NOT_FOUND`; каталога модели нет — `IXC_GIT_MODEL_NOT_IN_REF`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '409':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Содержимое модели изменилось после отчёта — `INV-IXC-012`, нужен новый отчёт;
             модель не заблокирована вызывающим — `INV-MDL-006`; нет привязки — `IXC_GIT_NOT_BOUND`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '422':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Каталог не собирается в документ — `IXC_CORRUPT_DOCUMENT`; строгий режим
             и нарушения методологии — `IXC_STRICT_IMPORT_REJECTED`; поля не заданы —
@@ -411,6 +499,8 @@ paths:
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '503':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Репозиторий недоступен — `IXC_GIT_UNREACHABLE`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
@@ -436,26 +526,36 @@ paths:
           application/json: { schema: { $ref: '#/components/schemas/GitMergePreviewRequest' } }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Отчёт; конфликты, каскад, изменения и отметки для холста.
           content:
             application/json: { schema: { $ref: '#/components/schemas/GitMergePreview' } }
         '404':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Модели нет или она скрыта; ссылки нет — `IXC_GIT_REF_NOT_FOUND`;
             в коммите нет каталога модели — `IXC_GIT_MODEL_NOT_IN_REF`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '409':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Нет рабочей привязки — `IXC_GIT_NOT_BOUND`; нет опубликованной версии,
             общего предка или каталога модели в нём — `IXC_GIT_NO_MERGE_BASE`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '422':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Ссылка пуста или недопустима, выбор по несуществующему конфликту — `IXC_INVALID_REQUEST`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '503':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Репозиторий недоступен — `IXC_GIT_UNREACHABLE`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
@@ -479,14 +579,20 @@ paths:
           application/json: { schema: { $ref: '#/components/schemas/GitMergeRequest' } }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Применено; `created = false` — результат совпал с текущим, версии нет.
           content:
             application/json: { schema: { $ref: '#/components/schemas/GitMergeResult' } }
         '404':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Модели нет; коммита нет — `IXC_GIT_REF_NOT_FOUND`; каталога модели нет — `IXC_GIT_MODEL_NOT_IN_REF`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '409':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Содержимое модели изменилось после отчёта — `INV-IXC-012`; модель не заблокирована
             вызывающим — `INV-MDL-006`; нет привязки — `IXC_GIT_NOT_BOUND`; нет общего
@@ -494,6 +600,8 @@ paths:
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '422':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Остались конфликты без выбора — `IXC_MERGE_CONFLICTS_UNRESOLVED` (в `conflicts` —
             их адреса); каталог не собирается — `IXC_CORRUPT_DOCUMENT`; строгий режим —
@@ -502,6 +610,8 @@ paths:
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '503':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Репозиторий недоступен — `IXC_GIT_UNREACHABLE`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
@@ -512,6 +622,14 @@ paths:
 # ───────────────────────────────────────────────────────────────────
 
 components:
+  headers:
+    XTraceId:
+      description: |
+        Идентификатор трассировки запроса — на каждом ответе, успешном и ошибочном.
+        Берётся из входящего `traceparent` (W3C), без него — новый; тем же значением
+        помечены записи журнала сервера. В тело ответа не входит.
+      schema: { type: string, pattern: '^[0-9a-f]{32}$' }
+
 
   securitySchemes:
     bearerAuth:
@@ -561,7 +679,7 @@ components:
 
     Problem:
       type: object
-      description: RFC 7807 Problem Details + поле `code` (docs/backend.md §8.1).
+      description: RFC 9457 Problem Details + поле `code` (docs/backend.md §8.1).
       required: [type, title, status]
       properties:
         type:     { type: string, format: uri }
@@ -903,6 +1021,8 @@ components:
   responses:
 
     ImageOptionRejected422:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
       description: |
         Недопустимый параметр картинки — `IXC_UNKNOWN_FORMAT` или
         `IXC_INVALID_EXPORT_OPTION`; PNG стороной больше 16 000 px (4 000 × 4 000
@@ -913,6 +1033,8 @@ components:
           schema: { $ref: '#/components/schemas/Problem' }
 
     UnprocessableEntity422:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
       description: |
         Строгий режим и находки уровня ERROR — модель не создана (INV-IXC-007, FR-49).
         `code: IXC_STRICT_IMPORT_REJECTED`, находки — в `findings`.
