@@ -45,6 +45,12 @@ public interface GitRepositoryPort {
     /** Достижим ли {@code ancestor} из {@code head}: история не переписана. */
     boolean contains(Remote remote, GitSha ancestor, GitSha head);
 
+    /**
+     * Общий предок двух коммитов — ближайший, как {@code git merge-base}. Коммита нет в кэше
+     * и после забора всех веток или общего предка нет — пусто.
+     */
+    Optional<GitSha> mergeBase(Remote remote, GitSha first, GitSha second);
+
     /** Последний коммит из истории {@code head}, менявший каталог; не менял никто — пусто. */
     Optional<Commit> lastChange(Remote remote, GitSha head, String directory);
 
@@ -53,9 +59,10 @@ public interface GitRepositoryPort {
 
     /**
      * Коммит поверх {@code parent}: каталог {@code directory} заменяется файлами целиком,
-     * корневые файлы — ставятся, если их ещё нет или они другие. Дерево не изменилось —
-     * {@link Unchanged}, коммита нет. Ветка ушла вперёд, пока строился коммит, —
-     * {@link Rejected}; принуждения нет.
+     * корневые файлы — ставятся, если их ещё нет или они другие. Слитый коммит запроса,
+     * которого ещё нет в истории {@code parent}, — второй родитель. Дерево не изменилось
+     * и второго родителя нет — {@link Unchanged}, коммита нет. Ветка ушла вперёд, пока
+     * строился коммит, — {@link Rejected}; принуждения нет.
      */
     PushResult push(Remote remote, Optional<GitSha> parent, CommitRequest request);
 
@@ -85,12 +92,19 @@ public interface GitRepositoryPort {
         }
     }
 
+    /** @param merged коммит, слитый в модель по сущностям, — кандидат во второго родителя */
     record CommitRequest(String directory, SortedMap<String, byte[]> files, SortedMap<String, byte[]> rootFiles,
-                         String message, Person author, Person committer) {
+                         String message, Person author, Person committer, Optional<GitSha> merged) {
 
         public CommitRequest {
             files = copy(files);
             rootFiles = copy(rootFiles);
+            Objects.requireNonNull(merged, "merged");
+        }
+
+        public CommitRequest(String directory, SortedMap<String, byte[]> files, SortedMap<String, byte[]> rootFiles,
+                             String message, Person author, Person committer) {
+            this(directory, files, rootFiles, message, author, committer, Optional.empty());
         }
 
         private static SortedMap<String, byte[]> copy(SortedMap<String, byte[]> files) {

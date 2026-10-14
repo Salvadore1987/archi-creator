@@ -690,6 +690,11 @@ class GitImportTest {
         }
 
         @Override
+        public Optional<GitSha> mergeBase(Remote remote, GitSha first, GitSha second) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public Optional<Commit> lastChange(Remote remote, GitSha head, String directory) {
             throw new UnsupportedOperationException();
         }

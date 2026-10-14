@@ -1750,7 +1750,7 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 7c.3 Git: общий предок и второй родитель
 
-- ⬜ `GitRepositoryPort.mergeBase`, второй родитель коммита в `push`; JGit; тест на настоящем JGit
+- ✅ `GitRepositoryPort.mergeBase`, второй родитель коммита в `push`; JGit; `GitMergeParentsTest`
 
 ### 7c.4 Сценарий слияния
 
