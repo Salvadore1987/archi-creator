@@ -316,3 +316,14 @@ decisions:
     requirements: []
     note: |
       Записывает решение этапа 2, жившее только в CLAUDE.md; отступление от стандарта Java/Spring (§4.8.1).
+
+  - id: ADR-0025
+    title: Логирование — Logback и встроенный формат ECS
+    status: accepted
+    date: 2026-10-14
+    kind: architecture
+    adr_file: 0025-logging-logback-ecs.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    note: |
+      Решение владельца по итогам этапа 0 ревью; отступление от стандарта Java/Spring (§4.4.1, §4.4.3, прил. D №19).
