@@ -409,6 +409,12 @@ class GitPublisherTest {
         }
 
         @Override
+        public void supersede(ModelId model, long throughVersionNo, Instant at) {
+            open().stream().filter(r -> r.model.equals(model) && r.versionNo <= throughVersionNo)
+                    .forEach(r -> r.status = "SKIPPED");
+        }
+
+        @Override
         public void retryLater(UUID id, String reason, Instant next) {
             rows.get(id).attempts++;
             rows.get(id).next = next;

@@ -1647,13 +1647,14 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 7b.4 Импорт: отчёт и применение
 
-- ⬜ Порт `ModelStates` (текущее содержимое, замена новой версией) и мост в bootstrap
+- ✅ Порт `ModelStates` (текущее содержимое, замена новой версией) и мост в bootstrap
       поверх modeling; `ModelImportService.current`/`replace`
-- ⬜ `GitImportService.preview`/`apply`: сессия с целевой моделью, проверка методологии,
+- ✅ `GitImportService.preview`/`apply`: сессия с целевой моделью, проверка методологии,
       привязка подтверждения к отчёту, отказ — сессия `REJECTED`
-- ⬜ REST: `POST /models/{id}/git/pull/preview`, `POST /models/{id}/git/pull`
-- ⬜ `GitImportTest#applyIsAtomic`, `#appliedStateBecomesNewVersion`, `#staleReportIsRejected`;
-      `GitImportIT#reportPrecedesApply`, `#failedApplyLeavesOnlyRejectedSession`
+- ✅ REST: `POST /models/{id}/git/pull/preview`, `POST /models/{id}/git/pull`
+- ✅ `GitImportTest#applyIsAtomic`, `#appliedStateBecomesNewVersion`, `#staleReportIsRejected`
+      (и ещё восемь: ветка ушла вперёд, блокировка, нечитаемое дерево, отказы, очередь);
+      `GitImportIT#reportPrecedesApply`, `#failedApplyLeavesOnlyRejectedSession`, `#refusals`
 
 ### 7b.5 Расхождение разрешается импортом
 
@@ -2397,3 +2398,12 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
   `ObjectReader.resolve` для 40 знаков отдаёт сам идентификатор, не проверяя, что объект
   есть; `parseCommit` потом бросает `MissingObjectException`, а общий обработчик превращал
   её в «репозиторий недоступен». Отсутствующий объект — «ссылка не найдена».
+- **2026-10-14. Решение: замена без изменений базу не трогает.** `VersionService.rollback`
+  раскладывает снимок заново, и все строки получают новые ключи — даже когда содержимое то же.
+  Для импорта по ссылке это лишнее: `ModelImportService.replace` сначала сравнивает снимок
+  с текущим содержимым и при совпадении возвращает последнюю версию без записи. Откат
+  к версии ведёт себя по-прежнему — его общая часть с импортом вынесена в `VersionService.replace`.
+- **2026-10-14. Решение: находки в подробностях отказа переводятся адаптером.** Отказ
+  применения `422` несёт находки сессии в `details`; без перевода Jackson отдал бы их записью
+  `Message` (ключ и аргументы). `InterchangeProblemHandler` пропускает подробности через
+  `FindingMapper` — тот же, что формирует находки ответа импорта файла.

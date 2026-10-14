@@ -37,6 +37,34 @@ public final class Dtos {
                                 Instant lastCheckedAt, List<GitAuthorDto> authors) {
     }
 
+    /** Ссылка, по которой строится отчёт: ветка, тег или коммит. */
+    public record GitPullPreviewRequestDto(String ref) {
+    }
+
+    /** Подтверждение применения: коммит и отпечаток содержимого — из отчёта. */
+    public record GitPullRequestDto(String ref, String commitSha, String baseHash, String comment) {
+    }
+
+    public record GitChangeCountDto(String kind, int added, int removed, int changed) {
+    }
+
+    /** Объект отчёта: вид, что с ним, тип ArchiMate, имя и изменённые поля. */
+    public record GitChangeDto(String kind, String change, String archiId, String type, String name,
+                               List<String> fields) {
+    }
+
+    /** Отчёт об изменениях до применения. */
+    public record GitPullPreviewDto(UUID modelId, String ref, String refKind, String commitSha, Long baseVersionNo,
+                                    String baseHash, String targetHash, boolean unchanged, boolean applicable,
+                                    List<GitChangeCountDto> summary, List<GitChangeDto> changes,
+                                    List<FindingDto> findings) {
+    }
+
+    /** Итог применения: сессия, версия и признак, создана ли она. */
+    public record GitPullResultDto(UUID sessionId, String status, UUID modelId, long versionNo, boolean created,
+                                   String commitSha, List<FindingDto> findings) {
+    }
+
     /** Состояние модели в Git: опубликовано всё, ждёт или встало на расхождении. */
     public record ModelGitStatusDto(UUID modelId, String state, int pending, Long versionNo, String gitSha,
                                     Long divergedVersionNo) {

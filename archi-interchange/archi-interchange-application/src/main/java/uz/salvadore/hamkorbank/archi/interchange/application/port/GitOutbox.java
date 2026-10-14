@@ -31,6 +31,12 @@ public interface GitOutbox {
 
     void diverged(UUID id, String reason, Instant at);
 
+    /**
+     * Открытые записи модели по версию {@code throughVersionNo} включительно закрываются
+     * как пропущенные — их место в ветке заняло принятое состояние. В транзакции вызывающего.
+     */
+    void supersede(ModelId model, long throughVersionNo, Instant at);
+
     void retryLater(UUID id, String reason, Instant next);
 
     enum Status { PENDING, DIVERGED }

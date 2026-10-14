@@ -41,6 +41,14 @@ public final class InterchangeMessages {
     public static final String TEXT_OUTSIDE_VALUE = "interchange.document.text-outside-value";
     public static final String ARTIFACT_HASH_MISMATCH = "interchange.export.artifact-hash-mismatch";
     public static final String FORMAT_NOT_AVAILABLE = "interchange.export.format-not-available";
+    public static final String GIT_BASE_HASH_INVALID = "interchange.git.base-hash-invalid";
+    public static final String GIT_PULL_COMMENT = "interchange.git.pull-comment";
+    public static final String GIT_PULL_FAILED = "interchange.git.pull-failed";
+    public static final String GIT_PULL_FIELD_MISSING = "interchange.git.pull-field-missing";
+    public static final String GIT_PULL_REJECTED_CORRUPT = "interchange.git.pull-rejected-corrupt";
+    public static final String GIT_PULL_REJECTED_STRICT = "interchange.git.pull-rejected-strict";
+    public static final String GIT_REF_NOT_FOUND = "interchange.git.ref-not-found";
+    public static final String GIT_REPORT_STALE = "interchange.git.report-stale";
     public static final String GIT_AUTHOR_INVALID = "interchange.git.author-invalid";
     public static final String GIT_AUTHOR_REPEATED = "interchange.git.author-repeated";
     public static final String GIT_BINDING_DISABLED = "interchange.git.binding-disabled";

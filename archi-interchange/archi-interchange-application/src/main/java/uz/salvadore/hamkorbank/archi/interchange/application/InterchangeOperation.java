@@ -23,6 +23,7 @@ public enum InterchangeOperation {
     EXPORT_ALL_VIEW_IMAGES("ExportAllViewImages", Role.VIEWER, Role.ARCHITECT, Role.ADMIN),
     CONFIGURE_IMPORT_POLICY("ConfigureImportPolicy", Role.ADMIN),
     PUSH_MODEL_TO_GIT("PushModelToGit", Role.ARCHITECT, Role.ADMIN),
+    PULL_MODEL_FROM_GIT("PullModelFromGit", Role.ARCHITECT, Role.ADMIN),
     CONFIGURE_GIT_BINDING("ConfigureGitBinding", Role.ADMIN);
 
     private final String useCase;

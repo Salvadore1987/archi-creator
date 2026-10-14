@@ -92,6 +92,15 @@ public class JpaGitOutbox implements GitOutbox {
     }
 
     @Override
+    public void supersede(ModelId model, long throughVersionNo, Instant at) {
+        em.createNativeQuery("update outbox_event set status = 'SKIPPED', processed_at = :at, next_attempt_at = null "
+                        + "where event_type = :type and partition_key = :key and " + OPEN
+                        + " and (payload ->> 'versionNo')::bigint <= :through")
+                .setParameter("at", at).setParameter("type", EVENT_TYPE).setParameter("key", model.value())
+                .setParameter("through", throughVersionNo).executeUpdate();
+    }
+
+    @Override
     public void retryLater(UUID id, String reason, Instant next) {
         em.createNativeQuery("update outbox_event set status = 'PENDING', attempts = attempts + 1, "
                         + "last_error = :reason, next_attempt_at = :next where id = :id")

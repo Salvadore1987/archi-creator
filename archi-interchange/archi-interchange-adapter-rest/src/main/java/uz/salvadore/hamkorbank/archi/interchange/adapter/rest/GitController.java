@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.adapter.rest;
 
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,23 +13,47 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitBindingDto;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitBindingSettingsDto;
+import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitPullPreviewDto;
+import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitPullPreviewRequestDto;
+import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitPullRequestDto;
+import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitPullResultDto;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ModelGitStatusDto;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingService;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitImportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 
-/** Привязка рабочего пространства к Git-репозиторию и публикация версий модели. */
+/** Привязка рабочего пространства к Git-репозиторию, публикация версий и импорт состояния по ссылке. */
 @RestController
 @RequestMapping("/api/v1")
 public class GitController {
 
     private final GitBindingService bindings;
     private final GitPublishingService publishing;
+    private final GitImportService imports;
+    private final TextCatalog text;
 
-    public GitController(GitBindingService bindings, GitPublishingService publishing) {
+    public GitController(GitBindingService bindings, GitPublishingService publishing, GitImportService imports,
+                         TextCatalog text) {
         this.bindings = bindings;
         this.publishing = publishing;
+        this.imports = imports;
+        this.text = text;
+    }
+
+    /** Отчёт об изменениях по ссылке — ничего не меняет. */
+    @PostMapping("/models/{id}/git/pull/preview")
+    public GitPullPreviewDto previewPull(EditorIdentity actor, @PathVariable UUID id,
+                                         @RequestBody GitPullPreviewRequestDto body) {
+        return GitDtoMapper.preview(imports.preview(actor, new ModelId(id), Optional.ofNullable(body.ref())), text);
+    }
+
+    /** Применить коммит из отчёта новой версией модели. */
+    @PostMapping("/models/{id}/git/pull")
+    public GitPullResultDto pull(EditorIdentity actor, @PathVariable UUID id, @RequestBody GitPullRequestDto body) {
+        return GitDtoMapper.pulled(imports.apply(actor, new ModelId(id), GitDtoMapper.pullRequest(body)), text);
     }
 
     /** Опубликовать ожидающие версии модели сейчас; ответ — состояние модели в Git. */

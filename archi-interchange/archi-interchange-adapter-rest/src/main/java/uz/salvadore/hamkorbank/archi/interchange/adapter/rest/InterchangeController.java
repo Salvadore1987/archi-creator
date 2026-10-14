@@ -25,7 +25,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.FindingDto;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportResult;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportSettings;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportRequest;
@@ -39,7 +38,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
-import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
@@ -186,12 +184,6 @@ public class InterchangeController {
     private static ImportResult result(ImportReport report, TextCatalog text) {
         return new ImportResult(report.sessionId().value(), report.status().name(), report.modelId().orElse(null),
                 report.versionNo() > 0 ? report.versionNo() : null, report.replayed(),
-                report.findings().stream().map(f -> finding(f, text)).toList());
-    }
-
-    private static FindingDto finding(ImportFinding f, TextCatalog text) {
-        return new FindingDto(f.severity().name(), f.code(), text.text(f.message()),
-                f.archiId().map(a -> a.value()).orElse(null),
-                f.xmlLine().orElse(null));
+                FindingMapper.findings(report.findings(), text));
     }
 }

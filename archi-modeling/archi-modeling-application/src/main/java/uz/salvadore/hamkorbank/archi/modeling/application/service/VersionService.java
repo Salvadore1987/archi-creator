@@ -130,12 +130,31 @@ public final class VersionService {
         return kernel.run(Operation.RESTORE_VERSION, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.writableModel(modelId, actor);
             byte[] xml = content(model.header(), requireVersion(modelId, versionNo));
-            ModelContent restored = snapshotReader.read(xml, model.header(), kernel.now());
-            kernel.models.replaceContent(restored);
-            return commit(restored.model(), actor,
-                    Optional.of(comment.filter(c -> !c.isBlank()).orElseGet(
-                            () -> kernel.texts.text(Message.of(ModelingMessages.COMMENT_ROLLBACK, versionNo)))));
+            return replace(model, xml, actor, comment.filter(c -> !c.isBlank()).orElseGet(
+                    () -> kernel.texts.text(Message.of(ModelingMessages.COMMENT_ROLLBACK, versionNo)))).version();
         }));
+    }
+
+    /** Итог замены содержимого: версия и сколько объектов в новом содержимом непрозрачны. */
+    record Replacement(ModelVersion version, int opaqueObjects) {
+    }
+
+    /**
+     * Содержимое модели заменяется снимком целиком и фиксируется версией — в транзакции
+     * вызывающего. Общая часть отката к версии и импорта состояния извне.
+     */
+    Replacement replace(ArchitectureModel model, byte[] xml, EditorIdentity actor, String comment) {
+        ModelContent restored = snapshotReader.read(xml, model.header(), kernel.now());
+        kernel.models.replaceContent(restored);
+        int opaque = (int) (restored.model().elements().values().stream().filter(e -> !e.supported()).count()
+                + restored.model().relationships().values().stream().filter(r -> !r.supported()).count());
+        return new Replacement(commit(restored.model(), actor, Optional.of(comment)), opaque);
+    }
+
+    /** Текущее содержимое модели в базе — тем же снимком, который соберёт сохранение. */
+    byte[] currentXml(ModelId modelId) {
+        return snapshotWriter.write(new ModelContent(kernel.models.load(modelId).orElseThrow(),
+                kernel.views.loadAll(modelId)));
     }
 
     /**
