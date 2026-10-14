@@ -42,6 +42,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepo
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMetrics;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.ModelMerges;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.PublishedVersions;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
@@ -78,6 +79,18 @@ class GitPublisherTest {
     private final MemoryOutbox outbox = new MemoryOutbox();
     private final MemoryBindings bindings = new MemoryBindings();
     private final MemoryVersions versions = new MemoryVersions();
+    private final Map<ModelId, GitSha> merged = new HashMap<>();
+    private final ModelMerges merges = new ModelMerges() {
+        @Override
+        public void record(ModelId m, GitSha sha, Instant at) {
+            merged.put(m, sha);
+        }
+
+        @Override
+        public Optional<GitSha> last(ModelId m) {
+            return Optional.ofNullable(merged.get(m));
+        }
+    };
     private final List<Object> events = new ArrayList<>();
     private Path remote;
     private GitRepositoryPort repository;
@@ -99,7 +112,8 @@ class GitPublisherTest {
                 return work.get();
             }
         };
-        publishing = new GitPublishingService(outbox, bindings, versions, repository, ref -> Optional.empty(), direct,
+        publishing = new GitPublishingService(outbox, bindings, versions, merges, repository, ref -> Optional.empty(),
+                direct,
                 events::addAll, InterchangeMetrics.NONE, message -> message.key() + message.args(), clock,
                 new GitPublishingService.Settings("Archi Creator", "archi@test", "users.test", Duration.ofSeconds(5),
                         Duration.ofMinutes(10)));
@@ -203,6 +217,44 @@ class GitPublisherTest {
         assertThat(top.getParent(0).getId()).isEqualTo(foreign);
         assertThat(versions.sha(2)).contains(top.name());
         assertThat(publishing.status(model).state()).isEqualTo(ModelGitStatus.State.SYNCED);
+    }
+
+    @Test
+    @DisplayName("FR-39: чужая правка каталога, принятая слиянием, — не расхождение, коммит ложится сверху")
+    void mergedForeignChangeIsNotDivergence() throws Exception {
+        commitVersion(1, Fixtures.fixture("unknown_extension"), "Первая");
+        publishing.publishPending();
+        ObjectId foreign = externalCommit(modelDirectory() + "/notes.yaml", "правка руками\n");
+        merges.record(model, GitSha.of(foreign.name()), clock.instant());
+
+        commitVersion(2, renamed("Клиент", "Клиент банка"), "Вторая");
+        publishing.publishPending();
+
+        RevCommit top = history().getFirst();
+        assertThat(top.getParents()).extracting(RevCommit::getId).containsExactly(foreign);
+        assertThat(versions.sha(2)).contains(top.name());
+        assertThat(publishing.status(model).state()).isEqualTo(ModelGitStatus.State.SYNCED);
+    }
+
+    @Test
+    @DisplayName("FR-39, INV-IXC-009: слитая ветка предложения — второй родитель, ветка привязки её содержит")
+    void mergedProposalBecomesSecondParent() throws Exception {
+        commitVersion(1, Fixtures.fixture("unknown_extension"), "Первая");
+        publishing.publishPending();
+        ObjectId proposal = proposalCommit(modelDirectory() + "/notes.yaml", "предложение\n");
+        merges.record(model, GitSha.of(proposal.name()), clock.instant());
+
+        commitVersion(2, renamed("Клиент", "Клиент банка"), "Вторая");
+        publishing.publishPending();
+
+        RevCommit top = history().getFirst();
+        assertThat(top.getParentCount()).isEqualTo(2);
+        assertThat(top.getParent(1).getId()).isEqualTo(proposal);
+        assertThat(versions.sha(2)).contains(top.name());
+
+        commitVersion(3, renamed("Клиент", "Клиент банка 2"), "Третья");
+        publishing.publishPending();
+        assertThat(history().getFirst().getParentCount()).isEqualTo(1);
     }
 
     @Test
@@ -345,6 +397,23 @@ class GitPublisherTest {
                     .setAuthor(new PersonIdent("Чужой", "other@bank.uz")).setCommitter(new PersonIdent("Чужой",
                             "other@bank.uz")).call();
             git.push().setRemote("origin").add("main").call();
+            return commit.getId();
+        }
+    }
+
+    /** Коммит в ветку предложения от головы {@code main}, как merge request. */
+    private ObjectId proposalCommit(String path, String content) throws Exception {
+        Path work = Files.createTempDirectory(temp, "work");
+        try (Git git = Git.cloneRepository().setURI(remote.toUri().toString()).setDirectory(work.toFile()).call()) {
+            git.checkout().setCreateBranch(true).setName("proposal").call();
+            Path file = work.resolve(path);
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, content);
+            git.add().addFilepattern(path).call();
+            RevCommit commit = git.commit().setMessage("предложение")
+                    .setAuthor(new PersonIdent("Чужой", "other@bank.uz")).setCommitter(new PersonIdent("Чужой",
+                            "other@bank.uz")).call();
+            git.push().setRemote("origin").add("proposal").call();
             return commit.getId();
         }
     }

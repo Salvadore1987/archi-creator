@@ -13,6 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitBindingDto;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitBindingSettingsDto;
+import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitMergePreviewDto;
+import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitMergePreviewRequestDto;
+import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitMergeRequestDto;
+import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitMergeResultDto;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitPullPreviewDto;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitPullPreviewRequestDto;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitPullRequestDto;
@@ -20,12 +24,16 @@ import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitPullRe
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ModelGitStatusDto;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingService;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitImportService;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitMergeService;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 
-/** Привязка рабочего пространства к Git-репозиторию, публикация версий и импорт состояния по ссылке. */
+/**
+ * Привязка рабочего пространства к Git-репозиторию, публикация версий, импорт состояния
+ * по ссылке и слияние предложения по сущностям.
+ */
 @RestController
 @RequestMapping("/api/v1")
 public class GitController {
@@ -33,13 +41,15 @@ public class GitController {
     private final GitBindingService bindings;
     private final GitPublishingService publishing;
     private final GitImportService imports;
+    private final GitMergeService merging;
     private final TextCatalog text;
 
     public GitController(GitBindingService bindings, GitPublishingService publishing, GitImportService imports,
-                         TextCatalog text) {
+                         GitMergeService merging, TextCatalog text) {
         this.bindings = bindings;
         this.publishing = publishing;
         this.imports = imports;
+        this.merging = merging;
         this.text = text;
     }
 
@@ -54,6 +64,20 @@ public class GitController {
     @PostMapping("/models/{id}/git/pull")
     public GitPullResultDto pull(EditorIdentity actor, @PathVariable UUID id, @RequestBody GitPullRequestDto body) {
         return GitDtoMapper.pulled(imports.apply(actor, new ModelId(id), GitDtoMapper.pullRequest(body)), text);
+    }
+
+    /** Отчёт слияния предложения по сущностям с выборами по конфликтам — ничего не меняет. */
+    @PostMapping("/models/{id}/git/merge/preview")
+    public GitMergePreviewDto previewMerge(EditorIdentity actor, @PathVariable UUID id,
+                                           @RequestBody GitMergePreviewRequestDto body) {
+        return GitDtoMapper.mergePreview(merging.preview(actor, new ModelId(id), Optional.ofNullable(body.ref()),
+                GitDtoMapper.resolutions(body.resolutions())), text);
+    }
+
+    /** Применить слияние из отчёта новой версией модели. */
+    @PostMapping("/models/{id}/git/merge")
+    public GitMergeResultDto merge(EditorIdentity actor, @PathVariable UUID id, @RequestBody GitMergeRequestDto body) {
+        return GitDtoMapper.merged(merging.apply(actor, new ModelId(id), GitDtoMapper.mergeRequest(body)), text);
     }
 
     /** Опубликовать ожидающие версии модели сейчас; ответ — состояние модели в Git. */

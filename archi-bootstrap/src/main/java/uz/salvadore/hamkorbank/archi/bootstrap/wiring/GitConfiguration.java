@@ -15,6 +15,7 @@ import uz.salvadore.hamkorbank.archi.bootstrap.git.JGitRepository;
 import uz.salvadore.hamkorbank.archi.bootstrap.git.ModelingModelStates;
 import uz.salvadore.hamkorbank.archi.bootstrap.git.ModelingPublishedVersions;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitImportService;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitMergeService;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
@@ -23,6 +24,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportPolicy;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportSessionRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeEvents;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMetrics;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.ModelMerges;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ModelStates;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.PublishedVersions;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.SecretResolver;
@@ -57,11 +59,13 @@ public class GitConfiguration {
 
     @Bean
     GitPublishingService gitPublishingService(GitOutbox outbox, GitBindingRepository bindings,
-                                              PublishedVersions versions, GitRepositoryPort repository,
-                                              SecretResolver secrets, UnitOfWork unitOfWork, InterchangeEvents events,
+                                              PublishedVersions versions, ModelMerges merges,
+                                              GitRepositoryPort repository, SecretResolver secrets,
+                                              UnitOfWork unitOfWork, InterchangeEvents events,
                                               InterchangeMetrics metrics, TextCatalog texts, Clock clock,
                                               GitSettings settings) {
-        return new GitPublishingService(outbox, bindings, versions, repository, secrets, unitOfWork, events, metrics,
+        return new GitPublishingService(outbox, bindings, versions, merges, repository, secrets, unitOfWork, events,
+                metrics,
                 texts, clock, new GitPublishingService.Settings(settings.committerName(), settings.committerEmail(),
                 settings.authorEmailDomain(), settings.retryBase(), settings.retryMax()));
     }
@@ -78,6 +82,16 @@ public class GitConfiguration {
                                       UnitOfWork unitOfWork, InterchangeEvents events, InterchangeMetrics metrics,
                                       TextCatalog texts, Clock clock) {
         return new GitImportService(bindings, repository, secrets, states, sessions, policy, outbox, versions,
+                unitOfWork, events, metrics, texts, clock);
+    }
+
+    @Bean
+    GitMergeService gitMergeService(GitBindingRepository bindings, GitRepositoryPort repository,
+                                    SecretResolver secrets, ModelStates states, ImportSessionRepository sessions,
+                                    ImportPolicy policy, GitOutbox outbox, PublishedVersions versions,
+                                    ModelMerges merges, UnitOfWork unitOfWork, InterchangeEvents events,
+                                    InterchangeMetrics metrics, TextCatalog texts, Clock clock) {
+        return new GitMergeService(bindings, repository, secrets, states, sessions, policy, outbox, versions, merges,
                 unitOfWork, events, metrics, texts, clock);
     }
 

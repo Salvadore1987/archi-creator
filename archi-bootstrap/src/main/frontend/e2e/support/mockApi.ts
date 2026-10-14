@@ -23,6 +23,8 @@ export interface MockOptions {
   lockedBy?: string;
   /** Помощник: состояние пространства и ответы функций. Нет — `/ai/status` отвечает 404, панели нет. */
   advisor?: AdvisorMock;
+  /** Отчёт слияния по выборам; нет — слияние отвечает 409, как модель без опубликованной версии. */
+  merge?: (resolutions: Record<string, string>) => Json;
 }
 
 export interface AdvisorMock {
@@ -179,6 +181,15 @@ export class MockApi {
       if (!reply) return json(503, { status: 503, title: 'Service Unavailable', code: 'ADVISOR_UNAVAILABLE' });
       if ('problem' in reply) return json(reply.status, reply.problem);
       return route.fulfill({ status: 200, contentType: 'text/event-stream', body: sse(reply.frames) });
+    }
+    if (path === `/models/${this.modelId}/git/merge/preview` && method === 'POST') {
+      const preview = this.options.merge;
+      if (!preview) return json(409, { status: 409, title: 'Conflict', code: 'IXC_GIT_NO_MERGE_BASE', detail: 'нет общего предка' });
+      return json(200, preview((body as { resolutions?: Record<string, string> }).resolutions ?? {}));
+    }
+    if (path === `/models/${this.modelId}/git/merge` && method === 'POST') {
+      this.versionNo++;
+      return json(200, { sessionId: 'session', status: 'APPLIED', modelId: this.modelId, versionNo: this.versionNo, created: true, commitSha: 'a'.repeat(40) });
     }
     if (path === '/models/import' && method === 'POST') {
       return json(201, { modelId: this.modelId, status: 'APPLIED' });

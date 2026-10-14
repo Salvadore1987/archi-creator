@@ -44,6 +44,10 @@ public final class InterchangeCodes {
     public static final String GIT_REF_NOT_FOUND = "IXC_GIT_REF_NOT_FOUND";
     /** В коммите нет каталога модели — импортировать нечего. */
     public static final String GIT_MODEL_NOT_IN_REF = "IXC_GIT_MODEL_NOT_IN_REF";
+    /** Сливать не с чем: нет опубликованной версии, общего предка или каталога модели в нём. */
+    public static final String GIT_NO_MERGE_BASE = "IXC_GIT_NO_MERGE_BASE";
+    /** Слияние применяется только с выбором по каждому конфликту. */
+    public static final String MERGE_CONFLICTS_UNRESOLVED = "IXC_MERGE_CONFLICTS_UNRESOLVED";
 
     private InterchangeCodes() {
     }

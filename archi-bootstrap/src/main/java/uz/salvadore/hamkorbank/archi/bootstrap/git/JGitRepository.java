@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import org.eclipse.jgit.revwalk.FooterLine;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.revwalk.filter.RevFilter;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.FetchConnection;
 import org.eclipse.jgit.transport.RefSpec;
@@ -104,11 +106,7 @@ public final class JGitRepository implements GitRepositoryPort {
     public Optional<ResolvedRef> resolve(Remote remote, GitRef ref) {
         synchronized (lock(remote)) {
             try (Repository repo = open(remote)) {
-                try (Transport transport = transport(repo, remote)) {
-                    transport.fetch(NullProgressMonitor.INSTANCE, List.of(
-                            new RefSpec("+" + Constants.R_HEADS + "*:" + TRACKING + "*"),
-                            new RefSpec("+" + Constants.R_TAGS + "*:" + Constants.R_TAGS + "*")));
-                }
+                fetchAll(repo, remote);
                 String name = ref.value();
                 if (name.startsWith(Constants.R_HEADS)) {
                     return named(repo, TRACKING + name.substring(Constants.R_HEADS.length()), ref, RefKind.BRANCH);
@@ -220,12 +218,62 @@ public final class JGitRepository implements GitRepositoryPort {
     public boolean contains(Remote remote, GitSha ancestor, GitSha head) {
         synchronized (lock(remote)) {
             try (Repository repo = open(remote); RevWalk walk = new RevWalk(repo)) {
+                if (!present(repo, remote, ancestor, head)) {
+                    return false;
+                }
                 return walk.isMergedInto(walk.parseCommit(id(ancestor)), walk.parseCommit(id(head)));
-            } catch (MissingObjectException missing) {
-                return false;
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
+            } catch (IOException | URISyntaxException e) {
+                throw unreachable(e);
             }
+        }
+    }
+
+    @Override
+    public Optional<GitSha> mergeBase(Remote remote, GitSha first, GitSha second) {
+        synchronized (lock(remote)) {
+            try (Repository repo = open(remote); RevWalk walk = new RevWalk(repo)) {
+                if (!present(repo, remote, first, second)) {
+                    return Optional.empty();
+                }
+                walk.setRevFilter(RevFilter.MERGE_BASE);
+                walk.markStart(walk.parseCommit(id(first)));
+                walk.markStart(walk.parseCommit(id(second)));
+                return Optional.ofNullable(walk.next()).map(JGitRepository::sha);
+            } catch (IOException | URISyntaxException e) {
+                throw unreachable(e);
+            }
+        }
+    }
+
+    /**
+     * Коммиты есть в кэше: чего нет — забирается со всеми ветками и тегами. Кэш мог быть
+     * пересоздан, а коммит ветки предложения — забран другим вызовом.
+     */
+    private boolean present(Repository repo, Remote remote, GitSha... commits) throws IOException,
+            URISyntaxException {
+        if (Arrays.stream(commits).allMatch(c -> has(repo, c))) {
+            return true;
+        }
+        fetchAll(repo, remote);
+        return Arrays.stream(commits).allMatch(c -> has(repo, c));
+    }
+
+    private static boolean has(Repository repo, GitSha commit) {
+        try (RevWalk walk = new RevWalk(repo)) {
+            walk.parseCommit(id(commit));
+            return true;
+        } catch (MissingObjectException | IncorrectObjectTypeException missing) {
+            return false;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private void fetchAll(Repository repo, Remote remote) throws IOException, URISyntaxException {
+        try (Transport transport = transport(repo, remote)) {
+            transport.fetch(NullProgressMonitor.INSTANCE, List.of(
+                    new RefSpec("+" + Constants.R_HEADS + "*:" + TRACKING + "*"),
+                    new RefSpec("+" + Constants.R_TAGS + "*:" + Constants.R_TAGS + "*")));
         }
     }
 
@@ -272,10 +320,11 @@ public final class JGitRepository implements GitRepositoryPort {
                 Optional<RevTree> parentTree = parent.isPresent()
                         ? Optional.of(walk.parseCommit(id(parent.get())).getTree()) : Optional.empty();
                 ObjectId tree = tree(repo, inserter, parentTree, request);
-                if (parentTree.isPresent() && tree.equals(parentTree.get())) {
+                Optional<GitSha> second = secondParent(repo, remote, walk, parent, request.merged());
+                if (parentTree.isPresent() && tree.equals(parentTree.get()) && second.isEmpty()) {
                     return new Unchanged(parent.get());
                 }
-                ObjectId commit = inserter.insert(commit(tree, parent, request));
+                ObjectId commit = inserter.insert(commit(tree, parent, second, request));
                 inserter.flush();
                 int changed = changedPaths(repo, parentTree, walk.parseTree(tree));
                 String branchRef = Constants.R_HEADS + remote.branch();
@@ -342,10 +391,27 @@ public final class JGitRepository implements GitRepositoryPort {
         return index.writeTree(inserter);
     }
 
-    private static CommitBuilder commit(ObjectId tree, Optional<GitSha> parent, CommitRequest request) {
+    /** Слитый коммит — второй родитель, если он есть в кэше и его ещё нет в истории родителя. */
+    private Optional<GitSha> secondParent(Repository repo, Remote remote, RevWalk walk, Optional<GitSha> parent,
+                                          Optional<GitSha> merged) throws IOException, URISyntaxException {
+        if (merged.isEmpty() || !present(repo, remote, merged.get())) {
+            return Optional.empty();
+        }
+        if (parent.isPresent() && walk.isMergedInto(walk.parseCommit(id(merged.get())),
+                walk.parseCommit(id(parent.get())))) {
+            return Optional.empty();
+        }
+        return merged;
+    }
+
+    private static CommitBuilder commit(ObjectId tree, Optional<GitSha> parent, Optional<GitSha> second,
+                                        CommitRequest request) {
         CommitBuilder commit = new CommitBuilder();
         commit.setTreeId(tree);
-        parent.ifPresent(p -> commit.setParentId(id(p)));
+        List<ObjectId> parents = new ArrayList<>();
+        parent.ifPresent(p -> parents.add(id(p)));
+        second.ifPresent(p -> parents.add(id(p)));
+        commit.setParentIds(parents);
         commit.setAuthor(person(request.author()));
         commit.setCommitter(person(request.committer()));
         commit.setMessage(request.message());

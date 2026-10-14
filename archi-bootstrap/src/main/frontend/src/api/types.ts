@@ -316,3 +316,82 @@ export interface TokenUsageReport {
   byUser: UsageRow[];
   byFunction: UsageRow[];
 }
+
+// ── Слияние предложения из Git ─────────────────────────────────────
+
+/** Выбор по конфликту: «наше» — содержимое модели, «их» — ветка предложения. */
+export type MergeSide = 'OURS' | 'THEIRS';
+export type MergeMarkKind = 'ADDED' | 'REMOVED' | 'CHANGED';
+
+/** Конфликт: поле, изменённое в обеих ветвях по-разному; поле `*` — удаление против правки. */
+export interface MergeConflict {
+  id: string;
+  kind: 'MODEL' | 'FOLDER' | 'ELEMENT' | 'RELATIONSHIP' | 'VIEW';
+  archiId: string;
+  type?: string;
+  name: string;
+  field: string;
+  base?: string;
+  ours?: string;
+  theirs?: string;
+  resolution?: MergeSide;
+}
+
+/** Удалено как следствие разрешения — не выбор, а отчёт. */
+export interface MergeCascade {
+  kind: 'FOLDER' | 'ELEMENT' | 'RELATIONSHIP' | 'VIEW' | 'VIEW_NODE' | 'VIEW_CONNECTION';
+  archiId: string;
+  name: string;
+  reason: 'FOLDER_REMOVED' | 'RELATION_ENDPOINT_REMOVED' | 'DIAGRAM_REFERENCE_REMOVED' | 'CONNECTION_ENDPOINT_REMOVED' | 'FOLDER_CYCLE';
+  viewArchiId?: string;
+}
+
+/** Узел представления, которого в модели ещё нет: абсолютная геометрия на холсте. */
+export interface MergeAddedNode {
+  archiId: string;
+  elementArchiId?: string;
+  type?: string;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface MergeChange {
+  kind: string;
+  change: MergeMarkKind;
+  archiId: string;
+  type?: string;
+  name: string;
+  fields: string[];
+}
+
+export interface MergePreview {
+  modelId: Uuid;
+  ref: string;
+  refKind: 'BRANCH' | 'TAG' | 'COMMIT';
+  commitSha: string;
+  mergeBaseSha: string;
+  baseVersionNo?: number;
+  baseHash: string;
+  targetHash: string;
+  unchanged: boolean;
+  applicable: boolean;
+  conflicts: MergeConflict[];
+  cascade: MergeCascade[];
+  summary: Array<{ kind: string; added: number; removed: number; changed: number }>;
+  changes: MergeChange[];
+  marks: Array<{ archiId: string; mark: MergeMarkKind }>;
+  views: Array<{ archiId: string; addedNodes: MergeAddedNode[] }>;
+  findings: Finding[];
+}
+
+export interface MergeResult {
+  sessionId: Uuid;
+  status: 'APPLIED';
+  modelId: Uuid;
+  versionNo: number;
+  created: boolean;
+  commitSha: string;
+}
