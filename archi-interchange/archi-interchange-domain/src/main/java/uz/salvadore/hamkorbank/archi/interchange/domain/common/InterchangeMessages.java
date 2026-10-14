@@ -57,6 +57,7 @@ public final class InterchangeMessages {
     public static final String GIT_ID_REPEATED = "interchange.git.id-repeated";
     public static final String GIT_MODEL_NOT_IN_COMMIT = "interchange.git.model-not-in-commit";
     public static final String GIT_POSITION_REPEATED = "interchange.git.position-repeated";
+    public static final String GIT_REF_INVALID = "interchange.git.ref-invalid";
     public static final String GIT_SECRET_MISSING = "interchange.git.secret-missing";
     public static final String GIT_SECRET_REF_INVALID = "interchange.git.secret-ref-invalid";
     public static final String GIT_SHA_INVALID = "interchange.git.sha-invalid";
