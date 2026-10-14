@@ -8,7 +8,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
 /**
@@ -22,6 +24,14 @@ public interface GitRepositoryPort {
 
     /** Свежая голова ветки; ветки ещё нет — пусто. */
     Optional<GitSha> fetch(Remote remote);
+
+    /**
+     * Ссылка в коммит — как в {@code git rev-parse}: полное имя {@code refs/…}, тег, ветка,
+     * затем идентификатор коммита, полный или сокращённый. Тег раньше одноимённой ветки.
+     * Перед разрешением забирает из репозитория все ветки и теги; найденный коммит потом
+     * читается {@link #read}. Не нашлось или сокращение неоднозначно — пусто.
+     */
+    Optional<ResolvedRef> resolve(Remote remote, GitRef ref);
 
     /** Файлы каталога в коммите — пути относительно каталога; каталога нет — пусто. */
     SortedMap<String, byte[]> read(Remote remote, GitSha commit, String directory);

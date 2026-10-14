@@ -18,6 +18,8 @@ public final class InterchangeCodes {
     public static final String EXPORT_VERSION = "INV-IXC-008";
     /** Коммит в Git не переписывает историю: расхождение не перезаписывается. */
     public static final String GIT_HISTORY = "INV-IXC-009";
+    /** Импорт по ссылке применяет только то, что было в отчёте: модель с тех пор не менялась. */
+    public static final String GIT_IMPORT = "INV-IXC-012";
 
     public static final String NOT_FOUND = "IXC_NOT_FOUND";
     public static final String ACCESS_DENIED = "IXC_ACCESS_DENIED";
@@ -38,6 +40,10 @@ public final class InterchangeCodes {
     public static final String GIT_NOT_BOUND = "IXC_GIT_NOT_BOUND";
     /** Репозиторий не отвечает или отказывает в доступе; версии ждут в очереди. */
     public static final String GIT_UNREACHABLE = "IXC_GIT_UNREACHABLE";
+    /** Ветки, тега или коммита с таким именем в репозитории привязки нет. */
+    public static final String GIT_REF_NOT_FOUND = "IXC_GIT_REF_NOT_FOUND";
+    /** В коммите нет каталога модели — импортировать нечего. */
+    public static final String GIT_MODEL_NOT_IN_REF = "IXC_GIT_MODEL_NOT_IN_REF";
 
     private InterchangeCodes() {
     }

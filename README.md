@@ -118,6 +118,23 @@ curl -X PUT http://localhost:8080/api/v1/workspaces/<id>/git-binding \
 сообщение — комментарий к сохранению. `.archimate` на теге собирает CI-задача
 репозитория — образец [`deploy/git/gitlab-ci.yml.example`](deploy/git/gitlab-ci.yml.example).
 
+**Импорт из Git** возвращает в базу состояние модели из ветки, тега или коммита
+репозитория привязки — новой версией. Сначала отчёт: что изменится, по объектам
+и полям; база при этом не трогается. Применение подтверждает отчёт его коммитом
+и отпечатком текущего содержимого — если модель с тех пор изменилась, нужен новый
+отчёт. Нужна блокировка модели.
+
+```
+curl -X POST http://localhost:8080/api/v1/models/<id>/git/pull/preview \
+     -H "Authorization: Bearer <токен>" -H "Content-Type: application/json" -d '{"ref":"proposal"}'
+curl -X POST http://localhost:8080/api/v1/models/<id>/git/pull \
+     -H "Authorization: Bearer <токен>" -H "Content-Type: application/json" \
+     -d '{"ref":"proposal","commitSha":"<из отчёта>","baseHash":"<из отчёта>","comment":"принято в ревью"}'
+```
+
+Импорт головы ветки привязки снимает расхождение: старые версии в очереди выгрузки
+пропускаются, и дальше сервер снова коммитит поверх ветки.
+
 Разработка фронтенда — отдельный процесс с прокси на приложение:
 [`archi-bootstrap/src/main/frontend/README.md`](archi-bootstrap/src/main/frontend/README.md).
 
@@ -144,7 +161,9 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 
 Перерисовывается по закрытии каждого этапа — `tools/render-depgraph.py`
 ([depgraph-maven-plugin](https://github.com/ferstl/depgraph-maven-plugin),
-формат PlantUML, версии на узлах). Состояние ниже — **этап 7a** (2026-10-13).
+формат PlantUML, версии на узлах). Состояние ниже — **этап 7b** (2026-10-14).
+
+Этап 7b графа не изменил: импорт по ссылке стоит на JGit и SnakeYAML, пришедших в 7a.
 
 Что изменил этап 7a: в `archi-bootstrap` пришёл JGit 7.8.0 (`org.eclipse.jgit`
 с JavaEWAH и commons-codec) — адаптер порта `GitRepositoryPort`, без внешнего
@@ -227,7 +246,7 @@ Jackson 2 — из BOM Spring Boot); он реализует порт `LlmPort` 
   и ревью; слияние — по сущностям через стабильные идентификаторы, текстовое слияние YAML
   запрещено ([§11](docs/backend.md#11-git-интеграция-и-формат-хранения)). Сервер коммитит
   только вперёд и чужой коммит не перезаписывает: правка каталога модели не через сервер —
-  расхождение, которое разбирается импортом или слиянием (этапы 7b, 7c).
+  расхождение, которое разбирается импортом головы ветки или слиянием (этап 7c).
 - **Ключ Anthropic живёт только на сервере** и никогда не попадает в браузер (NFR-06).
 
 ## Этапы работ

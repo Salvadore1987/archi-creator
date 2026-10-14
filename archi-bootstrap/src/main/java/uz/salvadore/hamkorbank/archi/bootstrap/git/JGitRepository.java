@@ -19,13 +19,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.eclipse.jgit.dircache.DirCache;
 import org.eclipse.jgit.dircache.DirCacheBuilder;
 import org.eclipse.jgit.dircache.DirCacheEntry;
+import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
+import org.eclipse.jgit.lib.AbbreviatedObjectId;
 import org.eclipse.jgit.lib.CommitBuilder;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.NullProgressMonitor;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectInserter;
+import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.RefUpdate;
@@ -46,7 +49,10 @@ import org.eclipse.jgit.treewalk.filter.AndTreeFilter;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.eclipse.jgit.treewalk.filter.TreeFilter;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.RefKind;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
 /**
@@ -91,6 +97,63 @@ public final class JGitRepository implements GitRepositoryPort {
             } catch (IOException | URISyntaxException e) {
                 throw unreachable(e);
             }
+        }
+    }
+
+    @Override
+    public Optional<ResolvedRef> resolve(Remote remote, GitRef ref) {
+        synchronized (lock(remote)) {
+            try (Repository repo = open(remote)) {
+                try (Transport transport = transport(repo, remote)) {
+                    transport.fetch(NullProgressMonitor.INSTANCE, List.of(
+                            new RefSpec("+" + Constants.R_HEADS + "*:" + TRACKING + "*"),
+                            new RefSpec("+" + Constants.R_TAGS + "*:" + Constants.R_TAGS + "*")));
+                }
+                String name = ref.value();
+                if (name.startsWith(Constants.R_HEADS)) {
+                    return named(repo, TRACKING + name.substring(Constants.R_HEADS.length()), ref, RefKind.BRANCH);
+                }
+                if (name.startsWith(Constants.R_TAGS)) {
+                    return named(repo, name, ref, RefKind.TAG);
+                }
+                Optional<ResolvedRef> named = named(repo, Constants.R_TAGS + name, ref, RefKind.TAG)
+                        .or(() -> named(repo, TRACKING + name, ref, RefKind.BRANCH));
+                return named.isPresent() || !ref.looksLikeSha() ? named : commit(repo, ref);
+            } catch (IOException | URISyntaxException e) {
+                throw unreachable(e);
+            }
+        }
+    }
+
+    /** Ссылка с этим именем в кэше — коммит за ней; аннотированный тег снимается до коммита. */
+    private static Optional<ResolvedRef> named(Repository repo, String refName, GitRef ref, RefKind kind) {
+        try (RevWalk walk = new RevWalk(repo)) {
+            Ref found = repo.exactRef(refName);
+            if (found == null) {
+                return Optional.empty();
+            }
+            return Optional.of(new ResolvedRef(ref, kind, sha(walk.parseCommit(found.getObjectId()))));
+        } catch (IncorrectObjectTypeException notCommit) {
+            return Optional.empty();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /** Коммит по идентификатору, полному или сокращённому; сокращение должно быть однозначным. */
+    private static Optional<ResolvedRef> commit(Repository repo, GitRef ref) throws IOException {
+        try (ObjectReader reader = repo.newObjectReader(); RevWalk walk = new RevWalk(reader)) {
+            List<ObjectId> candidates = new ArrayList<>(reader.resolve(AbbreviatedObjectId.fromString(ref.value())));
+            List<RevCommit> commits = new ArrayList<>();
+            for (ObjectId candidate : candidates) {
+                try {
+                    commits.add(walk.parseCommit(candidate));
+                } catch (IncorrectObjectTypeException | MissingObjectException notCommit) {
+                    // не коммит или его нет: полный идентификатор разрешается и без объекта
+                }
+            }
+            return commits.size() == 1 ? Optional.of(new ResolvedRef(ref, RefKind.COMMIT, sha(commits.getFirst())))
+                    : Optional.empty();
         }
     }
 

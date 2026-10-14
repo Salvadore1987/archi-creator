@@ -79,6 +79,7 @@ bounded_context: interchange
 | `ExportViewImage` | Отрисовать представление в SVG или PNG |
 | `ExportAllViewImages` | Пакетно отрисовать все представления модели |
 | `PushModelToGit` | Выгрузить состояние модели в репозиторий коммитом |
+| `PreviewModelPull` | Построить отчёт об изменениях по ссылке, ничего не меняя |
 | `PullModelFromGit` | Импортировать состояние по ссылке как новую версию |
 | `MergeModelBranch` | Слить предложение из ветки по сущностям |
 | `ConfigureGitBinding` | Настроить привязку рабочего пространства к репозиторию |

@@ -58,7 +58,7 @@ public class InterchangeProblemHandler {
                 ? InterchangeMessages.TITLE_BAD_FILE : InterchangeMessages.TITLE_INTERCHANGE)));
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", code);
-        details.forEach(problem::setProperty);
+        details.forEach((name, value) -> problem.setProperty(name, FindingMapper.detail(value, text)));
         return problem;
     }
 }

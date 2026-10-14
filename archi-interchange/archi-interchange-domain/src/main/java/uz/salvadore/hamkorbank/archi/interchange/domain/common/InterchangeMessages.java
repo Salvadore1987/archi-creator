@@ -41,6 +41,14 @@ public final class InterchangeMessages {
     public static final String TEXT_OUTSIDE_VALUE = "interchange.document.text-outside-value";
     public static final String ARTIFACT_HASH_MISMATCH = "interchange.export.artifact-hash-mismatch";
     public static final String FORMAT_NOT_AVAILABLE = "interchange.export.format-not-available";
+    public static final String GIT_BASE_HASH_INVALID = "interchange.git.base-hash-invalid";
+    public static final String GIT_PULL_COMMENT = "interchange.git.pull-comment";
+    public static final String GIT_PULL_FAILED = "interchange.git.pull-failed";
+    public static final String GIT_PULL_FIELD_MISSING = "interchange.git.pull-field-missing";
+    public static final String GIT_PULL_REJECTED_CORRUPT = "interchange.git.pull-rejected-corrupt";
+    public static final String GIT_PULL_REJECTED_STRICT = "interchange.git.pull-rejected-strict";
+    public static final String GIT_REF_NOT_FOUND = "interchange.git.ref-not-found";
+    public static final String GIT_REPORT_STALE = "interchange.git.report-stale";
     public static final String GIT_AUTHOR_INVALID = "interchange.git.author-invalid";
     public static final String GIT_AUTHOR_REPEATED = "interchange.git.author-repeated";
     public static final String GIT_BINDING_DISABLED = "interchange.git.binding-disabled";
@@ -57,6 +65,7 @@ public final class InterchangeMessages {
     public static final String GIT_ID_REPEATED = "interchange.git.id-repeated";
     public static final String GIT_MODEL_NOT_IN_COMMIT = "interchange.git.model-not-in-commit";
     public static final String GIT_POSITION_REPEATED = "interchange.git.position-repeated";
+    public static final String GIT_REF_INVALID = "interchange.git.ref-invalid";
     public static final String GIT_SECRET_MISSING = "interchange.git.secret-missing";
     public static final String GIT_SECRET_REF_INVALID = "interchange.git.secret-ref-invalid";
     public static final String GIT_SHA_INVALID = "interchange.git.sha-invalid";

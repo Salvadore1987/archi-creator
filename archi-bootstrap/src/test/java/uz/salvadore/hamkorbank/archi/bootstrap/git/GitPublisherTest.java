@@ -34,13 +34,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPositions;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService.ModelGitStatus;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMetrics;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.PublishedVersions;
+import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
+import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
+import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitAuthor;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBindingStatus;
@@ -184,6 +189,43 @@ class GitPublisherTest {
     }
 
     @Test
+    @DisplayName("FR-37: чужая правка каталога, уже вошедшая в опубликованный коммит модели, — не расхождение")
+    void foreignChangeAlreadyPublishedIsNotDivergence() throws Exception {
+        commitVersion(1, Fixtures.fixture("unknown_extension"), "Первая");
+        publishing.publishPending();
+        ObjectId foreign = externalCommit(modelDirectory() + "/notes.yaml", "правка руками\n");
+        versions.recordGitSha(model, 1, GitSha.of(foreign.name()));
+
+        commitVersion(2, renamed("Клиент", "Клиент банка"), "Вторая");
+        publishing.publishPending();
+
+        RevCommit top = history().getFirst();
+        assertThat(top.getParent(0).getId()).isEqualTo(foreign);
+        assertThat(versions.sha(2)).contains(top.name());
+        assertThat(publishing.status(model).state()).isEqualTo(ModelGitStatus.State.SYNCED);
+    }
+
+    @Test
+    @DisplayName("FR-37: каталог в голове уже несёт содержимое версии — версия получает голову без коммита")
+    void headCarryingVersionIsAdopted() throws Exception {
+        commitVersion(1, Fixtures.fixture("unknown_extension"), "Первая");
+        publishing.publishPending();
+        String directory = modelDirectory();
+        byte[] second = renamed("Клиент", "Клиент банка");
+        ObjectId foreign = externalTree(directory, new GitYamlWriter().write(
+                new StaxArchiDocumentReader().read(new java.io.ByteArrayInputStream(second)), GitPositions.none()));
+
+        versions.add(new PublishedVersions.Version(workspace, "Неизвестные узлы и атрибуты", 2, "architect-git",
+                Optional.of("Вторая"), clock.instant(), canonicalHash(second), second));
+        outbox.enqueue(workspace, model, 2, clock.instant());
+        publishing.publishPending();
+
+        assertThat(head()).isEqualTo(foreign);
+        assertThat(versions.sha(2)).contains(foreign.name());
+        assertThat(publishing.status(model).state()).isEqualTo(ModelGitStatus.State.SYNCED);
+    }
+
+    @Test
     @DisplayName("INV-IXC-009: переписанная история — расхождение, а не публикация поверх")
     void rewrittenHistoryIsDivergence() throws Exception {
         commitVersion(1, Fixtures.fixture("unknown_extension"), "Первая");
@@ -261,6 +303,35 @@ class GitPublisherTest {
     private static byte[] renamed(String from, String to) {
         return new String(Fixtures.fixture("unknown_extension"), StandardCharsets.UTF_8)
                 .replace("name=\"" + from + "\"", "name=\"" + to + "\"").getBytes(StandardCharsets.UTF_8);
+    }
+
+    private String modelDirectory() throws Exception {
+        return tree(history().getFirst()).keySet().stream().filter(p -> p.endsWith("/model.yaml"))
+                .findFirst().orElseThrow().replace("/model.yaml", "");
+    }
+
+    private static String canonicalHash(byte[] xml) {
+        return ContentHash.of(new ArchiXmlWriter().write(new StaxArchiDocumentReader()
+                .read(new java.io.ByteArrayInputStream(xml)))).value();
+    }
+
+    /** Каталог модели целиком заменяется файлами — чужим коммитом с другими позициями. */
+    private ObjectId externalTree(String directory, SortedMap<String, byte[]> files) throws Exception {
+        Path work = Files.createTempDirectory(temp, "work");
+        try (Git git = Git.cloneRepository().setURI(remote.toUri().toString()).setDirectory(work.toFile()).call()) {
+            git.rm().addFilepattern(directory).call();
+            for (Map.Entry<String, byte[]> file : files.entrySet()) {
+                Path target = work.resolve(directory).resolve(file.getKey());
+                Files.createDirectories(target.getParent());
+                Files.write(target, file.getValue());
+            }
+            git.add().addFilepattern(directory).call();
+            RevCommit commit = git.commit().setMessage("принято в ревью")
+                    .setAuthor(new PersonIdent("Чужой", "other@bank.uz")).setCommitter(new PersonIdent("Чужой",
+                            "other@bank.uz")).call();
+            git.push().setRemote("origin").add("main").call();
+            return commit.getId();
+        }
     }
 
     private ObjectId externalCommit(String path, String content) throws Exception {
@@ -406,6 +477,12 @@ class GitPublisherTest {
         public void diverged(UUID id, String reason, Instant at) {
             rows.get(id).status = "DIVERGED";
             rows.get(id).attempts++;
+        }
+
+        @Override
+        public void supersede(ModelId model, long throughVersionNo, Instant at) {
+            open().stream().filter(r -> r.model.equals(model) && r.versionNo <= throughVersionNo)
+                    .forEach(r -> r.status = "SKIPPED");
         }
 
         @Override
