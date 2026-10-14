@@ -148,7 +148,7 @@ public record ModelChanges(List<Change> changes) {
         }
     }
 
-    private static Optional<Kind> kind(DocumentNode node) {
+    static Optional<Kind> kind(DocumentNode node) {
         return switch (node.tag()) {
             case "folder" -> Optional.of(Kind.FOLDER);
             case "element" -> {
