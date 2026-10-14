@@ -1,6 +1,6 @@
 ---
-version: 1.5
-last_modified: 2026-10-13
+version: 1.6
+last_modified: 2026-10-14
 ---
 
 # ───────────────────────────────────────────────────────────────────
@@ -272,3 +272,14 @@ decisions:
     adr_file: 0020-uuid-generator.md
     affects: [modeling, interchange, advisor]
     requirements: []
+
+  - id: ADR-0021
+    title: Стиль исходников — отступ 4, строка 120, без @author, имена тестов фразой
+    status: accepted
+    date: 2026-10-14
+    kind: architecture
+    adr_file: 0021-source-style.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    note: |
+      Отступление от внутреннего стандарта Java/Spring (§2.4, §2.6.1, §2.2.3), найдено на этапе 0 ревью кода — docs/plans/code-review.md.
