@@ -1762,8 +1762,9 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 7c.5 Публикация после слияния
 
-- ⬜ Чужая правка в слитом коммите — не расхождение; второй родитель; закрытие очереди
-      при слиянии головы; `GitPublisherTest`
+- ✅ Чужая правка в слитом коммите — не расхождение; второй родитель;
+      `GitPublisherTest#mergedForeignChangeIsNotDivergence`, `#mergedProposalBecomesSecondParent`;
+      закрытие очереди при слиянии головы — в коммите 7c.4 (`GitMergeTest#mergeOfDivergedHeadSupersedesQueue`)
 
 ### 7c.6 REST
 

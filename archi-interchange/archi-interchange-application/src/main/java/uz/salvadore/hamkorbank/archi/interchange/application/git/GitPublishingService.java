@@ -29,6 +29,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryP
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Unreachable;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeEvents;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMetrics;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.ModelMerges;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.PublishedVersions;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.SecretResolver;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
@@ -64,6 +65,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  * Чужие коммиты вне каталога расхождением не считаются: наш ложится сверху. Не считается
  * им и чужая правка, уже принятая импортом: она входит в последний опубликованный коммит
  * модели, или каталог в голове уже несёт содержимое версии — тогда версия получает голову.
+ * Не расхождение и правка, принятая слиянием: она входит в слитый коммит модели. Слитого
+ * коммита нет в голове ветки — он второй родитель нашего коммита.
  */
 public final class GitPublishingService {
 
@@ -92,6 +95,7 @@ public final class GitPublishingService {
     private final GitOutbox outbox;
     private final GitBindingRepository bindings;
     private final PublishedVersions versions;
+    private final ModelMerges merges;
     private final GitRepositoryPort repository;
     private final GitRemotes remotes;
     private final UnitOfWork unitOfWork;
@@ -106,12 +110,14 @@ public final class GitPublishingService {
     private final byte[] gitattributes;
 
     public GitPublishingService(GitOutbox outbox, GitBindingRepository bindings, PublishedVersions versions,
-                                GitRepositoryPort repository, SecretResolver secrets, UnitOfWork unitOfWork,
+                                ModelMerges merges, GitRepositoryPort repository, SecretResolver secrets,
+                                UnitOfWork unitOfWork,
                                 InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts, Clock clock,
                                 Settings settings) {
         this.outbox = outbox;
         this.bindings = bindings;
         this.versions = versions;
+        this.merges = merges;
         this.repository = repository;
         this.remotes = new GitRemotes(secrets, texts);
         this.unitOfWork = unitOfWork;
@@ -300,10 +306,11 @@ public final class GitPublishingService {
             return recorded(entry, binding, version, already.get(), head.orElseThrow(), 0);
         }
         String directory = directory(remote, head, entry.model(), version.modelName());
+        Optional<GitSha> merged = unitOfWork.read(() -> merges.last(entry.model()));
         if (head.isPresent()) {
             Optional<GitRepositoryPort.Commit> last = repository.lastChange(remote, head.get(), directory);
             if (last.isPresent() && !entry.model().value().toString().equals(last.get().trailers().get(TRAILER_MODEL))
-                    && !accepted(remote, entry.model(), last.get().sha())) {
+                    && !accepted(remote, entry.model(), last.get().sha(), merged)) {
                 if (carries(remote, head.get(), directory, version)) {
                     return recorded(entry, binding, version, head.get(), head.get(), 0);
                 }
@@ -324,7 +331,7 @@ public final class GitPublishingService {
         rootFiles.put(GITATTRIBUTES, gitattributes(head.flatMap(h -> repository.file(remote, h, GITATTRIBUTES))));
         CommitRequest request = new CommitRequest(directory, files, rootFiles, message(version, trailers),
                 author(binding, version), new Person(settings.committerName(), settings.committerEmail(),
-                clock.instant()));
+                clock.instant()), merged);
         PushResult result = repository.push(remote, head, request);
         return switch (result) {
             case Pushed pushed -> recorded(entry, binding, version, pushed.sha(), pushed.sha(), pushed.changedFiles());
@@ -341,11 +348,12 @@ public final class GitPublishingService {
 
     /**
      * Чужая правка каталога уже принята: она входит в коммит, который записан последней
-     * опубликованной версией модели, — так бывает после импорта головы ветки. Переписывать
-     * поверх неё нечего.
+     * опубликованной версией модели, — так бывает после импорта головы ветки, — или в коммит,
+     * слитый в модель по сущностям. Переписывать поверх неё нечего.
      */
-    private boolean accepted(Remote remote, ModelId model, GitSha change) {
-        return unitOfWork.read(() -> versions.lastPublished(model))
+    private boolean accepted(Remote remote, ModelId model, GitSha change, Optional<GitSha> merged) {
+        return merged.filter(m -> repository.contains(remote, change, m)).isPresent()
+                || unitOfWork.read(() -> versions.lastPublished(model))
                 .filter(published -> repository.contains(remote, change, published.sha())).isPresent();
     }
 

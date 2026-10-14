@@ -59,11 +59,13 @@ public class GitConfiguration {
 
     @Bean
     GitPublishingService gitPublishingService(GitOutbox outbox, GitBindingRepository bindings,
-                                              PublishedVersions versions, GitRepositoryPort repository,
-                                              SecretResolver secrets, UnitOfWork unitOfWork, InterchangeEvents events,
+                                              PublishedVersions versions, ModelMerges merges,
+                                              GitRepositoryPort repository, SecretResolver secrets,
+                                              UnitOfWork unitOfWork, InterchangeEvents events,
                                               InterchangeMetrics metrics, TextCatalog texts, Clock clock,
                                               GitSettings settings) {
-        return new GitPublishingService(outbox, bindings, versions, repository, secrets, unitOfWork, events, metrics,
+        return new GitPublishingService(outbox, bindings, versions, merges, repository, secrets, unitOfWork, events,
+                metrics,
                 texts, clock, new GitPublishingService.Settings(settings.committerName(), settings.committerEmail(),
                 settings.authorEmailDomain(), settings.retryBase(), settings.retryMax()));
     }
