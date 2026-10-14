@@ -245,6 +245,44 @@
                     </execution>
                 </executions>
             </plugin>
+            <!--
+                Бэкенд журнала один — Logback из стартера Spring Boot. Второй на classpath
+                SLF4J не отвергает: печатает предупреждение и молча берёт один из двух.
+                Запрет Spring из родителя (ban-framework) здесь выключен: Spring — суть модуля.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>ban-framework</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>single-logging-backend</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <searchTransitive>true</searchTransitive>
+                                    <excludes>
+                                        <exclude>org.apache.logging.log4j:log4j-core</exclude>
+                                        <exclude>org.apache.logging.log4j:log4j-slf4j2-impl</exclude>
+                                        <exclude>org.springframework.boot:spring-boot-starter-log4j2</exclude>
+                                    </excludes>
+                                    <message>
+                                        Журнал пишет Logback со встроенным форматом ECS (ADR-0025):
+                                        второй бэкенд SLF4J выбрал бы один из двух молча.
+                                    </message>
+                                </bannedDependencies>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 

@@ -112,10 +112,13 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
 
 ### ADR-0025 — Logback и ECS
 
-- [ ] **9. Один бэкенд логов.** Правило enforcer `bannedDependencies` в `archi-bootstrap`:
+- [x] **9. Один бэкенд логов.** Правило enforcer `bannedDependencies` в `archi-bootstrap`:
       `org.apache.logging.log4j:log4j-core` и `spring-boot-starter-log4j2` запрещены —
       два бэкенда на classpath SLF4J разрешает предупреждением и молча выбирает один.
       Проверку доказать временной зависимостью.
+      Сделано: исполнение `single-logging-backend` в `archi-bootstrap`; унаследованный
+      из родителя запрет Spring (`ban-framework`) там выключен — иначе он ронял бы модуль,
+      которому Spring нужен. С временной `log4j-core` сборка падала на `validate`.
 
 Пересмотр решения — когда логи начнёт собирать общая платформа банка; задачи на это нет.
 
