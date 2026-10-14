@@ -113,7 +113,8 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
                     case "s" -> items.add(readSlot(xml));
                     case "v" -> items.add(readValue(xml));
                     case "f" -> items.add(new ResidueItem.Fragment(order(xml), xml.getElementText()));
-                    default -> throw new InvalidValueException(InterchangeMessages.RESIDUE_UNKNOWN_RECORD, xml.getLocalName());
+                    default -> throw new InvalidValueException(InterchangeMessages.RESIDUE_UNKNOWN_RECORD,
+                            xml.getLocalName());
                 }
             }
             return new NodeResidue(attributes, items);

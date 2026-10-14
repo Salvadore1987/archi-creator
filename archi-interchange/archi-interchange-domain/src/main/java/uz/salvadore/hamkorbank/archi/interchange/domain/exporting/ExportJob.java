@@ -112,7 +112,8 @@ public final class ExportJob {
 
     private void require(ExportStatus expected, String command) {
         if (status != expected) {
-            throw new IllegalStateException(Message.of(InterchangeMessages.EXPORT_TRANSITION, command, status).toString());
+            throw new IllegalStateException(
+                    Message.of(InterchangeMessages.EXPORT_TRANSITION, command, status).toString());
         }
     }
 

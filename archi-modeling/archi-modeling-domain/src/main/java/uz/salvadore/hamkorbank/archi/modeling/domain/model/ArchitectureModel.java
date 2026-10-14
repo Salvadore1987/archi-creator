@@ -416,7 +416,8 @@ public final class ArchitectureModel {
                                                  RelationshipId newId, ArchiId newArchiId, Instant now) {
         requireActive();
         RelationshipType type = RelationshipType.fromArchiType(archiType)
-                .orElseThrow(() -> ModelingException.invalid(Message.of(ModelingMessages.NOT_RELATIONSHIP_TYPE, archiType)));
+                .orElseThrow(() -> ModelingException.invalid(
+                        Message.of(ModelingMessages.NOT_RELATIONSHIP_TYPE, archiType)));
         if (accessType.isPresent() && type != RelationshipType.ACCESS) {
             throw ModelingException.invalid(Message.of(ModelingMessages.ACCESS_TYPE_MISPLACED, archiType));
         }
@@ -450,7 +451,8 @@ public final class ArchitectureModel {
         requireActive();
         Relationship relationship = requireRelationship(relationshipId);
         requireEditable(relationship.supported(), relationship.archiType());
-        Relationship edited = relationship.edited(newName.filter(n -> !n.isEmpty()).map(n -> Names.limited(n, Names.RELATIONSHIP)),
+        Relationship edited = relationship.edited(
+                newName.filter(n -> !n.isEmpty()).map(n -> Names.limited(n, Names.RELATIONSHIP)),
                 newDocumentation.filter(d -> !d.isEmpty()), newProperties);
         relationships.put(relationshipId, edited);
         touch(now);
@@ -521,7 +523,8 @@ public final class ArchitectureModel {
 
     public Relationship requireRelationship(RelationshipId relationshipId) {
         return relationships.get(relationshipId)
-                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.RELATIONSHIP, relationshipId)));
+                .orElseThrow(() -> ModelingException.notFound(
+                        Message.of(ModelingMessages.RELATIONSHIP, relationshipId)));
     }
 
     /** Конец связи обязан принадлежать этой модели. */

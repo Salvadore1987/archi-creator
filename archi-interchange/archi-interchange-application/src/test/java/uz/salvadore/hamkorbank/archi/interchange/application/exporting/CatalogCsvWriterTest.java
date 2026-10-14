@@ -37,7 +37,8 @@ class CatalogCsvWriterTest {
                 CatalogCsvOptions.of(Optional.empty(), Optional.empty())));
 
         assertEquals(List.of("elements.csv", "relations.csv"), List.copyOf(files.keySet()));
-        assertArrayEquals(new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF}, Arrays.copyOf(files.get("elements.csv"), 3));
+        assertArrayEquals(new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF},
+                Arrays.copyOf(files.get("elements.csv"), 3));
         String elements = text(files.get("elements.csv"));
         assertTrue(elements.startsWith("id;type;name;layer;folder;documentation;views;placed\r\n"), elements);
         assertTrue(elements.contains(";Application Component;Платёжный шлюз;Application;Application;;1;да\r\n"),

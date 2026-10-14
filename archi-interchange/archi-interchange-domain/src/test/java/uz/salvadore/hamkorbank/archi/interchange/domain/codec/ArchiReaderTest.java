@@ -95,7 +95,8 @@ class ArchiReaderTest {
 
         DocumentNode folder = document.folders().getFirst();
         assertEquals(List.of("name", "id", "type", "futureFlag"), names(folder));
-        assertEquals(List.of("xmlns:archi9", "xsi:type", "archi9:hint", "name", "id"), names(folder.children().getFirst()));
+        assertEquals(List.of("xmlns:archi9", "xsi:type", "archi9:hint", "name", "id"),
+                names(folder.children().getFirst()));
     }
 
     @Test

@@ -429,7 +429,8 @@ public final class DocumentAssembler {
                     .toList();
             for (int i = 0; i < ordered.size(); i++) {
                 Optional<ResidueItem.Slot> slot = i < slots.size() ? Optional.of(slots.get(i)) : Optional.empty();
-                typed(slot.map(ResidueItem.Slot::order).orElse(lastOrder(slots, fallback)), property(ordered.get(i), slot));
+                typed(slot.map(ResidueItem.Slot::order).orElse(lastOrder(slots, fallback)),
+                        property(ordered.get(i), slot));
             }
         }
 
@@ -441,7 +442,8 @@ public final class DocumentAssembler {
             entries.add(new Entry(order, sequence++, parent -> node));
         }
 
-        List<DocumentContent> build(Optional<uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId> parent) {
+        List<DocumentContent> build(
+                Optional<uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId> parent) {
             entries.sort(Comparator.comparingLong(Entry::order).thenComparingInt(Entry::sequence));
             List<DocumentContent> content = new ArrayList<>();
             for (int i = 0; i < entries.size(); i++) {
@@ -467,7 +469,8 @@ public final class DocumentAssembler {
         }
 
         private static Attributes literal(List<ResidueAttribute> attributes) {
-            return new Attributes(attributes.stream().map(a -> new Attribute(a.name(), a.value().orElseThrow())).toList());
+            return new Attributes(attributes.stream()
+                    .map(a -> new Attribute(a.name(), a.value().orElseThrow())).toList());
         }
 
         private static DocumentContent reorder(DocumentContent item, int position) {

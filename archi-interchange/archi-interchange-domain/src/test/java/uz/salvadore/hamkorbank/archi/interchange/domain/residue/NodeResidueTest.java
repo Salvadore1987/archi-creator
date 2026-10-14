@@ -22,7 +22,8 @@ class NodeResidueTest {
                                 ResidueAttribute.literal("extra", "1"))),
                         new ResidueItem.Value(3000, "content", List.of(), Optional.of("  Платить по QR\n  ")),
                         new ResidueItem.Value(3500, "purpose", List.of(), Optional.of("")),
-                        new ResidueItem.Fragment(4000, "<vendor:step order=\"1\">очистка &amp; дедупликация</vendor:step>")));
+                        new ResidueItem.Fragment(4000,
+                                "<vendor:step order=\"1\">очистка &amp; дедупликация</vendor:step>")));
 
         NodeResidue decoded = NodeResidue.decode(residue.encode());
 

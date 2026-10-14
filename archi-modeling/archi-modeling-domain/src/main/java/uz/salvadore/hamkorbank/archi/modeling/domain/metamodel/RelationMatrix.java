@@ -95,7 +95,8 @@ public final class RelationMatrix {
     private static RelationMatrix load() {
         try (InputStream in = RelationMatrix.class.getResourceAsStream(RESOURCE)) {
             if (in == null) {
-                throw new IllegalStateException(Message.of(ModelingMessages.MATRIX_RESOURCE_MISSING, RESOURCE).toString());
+                throw new IllegalStateException(
+                        Message.of(ModelingMessages.MATRIX_RESOURCE_MISSING, RESOURCE).toString());
             }
             return new RelationMatrix(parse(in));
         } catch (IOException e) {
@@ -122,7 +123,8 @@ public final class RelationMatrix {
                 }
                 case "target" -> {
                     if (targets == null) {
-                        throw new IllegalStateException(Message.of(ModelingMessages.MATRIX_TARGET_OUTSIDE_SOURCE, RESOURCE).toString());
+                        throw new IllegalStateException(
+                                Message.of(ModelingMessages.MATRIX_TARGET_OUTSIDE_SOURCE, RESOURCE).toString());
                     }
                     targets.put(xml.getAttributeValue(null, "concept"),
                             relations(xml.getAttributeValue(null, "relations")));

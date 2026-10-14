@@ -20,7 +20,8 @@ public record DocumentValue(String tag, DocumentOrder order, Attributes attribut
         implements DocumentContent {
 
     /** Теги, которые читатель понимает как значения. Остальное без {@code id} — {@link RawXmlFragment}. */
-    public static final Set<String> TAGS = Set.of("documentation", "purpose", "property", "bounds", "bendpoint", "content");
+    public static final Set<String> TAGS = Set.of("documentation", "purpose", "property", "bounds", "bendpoint",
+            "content");
 
     public DocumentValue {
         Objects.requireNonNull(tag, "tag");

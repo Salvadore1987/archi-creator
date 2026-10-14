@@ -144,7 +144,8 @@ class GitYamlWriterTest {
                 "{фигурные}", "[квадратные]", "a #b", "пробелы   \n   и ещё", "&якорь", "*ссылка", "!тег", "%процент"};
         StringBuilder xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<archimate:model"
                 + " xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""
-                + " xmlns:archimate=\"http://www.archimatetool.com/archimate\" name=\"x\" id=\"id-1\" version=\"5.0.0\">\n"
+                + " xmlns:archimate=\"http://www.archimatetool.com/archimate\""
+                + " name=\"x\" id=\"id-1\" version=\"5.0.0\">\n"
                 + "  <folder name=\"Business\" id=\"id-2\" type=\"business\">\n");
         for (int i = 0; i < texts.length; i++) {
             String escaped = escape(texts[i]);
@@ -180,7 +181,8 @@ class GitYamlWriterTest {
         Set<String> paths = new TreeSet<>(before.keySet());
         paths.addAll(after.keySet());
         return paths.stream().filter(p -> !before.containsKey(p) || !after.containsKey(p)
-                || !java.util.Arrays.equals(before.get(p), after.get(p))).collect(Collectors.toCollection(TreeSet::new));
+                || !java.util.Arrays.equals(before.get(p), after.get(p)))
+                .collect(Collectors.toCollection(TreeSet::new));
     }
 
     private static void assertTreesEqual(Map<String, byte[]> expected, Map<String, byte[]> actual) {

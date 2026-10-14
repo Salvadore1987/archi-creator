@@ -85,7 +85,8 @@ public final class JGitRepository implements GitRepositoryPort {
             try (Repository repo = open(remote)) {
                 String branchRef = Constants.R_HEADS + remote.branch();
                 Optional<Ref> advertised;
-                try (Transport transport = transport(repo, remote); FetchConnection connection = transport.openFetch()) {
+                try (Transport transport = transport(repo, remote);
+                        FetchConnection connection = transport.openFetch()) {
                     advertised = Optional.ofNullable(connection.getRef(branchRef));
                 }
                 if (advertised.isEmpty()) {

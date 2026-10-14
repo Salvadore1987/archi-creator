@@ -79,7 +79,8 @@ public class ModelController {
     public ResponseEntity<ModelSummary> create(EditorIdentity actor, @RequestBody CreateModelRequest request,
                                                @RequestHeader("Idempotency-Key") Optional<String> key) {
         var model = lifecycle.create(actor, workspace(Optional.ofNullable(request.workspaceId())), request.name(), key);
-        return ResponseEntity.created(URI.create("/api/v1/models/" + model.id())).body(DtoMapper.summary(model.header()));
+        return ResponseEntity.created(URI.create("/api/v1/models/" + model.id()))
+                .body(DtoMapper.summary(model.header()));
     }
 
     @GetMapping("/models/{id}")

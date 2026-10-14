@@ -166,7 +166,8 @@ public final class VersionService {
         return kernel.unitOfWork.read(() -> {
             ModelHeader header = kernel.visibleHeader(modelId, actor, AclAccess.READ);
             if (header.status() != ModelStatus.ACTIVE) {
-                throw new ModelingException(MODEL_DELETED, Failure.CONFLICT, Message.of(ModelingMessages.MODEL_DELETED));
+                throw new ModelingException(MODEL_DELETED, Failure.CONFLICT,
+                        Message.of(ModelingMessages.MODEL_DELETED));
             }
             ModelVersion version = versionNo.map(no -> requireVersion(modelId, no))
                     .orElseGet(() -> kernel.versions.last(modelId)

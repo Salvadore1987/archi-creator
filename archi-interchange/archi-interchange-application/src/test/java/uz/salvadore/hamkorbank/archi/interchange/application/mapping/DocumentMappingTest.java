@@ -100,7 +100,8 @@ class DocumentMappingTest {
                 note.content());
         assertTrue(note.rawXml().orElseThrow().value().indexOf("Легенда") < 0, "текста заметки нет в остатке");
 
-        ModelContent reference = decompose(read(Files.readAllBytes(ROOT.resolve("docs/Hamkorbank_AS_IS_strict.archimate"))));
+        ModelContent reference = decompose(read(Files.readAllBytes(
+                ROOT.resolve("docs/Hamkorbank_AS_IS_strict.archimate"))));
         ViewNode group = reference.views().stream().flatMap(v -> v.nodes().values().stream())
                 .filter(n -> n.kind() == ViewNodeKind.GROUP && n.label().equals(Optional.of("Каналы")))
                 .findFirst().orElseThrow();

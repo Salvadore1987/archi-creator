@@ -104,7 +104,8 @@ public final class ModelingKernel {
 
     ArchitectureModel visibleModel(ModelId modelId, EditorIdentity actor, AclAccess access) {
         visibleHeader(modelId, actor, access);
-        return models.load(modelId).orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.MODEL, modelId)));
+        return models.load(modelId)
+                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.MODEL, modelId)));
     }
 
     /**

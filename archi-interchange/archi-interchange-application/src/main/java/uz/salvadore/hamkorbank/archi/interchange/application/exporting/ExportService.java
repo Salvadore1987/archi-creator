@@ -82,8 +82,8 @@ public final class ExportService {
      * @param notation  размеры фигур по умолчанию — те же, что у канвы и картинок
      * @param oefSchema официальная схема OEF; одна на приложение, компилируется при старте
      */
-    public ExportService(VersionService versions, InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts,
-                         Notation notation, OefSchema oefSchema, Clock clock) {
+    public ExportService(VersionService versions, InterchangeEvents events, InterchangeMetrics metrics,
+                         TextCatalog texts, Notation notation, OefSchema oefSchema, Clock clock) {
         this.texts = texts;
         this.notation = notation;
         this.oefSchema = oefSchema;

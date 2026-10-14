@@ -23,7 +23,8 @@ final class FindingMapper {
 
     /** Подробность отказа: список находок переводится, остальное отдаётся как есть. */
     static Object detail(Object value, TextCatalog text) {
-        if (value instanceof List<?> list && !list.isEmpty() && list.stream().allMatch(ImportFinding.class::isInstance)) {
+        if (value instanceof List<?> list && !list.isEmpty()
+                && list.stream().allMatch(ImportFinding.class::isInstance)) {
             return list.stream().map(f -> finding((ImportFinding) f, text)).toList();
         }
         return value;

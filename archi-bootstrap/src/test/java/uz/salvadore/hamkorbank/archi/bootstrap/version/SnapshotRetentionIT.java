@@ -52,9 +52,11 @@ class SnapshotRetentionIT extends IntegrationTest {
         jdbc.update("update model_version set created_at = created_at - interval '180 days', git_sha = ? "
                 + "where model_id = ?", "a".repeat(40), model.value());
 
-        VersionService enabledWithoutGit = new VersionService(kernel, snapshots, snapshots, workspaceId -> false, SnapshotArchive.NONE,
+        VersionService enabledWithoutGit = new VersionService(kernel, snapshots, snapshots, workspaceId -> false,
+                SnapshotArchive.NONE,
                 ZoneOffset.UTC, true);
-        VersionService enabledWithGit = new VersionService(kernel, snapshots, snapshots, workspaceId -> true, SnapshotArchive.NONE,
+        VersionService enabledWithGit = new VersionService(kernel, snapshots, snapshots, workspaceId -> true,
+                SnapshotArchive.NONE,
                 ZoneOffset.UTC, true);
 
         assertEquals(0, versions.purgeSnapshots(), "у пространства нет привязки к Git");

@@ -138,8 +138,8 @@ public final class DocumentDecomposer {
             String version = document.attributes().get("version").filter(ModelHeader::validArchiVersion)
                     .orElse(ModelHeader.DEFAULT_ARCHI_VERSION);
             ModelHeader header = new ModelHeader(identity.modelId(), identity.workspaceId(),
-                    ArchiId.of(document.archiId().value()), document.name(), Optional.ofNullable(documentation[0]), version,
-                    ModelStatus.ACTIVE, properties, root.encode(), identity.createdBy(), identity.createdAt(),
+                    ArchiId.of(document.archiId().value()), document.name(), Optional.ofNullable(documentation[0]),
+                    version, ModelStatus.ACTIVE, properties, root.encode(), identity.createdBy(), identity.createdAt(),
                     identity.now(), identity.version());
             ArchitectureModel model = ArchitectureModel.imported(header, folders, elements, relationships,
                     views.stream().map(ViewParts::ref).toList(), () -> FolderId.of(uuids.get()), archiIds);
@@ -163,7 +163,8 @@ public final class DocumentDecomposer {
             for (int i = 0; i < content.size(); i++) {
                 long childOrder = SortOrder.ofPosition(i).value();
                 switch (content.get(i)) {
-                    case DocumentNode child when child.tag().equals("folder") -> folder(child, Optional.of(id), childOrder);
+                    case DocumentNode child when child.tag().equals("folder") ->
+                            folder(child, Optional.of(id), childOrder);
                     case DocumentNode child when child.tag().equals("element") -> modelObject(child, id, childOrder);
                     case DocumentNode child -> throw unexpected(child, Message.of(InterchangeMessages.WHERE_FOLDER));
                     case DocumentValue value -> residue.value(childOrder, value);
@@ -176,7 +177,8 @@ public final class DocumentDecomposer {
 
         private void modelObject(DocumentNode node, FolderId folder, long order) {
             String xsiType = node.archiType()
-                    .orElseThrow(() -> unexpected(node, Message.of(InterchangeMessages.WHERE_WITHOUT, XmlSchema.XSI_TYPE)));
+                    .orElseThrow(() -> unexpected(node,
+                            Message.of(InterchangeMessages.WHERE_WITHOUT, XmlSchema.XSI_TYPE)));
             if (xsiType.endsWith("Relationship")) {
                 relationship(node, folder, order);
             } else if (xsiType.endsWith("Model")) {
@@ -241,7 +243,8 @@ public final class DocumentDecomposer {
             for (int i = 0; i < content.size(); i++) {
                 long order = SortOrder.ofPosition(i).value();
                 switch (content.get(i)) {
-                    case DocumentValue value when documentation[0] == null && isDocumentation(value, "documentation") -> {
+                    case DocumentValue value when documentation[0] == null
+                            && isDocumentation(value, "documentation") -> {
                         documentation[0] = value.text().orElse("");
                         residue.slot(order, value);
                     }
@@ -273,7 +276,8 @@ public final class DocumentDecomposer {
                     case DocumentNode child when child.tag().equals("child") ->
                             viewNode(child, Optional.empty(), childOrder, parts);
                     case DocumentNode child -> throw unexpected(child, Message.of(InterchangeMessages.WHERE_VIEW));
-                    case DocumentValue value when documentation[0] == null && isDocumentation(value, "documentation") -> {
+                    case DocumentValue value when documentation[0] == null
+                            && isDocumentation(value, "documentation") -> {
                         documentation[0] = value.text().orElse("");
                         residue.slot(childOrder, value);
                     }
@@ -287,8 +291,8 @@ public final class DocumentDecomposer {
             }
             DiagramType type = DiagramType.of(node.archiType().orElseThrow());
             ViewHeader header = new ViewHeader(id, identity.modelId(), folder, archiId(node), type,
-                    node.attribute("name").orElse(""), Optional.ofNullable(documentation[0]), node.attribute("viewpoint"),
-                    properties,
+                    node.attribute("name").orElse(""), Optional.ofNullable(documentation[0]),
+                    node.attribute("viewpoint"), properties,
                     SortOrder.of(order), residue.encode(), 0);
             parts.header = header;
             parts.ref = new ViewRef(id, folder, header.archiId(), type, header.name(), header.sortOrder());

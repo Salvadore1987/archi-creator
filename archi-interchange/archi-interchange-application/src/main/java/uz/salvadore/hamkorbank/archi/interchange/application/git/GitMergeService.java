@@ -273,7 +273,8 @@ public final class GitMergeService {
                         InterchangeCodes.STRICT_IMPORT_REJECTED);
             }
             String comment = request.comment().filter(c -> !c.isBlank()).orElseGet(() -> texts.text(
-                    Message.of(InterchangeMessages.GIT_MERGE_COMMENT, ref.value(), sha.value().substring(0, SHORT_SHA))));
+                    Message.of(InterchangeMessages.GIT_MERGE_COMMENT, ref.value(),
+                            sha.value().substring(0, SHORT_SHA))));
             Applied applied;
             try {
                 applied = unitOfWork.write(() -> {

@@ -132,7 +132,8 @@ class ViewEditingIT extends ApiTest {
         mvc.perform(get("/api/v1/metamodel/relations").param("source", "archimate:Node")
                         .param("target", "archimate:SystemSoftware").with(architect()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.nesting == true)].type").value(org.hamcrest.Matchers.contains("COMPOSITION")));
+                .andExpect(jsonPath("$[?(@.nesting == true)].type")
+                        .value(org.hamcrest.Matchers.contains("COMPOSITION")));
 
         mvc.perform(put("/api/v1/view-nodes/" + inner + "/parent").with(architect())
                         .contentType(MediaType.APPLICATION_JSON)

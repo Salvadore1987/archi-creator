@@ -87,7 +87,8 @@ public final class GitYamlReader {
             }
             rootAttributes = root.attributes(false);
             rootId = rootAttributes.get(A_ID)
-                    .orElseThrow(() -> new InvalidValueException(InterchangeMessages.GIT_FIELD_MISSING, MODEL_FILE, K_ID));
+                    .orElseThrow(() -> new InvalidValueException(InterchangeMessages.GIT_FIELD_MISSING,
+                            MODEL_FILE, K_ID));
             items(root, rootId, Optional.empty());
             root.done();
 

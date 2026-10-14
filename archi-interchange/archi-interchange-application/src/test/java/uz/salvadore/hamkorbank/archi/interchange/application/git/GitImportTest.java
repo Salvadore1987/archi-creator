@@ -204,7 +204,8 @@ class GitImportTest {
 
         assertEquals(ModelingCodes.LOCK_REQUIRED, e.code());
         assertEquals(List.of(1L, 2L, 3L), modelStates.versionNos());
-        assertEquals(ModelingCodes.LOCK_REQUIRED, sessions.rows.values().iterator().next().findings().getFirst().code());
+        assertEquals(ModelingCodes.LOCK_REQUIRED,
+                sessions.rows.values().iterator().next().findings().getFirst().code());
     }
 
     @Test
@@ -311,7 +312,8 @@ class GitImportTest {
 
     private static GitImportService.PullRequest confirm(GitImportService.Preview preview, String comment) {
         return new GitImportService.PullRequest(Optional.of(preview.ref().ref().value()),
-                Optional.of(preview.ref().sha().value()), Optional.of(preview.baseHash()), Optional.ofNullable(comment));
+                Optional.of(preview.ref().sha().value()), Optional.of(preview.baseHash()),
+                Optional.ofNullable(comment));
     }
 
     private static String code(Runnable call) {

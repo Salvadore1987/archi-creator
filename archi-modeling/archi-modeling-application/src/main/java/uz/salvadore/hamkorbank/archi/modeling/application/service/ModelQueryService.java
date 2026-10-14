@@ -41,7 +41,8 @@ public final class ModelQueryService {
     public List<ModelHeader> list(EditorIdentity actor, WorkspaceId workspaceId) {
         return kernel.run(Operation.OPEN_MODEL, actor, () -> kernel.unitOfWork.read(() -> {
             List<ModelHeader> headers = kernel.models.list(workspaceId);
-            Map<ModelId, ModelAccessList> acl = kernel.accessLists.findAll(headers.stream().map(ModelHeader::id).toList());
+            Map<ModelId, ModelAccessList> acl = kernel.accessLists
+                    .findAll(headers.stream().map(ModelHeader::id).toList());
             return headers.stream()
                     .filter(h -> h.status() == ModelStatus.ACTIVE || actor.isAdmin())
                     .filter(h -> acl.getOrDefault(h.id(), ModelAccessList.open(h.id())).permits(actor, AclAccess.READ))

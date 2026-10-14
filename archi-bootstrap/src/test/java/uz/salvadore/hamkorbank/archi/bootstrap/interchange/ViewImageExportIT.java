@@ -40,7 +40,8 @@ class ViewImageExportIT extends ApiTest {
         String svg = new String(response.getContentAsByteArray(), StandardCharsets.UTF_8);
         assertThat(svg).startsWith("<?xml").contains("<svg ", "@font-face", ">АБС<");
 
-        String outline = new String(mvc.perform(get("/api/v1/views/" + view + "/export?outline=true&background=transparent")
+        String outline = new String(mvc.perform(get("/api/v1/views/" + view
+                        + "/export?outline=true&background=transparent")
                         .with(viewer()))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
         assertThat(outline).doesNotContain("<text", "@font-face");

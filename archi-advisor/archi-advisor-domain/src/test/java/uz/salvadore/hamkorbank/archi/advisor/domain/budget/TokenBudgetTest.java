@@ -102,7 +102,8 @@ class TokenBudgetTest {
     @Test
     @DisplayName("Период — календарный месяц, сброс с первого числа следующего")
     void periodIsCalendarMonth() {
-        BudgetPeriod period = BudgetPeriod.containing(Instant.parse("2026-12-31T20:00:00Z"), ZoneId.of("Asia/Tashkent"));
+        BudgetPeriod period = BudgetPeriod.containing(Instant.parse("2026-12-31T20:00:00Z"),
+                ZoneId.of("Asia/Tashkent"));
 
         assertEquals("2027-01", period.value(), "по поясу учёта это уже январь");
         assertEquals(LocalDate.of(2027, 2, 1), period.resetsAt());

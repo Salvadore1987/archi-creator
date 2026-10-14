@@ -42,34 +42,36 @@ public class CommonProblemHandler {
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
     ProblemDetail optimistic(OptimisticLockingFailureException e, HttpServletRequest request) {
-        return problem(HttpStatus.CONFLICT, ModelingCodes.LOCK_REQUIRED, text(BootstrapMessages.CONCURRENT_MODIFICATION),
-                request);
+        return problem(HttpStatus.CONFLICT, ModelingCodes.LOCK_REQUIRED,
+                text(BootstrapMessages.CONCURRENT_MODIFICATION), request);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     ProblemDetail integrity(DataIntegrityViolationException e, HttpServletRequest request) {
-        return problem(HttpStatus.CONFLICT, ModelingCodes.INTEGRITY_CONFLICT, text(BootstrapMessages.INTEGRITY_CONFLICT),
-                request);
+        return problem(HttpStatus.CONFLICT, ModelingCodes.INTEGRITY_CONFLICT,
+                text(BootstrapMessages.INTEGRITY_CONFLICT), request);
     }
 
     /** Файл больше предела — {@code 413} до чтения тела. */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     ProblemDetail tooLarge(MaxUploadSizeExceededException e, HttpServletRequest request) {
-        return problem(HttpStatus.CONTENT_TOO_LARGE, InterchangeCodes.FILE_TOO_LARGE, text(BootstrapMessages.FILE_TOO_LARGE),
-                request);
+        return problem(HttpStatus.CONTENT_TOO_LARGE, InterchangeCodes.FILE_TOO_LARGE,
+                text(BootstrapMessages.FILE_TOO_LARGE), request);
     }
 
     /** Причину разбора отдаёт Spring — технический текст, он идёт аргументом без перевода. */
     @ExceptionHandler({HttpMessageNotReadableException.class, MissingServletRequestParameterException.class,
             MissingServletRequestPartException.class, MethodArgumentTypeMismatchException.class})
     ProblemDetail badRequest(Exception e, HttpServletRequest request) {
-        return problem(HttpStatus.BAD_REQUEST, BAD_REQUEST, text(BootstrapMessages.BAD_REQUEST, e.getMessage()), request);
+        return problem(HttpStatus.BAD_REQUEST, BAD_REQUEST, text(BootstrapMessages.BAD_REQUEST, e.getMessage()),
+                request);
     }
 
     private ProblemDetail problem(HttpStatus status, String code, String detail, HttpServletRequest request) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setType(URI.create(TYPE_BASE + code.toLowerCase(Locale.ROOT).replace('_', '-')));
-        problem.setTitle(status == HttpStatus.CONFLICT ? text(BootstrapMessages.TITLE_CONFLICT) : status.getReasonPhrase());
+        problem.setTitle(status == HttpStatus.CONFLICT ? text(BootstrapMessages.TITLE_CONFLICT)
+                : status.getReasonPhrase());
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", code);
         return problem;

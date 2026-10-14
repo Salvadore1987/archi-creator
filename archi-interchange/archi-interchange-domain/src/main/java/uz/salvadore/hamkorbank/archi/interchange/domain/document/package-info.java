@@ -1,5 +1,6 @@
 /**
- * Документ {@code .archimate} как значение: {@link uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument}
+ * Документ {@code .archimate} как значение:
+ * {@link uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument}
  * и его узлы в порядке исходного файла.
  *
  * <p>Published language с BC modeling. Узел однороден, а не типизирован:

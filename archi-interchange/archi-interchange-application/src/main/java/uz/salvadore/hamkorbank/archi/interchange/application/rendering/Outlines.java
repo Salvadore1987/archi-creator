@@ -47,7 +47,8 @@ final class Outlines {
                     + " H" + n(x1);
             case "bevel" -> {
                 double c = Math.min(BEVEL, Math.min(w / 2, h / 2));
-                yield "M" + n(x0 + c) + " " + n(y0) + " H" + n(x1 - c) + " L" + n(x1) + " " + n(y0 + c) + " V" + n(y1 - c)
+                yield "M" + n(x0 + c) + " " + n(y0) + " H" + n(x1 - c) + " L" + n(x1) + " " + n(y0 + c)
+                        + " V" + n(y1 - c)
                         + " L" + n(x1 - c) + " " + n(y1) + " H" + n(x0 + c) + " L" + n(x0) + " " + n(y1 - c)
                         + " V" + n(y0 + c) + " Z";
             }

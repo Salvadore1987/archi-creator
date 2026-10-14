@@ -25,7 +25,8 @@ class ObservabilityIT extends ApiTest {
                 .post("/api/v1/models/" + model + "/lock").with(as("intruder", "ARCHITECT")))
                 .andExpect(status().isConflict());
         mvc.perform(multipart("/api/v1/models/import")
-                .file(new MockMultipartFile("file", "f.archimate", "application/xml", Fixtures.fixture("unknown_extension")))
+                .file(new MockMultipartFile("file", "f.archimate", "application/xml",
+                        Fixtures.fixture("unknown_extension")))
                 .with(architect())).andExpect(status().isCreated());
 
         mvc.perform(get("/actuator/prometheus").with(admin()))

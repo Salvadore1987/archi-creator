@@ -201,7 +201,10 @@ public final class ViewImageService {
         });
     }
 
-    /** Неизвестный формат — {@code IXC_UNKNOWN_FORMAT}; плотность и фон вне списка — {@code IXC_INVALID_EXPORT_OPTION}. */
+    /**
+     * Неизвестный формат — {@code IXC_UNKNOWN_FORMAT}; плотность и фон вне списка —
+     * {@code IXC_INVALID_EXPORT_OPTION}.
+     */
     private static Settings settings(ImageRequest request) {
         String formatName = request.format().orElse(FORMAT_SVG);
         ExportFormat format = Optional.ofNullable(FORMATS.get(formatName))

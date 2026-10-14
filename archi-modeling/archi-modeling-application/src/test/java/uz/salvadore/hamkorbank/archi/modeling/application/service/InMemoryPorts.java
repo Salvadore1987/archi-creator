@@ -242,7 +242,8 @@ final class InMemoryPorts {
 
         @Override
         public List<ModelId> modelsWithSnapshots() {
-            return versions.stream().filter(v -> v.snapshot().isPresent()).map(ModelVersion::modelId).distinct().toList();
+            return versions.stream().filter(v -> v.snapshot().isPresent()).map(ModelVersion::modelId)
+                    .distinct().toList();
         }
     };
 

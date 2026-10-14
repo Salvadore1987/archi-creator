@@ -155,7 +155,8 @@ public final class Routing {
         double[] lengths = new double[points.size() - 1];
         double total = 0;
         for (int i = 0; i < lengths.length; i++) {
-            lengths[i] = Math.hypot(points.get(i + 1).x() - points.get(i).x(), points.get(i + 1).y() - points.get(i).y());
+            lengths[i] = Math.hypot(points.get(i + 1).x() - points.get(i).x(),
+                    points.get(i + 1).y() - points.get(i).y());
             total += lengths[i];
         }
         double rest = total / 2;
