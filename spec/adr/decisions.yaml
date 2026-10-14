@@ -327,3 +327,14 @@ decisions:
     requirements: []
     note: |
       Решение владельца по итогам этапа 0 ревью; отступление от стандарта Java/Spring (§4.4.1, §4.4.3, прил. D №19).
+
+  - id: ADR-0026
+    title: Значения из требований — в YAML, окружением — секреты и адреса
+    status: accepted
+    date: 2026-10-14
+    kind: architecture
+    adr_file: 0026-config-values-in-yaml.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    note: |
+      Отступление от стандарта Java/Spring (§2.1.5, §4.6.2): число из spec/nfr в переменной окружения было бы вторым источником правды.
