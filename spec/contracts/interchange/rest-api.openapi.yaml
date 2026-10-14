@@ -11,8 +11,8 @@ info:
     доступа в `x-operation` (spec/nfr/interchange.yaml#security.authorization).
     Наполнено на этапе 2 (2026-10-08), картинки представлений — этап 5a
     (2026-10-12), OEF — этап 6a, привязка к Git и публикация — этап 7a
-    (2026-10-13), импорт по ссылке — этап 7b (2026-10-14); операция этапа 7c
-    перечислена в конце раздела `paths` и появится вместе со своим use case'ом.
+    (2026-10-13), импорт по ссылке — этап 7b, слияние предложения — этап 7c
+    (2026-10-14).
 
 servers:
   - url: /api/v1
@@ -415,11 +415,98 @@ paths:
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 
+  /models/{id}/git/merge/preview:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [interchange]
+      operationId: previewModelMerge
+      summary: Отчёт слияния предложения по сущностям — ничего не меняет (UC-IXC-007, FR-39)
+      description: |
+        Три состояния — общий предок, текущее содержимое модели и каталог модели
+        в коммите ссылки — сравниваются по `archiId` и полям объектов (INV-IXC-010).
+        Выборы по конфликтам необязательны: отчёт пересчитывает результат с ними,
+        конфликт без выбора показывается в пользу «нашего». `commitSha`,
+        `mergeBaseSha` и `baseHash` отчёта нужны для применения.
+      x-use-case: UC-IXC-007
+      x-operation: MergeModelBranch
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/GitMergePreviewRequest' } }
+      responses:
+        '200':
+          description: Отчёт; конфликты, каскад, изменения и отметки для холста.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/GitMergePreview' } }
+        '404':
+          description: |
+            Модели нет или она скрыта; ссылки нет — `IXC_GIT_REF_NOT_FOUND`;
+            в коммите нет каталога модели — `IXC_GIT_MODEL_NOT_IN_REF`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '409':
+          description: |
+            Нет рабочей привязки — `IXC_GIT_NOT_BOUND`; нет опубликованной версии,
+            общего предка или каталога модели в нём — `IXC_GIT_NO_MERGE_BASE`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '422':
+          description: Ссылка пуста или недопустима, выбор по несуществующему конфликту — `IXC_INVALID_REQUEST`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '503':
+          description: Репозиторий недоступен — `IXC_GIT_UNREACHABLE`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+
+  /models/{id}/git/merge:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [interchange]
+      operationId: mergeModelBranch
+      summary: Применить слияние из отчёта новой версией (UC-IXC-007, INV-IXC-010, INV-IXC-012)
+      description: |
+        Читаются ровно коммиты отчёта, слияние строится заново с переданными выборами.
+        Одной транзакцией: содержимое заменяется, фиксируется версия, слитый коммит
+        записывается за моделью, сессия импорта закрывается. Нужна блокировка модели.
+      x-use-case: UC-IXC-007
+      x-operation: MergeModelBranch
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/GitMergeRequest' } }
+      responses:
+        '200':
+          description: Применено; `created = false` — результат совпал с текущим, версии нет.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/GitMergeResult' } }
+        '404':
+          description: Модели нет; коммита нет — `IXC_GIT_REF_NOT_FOUND`; каталога модели нет — `IXC_GIT_MODEL_NOT_IN_REF`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '409':
+          description: |
+            Содержимое модели изменилось после отчёта — `INV-IXC-012`; модель не заблокирована
+            вызывающим — `INV-MDL-006`; нет привязки — `IXC_GIT_NOT_BOUND`; нет общего
+            предка — `IXC_GIT_NO_MERGE_BASE`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '422':
+          description: |
+            Остались конфликты без выбора — `IXC_MERGE_CONFLICTS_UNRESOLVED` (в `conflicts` —
+            их адреса); каталог не собирается — `IXC_CORRUPT_DOCUMENT`; строгий режим —
+            `IXC_STRICT_IMPORT_REJECTED`; поля не заданы или выбор по несуществующему
+            конфликту — `IXC_INVALID_REQUEST`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '503':
+          description: Репозиторий недоступен — `IXC_GIT_UNREACHABLE`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+
 # ───────────────────────────────────────────────────────────────────
-# Появится со своим use case'ом:
-#
-#   POST /models/{id}/git/merge         этап 7c
-#
 # Импорта из OEF и CSV в этом списке нет и не будет: единственный
 # принимаемый формат — .archimate (FR-01, docs/backend.md §3.5).
 # ───────────────────────────────────────────────────────────────────
@@ -554,7 +641,7 @@ components:
           description: |
             SYNCED — все версии в репозитории; PENDING — версии ждут публикации;
             DIVERGED — каталог модели в ветке изменён не сервером (FR-37),
-            очередь стоит до импорта головы ветки (UC-IXC-006) или слияния (7c).
+            очередь стоит до импорта головы ветки (UC-IXC-006) или её слияния (UC-IXC-007).
         pending:   { type: integer, description: "Сколько версий ждут публикации." }
         versionNo: { type: integer, format: int64, description: "Последняя опубликованная версия." }
         gitSha:    { type: string, pattern: '^[0-9a-f]{40}$' }
@@ -632,6 +719,143 @@ components:
         modelId:   { type: string, format: uuid }
         versionNo: { type: integer, format: int64 }
         created:   { type: boolean, description: "Ложь — содержимое совпало с текущим, версия прежняя." }
+        commitSha: { type: string, pattern: '^[0-9a-f]{40}$' }
+        findings:
+          type: array
+          items: { $ref: '#/components/schemas/ImportFinding' }
+
+    GitMergeResolution:
+      type: string
+      enum: [OURS, THEIRS]
+      description: |
+        Выбор по конфликту. У конфликта удаления против правки «наше» и «их» —
+        это стороны: та, что удалила, и та, что правила.
+
+    GitMergePreviewRequest:
+      type: object
+      required: [ref]
+      properties:
+        ref: { type: string, maxLength: 255, examples: ["proposal/kanaly", "main"] }
+        resolutions:
+          type: object
+          description: Выборы по адресу конфликта `<archiId>:<поле>`.
+          additionalProperties: { $ref: '#/components/schemas/GitMergeResolution' }
+
+    GitMergeRequest:
+      type: object
+      required: [ref, commitSha, mergeBaseSha, baseHash]
+      properties:
+        ref:          { type: string, maxLength: 255 }
+        commitSha:    { type: string, pattern: '^[0-9a-f]{40}$', description: "Коммит предложения из отчёта." }
+        mergeBaseSha: { type: string, pattern: '^[0-9a-f]{40}$', description: "Общий предок из отчёта." }
+        baseHash:     { type: string, pattern: '^[0-9a-f]{64}$', description: "Отпечаток содержимого модели из отчёта." }
+        resolutions:
+          type: object
+          description: Выбор по каждому конфликту отчёта.
+          additionalProperties: { $ref: '#/components/schemas/GitMergeResolution' }
+        comment:      { type: string, maxLength: 2000 }
+
+    GitMergePreview:
+      type: object
+      required: [modelId, ref, refKind, commitSha, mergeBaseSha, baseHash, targetHash, unchanged, applicable,
+                 conflicts, cascade, summary, changes, marks, views, findings]
+      properties:
+        modelId:       { type: string, format: uuid }
+        ref:           { type: string }
+        refKind:       { type: string, enum: [BRANCH, TAG, COMMIT] }
+        commitSha:     { type: string, pattern: '^[0-9a-f]{40}$' }
+        mergeBaseSha:  { type: string, pattern: '^[0-9a-f]{40}$' }
+        baseVersionNo: { type: integer, format: int64 }
+        baseHash:      { type: string, pattern: '^[0-9a-f]{64}$', description: "Отпечаток текущего содержимого." }
+        targetHash:    { type: string, pattern: '^[0-9a-f]{64}$', description: "Отпечаток результата с выборами отчёта." }
+        unchanged:     { type: boolean, description: "Результат совпадает с текущим содержимым." }
+        applicable:    { type: boolean, description: "Конфликты разрешены, разбор и строгий режим пройдут." }
+        conflicts:
+          type: array
+          items: { $ref: '#/components/schemas/GitMergeConflict' }
+        cascade:
+          type: array
+          items: { $ref: '#/components/schemas/GitMergeCascade' }
+        summary:
+          type: array
+          items: { $ref: '#/components/schemas/GitChangeCount' }
+        changes:
+          type: array
+          description: Изменения результата относительно текущего содержимого.
+          items: { $ref: '#/components/schemas/GitChange' }
+        marks:
+          type: array
+          description: Отметки объектов для холста — те же изменения, ключом `archiId`.
+          items: { $ref: '#/components/schemas/GitMergeMark' }
+        views:
+          type: array
+          description: Изменённые представления — узлы, которых в текущем содержимом нет.
+          items: { $ref: '#/components/schemas/GitMergeView' }
+        findings:
+          type: array
+          items: { $ref: '#/components/schemas/ImportFinding' }
+
+    GitMergeConflict:
+      type: object
+      required: [id, kind, archiId, name, field]
+      properties:
+        id:         { type: string, examples: ["id-2ae470c0df71095e61b6d059:name", "id-2ae470c0df71095e61b6d059:*"] }
+        kind:       { type: string, enum: [MODEL, FOLDER, ELEMENT, RELATIONSHIP, VIEW] }
+        archiId:    { type: string }
+        type:       { type: string, description: "Тип ArchiMate; у папок и модели нет." }
+        name:       { type: string }
+        field:      { type: string, description: "Поле; `*` — удаление в одной ветви против правки в другой." }
+        base:       { type: string, description: "Значение в общем предке; нет — поля нет." }
+        ours:       { type: string, description: "«Наше»; удалено — поля нет." }
+        theirs:     { type: string, description: "«Их»; удалено — поля нет." }
+        resolution: { $ref: '#/components/schemas/GitMergeResolution' }
+
+    GitMergeCascade:
+      type: object
+      required: [kind, archiId, name, reason]
+      properties:
+        kind:    { type: string, enum: [FOLDER, ELEMENT, RELATIONSHIP, VIEW, VIEW_NODE, VIEW_CONNECTION] }
+        archiId: { type: string }
+        name:    { type: string }
+        reason:  { type: string, enum: [RELATION_ENDPOINT_REMOVED, DIAGRAM_REFERENCE_REMOVED, CONNECTION_ENDPOINT_REMOVED, FOLDER_CYCLE] }
+        viewArchiId: { type: string, description: "Представление узла или ребра." }
+
+    GitMergeMark:
+      type: object
+      required: [archiId, mark]
+      properties:
+        archiId: { type: string }
+        mark:    { type: string, enum: [ADDED, REMOVED, CHANGED] }
+
+    GitMergeView:
+      type: object
+      required: [archiId, addedNodes]
+      properties:
+        archiId: { type: string }
+        addedNodes:
+          type: array
+          items:
+            type: object
+            required: [archiId, x, y, width, height]
+            properties:
+              archiId:        { type: string }
+              elementArchiId: { type: string }
+              type:           { type: string }
+              name:           { type: string }
+              x:      { type: integer, description: "Абсолютно, от начала холста." }
+              y:      { type: integer }
+              width:  { type: integer }
+              height: { type: integer }
+
+    GitMergeResult:
+      type: object
+      required: [sessionId, status, modelId, versionNo, created, commitSha]
+      properties:
+        sessionId: { type: string, format: uuid }
+        status:    { type: string, enum: [APPLIED] }
+        modelId:   { type: string, format: uuid }
+        versionNo: { type: integer, format: int64 }
+        created:   { type: boolean, description: "Ложь — результат совпал с текущим, версия прежняя." }
         commitSha: { type: string, pattern: '^[0-9a-f]{40}$' }
         findings:
           type: array

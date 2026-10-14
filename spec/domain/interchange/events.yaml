@@ -27,6 +27,7 @@ events:
     triggers:
       - ApplyImport
       - PullModelFromGit
+      - MergeModelBranch
     payload:
       - { name: importSessionId, type: ImportSessionId, required: true }
       - { name: workspaceId,     type: WorkspaceId,     required: true }

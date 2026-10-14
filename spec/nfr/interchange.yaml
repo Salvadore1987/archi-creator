@@ -67,6 +67,12 @@ latency:
     p95: 6s
     p99: 12s
     timeout: 120s
+  MergeModelBranch:
+    p50: 2s
+    p95: 8s
+    p99: 15s
+    timeout: 120s
+    conditions: три состояния модели читаются из репозитория и собираются в документы
 
 throughput:
   baseline_rps: 0.2

@@ -294,8 +294,9 @@ round-trip на цикле БД → Git → БД, хотя сам `.archimate` �
 (2026-10-12, этап 5a) и [`UC-IXC-005`](../../application/interchange/usecases/export-open-exchange.md)
 (2026-10-13, этап 6a);
 `INV-IXC-002`, `INV-IXC-009`, `INV-IXC-012` — [`UC-IXC-006`](../../application/interchange/usecases/pull-model-from-git.md)
-(2026-10-14, этап 7b).
-Без use case'а остаётся `INV-IXC-010` (слияние по сущностям, этап 7c) — его сценарий пишется на своём этапе. Отчёт даёт `tools/check-traceability.py`.
+(2026-10-14, этап 7b);
+`INV-IXC-010`, `INV-IXC-012` — [`UC-IXC-007`](../../application/interchange/usecases/merge-model-branch.md)
+(2026-10-14, этап 7c). Все инварианты контекста покрыты сценариями. Отчёт даёт `tools/check-traceability.py`.
 
 **Приоритет:** `INV-IXC-001`, `INV-IXC-004`, `INV-IXC-005` покрываются
 первыми — этап 1 закрывается именно round-trip референсной модели
