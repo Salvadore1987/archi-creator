@@ -3,12 +3,16 @@ package uz.salvadore.hamkorbank.archi.bootstrap.wiring;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.time.ZoneId;
+import java.util.Locale;
+import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.web.WebProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -155,14 +159,27 @@ public class ModelingConfiguration {
     }
 
     @Bean
-    WorkspaceService workspaceService(WorkspaceRepository workspaces, UnitOfWork unitOfWork, Clock clock) {
-        return new WorkspaceService(workspaces, unitOfWork, clock);
+    WorkspaceService workspaceService(WorkspaceRepository workspaces, UnitOfWork unitOfWork, TextCatalog texts,
+                                      Clock clock) {
+        return new WorkspaceService(workspaces, unitOfWork, texts, clock);
     }
 
-    /** Первое рабочее пространство — при старте на пустой базе (журнал этапа 0). */
+    /**
+     * Первое рабочее пространство — при старте на пустой базе (журнал этапа 0). Запроса
+     * на старте нет, поэтому язык имени — язык приложения по умолчанию, а не системная
+     * локаль сервера.
+     */
     @Bean
-    ApplicationRunner defaultWorkspace(WorkspaceService workspaces, ModelingSettings settings) {
-        return args -> workspaces.ensureDefault(settings.defaultWorkspaceName());
+    ApplicationRunner defaultWorkspace(WorkspaceService workspaces, ModelingSettings settings, WebProperties web) {
+        return args -> {
+            LocaleContextHolder.setLocale(Optional.ofNullable(web.getLocale()).orElse(Locale.ROOT));
+            try {
+                workspaces.ensureDefault(Optional.ofNullable(settings.defaultWorkspaceName())
+                        .filter(name -> !name.isBlank()));
+            } finally {
+                LocaleContextHolder.resetLocaleContext();
+            }
+        };
     }
 
     /** Очистка снимков по расписанию; выключенная настройкой — пустой проход. */

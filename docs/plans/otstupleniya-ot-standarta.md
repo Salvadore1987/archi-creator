@@ -142,12 +142,19 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
 
 ### ADR-0026 — значения требований в YAML
 
-- [ ] **10. Имя пространства по умолчанию — ключ локали.** `archi.modeling.default-workspace-name`
+- [x] **10. Имя пространства по умолчанию — ключ локали.** `archi.modeling.default-workspace-name`
       (русский текст в YAML) → ключ в `messages*.properties`, текст через `TextCatalog`
       на языке по умолчанию (на старте запроса нет). Это данные: имя пишется в базу один
       раз, у существующих баз не меняется. `tools/check-string-literals.py` YAML
       не проверяет — расширить его на `application*.yaml` (кириллица в значениях)
       и прогнать до правки.
+      Сделано: `check-string-literals.py` проверяет значения `application*.yaml` и до правки
+      падал ровно на `default-workspace-name`. Имя — ключ `modeling.workspace.default-name`;
+      умолчание решает `WorkspaceService.ensureDefault(Optional<String>)` через `TextCatalog`.
+      Расхождение с планом: имя осталось настраиваемым — прежде оно было записано как данные
+      установки, поэтому стало переменной `ARCHI_DEFAULT_WORKSPACE_NAME` (по `ADR-0026` —
+      значение стенда), а не исчезло. Язык на старте — `spring.web.locale`: запроса нет,
+      а системная локаль сервера не в счёт; `DefaultWorkspaceIT` зелёный и в JVM с `en`.
 - [ ] **11. Пул interchange по Р-2.** `spec/nfr/interchange.yaml`: `storage` — общий пул
       приложения (20, 15 с) вместо отдельного, с причиной; новое требование — предел
       одновременных импортов и таймаут запроса импорта (`timeout` у сценария импорта уже
