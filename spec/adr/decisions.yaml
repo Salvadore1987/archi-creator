@@ -283,3 +283,14 @@ decisions:
     requirements: []
     note: |
       Отступление от внутреннего стандарта Java/Spring (§2.4, §2.6.1, §2.2.3), найдено на этапе 0 ревью кода — docs/plans/code-review.md.
+
+  - id: ADR-0022
+    title: Контракт ошибок — Problem Details со строковым кодом
+    status: accepted
+    date: 2026-10-14
+    kind: architecture
+    adr_file: 0022-error-contract.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    note: |
+      Записывает формат ответа, действующий с этапа 2; отступление от стандарта Java/Spring (§4.3.3, прил. D №13, №17).
