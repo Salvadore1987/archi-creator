@@ -92,8 +92,10 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 в `@RestController` или `@RestControllerAdvice` роняет сборку
 (`RestLayerConventionsTest`, ArchUnit).
 
-Application-слои без Spring: транзакция — порт `UnitOfWork`, события — после коммита,
-роль проверяется на границе use case'а по таблице `spec/nfr/<bc>.yaml`, а не URL.
+Application-слои без Spring: транзакция — порт `UnitOfWork`
+([`ADR-0024`](spec/adr/0024-unit-of-work.md), `@Transactional` роняет `TransactionBoundaryTest`),
+события — после коммита, роль проверяется на границе use case'а по таблице
+`spec/nfr/<bc>.yaml`, а не URL.
 
 Модули доменов друг от друга **не зависят**: Maven не допускает цикла, а partnership
 в карте контекстов двусторонний. Поэтому у interchange свой `ArchiId`, а проверка
@@ -306,7 +308,7 @@ macOS и старый Проводник его не создают. Измен�
 Контуры добавляемых узлов — узлы React Flow вне документа: их изменения размеров
 в состояние канвы не идут, иначе ResizeObserver зацикливается.
 
-Тестов на сервере: 455 юнит-тестов (`./mvnw test`) и 94 интеграционных `*IT` на
+Тестов на сервере: 467 юнит-тестов (`./mvnw test`) и 96 интеграционных `*IT` на
 Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
 Во фронтенде: 67 юнит-тестов vitest (`npm test`, гоняется фазой `test` Maven)
 и 87 сценариев Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
@@ -355,13 +357,15 @@ tools/check-commit-message.py      # сообщение коммита по пр
 tools/render-depgraph.py           # граф зависимостей в PlantUML и PNG (см. ниже)
 tools/check-comment-refs.py        # комментарии в коде без ссылок на спеку (см. ниже)
 tools/check-string-literals.py     # строки кода: текст в i18n, без якорей (см. ниже)
+tools/check-nfr-config.py          # числа application.yaml совпадают со spec/nfr
 git config core.hooksPath .githooks # включить хук commit-msg, один раз на клон
 ```
 
-Семь скриптов на Python 3.9+ без зависимостей, каждый возвращает ненулевой код при
+Восемь скриптов на Python 3.9+ без зависимостей, каждый возвращает ненулевой код при
 первом нарушении. Правишь спеку — прогони первые два; правишь требования — третий;
 четвёртый вызывается хуком сам; пятый — по закрытии этапа; шестой — после правки
-комментариев в коде; седьмой — после правки сообщений и строк в коде.
+комментариев в коде; седьмой — после правки сообщений и строк в коде; восьмой —
+после правки `spec/nfr/` или чисел в `application.yaml`.
 
 ### Граф зависимостей
 
@@ -591,7 +595,7 @@ Co-Authored-By: …
 | [`spec/application/<bc>/usecases/`](spec/application/) | Use case'ы `UC-<BC>-NNN`: Given/When/Then, порты, отказы |
 | [`spec/ui/`](spec/ui/README.md) | Слой интерфейса: правила `UI-NNN`, токены стиля, контракт геометрии фигур |
 | [`spec/contracts/<bc>/`](spec/contracts/) | OpenAPI и AsyncAPI |
-| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 20 записей, восемь с файлами MADR |
+| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 26 записей, четырнадцать с файлами MADR |
 | [`spec/nfr/<bc>.yaml`](spec/nfr/) | SLO, latency, throughput, security по контекстам |
 
 Правила при правке `spec/`:

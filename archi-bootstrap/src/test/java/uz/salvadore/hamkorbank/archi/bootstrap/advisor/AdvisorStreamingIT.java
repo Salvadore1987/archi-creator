@@ -73,7 +73,8 @@ class AdvisorStreamingIT extends IntegrationTest {
 
         long firstToken = -1;
         long last = -1;
-        try (BufferedReader lines = new BufferedReader(new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
+        try (BufferedReader lines = new BufferedReader(
+                new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
             String line;
             while ((line = lines.readLine()) != null) {
                 long at = (System.nanoTime() - started) / 1_000_000;

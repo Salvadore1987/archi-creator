@@ -74,7 +74,8 @@ class SvgWriterTest {
     @Test
     @DisplayName("INV-IXC-006: заглушка, подменённый шрифт и обрыв связи — в отчёте о потерях")
     void lossesAreReported() {
-        String xml = RenderingFixtures.MODEL.replace("</element>\n              </folder>\n            </archimate:model>",
+        String xml = RenderingFixtures.MODEL.replace(
+                "</element>\n              </folder>\n            </archimate:model>",
                 "  <sourceConnection xsi:type=\"archimate:Connection\" id=\"id-c9\" source=\"id-n4\" target=\"id-zz\"/>"
                         + "\n                </element>\n              </folder>\n            </archimate:model>");
         List<ImageLoss> losses = render(RenderingFixtures.document(xml), TEXT).losses();

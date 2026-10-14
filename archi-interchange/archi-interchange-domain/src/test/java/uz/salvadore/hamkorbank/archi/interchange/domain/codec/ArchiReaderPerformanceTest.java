@@ -48,8 +48,8 @@ class ArchiReaderPerformanceTest {
         }
         xml.append("</folder>\n<folder name=\"Relations\" id=\"id-fr\" type=\"relations\">\n");
         for (int i = 1; i < elements; i++) {
-            xml.append("  <element xsi:type=\"archimate:FlowRelationship\" id=\"id-r%d\" source=\"id-e%d\" target=\"id-e%d\"/>\n"
-                    .formatted(i, i - 1, i));
+            xml.append(("  <element xsi:type=\"archimate:FlowRelationship\" id=\"id-r%d\" "
+                    + "source=\"id-e%d\" target=\"id-e%d\"/>\n").formatted(i, i - 1, i));
         }
         xml.append("</folder>\n<folder name=\"Views\" id=\"id-fv\" type=\"diagrams\">\n")
                 .append("  <element xsi:type=\"archimate:ArchimateDiagramModel\" name=\"Все\" id=\"id-v\">\n");
@@ -57,10 +57,12 @@ class ArchiReaderPerformanceTest {
             String target = i == 0 ? "" : " targetConnections=\"id-c" + i + "\"";
             xml.append("    <child xsi:type=\"archimate:DiagramObject\" id=\"id-d%d\"%s archimateElement=\"id-e%d\">\n"
                     .formatted(i, target, i));
-            xml.append("      <bounds x=\"%d\" y=\"%d\" width=\"120\" height=\"55\"/>\n".formatted(i % 20 * 140, i / 20 * 80));
+            xml.append("      <bounds x=\"%d\" y=\"%d\" width=\"120\" height=\"55\"/>\n"
+                    .formatted(i % 20 * 140, i / 20 * 80));
             if (i + 1 < elements) {
                 xml.append("      <sourceConnection xsi:type=\"archimate:Connection\" id=\"id-c%d\" source=\"id-d%d\" "
-                        .formatted(i + 1, i) + "target=\"id-d%d\" archimateRelationship=\"id-r%d\"/>\n".formatted(i + 1, i + 1));
+                        .formatted(i + 1, i)
+                        + "target=\"id-d%d\" archimateRelationship=\"id-r%d\"/>\n".formatted(i + 1, i + 1));
             }
             xml.append("    </child>\n");
         }

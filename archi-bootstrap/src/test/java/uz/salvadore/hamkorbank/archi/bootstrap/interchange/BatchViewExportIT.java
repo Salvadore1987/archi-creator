@@ -37,7 +37,8 @@ class BatchViewExportIT extends ApiTest {
         List<String> iabs = read(mvc.perform(get("/api/v1/models/" + model).with(architect())).andReturn(),
                 "$.elements[?(@.name == 'IABS')].id");
         mvc.perform(patch("/api/v1/elements/" + iabs.getFirst()).with(architect())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"IABS Новый\"}")).andExpect(status().isOk());
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"IABS Новый\"}"))
+                .andExpect(status().isOk());
         mvc.perform(post("/api/v1/models/" + model + "/versions").with(architect())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"comment\":\"переименование\"}"))
                 .andExpect(status().isCreated());
@@ -60,7 +61,8 @@ class BatchViewExportIT extends ApiTest {
                         .with(viewer()))
                 .andExpect(header().string("X-Archi-Version-No", "2"))
                 .andReturn().getResponse().getContentAsByteArray());
-        assertThat(latest.values().stream().filter(svg -> svg.contains("Новый<"))).as("перенос по ширине допустим").hasSize(4);
+        assertThat(latest.values().stream().filter(svg -> svg.contains("Новый<")))
+                .as("перенос по ширине допустим").hasSize(4);
         assertThat(latest.values()).noneMatch(svg -> svg.contains(">IABS<") && !svg.contains("Новый<"));
     }
 

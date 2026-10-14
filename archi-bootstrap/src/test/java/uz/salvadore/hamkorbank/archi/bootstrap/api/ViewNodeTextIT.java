@@ -55,7 +55,8 @@ class ViewNodeTextIT extends ApiTest {
                 .andExpect(status().isOk()).andReturn();
         assertEquals(List.of("GROUP"), read(payload, "$.nodes[?(@.label == 'Каналы')].kind"));
         List<Object> objectLabels = read(payload, "$.nodes[?(@.kind == 'DIAGRAM_OBJECT')].label");
-        assertTrue(objectLabels.stream().allMatch(java.util.Objects::isNull), "у узла над элементом подпись — имя элемента");
+        assertTrue(objectLabels.stream().allMatch(java.util.Objects::isNull),
+                "у узла над элементом подпись — имя элемента");
     }
 
     private String importModel(String fileName, byte[] file) throws Exception {

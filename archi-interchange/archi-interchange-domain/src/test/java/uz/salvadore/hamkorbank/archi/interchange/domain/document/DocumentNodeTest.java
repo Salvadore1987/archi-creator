@@ -22,10 +22,12 @@ class DocumentNodeTest {
     @Test
     @DisplayName("позиции содержимого обязаны совпадать с местом в списке")
     void contentOrderMustBeDense() {
-        DocumentValue misplaced = new DocumentValue("documentation", DocumentOrder.of(1), Attributes.of(), Optional.of("x"));
+        DocumentValue misplaced = new DocumentValue("documentation", DocumentOrder.of(1), Attributes.of(),
+                Optional.of("x"));
 
         assertThrows(IllegalArgumentException.class,
-                () -> new DocumentNode("element", DocumentOrder.of(0), Attributes.of("id", ID.value()), List.of(misplaced)));
+                () -> new DocumentNode("element", DocumentOrder.of(0), Attributes.of("id", ID.value()),
+                        List.of(misplaced)));
     }
 
     @Test
@@ -35,18 +37,21 @@ class DocumentNodeTest {
                 Optional.of(ArchiId.of("id-other")), DocumentOrder.of(0));
 
         assertThrows(IllegalArgumentException.class,
-                () -> new DocumentNode("child", DocumentOrder.of(0), Attributes.of("id", ID.value()), List.of(elsewhere)));
+                () -> new DocumentNode("child", DocumentOrder.of(0), Attributes.of("id", ID.value()),
+                        List.of(elsewhere)));
     }
 
     @Test
     @DisplayName("содержимое разбирается по видам без потери порядка")
     void contentIsSlicedByKind() {
-        DocumentValue doc = new DocumentValue("documentation", DocumentOrder.of(0), Attributes.of(), Optional.of("описание"));
+        DocumentValue doc = new DocumentValue("documentation", DocumentOrder.of(0), Attributes.of(),
+                Optional.of("описание"));
         RawXmlFragment raw = new RawXmlFragment("<feature name=\"a\"/>", Optional.of(ID), DocumentOrder.of(1));
         DocumentNode child = new DocumentNode("child", DocumentOrder.of(2),
                 Attributes.of("xsi:type", "archimate:Note", "id", "id-child"), List.of());
         DocumentNode node = new DocumentNode("element", DocumentOrder.of(0),
-                Attributes.of("xsi:type", "archimate:ArchimateDiagramModel", "id", ID.value()), List.of(doc, raw, child));
+                Attributes.of("xsi:type", "archimate:ArchimateDiagramModel", "id", ID.value()),
+                List.of(doc, raw, child));
 
         assertEquals(Optional.of("описание"), node.documentation());
         assertEquals(List.of(raw), node.rawFragments());

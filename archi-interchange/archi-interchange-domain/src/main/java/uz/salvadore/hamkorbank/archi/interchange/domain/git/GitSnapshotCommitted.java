@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.git;
 
 import java.time.Instant;
 import java.util.Objects;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
@@ -13,7 +14,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
  *                         содержимое уже было в ветке, коммит не понадобился
  */
 public record GitSnapshotCommitted(WorkspaceId workspaceId, ModelId modelId, long versionNo, GitSha gitSha,
-                                   String branch, int changedFileCount, Instant occurredAt) {
+                                   String branch, int changedFileCount, Instant occurredAt) implements DomainEvent {
 
     public GitSnapshotCommitted {
         Objects.requireNonNull(workspaceId, "workspaceId");

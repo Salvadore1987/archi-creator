@@ -144,7 +144,8 @@ public final class GitImportService {
             ModelStates.Current current = states.current(actor, model);
             GitBinding binding = attempts.binding(current.workspace());
             Candidate candidate = attempts.network(binding, remote -> {
-                ResolvedRef resolved = repository.resolve(remote, requested).orElseThrow(() -> GitAttempts.refNotFound(requested));
+                ResolvedRef resolved = repository.resolve(remote, requested)
+                        .orElseThrow(() -> GitAttempts.refNotFound(requested));
                 return read(remote, resolved, current.workspace(), model, actor);
             });
             ModelChanges changes = candidate.document()
@@ -189,7 +190,8 @@ public final class GitImportService {
             }
             boolean adopt = fetched.head().filter(sha::equals).isPresent();
             String comment = request.comment().filter(c -> !c.isBlank()).orElseGet(() -> texts.text(
-                    Message.of(InterchangeMessages.GIT_PULL_COMMENT, ref.value(), sha.value().substring(0, SHORT_SHA))));
+                    Message.of(InterchangeMessages.GIT_PULL_COMMENT, ref.value(),
+                            sha.value().substring(0, SHORT_SHA))));
             byte[] xml = candidate.xml().orElseThrow();
             Applied applied;
             try {

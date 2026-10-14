@@ -57,15 +57,19 @@ class XmlEquivalenceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-            "порядок узлов|<element xsi:type=\"m:X\" id=\"id-3\" name=\"x\"><documentation>текст</documentation></element>\n"
-                    + "    <element xsi:type=\"m:Y\" id=\"id-4\" name=\"y\"/>|<element xsi:type=\"m:Y\" id=\"id-4\" name=\"y\"/>\n"
-                    + "    <element xsi:type=\"m:X\" id=\"id-3\" name=\"x\"><documentation>текст</documentation></element>",
+            "порядок узлов|<element xsi:type=\"m:X\" id=\"id-3\" name=\"x\">"
+                    + "<documentation>текст</documentation></element>\n"
+                    + "    <element xsi:type=\"m:Y\" id=\"id-4\" name=\"y\"/>|"
+                    + "<element xsi:type=\"m:Y\" id=\"id-4\" name=\"y\"/>\n"
+                    + "    <element xsi:type=\"m:X\" id=\"id-3\" name=\"x\">"
+                    + "<documentation>текст</documentation></element>",
             "id|id=\"id-4\"|id=\"id-5\"",
             "атрибут пропал| name=\"y\"|",
             "атрибут добавлен|name=\"y\"|name=\"y\" fillColor=\"#ffffff\"",
             "текст|>текст<|>текст.<",
             "пробел в тексте|>текст<|> текст<",
-            "лишний узел|<element xsi:type=\"m:Y\" id=\"id-4\" name=\"y\"/>|<element xsi:type=\"m:Y\" id=\"id-4\" name=\"y\"/><property key=\"k\"/>",
+            "лишний узел|<element xsi:type=\"m:Y\" id=\"id-4\" name=\"y\"/>|"
+                    + "<element xsi:type=\"m:Y\" id=\"id-4\" name=\"y\"/><property key=\"k\"/>",
             "тип|m:Y|m:Z"})
     @DisplayName("смысловое расхождение не прощается")
     void semanticDifferenceFails(String testCase) {

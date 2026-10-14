@@ -17,7 +17,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
-import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommitted;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
@@ -96,13 +95,13 @@ public final class VersionService {
             return last.get();
         }
         Instant now = kernel.now();
-        ModelVersion version = ModelVersion.next(last, VersionId.next(kernel.uuids), model.id(), actor.subject(),
-                comment, now, Snapshots.gzip(xml), hash);
-        kernel.versions.save(version);
-        kernel.events.publish(List.of(new ModelVersionCommitted(model.id(), model.workspaceId(), version.versionNo(),
-                actor.subject(), version.comment(), content.model().elements().size(),
-                content.model().relationships().size(), now)));
-        return version;
+        ModelVersion.Committed committed = ModelVersion.commit(last, VersionId.next(kernel.uuids), model.id(),
+                model.workspaceId(), actor.subject(), comment, now, Snapshots.gzip(xml), hash,
+                new ModelVersion.ModelSize(content.model().elements().size(),
+                        content.model().relationships().size()));
+        kernel.versions.save(committed.version());
+        kernel.events.publish(List.of(committed.event()));
+        return committed.version();
     }
 
     public List<ModelVersion> list(EditorIdentity actor, ModelId modelId) {
@@ -166,7 +165,8 @@ public final class VersionService {
         return kernel.unitOfWork.read(() -> {
             ModelHeader header = kernel.visibleHeader(modelId, actor, AclAccess.READ);
             if (header.status() != ModelStatus.ACTIVE) {
-                throw new ModelingException(MODEL_DELETED, Failure.CONFLICT, Message.of(ModelingMessages.MODEL_DELETED));
+                throw new ModelingException(MODEL_DELETED, Failure.CONFLICT,
+                        Message.of(ModelingMessages.MODEL_DELETED));
             }
             ModelVersion version = versionNo.map(no -> requireVersion(modelId, no))
                     .orElseGet(() -> kernel.versions.last(modelId)

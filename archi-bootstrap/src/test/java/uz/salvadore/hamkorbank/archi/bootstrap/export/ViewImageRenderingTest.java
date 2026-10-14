@@ -53,7 +53,8 @@ class ViewImageRenderingTest {
         Files.createDirectories(out);
         for (DocumentNode view : document.views()) {
             SvgWriter.Rendered outline = WRITER.write(document, view, new SvgWriter.Options(true, false));
-            byte[] png = new BatikRasterizer().png(outline.svg(), (int) outline.width() * 2, (int) outline.height() * 2);
+            byte[] png = new BatikRasterizer().png(outline.svg(), (int) outline.width() * 2,
+                    (int) outline.height() * 2);
             BufferedImage image = ImageIO.read(new ByteArrayInputStream(png));
             assertThat(image.getWidth()).isEqualTo((int) outline.width() * 2);
             assertThat(image.getHeight()).isEqualTo((int) outline.height() * 2);

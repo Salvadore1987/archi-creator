@@ -14,8 +14,8 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.LossEntryId;
  */
 public record LossEntry(LossEntryId id, ArchiId archiId, String objectKind, String lostAspect, String reason) {
 
-    private static final Set<String> KINDS = Set.of("model", "folder", "element", "relationship", "view", "node", "edge",
-            "property");
+    private static final Set<String> KINDS = Set.of("model", "folder", "element", "relationship", "view", "node",
+            "edge", "property");
 
     public LossEntry {
         Objects.requireNonNull(id, "id");

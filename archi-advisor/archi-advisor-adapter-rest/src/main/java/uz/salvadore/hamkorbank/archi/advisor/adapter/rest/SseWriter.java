@@ -56,7 +56,8 @@ final class SseWriter implements StreamSink {
 
     private void frame(String event, Object data) {
         try {
-            emitter.send(SseEmitter.event().name(event).data(json.writeValueAsString(data), MediaType.APPLICATION_JSON));
+            emitter.send(SseEmitter.event().name(event)
+                    .data(json.writeValueAsString(data), MediaType.APPLICATION_JSON));
         } catch (IOException gone) {
             throw new UncheckedIOException(gone);
         }

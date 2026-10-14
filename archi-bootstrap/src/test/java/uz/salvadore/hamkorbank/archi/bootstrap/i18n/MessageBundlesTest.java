@@ -67,7 +67,8 @@ class MessageBundlesTest {
     @Test
     @DisplayName("UI-021: ключ объявлен одной константой: два имени на один ключ — признак копирования")
     void keysAreUnique() throws Exception {
-        List<String> all = Stream.of(ModelingMessages.class, InterchangeMessages.class, AdvisorMessages.class, BootstrapMessages.class)
+        List<String> all = Stream.of(ModelingMessages.class, InterchangeMessages.class, AdvisorMessages.class,
+                        BootstrapMessages.class)
                 .flatMap(MessageBundlesTest::constants).toList();
         assertThat(all).doesNotHaveDuplicates();
     }

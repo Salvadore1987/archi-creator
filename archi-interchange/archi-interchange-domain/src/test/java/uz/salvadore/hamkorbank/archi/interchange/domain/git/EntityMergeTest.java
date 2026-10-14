@@ -173,7 +173,8 @@ class EntityMergeTest {
         DocumentNode app = view.children().getFirst();
         assertEquals(Optional.empty(), app.attribute("targetConnections"));
         assertTrue(result.cascade().stream().anyMatch(c -> c.kind() == CascadeKind.VIEW_NODE
-                && c.archiId().equals(ArchiId.of("id-node-crm")) && c.view().equals(Optional.of(ArchiId.of("id-view")))));
+                && c.archiId().equals(ArchiId.of("id-node-crm"))
+                && c.view().equals(Optional.of(ArchiId.of("id-view")))));
         assertTrue(result.cascade().stream().anyMatch(c -> c.archiId().equals(ArchiId.of("id-rel2"))));
     }
 

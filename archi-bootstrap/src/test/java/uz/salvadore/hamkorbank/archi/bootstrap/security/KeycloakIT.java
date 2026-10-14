@@ -89,7 +89,8 @@ class KeycloakIT {
     }
 
     @Test
-    @DisplayName("FR-28, UI-015: /me по токену Keycloak — sub, имя из name, роль из realm_access; /ui-config без токена")
+    @DisplayName("FR-28, UI-015: /me по токену Keycloak — sub, имя из name, роль из realm_access; "
+            + "/ui-config без токена")
     void meFromKeycloakToken() throws Exception {
         String architect = token("architect");
         String subject = JsonPath.read(new String(java.util.Base64.getUrlDecoder().decode(architect.split("\\.")[1]),

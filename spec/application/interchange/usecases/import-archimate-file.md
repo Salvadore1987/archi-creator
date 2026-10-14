@@ -60,6 +60,7 @@ stages: ["1", "2"]
 | Нарушения матрицы, `strict_import = true` | `422` | Отказ целиком со списком нарушений, модель не создаётся |
 | Повтор с тем же ключом идемпотентности | `200` | Возвращается результат первой попытки (`INV-IXC-003`) |
 | Файл больше предела рабочего пространства | `413` | Отказ до чтения тела |
+| В пространство уже идёт импорт | `409` | `IXC_IMPORT_BUSY`, отказ сразу, без ожидания: импорты в пространство последовательны (`spec/nfr/interchange.yaml#concurrency`) |
 
 ## Порты
 
@@ -89,5 +90,6 @@ stages: ["1", "2"]
 |---|---|
 | Round-trip после импорта | `RoundTripGoldenFileTest#hamkorbankAsIsSurvivesRoundTrip` |
 | Идемпотентность | `ImportIT#retryDoesNotCreateSecondModel` |
+| Предел одновременных импортов | `ImportGateTest` |
 | Строгий режим | `ImportIT#corruptedFileIsRejectedInBothModes` |
 | Порядок и папки | `ModelImportIT#folderTreeSurvivesRoundTrip` |

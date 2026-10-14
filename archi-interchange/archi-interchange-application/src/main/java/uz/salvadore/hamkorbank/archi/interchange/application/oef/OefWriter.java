@@ -191,7 +191,8 @@ public final class OefWriter {
             if (!propertyIds.isEmpty()) {
                 model.append("  <propertyDefinitions>\n");
                 propertyIds.forEach((key, id) -> {
-                    model.append("    <propertyDefinition identifier=\"").append(attr(id)).append("\" type=\"string\">\n");
+                    model.append("    <propertyDefinition identifier=\"").append(attr(id))
+                            .append("\" type=\"string\">\n");
                     langString(model, 3, "name", key);
                     model.append("    </propertyDefinition>\n");
                 });

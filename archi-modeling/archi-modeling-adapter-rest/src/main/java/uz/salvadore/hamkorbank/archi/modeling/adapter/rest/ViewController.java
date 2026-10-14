@@ -134,7 +134,8 @@ public class ViewController {
     @PatchMapping("/view-nodes/{id}")
     public ViewNodeDto editNode(EditorIdentity actor, @PathVariable UUID id, @RequestBody EditNodeRequest request) {
         return DtoMapper.node(views.editNode(actor, ViewNodeId.of(id), Optional.ofNullable(request.label()),
-                Optional.ofNullable(request.content()), Optional.ofNullable(request.style()).map(ViewController::style)));
+                Optional.ofNullable(request.content()),
+                Optional.ofNullable(request.style()).map(ViewController::style)));
     }
 
     @PatchMapping("/view-edges/{id}")

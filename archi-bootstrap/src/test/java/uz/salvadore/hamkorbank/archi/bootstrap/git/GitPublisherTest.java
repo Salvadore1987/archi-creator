@@ -161,7 +161,8 @@ class GitPublisherTest {
         SortedMap<String, byte[]> tree = tree(commit);
         assertThat(tree).containsKey(".gitattributes");
         assertThat(new String(tree.get(".gitattributes"), StandardCharsets.UTF_8)).contains("models/** -merge");
-        assertThat(tree.keySet()).anyMatch(p -> p.matches("models/neizvestnye-uzly-i-atributy\\.[0-9a-f]{8}/model\\.yaml"));
+        assertThat(tree.keySet())
+                .anyMatch(p -> p.matches("models/neizvestnye-uzly-i-atributy\\.[0-9a-f]{8}/model\\.yaml"));
         assertThat(events).singleElement().isInstanceOf(GitSnapshotCommitted.class);
     }
 
@@ -326,7 +327,8 @@ class GitPublisherTest {
     }
 
     @Test
-    @DisplayName("FR-47: недоступный репозиторий — версия ждёт, привязка UNREACHABLE; после восстановления — публикуется")
+    @DisplayName("FR-47: недоступный репозиторий — версия ждёт, привязка UNREACHABLE; "
+            + "после восстановления — публикуется")
     void unreachableRepositoryDefersPublication() throws Exception {
         Path missing = temp.resolve("later.git");
         bindings.save(GitBinding.configure(workspace, missing.toUri().toString(), Optional.empty(),

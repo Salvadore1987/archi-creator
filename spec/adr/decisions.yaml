@@ -1,6 +1,6 @@
 ---
-version: 1.5
-last_modified: 2026-10-13
+version: 1.6
+last_modified: 2026-10-14
 ---
 
 # ───────────────────────────────────────────────────────────────────
@@ -12,6 +12,10 @@ last_modified: 2026-10-13
 #   - kind:   architecture | format | product
 #   - supersedes / superseded_by — явные ссылки на id других решений
 #   - id не переиспользуется при удалении; удалённое = status: rejected
+#   - deviates_from — решение отступает от внутреннего стандарта кода
+#     (standard: документ@коммит, sections: его разделы). Список всех
+#     отступлений — выборка по этому полю, отдельной таблицы нет:
+#     ревью кода (docs/plans/code-review.md) их находками не считает.
 #
 # Где лежит обоснование. У решения либо свой файл `NNNN-<slug>.md`
 # в формате MADR (поле adr_file), либо раздел docs/ с уже написанным
@@ -272,3 +276,93 @@ decisions:
     adr_file: 0020-uuid-generator.md
     affects: [modeling, interchange, advisor]
     requirements: []
+
+  - id: ADR-0021
+    title: Стиль исходников — отступ 4, строка 120, без @author, имена тестов фразой
+    status: accepted
+    date: 2026-10-14
+    kind: architecture
+    adr_file: 0021-source-style.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    implemented: 2026-10-14
+    deviates_from:
+      standard: java-spring-code-guidelines-v2@97bce16
+      sections: ['§2.4', '§2.6.1', '§2.2.3']
+    note: |
+      Отступление от внутреннего стандарта Java/Spring (§2.4, §2.6.1, §2.2.3), найдено на этапе 0 ревью кода — docs/plans/code-review.md.
+
+  - id: ADR-0022
+    title: Контракт ошибок — Problem Details со строковым кодом
+    status: accepted
+    date: 2026-10-14
+    kind: architecture
+    adr_file: 0022-error-contract.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    implemented: 2026-10-14
+    deviates_from:
+      standard: java-spring-code-guidelines-v2@97bce16
+      sections: ['§4.3.3', 'D.1 №13', 'D.2 №17']
+    note: |
+      Записывает формат ответа, действующий с этапа 2; отступление от стандарта Java/Spring (§4.3.3, прил. D №13, №17).
+
+  - id: ADR-0023
+    title: События создаёт агрегат, Domain Service не вводится
+    status: accepted
+    date: 2026-10-14
+    kind: architecture
+    adr_file: 0023-events-from-aggregate.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    implemented: 2026-10-14
+    deviates_from:
+      standard: java-spring-code-guidelines-v2@97bce16
+      sections: ['§3.3.6.6', 'D.1 №6']
+    note: |
+      Дополняет ADR-0003 (доставка) решением о создании событий; отступление от стандарта Java/Spring (§3.3.6.6, прил. D №6).
+
+  - id: ADR-0024
+    title: Транзакция — порт UnitOfWork, application-слой без Spring
+    status: accepted
+    date: 2026-10-14
+    kind: architecture
+    adr_file: 0024-unit-of-work.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    implemented: 2026-10-14
+    deviates_from:
+      standard: java-spring-code-guidelines-v2@97bce16
+      sections: ['§4.8.1']
+    note: |
+      Записывает решение этапа 2, жившее только в CLAUDE.md; отступление от стандарта Java/Spring (§4.8.1).
+
+  - id: ADR-0025
+    title: Логирование — Logback и встроенный формат ECS
+    status: accepted
+    date: 2026-10-14
+    kind: architecture
+    adr_file: 0025-logging-logback-ecs.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    implemented: 2026-10-14
+    deviates_from:
+      standard: java-spring-code-guidelines-v2@97bce16
+      sections: ['§4.4.1', '§4.4.3', 'D.2 №19']
+    note: |
+      Решение владельца по итогам этапа 0 ревью; отступление от стандарта Java/Spring (§4.4.1, §4.4.3, прил. D №19).
+
+  - id: ADR-0026
+    title: Значения из требований — в YAML, окружением — секреты и адреса
+    status: accepted
+    date: 2026-10-14
+    kind: architecture
+    adr_file: 0026-config-values-in-yaml.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    implemented: 2026-10-14
+    deviates_from:
+      standard: java-spring-code-guidelines-v2@97bce16
+      sections: ['§2.1.5', '§4.6.2']
+    note: |
+      Отступление от стандарта Java/Spring (§2.1.5, §4.6.2): число из spec/nfr в переменной окружения было бы вторым источником правды.

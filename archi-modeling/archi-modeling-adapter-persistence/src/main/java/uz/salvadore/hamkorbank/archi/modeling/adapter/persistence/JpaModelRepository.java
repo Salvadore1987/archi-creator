@@ -104,8 +104,10 @@ public class JpaModelRepository implements ModelRepository {
                 em.lock(entity, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
             }
         }
-        AggregateWrites.sync(em, model.folders(), FolderEntity.class, FolderEntity::new, (d, e) -> EntityMapper.apply(d, modelId, e));
-        AggregateWrites.sync(em, model.elements(), ElementEntity.class, ElementEntity::new, (d, e) -> EntityMapper.apply(d, modelId, e));
+        AggregateWrites.sync(em, model.folders(), FolderEntity.class, FolderEntity::new,
+                (d, e) -> EntityMapper.apply(d, modelId, e));
+        AggregateWrites.sync(em, model.elements(), ElementEntity.class, ElementEntity::new,
+                (d, e) -> EntityMapper.apply(d, modelId, e));
         AggregateWrites.sync(em, model.relationships(), RelationshipEntity.class, RelationshipEntity::new,
                 (d, e) -> EntityMapper.apply(d, modelId, e));
         AggregateWrites.flush(em, Message.of(ModelingMessages.MODEL, model.id()));
@@ -129,8 +131,10 @@ public class JpaModelRepository implements ModelRepository {
         EntityMapper.apply(content.model().header(), fresh);
         em.lock(fresh, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
         UUID modelId = id.value();
-        content.model().folders().values().forEach(f -> persist(new FolderEntity(), e -> EntityMapper.apply(f, modelId, e)));
-        content.model().elements().values().forEach(x -> persist(new ElementEntity(), e -> EntityMapper.apply(x, modelId, e)));
+        content.model().folders().values()
+                .forEach(f -> persist(new FolderEntity(), e -> EntityMapper.apply(f, modelId, e)));
+        content.model().elements().values()
+                .forEach(x -> persist(new ElementEntity(), e -> EntityMapper.apply(x, modelId, e)));
         content.model().relationships().values()
                 .forEach(x -> persist(new RelationshipEntity(), e -> EntityMapper.apply(x, modelId, e)));
         content.model().folders().markPersisted();

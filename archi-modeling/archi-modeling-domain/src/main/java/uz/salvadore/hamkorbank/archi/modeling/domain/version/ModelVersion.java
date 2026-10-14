@@ -11,7 +11,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
+import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommitted;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
  * Запись истории — агрегат. Неизменяема, кроме метки и очистки снимка.
@@ -55,20 +57,26 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
     }
 
     /**
-     * Следующая версия: номер строго больше последнего и не переиспользуется.
+     * Фиксация следующей версии: номер строго больше последнего и не переиспользуется,
+     * событие о фиксации рождается вместе с версией — без него версия не создаётся.
      *
-     * @param last последняя версия модели; пусто — версий ещё не было
+     * @param last          последняя версия модели; пусто — версий ещё не было
+     * @param modelSize     сколько в снимке элементов и связей — для события
      */
-    public static ModelVersion next(Optional<ModelVersion> last, VersionId id, ModelId modelId, String author,
-                                    Optional<String> comment, Instant now, byte[] snapshot, String contentHash) {
+    public static Committed commit(Optional<ModelVersion> last, VersionId id, ModelId modelId,
+                                   WorkspaceId workspaceId, String author, Optional<String> comment, Instant now,
+                                   byte[] snapshot, String contentHash, ModelSize modelSize) {
         last.ifPresent(previous -> {
             if (!previous.modelId.equals(modelId)) {
                 throw new InvalidValueException(ModelingMessages.VERSION_OTHER_MODEL);
             }
         });
         long number = last.map(v -> v.versionNo + 1).orElse(1L);
-        return new ModelVersion(id, modelId, number, author, comment.filter(c -> !c.isBlank()), Optional.empty(), now,
-                Optional.of(snapshot), contentHash, Optional.empty());
+        ModelVersion version = new ModelVersion(id, modelId, number, author, comment.filter(c -> !c.isBlank()),
+                Optional.empty(), now, Optional.of(snapshot), contentHash, Optional.empty());
+        ModelVersionCommitted event = new ModelVersionCommitted(modelId, workspaceId, number, author,
+                version.comment, modelSize.elements(), modelSize.relationships(), now);
+        return new Committed(version, event);
     }
 
     /** Метка релиза: снимок помеченной версии не удаляется. Пустая метка снимает пометку. */
@@ -131,5 +139,18 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
     @Override
     public int hashCode() {
         return id.hashCode();
+    }
+
+    /** Зафиксированная версия и событие о ней: событие публикуется после записи версии. */
+    public record Committed(ModelVersion version, ModelVersionCommitted event) {
+
+        public Committed {
+            Objects.requireNonNull(version, "version");
+            Objects.requireNonNull(event, "event");
+        }
+    }
+
+    /** Размер содержимого версии, который несёт событие о фиксации. */
+    public record ModelSize(int elements, int relationships) {
     }
 }

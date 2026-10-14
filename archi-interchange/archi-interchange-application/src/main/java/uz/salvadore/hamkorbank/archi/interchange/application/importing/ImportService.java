@@ -60,11 +60,13 @@ public final class ImportService {
     private final TextCatalog texts;
     private final Clock clock;
     private final UuidV7 uuids;
+    private final ImportGate gate;
     private final MethodologyCheck methodology = new MethodologyCheck();
 
     public ImportService(ImportSessionRepository sessions, ImportPolicy policy, ModelImportService models,
                          ArchiDocumentReader reader, UnitOfWork unitOfWork, InterchangeEvents events,
-                         InterchangeMetrics metrics, TextCatalog texts, Clock clock) {
+                         InterchangeMetrics metrics, TextCatalog texts, Clock clock,
+                         int maxParallelImportsPerWorkspace) {
         this.texts = texts;
         this.sessions = sessions;
         this.policy = policy;
@@ -75,6 +77,7 @@ public final class ImportService {
         this.metrics = metrics;
         this.clock = clock;
         this.uuids = new UuidV7(clock);
+        this.gate = new ImportGate(maxParallelImportsPerWorkspace);
     }
 
     public ImportReport importFile(EditorIdentity actor, UUID workspaceId, String fileName, byte[] content,
@@ -85,13 +88,13 @@ public final class ImportService {
             WorkspaceId workspace = new WorkspaceId(workspaceId);
             String key = idempotencyKey.filter(k -> !k.isBlank()).orElseGet(() -> uuids.next().toString());
             ImportRequest request = request(workspace, fileName, content, key, actor);
-            return unitOfWork.write(() -> {
+            return gate.through(workspace, () -> unitOfWork.write(() -> {
                 ImportIntake.Intake intake = intake(request);
                 if (intake.replayed()) {
                     return report(intake.session(), true);
                 }
                 return process(intake.session(), content, actor);
-            });
+            }));
         });
     }
 

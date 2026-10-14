@@ -39,7 +39,8 @@ class OefSchemaViolationIT extends ApiTest {
     }
 
     @Test
-    @DisplayName("FR-43: результат, не прошедший XSD, не отдаётся — 500 IXC_OEF_SCHEMA_VIOLATION без подробностей схемы")
+    @DisplayName("FR-43: результат, не прошедший XSD, не отдаётся — "
+            + "500 IXC_OEF_SCHEMA_VIOLATION без подробностей схемы")
     void invalidResultIsServerError() throws Exception {
         String model = read(mvc.perform(multipart("/api/v1/models/import")
                         .file(new MockMultipartFile("file", "styled.archimate", "application/xml",

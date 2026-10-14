@@ -21,6 +21,10 @@
     поиск объекта, обращение к порту из контроллера — ловит ArchUnit
     (``RestLayerConventionsTest``).
 
+В конфигурации (``src/main/resources/application*.yaml``) отказ вызывает русский
+текст в значении: текст для пользователя — ключ ресурса, а не настройка;
+комментарии YAML не проверяются.
+
 В файлах локали (``src/main/resources/i18n/*.properties``) отказ вызывают
 якорь спецификации в тексте и апостроф: при ``always-use-message-format``
 он служебный символ ``MessageFormat`` и молча съедает подстановку.
@@ -154,20 +158,37 @@ def check_bundle(rel: str) -> list[str]:
     return found
 
 
+def check_config(rel: str) -> list[str]:
+    found = []
+    for number, raw in enumerate((ROOT / rel).read_text(encoding="utf-8").splitlines(), 1):
+        line = raw.split(" #", 1)[0] if not raw.lstrip().startswith("#") else ""
+        if ":" not in line:
+            continue
+        value = line.split(":", 1)[1]
+        if CYRILLIC.search(value):
+            found.append(f"{rel}:{number}: русский текст в значении настройки — ключ сообщения и текст в i18n")
+    return found
+
+
 def main() -> int:
     violations: list[str] = []
     java = [p for p in tracked("*.java") if "/src/main/java/" in p]
     bundles = [p for p in tracked("*.properties") if "/src/main/resources/i18n/" in p]
+    configs = [p for p in tracked("*.yaml") if "/src/main/resources/" in p
+               and Path(p).name.startswith("application")]
     for rel in java:
         if rel not in EXEMPT:
             violations += check_java(rel)
     for rel in bundles:
         violations += check_bundle(rel)
+    for rel in configs:
+        violations += check_config(rel)
     if violations:
         print("\n".join(violations))
         print(f"\nНарушений: {len(violations)}. Правила — CLAUDE.md, разделы «Тексты и локализация» и «Контроллер и сценарий».")
         return 1
-    print(f"Проверено файлов Java: {len(java)}, файлов локали: {len(bundles)}. Нарушений нет.")
+    print(f"Проверено файлов Java: {len(java)}, файлов локали: {len(bundles)}, "
+          f"конфигураций: {len(configs)}. Нарушений нет.")
     return 0
 
 

@@ -142,7 +142,8 @@ public final class RelationshipService {
     }
 
     public Relationship update(EditorIdentity actor, RelationshipId relationshipId, Optional<String> name,
-                               Optional<String> documentation, Optional<List<ElementService.PropertyValue>> properties) {
+                               Optional<String> documentation,
+                               Optional<List<ElementService.PropertyValue>> properties) {
         return kernel.run(Operation.UPDATE_RELATIONSHIP, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.writableModel(elements.ownerOf(relationshipId.value()), actor);
             Relationship current = model.requireRelationship(relationshipId);

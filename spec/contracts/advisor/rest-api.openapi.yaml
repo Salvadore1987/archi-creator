@@ -25,6 +25,9 @@ info:
     ниже описывает предлагаемые элементы по имени и типу — применить его
     автоматически нечем, и это сделано намеренно.
 
+    Каждый ответ, успешный и ошибочный, несёт заголовок `X-Trace-Id`
+    (`components.headers.XTraceId`) — по нему запрос находится в журнале сервера.
+
 servers:
   - url: /api/v1
     description: Относительный путь; приложение и фронтенд отдаются одним артефактом.
@@ -161,6 +164,8 @@ paths:
             description: "Без него — пространство по умолчанию." }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Состояние помощника в пространстве.
           content:
             application/json: { schema: { $ref: '#/components/schemas/AdvisorStatus' } }
@@ -176,6 +181,8 @@ paths:
         - { in: query, name: workspaceId, required: false, schema: { type: string, format: uuid } }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Настройки помощника.
           content:
             application/json: { schema: { $ref: '#/components/schemas/AdvisorSettings' } }
@@ -194,6 +201,8 @@ paths:
           application/json: { schema: { $ref: '#/components/schemas/AdvisorSettings' } }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Настройки сохранены; бюджет текущего месяца пересчитан от нового лимита.
           content:
             application/json: { schema: { $ref: '#/components/schemas/AdvisorSettings' } }
@@ -213,12 +222,22 @@ paths:
             description: "Месяц YYYY-MM; без него — текущий." }
       responses:
         '200':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: Расход и состояние бюджета.
           content:
             application/json: { schema: { $ref: '#/components/schemas/TokenUsageReport' } }
         '403': { $ref: '#/components/responses/Forbidden403' }
 
 components:
+  headers:
+    XTraceId:
+      description: |
+        Идентификатор трассировки запроса — на каждом ответе, успешном и ошибочном.
+        Берётся из входящего `traceparent` (W3C), без него — новый; тем же значением
+        помечены записи журнала сервера. В тело ответа не входит.
+      schema: { type: string, pattern: '^[0-9a-f]{32}$' }
+
 
   securitySchemes:
     bearerAuth:
@@ -240,7 +259,7 @@ components:
 
     Problem:
       type: object
-      description: RFC 7807 Problem Details + поле `code` (docs/backend.md §8.1).
+      description: RFC 9457 Problem Details + поле `code` (docs/backend.md §8.1).
       required: [type, title, status]
       properties:
         type:     { type: string, format: uri }
@@ -384,30 +403,40 @@ components:
   responses:
 
     Stream200:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
       description: Поток SSE; последним кадром — `meta` (`SessionMeta`).
       content:
         text/event-stream:
           schema: { type: string }
 
     NotFound404:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
       description: Модели, представления или элемента нет — или они скрыты списком доступа.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
 
     Conflict409:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
       description: Тот же `Idempotency-Key` с другими параметрами или сессия с ним ещё идёт (INV-ADV-003).
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
 
     Unprocessable422:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
       description: Запрос сам по себе недопустим — пустое описание, длиннее предела.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
 
     ContextTooLarge413:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
       description: |
         Контекст не помещается даже усечённым — выберите представление вместо
         всей модели (`CONTEXT_TOO_LARGE`, INV-ADV-007).
@@ -416,12 +445,16 @@ components:
           schema: { $ref: '#/components/schemas/Problem' }
 
     Unavailable503:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
       description: Anthropic API недоступен до открытия потока (`ADVISOR_UNAVAILABLE`); редактор работает.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
 
     Forbidden403:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
       description: |
         Помощник выключен администратором рабочего пространства
         (`ADVISOR_DISABLED`, INV-ADV-005) или роль не даёт права на операцию
@@ -435,6 +468,7 @@ components:
         Месячный бюджет исчерпан (`BUDGET_EXHAUSTED`, поле `resetsAt`, FR-51)
         или превышена частота обращений (`RATE_LIMITED`, FR-52, INV-ADV-007).
       headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
         Retry-After:
           description: Секунды до следующей попытки; только у `RATE_LIMITED`.
           schema: { type: integer }

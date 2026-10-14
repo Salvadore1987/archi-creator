@@ -39,7 +39,8 @@ class GitYamlReaderTest {
     @DisplayName("INV-IXC-011: незнакомая версия формата — отказ")
     void unknownFormatVersionIsRejected() {
         InvalidValueException e = assertThrows(InvalidValueException.class,
-                () -> reader.read(Map.of("model.yaml", bytes(MODEL.replace("format_version: 1", "format_version: 9")))));
+                () -> reader.read(Map.of("model.yaml",
+                        bytes(MODEL.replace("format_version: 1", "format_version: 9")))));
         assertEquals(InterchangeMessages.GIT_FORMAT_VERSION, e.reason().key());
     }
 

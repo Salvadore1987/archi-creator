@@ -71,7 +71,8 @@ class ClientIdsIT extends ApiTest {
         UUID component = element(architect(), model, "ApplicationComponent", "АБС");
         UUID data = element(architect(), model, "DataObject", "Счёт");
         UUID relations = UUIDUtil.uuid(column(
-                "select id::text from model_folder where model_id = ? and folder_type = 'RELATIONS'", String.class, model)
+                "select id::text from model_folder where model_id = ? and folder_type = 'RELATIONS'",
+                String.class, model)
                 .getFirst());
         UUID view = id(mvc.perform(post("/api/v1/models/" + model + "/views").with(architect())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Контекст\"}"))

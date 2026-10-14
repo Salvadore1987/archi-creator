@@ -94,7 +94,8 @@ class RelationMatrixTest {
     void specializationRequiresSameType() {
         // ArchiMate 3.2 сам определяет Contract как специализацию BusinessObject,
         // а Constraint — как специализацию Requirement.
-        Set<Set<String>> subtypePairs = Set.of(Set.of("BusinessObject", "Contract"), Set.of("Requirement", "Constraint"));
+        Set<Set<String>> subtypePairs = Set.of(Set.of("BusinessObject", "Contract"),
+                Set.of("Requirement", "Constraint"));
         List<ArchiType> types = elementTypes().stream()
                 .filter(t -> !t.simpleName().equals("Grouping") && !t.simpleName().equals("Junction"))
                 .toList();

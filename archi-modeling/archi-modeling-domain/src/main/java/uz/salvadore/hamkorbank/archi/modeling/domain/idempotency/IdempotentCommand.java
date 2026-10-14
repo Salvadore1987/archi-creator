@@ -66,7 +66,8 @@ public final class IdempotentCommand {
 
     public static void requireValidKey(String key) {
         if (key == null || key.isBlank() || key.length() > IdempotencyRecord.KEY_MAX) {
-            throw ModelingException.invalid(Message.of(ModelingMessages.IDEMPOTENCY_KEY_INVALID, IdempotencyRecord.KEY_MAX));
+            throw ModelingException.invalid(
+                    Message.of(ModelingMessages.IDEMPOTENCY_KEY_INVALID, IdempotencyRecord.KEY_MAX));
         }
     }
 }

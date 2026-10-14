@@ -92,6 +92,7 @@ public final class ModelingMessages {
     public static final String RESIDUE_EMPTY = "modeling.residue.empty";
     public static final String COLOR_FORMAT = "modeling.style.color-format";
     public static final String ANY_WORKSPACE = "modeling.subject.any-workspace";
+    public static final String DEFAULT_WORKSPACE_NAME = "modeling.workspace.default-name";
     public static final String ELEMENT = "modeling.subject.element";
     public static final String ELEMENT_OF_TYPE = "modeling.subject.element-of-type";
     public static final String FOLDER = "modeling.subject.folder";

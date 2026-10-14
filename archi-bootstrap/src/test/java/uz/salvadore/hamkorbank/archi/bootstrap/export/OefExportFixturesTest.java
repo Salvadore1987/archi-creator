@@ -35,7 +35,8 @@ class OefExportFixturesTest {
 
     @ParameterizedTest(name = "{0}")
     @ValueSource(strings = {"unknown_extension", "styled_objects", "nested_containment", "capability_and_location"})
-    @DisplayName("FR-43, FR-44: выгрузка фикстуры совпадает с эталоном, эталон валиден по XSD, отчёт — с ожидаемыми позициями")
+    @DisplayName("FR-43, FR-44: выгрузка фикстуры совпадает с эталоном, эталон валиден по XSD, "
+            + "отчёт — с ожидаемыми позициями")
     void exportMatchesFixture(String name) throws IOException {
         OefWriter.Written written = WRITER.write(new StaxArchiDocumentReader()
                 .read(new ByteArrayInputStream(Fixtures.fixture(name))));

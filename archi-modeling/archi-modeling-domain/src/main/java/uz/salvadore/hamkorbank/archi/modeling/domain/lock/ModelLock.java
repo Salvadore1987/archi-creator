@@ -89,7 +89,8 @@ public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Insta
      */
     public static void requireWriteAccess(ModelId modelId, Optional<ModelLock> lock, String subject, Instant now) {
         if (lock.isEmpty()) {
-            throw new ModelingException(INVARIANT, Failure.CONFLICT, Message.of(ModelingMessages.LOCK_NOT_HELD, modelId));
+            throw new ModelingException(INVARIANT, Failure.CONFLICT,
+                    Message.of(ModelingMessages.LOCK_NOT_HELD, modelId));
         }
         if (lock.get().status(now) == LockStatus.EXPIRED) {
             throw new ModelingException(INVARIANT, Failure.CONFLICT,
