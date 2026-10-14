@@ -20,7 +20,7 @@ layer: ui
 
 | Файл | Что внутри | Требования |
 |---|---|---|
-| [`rules.md`](rules.md) | Правила интерфейса `UI-001`…`UI-021` с проверками | FR-03, FR-10…FR-21, FR-28, FR-30…FR-36, FR-41, FR-42, NFR-01, NFR-08 |
+| [`rules.md`](rules.md) | Правила интерфейса `UI-001`…`UI-022` с проверками | FR-03, FR-10…FR-21, FR-28, FR-30…FR-36, FR-39, FR-41, FR-42, NFR-01, NFR-08 |
 | [`design-tokens.yaml`](design-tokens.yaml) | Токены цвета, формы, типографики, связей | FR-19, FR-20, FR-21 |
 | [`shapes-contract.yaml`](shapes-contract.yaml) | Контракт `shapes.json` и спрайта иконок | FR-42, FR-41 |
 
