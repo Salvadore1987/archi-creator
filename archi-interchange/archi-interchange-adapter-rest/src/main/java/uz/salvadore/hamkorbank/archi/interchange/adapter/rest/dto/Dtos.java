@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -63,6 +64,50 @@ public final class Dtos {
     /** Итог применения: сессия, версия и признак, создана ли она. */
     public record GitPullResultDto(UUID sessionId, String status, UUID modelId, long versionNo, boolean created,
                                    String commitSha, List<FindingDto> findings) {
+    }
+
+    /** Ссылка на предложение и выборы по уже показанным конфликтам: адрес — OURS или THEIRS. */
+    public record GitMergePreviewRequestDto(String ref, Map<String, String> resolutions) {
+    }
+
+    /** Подтверждение слияния: оба коммита и отпечаток — из отчёта, выбор по каждому конфликту. */
+    public record GitMergeRequestDto(String ref, String commitSha, String mergeBaseSha, String baseHash,
+                                     Map<String, String> resolutions, String comment) {
+    }
+
+    /** Конфликт: поле или удаление против правки, значения трёх состояний и выбор. */
+    public record GitMergeConflictDto(String id, String kind, String archiId, String type, String name, String field,
+                                      String base, String ours, String theirs, String resolution) {
+    }
+
+    /** Удаление как следствие разрешения: что, почему, на каком представлении. */
+    public record GitMergeCascadeDto(String kind, String archiId, String name, String reason, String viewArchiId) {
+    }
+
+    /** Отметка объекта для холста. */
+    public record GitMergeMarkDto(String archiId, String mark) {
+    }
+
+    /** Узел, которого в текущем содержимом нет: абсолютная геометрия. */
+    public record GitMergeAddedNodeDto(String archiId, String elementArchiId, String type, String name, int x, int y,
+                                       int width, int height) {
+    }
+
+    public record GitMergeViewDto(String archiId, List<GitMergeAddedNodeDto> addedNodes) {
+    }
+
+    /** Отчёт слияния до применения. */
+    public record GitMergePreviewDto(UUID modelId, String ref, String refKind, String commitSha, String mergeBaseSha,
+                                     Long baseVersionNo, String baseHash, String targetHash, boolean unchanged,
+                                     boolean applicable, List<GitMergeConflictDto> conflicts,
+                                     List<GitMergeCascadeDto> cascade, List<GitChangeCountDto> summary,
+                                     List<GitChangeDto> changes, List<GitMergeMarkDto> marks,
+                                     List<GitMergeViewDto> views, List<FindingDto> findings) {
+    }
+
+    /** Итог слияния: сессия, версия и признак, создана ли она. */
+    public record GitMergeResultDto(UUID sessionId, String status, UUID modelId, long versionNo, boolean created,
+                                    String commitSha, List<FindingDto> findings) {
     }
 
     /** Состояние модели в Git: опубликовано всё, ждёт или встало на расхождении. */

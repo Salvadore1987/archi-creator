@@ -2,19 +2,12 @@ package uz.salvadore.hamkorbank.archi.bootstrap.git;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.UnaryOperator;
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -158,23 +151,6 @@ class GitImportIT extends GitApiTest {
                 .contentType(MediaType.APPLICATION_JSON).content(body));
     }
 
-    private void rename(UUID model, String from, String to) throws Exception {
-        List<String> ids = read(mvc.perform(get("/api/v1/models/" + model).with(architect())).andReturn(),
-                "$.elements[?(@.name == '" + from + "')].id");
-        mvc.perform(patch("/api/v1/elements/" + ids.getFirst()).with(architect())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"" + to + "\"}"))
-                .andExpect(status().isOk());
-    }
-
-    private void lock(UUID model) throws Exception {
-        mvc.perform(post("/api/v1/models/" + model + "/lock").with(architect())).andExpect(status().isOk());
-    }
-
-    private List<Long> versions(UUID model) {
-        return column("select version_no from model_version where model_id = ? order by version_no", Long.class,
-                model);
-    }
-
     private List<String> sessions(UUID model) {
         return column("select status from import_session where target_model_id = ? order by started_at", String.class,
                 model);
@@ -183,33 +159,5 @@ class GitImportIT extends GitApiTest {
     private byte[] export(UUID model) throws Exception {
         return mvc.perform(get("/api/v1/models/" + model + "/export").with(viewer()))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
-    }
-
-    /** Правка YAML модели не через сервер: коммит в ветку {@code branch} поверх головы {@code main}. */
-    protected RevCommit externalCommit(String branch, UnaryOperator<String> edit) throws Exception {
-        Path work = Files.createTempDirectory(temp, "work");
-        try (Git git = Git.cloneRepository().setURI(remote.toUri().toString()).setDirectory(work.toFile()).call()) {
-            if (!branch.equals("main")) {
-                git.checkout().setCreateBranch(true).setName(branch).call();
-            }
-            boolean changed = false;
-            try (var files = Files.walk(work.resolve("models"))) {
-                for (Path file : files.filter(p -> p.toString().endsWith(".yaml")).toList()) {
-                    String text = Files.readString(file, StandardCharsets.UTF_8);
-                    String edited = edit.apply(text);
-                    if (!edited.equals(text)) {
-                        Files.writeString(file, edited, StandardCharsets.UTF_8);
-                        changed = true;
-                    }
-                }
-            }
-            assertThat(changed).as("правка нашла, что менять").isTrue();
-            git.add().addFilepattern("models").call();
-            RevCommit commit = git.commit().setMessage("правка YAML руками")
-                    .setAuthor(new PersonIdent("Ревьюер", "review@bank.uz"))
-                    .setCommitter(new PersonIdent("Ревьюер", "review@bank.uz")).call();
-            git.push().setRemote("origin").add(branch).call();
-            return commit;
-        }
     }
 }

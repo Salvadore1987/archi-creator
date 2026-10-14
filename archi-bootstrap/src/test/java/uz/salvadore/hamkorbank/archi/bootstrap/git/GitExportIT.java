@@ -28,9 +28,9 @@ class GitExportIT extends GitApiTest {
         publishing.publishPending();
         String element = elementNamed(model, "АБС");
 
-        rename(model, element, "АБС «Ядро»");
+        renameElement(model, element, "АБС «Ядро»");
         save(model, "переименование");
-        rename(model, element, "АБС");
+        renameElement(model, element, "АБС");
         save(model, "обратно");
         publishing.publishPending();
 
@@ -52,7 +52,7 @@ class GitExportIT extends GitApiTest {
         UUID model = importModel(Fixtures.fixture("styled_objects"));
         publishing.publishPending();
         RevCommit first = history().getFirst();
-        rename(model, elementNamed(model, "АБС"), "АБС-2");
+        renameElement(model, elementNamed(model, "АБС"), "АБС-2");
         save(model, "вторая");
         publishing.publishPending();
 
@@ -102,7 +102,7 @@ class GitExportIT extends GitApiTest {
         return ids.getFirst();
     }
 
-    private void rename(UUID model, String element, String name) throws Exception {
+    private void renameElement(UUID model, String element, String name) throws Exception {
         mvc.perform(patch("/api/v1/elements/" + element).with(architect()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"" + name + "\"}")).andExpect(status().isOk());
     }

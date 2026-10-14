@@ -1768,8 +1768,9 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 7c.6 REST
 
-- ⬜ `POST /models/{id}/git/merge/preview`, `POST /models/{id}/git/merge`;
-      `MergeRequestIT#conflictIsResolvedPerField`, `#disjointProposalIsMergedAndPublished`
+- ✅ `POST /models/{id}/git/merge/preview`, `POST /models/{id}/git/merge`;
+      `MergeRequestIT#conflictIsResolvedPerField`, `#disjointProposalIsMergedAndPublished`, `#refusals`.
+      Общие помощники IT (`externalCommit`, `rename`, `lock`, `versions`) переехали в `GitApiTest`
 
 ### 7c.7 Холст и панель слияния
 
