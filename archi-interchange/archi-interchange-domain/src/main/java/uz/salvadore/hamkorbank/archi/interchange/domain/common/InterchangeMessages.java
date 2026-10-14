@@ -42,6 +42,14 @@ public final class InterchangeMessages {
     public static final String ARTIFACT_HASH_MISMATCH = "interchange.export.artifact-hash-mismatch";
     public static final String FORMAT_NOT_AVAILABLE = "interchange.export.format-not-available";
     public static final String GIT_BASE_HASH_INVALID = "interchange.git.base-hash-invalid";
+    public static final String GIT_MERGE_BASE_INVALID = "interchange.git.merge-base-invalid";
+    public static final String GIT_MERGE_COMMENT = "interchange.git.merge-comment";
+    public static final String GIT_MERGE_REJECTED_CORRUPT = "interchange.git.merge-rejected-corrupt";
+    public static final String GIT_MERGE_RESOLUTION_INVALID = "interchange.git.merge-resolution-invalid";
+    public static final String GIT_MERGE_RESOLUTION_UNKNOWN = "interchange.git.merge-resolution-unknown";
+    public static final String GIT_MERGE_UNRESOLVED = "interchange.git.merge-unresolved";
+    public static final String GIT_NO_MERGE_BASE = "interchange.git.no-merge-base";
+    public static final String GIT_NO_PUBLISHED_VERSION = "interchange.git.no-published-version";
     public static final String GIT_PULL_COMMENT = "interchange.git.pull-comment";
     public static final String GIT_PULL_FAILED = "interchange.git.pull-failed";
     public static final String GIT_PULL_FIELD_MISSING = "interchange.git.pull-field-missing";

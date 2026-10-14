@@ -24,6 +24,7 @@ public enum InterchangeOperation {
     CONFIGURE_IMPORT_POLICY("ConfigureImportPolicy", Role.ADMIN),
     PUSH_MODEL_TO_GIT("PushModelToGit", Role.ARCHITECT, Role.ADMIN),
     PULL_MODEL_FROM_GIT("PullModelFromGit", Role.ARCHITECT, Role.ADMIN),
+    MERGE_MODEL_BRANCH("MergeModelBranch", Role.ARCHITECT, Role.ADMIN),
     CONFIGURE_GIT_BINDING("ConfigureGitBinding", Role.ADMIN);
 
     private final String useCase;
