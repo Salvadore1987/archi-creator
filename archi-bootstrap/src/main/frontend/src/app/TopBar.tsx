@@ -4,6 +4,7 @@ import { api } from '../api/endpoints';
 import { signOut, type AuthMode } from '../auth/session';
 import { t } from '../i18n';
 import { canRedo, canUndo, unsavedCount } from '../model/history';
+import { useMerge } from '../merge/store';
 import { useEditor } from '../model/store';
 import { describeError } from './errors';
 import { Icon } from './Icon';
@@ -160,6 +161,18 @@ export function TopBar({ me, auth }: { me?: Me; auth: AuthMode }) {
         {t('topbar.search')}
         <span className="kbd">{t('topbar.searchKey')}</span>
       </button>
+      {editorRole && (
+        <button
+          type="button"
+          className="btn btn--ghost"
+          data-testid="merge-open"
+          title={t('topbar.mergeTitle')}
+          onClick={() => useMerge.getState().show()}
+        >
+          <Icon name="relation" />
+          {t('topbar.merge')}
+        </button>
+      )}
       <button
         type="button"
         className="btn btn--ghost"

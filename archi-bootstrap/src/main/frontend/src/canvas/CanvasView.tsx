@@ -57,8 +57,10 @@ import { layerToken } from './style';
 import { CanvasTools } from './CanvasTools';
 import { RelationPicker, type RelationChoice } from './RelationPicker';
 import tokens from 'virtual:design-tokens';
+import { MERGE_GHOST, MergeGhostNode, ghostId, isGhost, type MergeGhostFlowNode } from '../merge/MergeGhostNode';
+import { useMerge } from '../merge/store';
 
-const nodeTypes = { archi: ArchiNode };
+const nodeTypes = { archi: ArchiNode, [MERGE_GHOST]: MergeGhostNode };
 const edgeTypes = { archi: ArchiEdge };
 const GRID = parseFloat(tokens.values.grid_step ?? '20');
 /** Насколько близко, в экранных пикселях, край узла притягивается к направляющей. */
@@ -105,6 +107,34 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
   const derivedNodes = useMemo(() => toFlowNodes(view, selected, canEdit), [view, selected, canEdit]);
   const derivedEdges = useMemo(() => toFlowEdges(view, selected, canEdit), [view, selected, canEdit]);
   const [nodes, setNodes] = useState<ArchiFlowNode[]>(derivedNodes);
+  // Узлы, которые добавит слияние, — контуры поверх холста, вне документа и истории.
+  // Объекты контуров живут, пока жив отчёт: новые объекты на каждый рендер React Flow
+  // перемерял бы без конца.
+  const ghosts = useMerge((s) => s.ghosts[doc.views[viewId]?.archiId ?? '']);
+  const ghostNodes = useMemo<MergeGhostFlowNode[]>(
+    () =>
+      (ghosts ?? []).map((ghost) => {
+        const size = effectiveSize(ghost.type ?? '', ghost.width, ghost.height);
+        return {
+          id: ghostId(ghost.archiId),
+          type: MERGE_GHOST,
+          position: { x: ghost.x, y: ghost.y },
+          data: { name: ghost.name, type: ghost.type },
+          width: size.width,
+          height: size.height,
+          selectable: false,
+          draggable: false,
+          connectable: false,
+          focusable: false,
+          zIndex: 1000,
+        };
+      }),
+    [ghosts],
+  );
+  const shown = useMemo(
+    () => (ghostNodes.length > 0 ? [...nodes, ...ghostNodes] : nodes) as ArchiFlowNode[],
+    [nodes, ghostNodes],
+  );
   const [edges, setEdges] = useState<ArchiFlowEdge[]>(derivedEdges);
   useEffect(() => setNodes(derivedNodes), [derivedNodes]);
   useEffect(() => setEdges(derivedEdges), [derivedEdges]);
@@ -301,7 +331,9 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
   const boxSelecting = useRef(false);
   const onNodesChange = useCallback((changes: NodeChange<ArchiFlowNode>[]) => {
     const local = changes.filter(
-      (c) => c.type === 'position' || c.type === 'dimensions' || (c.type === 'select' && boxSelecting.current),
+      (c) =>
+        (c.type === 'position' || c.type === 'dimensions' || (c.type === 'select' && boxSelecting.current)) &&
+        !isGhost(c.id),
     );
     if (local.length > 0) setNodes((current) => applyNodeChanges(local, current));
   }, []);
@@ -578,13 +610,15 @@ export function CanvasView({ viewId }: { viewId: Uuid }) {
       onDrop={(event) => void onDrop(event)}
     >
       <ReactFlow
-        nodes={nodes}
+        nodes={shown}
         edges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onNodeClick={(event, node) => clickObject(objectOfNode(node.id), event)}
+        onNodeClick={(event, node) => {
+          if (!isGhost(node.id)) clickObject(objectOfNode(node.id), event);
+        }}
         onEdgeClick={(event, edge) => clickObject(objectOfEdge(edge.id), event)}
         onPaneClick={() => {
           if (useEditor.getState().selection.ids.length > 0) select([], 'canvas');

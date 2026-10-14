@@ -4,6 +4,7 @@ import { t } from '../i18n';
 import { setBendpoints } from '../model/ops';
 import type { Uuid } from '../api/types';
 import type { ViewDoc } from '../model/doc';
+import { useMergeMark } from '../merge/store';
 import { useEditor } from '../model/store';
 import { markerUrl } from './EdgeMarkers';
 import { notationOf } from './edgeNotation';
@@ -12,6 +13,8 @@ import { absoluteBendpoints, chopbox, midpoint, relativeBendpoints, roundedPath,
 import tokens from 'virtual:design-tokens';
 
 const CORNER = parseFloat(tokens.values.edge_corner_radius ?? '6');
+/** Ребро в отчёте слияния — цветом состояния, как рамка узла. */
+const MERGE_STROKE = { ADDED: 'var(--ok)', REMOVED: 'var(--err)', CHANGED: 'var(--warn)' } as const;
 
 /**
  * Прямоугольник конца ребра в координатах холста. Конец — узел (берётся
@@ -49,6 +52,7 @@ export const ArchiEdge = memo(function ArchiEdge({ id, data, selected }: EdgePro
     (a, b) => sameRect(a[0], b[0]) && sameRect(a[1], b[1]),
   );
   const [drag, setDrag] = useState<{ bends: Point[] } | null>(null);
+  const mark = useMergeMark(edge?.archiId, relationship?.archiId);
   if (!edge || !ends[0] || !ends[1]) return null;
 
   const [source, target] = ends as readonly [Rect, Rect];
@@ -57,7 +61,11 @@ export const ArchiEdge = memo(function ArchiEdge({ id, data, selected }: EdgePro
   const notation = notationOf(relationship?.archiType ?? edge.archiType, relationship?.accessType, relationship?.directed);
   const label = relationship?.name;
   const at = midpoint(points);
-  const stroke = selected ? 'var(--accent)' : (edge.style?.lineColor ?? 'var(--edge-color)');
+  const stroke = selected
+    ? 'var(--accent)'
+    : mark
+      ? MERGE_STROKE[mark]
+      : (edge.style?.lineColor ?? 'var(--edge-color)');
 
   return (
     <>
@@ -67,6 +75,7 @@ export const ArchiEdge = memo(function ArchiEdge({ id, data, selected }: EdgePro
         markerStart={markerUrl(notation.start, 'start', !!selected)}
         markerEnd={markerUrl(notation.end, 'end', !!selected)}
         interactionWidth={12}
+        className={mark ? `archi-edge--merge-${mark.toLowerCase()}` : undefined}
         style={{
           stroke,
           strokeWidth: selected ? 'var(--edge-width-selected)' : 'var(--edge-width)',

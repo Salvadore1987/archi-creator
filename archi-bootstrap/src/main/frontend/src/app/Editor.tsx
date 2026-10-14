@@ -10,6 +10,8 @@ import { CanvasArea } from '../canvas/CanvasArea';
 import { t } from '../i18n';
 import { useEditor } from '../model/store';
 import { HistoryPanel } from '../history/HistoryPanel';
+import { MergePanel } from '../merge/MergePanel';
+import { useMerge } from '../merge/store';
 import { Palette } from '../palette/Palette';
 import { Inspector } from '../panels/Inspector';
 import { TreePanel } from '../tree/TreePanel';
@@ -34,11 +36,13 @@ export function Editor({ modelId, me, auth }: { modelId: string; me?: Me; auth: 
   const setRoles = useEditor((s) => s.setRoles);
   const roles = me?.roles ?? [];
   const editor = isEditorRole(roles);
+  const merging = useMerge((s) => s.open);
 
   useEffect(() => {
     if (tree.data) load(tree.data);
   }, [tree.data, load]);
   useEffect(() => close, [close]);
+  useEffect(() => () => useMerge.getState().hide(), [modelId]);
   useEffect(() => () => useAdvisor.getState().reset(), [modelId]);
   useEffect(() => setRoles(roles), [roles, setRoles]);
   useEffect(() => {
@@ -76,11 +80,17 @@ export function Editor({ modelId, me, auth }: { modelId: string; me?: Me; auth: 
           <CanvasArea />
         </main>
         <aside className="side side--r">
-          <Inspector defaultTab={editor ? 'properties' : 'description'} />
-          {advisor && (
+          {merging ? (
+            <MergePanel />
+          ) : (
             <>
-              <div className="split" />
-              <AdvisorPanel status={advisor} />
+              <Inspector defaultTab={editor ? 'properties' : 'description'} />
+              {advisor && (
+                <>
+                  <div className="split" />
+                  <AdvisorPanel status={advisor} />
+                </>
+              )}
             </>
           )}
         </aside>

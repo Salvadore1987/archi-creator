@@ -1,0 +1,169 @@
+/* Панель слияния и отметки холста. Цвета — токены состояния: добавленное — --ok,
+   удалённое — --err, изменённое — --warn. */
+
+.merge-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+.merge-ref {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.merge-ref .field__label {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: var(--text-low);
+}
+.merge-error {
+  margin: 10px 12px 0;
+  color: var(--err);
+  font-size: 12px;
+}
+.merge-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-hi);
+}
+.merge-body h4 {
+  margin: 6px 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-mid);
+}
+.merge-muted {
+  color: var(--text-low);
+  font-size: 11.5px;
+}
+.merge-legend {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+}
+.merge-legend__item::before {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 4px;
+  border-radius: 2px;
+  border: 2px solid currentColor;
+  vertical-align: -1px;
+}
+.merge-legend__item--added {
+  color: var(--ok);
+}
+.merge-legend__item--removed {
+  color: var(--err);
+}
+.merge-legend__item--changed {
+  color: var(--warn);
+}
+.merge-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.merge-conflict {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.merge-conflict__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.merge-choice {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 6px;
+  align-items: baseline;
+  padding: 3px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.merge-choice.is-on {
+  background: var(--ink-800);
+}
+.merge-choice__side {
+  color: var(--text-mid);
+}
+.merge-choice__value {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.merge-row {
+  display: flex;
+  flex-direction: column;
+  padding-left: 8px;
+  border-left: 3px solid var(--line);
+}
+.merge-row--added {
+  border-left-color: var(--ok);
+}
+.merge-row--removed {
+  border-left-color: var(--err);
+}
+.merge-row--changed {
+  border-left-color: var(--warn);
+}
+.merge-foot {
+  padding: 10px 12px;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ---------- Отметки на холсте ---------- */
+.archi-node[data-merge] {
+  outline: 3px solid var(--warn);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.archi-node[data-merge='ADDED'] {
+  outline-color: var(--ok);
+}
+.archi-node[data-merge='REMOVED'] {
+  outline-color: var(--err);
+  opacity: 0.55;
+}
+.merge-ghost {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border: 2px dashed var(--ok);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--paper-text);
+  pointer-events: none;
+}
+.merge-ghost__type {
+  font-size: 9.5px;
+  opacity: 0.7;
+}

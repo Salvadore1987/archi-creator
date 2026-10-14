@@ -10,6 +10,9 @@ import type {
   Folder,
   LayoutPatch,
   LockInfo,
+  MergePreview,
+  MergeResult,
+  MergeSide,
   Me,
   ModelSummary,
   ModelTree,
@@ -153,6 +156,23 @@ export const api = {
       edges: Array<{ id: Uuid; bendpoints: Bendpoint[] }>;
     },
   ) => request<void>(`/views/${viewId}/layout`, { method: 'PUT', body }),
+
+  /** Отчёт слияния ветки предложения; выборы пересчитывают результат, база не меняется. */
+  mergePreview: (modelId: Uuid, ref: string, resolutions: Record<string, MergeSide>) =>
+    request<MergePreview>(`/models/${modelId}/git/merge/preview`, { method: 'POST', body: { ref, resolutions } }),
+  /** Применить слияние из отчёта: оба коммита и отпечаток — из него же. */
+  merge: (modelId: Uuid, preview: MergePreview, resolutions: Record<string, MergeSide>, comment?: string) =>
+    request<MergeResult>(`/models/${modelId}/git/merge`, {
+      method: 'POST',
+      body: {
+        ref: preview.ref,
+        commitSha: preview.commitSha,
+        mergeBaseSha: preview.mergeBaseSha,
+        baseHash: preview.baseHash,
+        resolutions,
+        comment,
+      },
+    }),
 
   advisorStatus: (workspaceId: Uuid) => request<AdvisorStatus>(`/ai/status?workspaceId=${workspaceId}`),
   advisorSettings: () => request<AdvisorSettings>('/ai/settings'),

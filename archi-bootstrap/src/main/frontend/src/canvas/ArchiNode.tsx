@@ -1,6 +1,7 @@
 import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/react';
 import { memo } from 'react';
 import { t, typeName } from '../i18n';
+import { useMergeMark } from '../merge/store';
 import { useEditor } from '../model/store';
 import { isOpaque, type ArchiFlowNode } from './flowModel';
 import { NodeShape } from './NodeShape';
@@ -29,6 +30,7 @@ export const ArchiNode = memo(function ArchiNode({ id, data, selected, width, he
   const node = useEditor((s) => s.doc?.loadedViews[data.viewId]?.nodes[id]);
   const element = useEditor((s) => (node?.elementId ? s.doc?.elements[node.elementId] : undefined));
   const opaque = useEditor((s) => (node && s.doc ? isOpaque(s.doc, node) : false));
+  const mark = useMergeMark(node?.archiId, element?.archiId);
   if (!node) return null;
 
   const archiType = element?.archiType ?? node.archiType;
@@ -38,7 +40,12 @@ export const ArchiNode = memo(function ArchiNode({ id, data, selected, width, he
   const h = height ?? node.height;
 
   return (
-    <div className={`archi-node${opaque ? ' archi-node--opaque' : ''}`} data-node={id} data-element={node.elementId}>
+    <div
+      className={`archi-node${opaque ? ' archi-node--opaque' : ''}`}
+      data-node={id}
+      data-element={node.elementId}
+      data-merge={mark}
+    >
       {selected && editing.resizable && !opaque && (
         <NodeResizer
           minWidth={20}
