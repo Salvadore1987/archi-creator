@@ -408,6 +408,25 @@ jar'а в репозитории нет.
 `ARCHI_DB_PORT` (5432), `ARCHI_KEYCLOAK_PORT` (8081). Занят соседним проектом —
 меняется `.env`, а не состав.
 
+## Отступления от внутреннего стандарта Java/Spring
+
+Код ревьюится по `java-spring-code-guidelines-v2.md` (план — `docs/plans/code-review.md`,
+находки — `docs/review/`). Где проект решил иначе, решение записано ADR, и находкой
+это не считается:
+
+| Стандарт требует | В проекте | ADR |
+|---|---|---|
+| отступ 2, строка 100, `@author`/`@since`, тесты `метод_состояние_ожидание` | отступ 4 (+8 продолжение), строка 120, без тегов, тест — фраза + `@DisplayName` | [`ADR-0021`](spec/adr/0021-source-style.md) |
+| тело ошибки с шестизначным `code`, без 500 | Problem Details, строковый `code`, 500 только на дефект OEF | [`ADR-0022`](spec/adr/0022-error-contract.md) |
+| вход в агрегат только через Domain Service | событие создаёт бизнес-метод агрегата, сервис зовёт агрегат | [`ADR-0023`](spec/adr/0023-events-from-aggregate.md) |
+| `@Transactional` на сервисе | порт `UnitOfWork`, application без Spring | [`ADR-0024`](spec/adr/0024-unit-of-work.md) |
+| Log4j2 + `JsonTemplateLayout` | Logback + ECS | [`ADR-0025`](spec/adr/0025-logging-logback-ecs.md) |
+| всё в YAML — переменными окружения | числа из `spec/nfr/` в YAML, окружением — секреты и адреса | [`ADR-0026`](spec/adr/0026-config-values-in-yaml.md) |
+
+Всё остальное из стандарта действует, включая то, что в коде ещё не выполнено:
+JSpecify и `@NullMarked`, `proxyBeanMethods = false`, пагинация списков, JaCoCo,
+покрытие Javadoc публичных методов.
+
 ## Идентификаторы: UUID только через java-uuid-generator
 
 **UUID создаются и разбираются только библиотекой `com.fasterxml.uuid:java-uuid-generator`**
@@ -591,7 +610,7 @@ Co-Authored-By: …
 | [`spec/application/<bc>/usecases/`](spec/application/) | Use case'ы `UC-<BC>-NNN`: Given/When/Then, порты, отказы |
 | [`spec/ui/`](spec/ui/README.md) | Слой интерфейса: правила `UI-NNN`, токены стиля, контракт геометрии фигур |
 | [`spec/contracts/<bc>/`](spec/contracts/) | OpenAPI и AsyncAPI |
-| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 20 записей, восемь с файлами MADR |
+| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 26 записей, четырнадцать с файлами MADR |
 | [`spec/nfr/<bc>.yaml`](spec/nfr/) | SLO, latency, throughput, security по контекстам |
 
 Правила при правке `spec/`:
