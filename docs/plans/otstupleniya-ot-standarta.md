@@ -107,11 +107,14 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
 
 ### ADR-0024 — транзакция портом
 
-- [ ] **7. Проверка в сборке.** Enforcer держит только `domain` и `application`. ArchUnit
+- [x] **7. Проверка в сборке.** Enforcer держит только `domain` и `application`. ArchUnit
       на все модули: нет `org.springframework.transaction.annotation.Transactional`
       и `jakarta.transaction.Transactional`; `TransactionTemplate`
       и `PlatformTransactionManager` — только в `bootstrap.wiring`. Нарушений сейчас нет:
       проверку доказать на временном классе с `@Transactional`, затем его удалить.
+      Сделано: `TransactionBoundaryTest` — нет `@Transactional` (Spring и Jakarta) ни на классе,
+      ни на методе; пакеты `org.springframework.transaction..` и `jakarta.transaction..` —
+      только в `bootstrap.wiring`. Временный класс в `bootstrap.web` ронял оба правила.
 - [ ] **8. Ссылка в `CLAUDE.md`.** Абзац «Application-слои без Spring: транзакция —
       порт `UnitOfWork`…» получает ссылку на `ADR-0024`, как у остальных решений; текст
       не дублируется.
