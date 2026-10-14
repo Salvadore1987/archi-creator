@@ -11,8 +11,8 @@ info:
     доступа в `x-operation` (spec/nfr/interchange.yaml#security.authorization).
     Наполнено на этапе 2 (2026-10-08), картинки представлений — этап 5a
     (2026-10-12), OEF — этап 6a, привязка к Git и публикация — этап 7a
-    (2026-10-13); операции этапов 7b и 7c перечислены в конце раздела `paths`
-    и появятся вместе со своими use case'ами.
+    (2026-10-13), импорт по ссылке — этап 7b (2026-10-14); операция этапа 7c
+    перечислена в конце раздела `paths` и появится вместе со своим use case'ом.
 
 servers:
   - url: /api/v1
@@ -329,10 +329,95 @@ paths:
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 
+  /models/{id}/git/pull/preview:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [interchange]
+      operationId: previewModelPull
+      summary: Отчёт об изменениях по ссылке Git — ничего не меняет (UC-IXC-006, FR-38)
+      description: |
+        Ссылка — ветка, тег или коммит репозитория привязки; разрешается как
+        в `git rev-parse`, тег раньше ветки. Состояние модели из коммита
+        сравнивается с текущим содержимым модели. `commitSha` и `baseHash`
+        отчёта нужны для применения: применяется ровно то, что в отчёте.
+      x-use-case: UC-IXC-006
+      x-operation: PullModelFromGit
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/GitPullPreviewRequest' } }
+      responses:
+        '200':
+          description: Отчёт; находки разбора и методологии — в `findings`.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/GitPullPreview' } }
+        '404':
+          description: |
+            Модели нет или она скрыта; ссылки нет в репозитории — `IXC_GIT_REF_NOT_FOUND`;
+            в коммите нет каталога модели — `IXC_GIT_MODEL_NOT_IN_REF`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '409':
+          description: У рабочего пространства нет рабочей привязки — `IXC_GIT_NOT_BOUND`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '422':
+          description: Ссылка пуста или недопустима — `IXC_INVALID_REQUEST`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '503':
+          description: Репозиторий недоступен — `IXC_GIT_UNREACHABLE`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+
+  /models/{id}/git/pull:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [interchange]
+      operationId: pullModelFromGit
+      summary: Применить состояние из коммита отчёта новой версией (UC-IXC-006, INV-IXC-012)
+      description: |
+        Одной транзакцией: содержимое модели заменяется, фиксируется новая версия,
+        сессия импорта закрывается. Нужна блокировка модели у вызывающего.
+        Отказ оставляет только сессию `REJECTED` с причиной.
+      x-use-case: UC-IXC-006
+      x-operation: PullModelFromGit
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/GitPullRequest' } }
+      responses:
+        '200':
+          description: Применено; `created = false` — содержимое совпало с текущим, версии нет.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/GitPullResult' } }
+        '404':
+          description: Модели нет; коммита нет в репозитории — `IXC_GIT_REF_NOT_FOUND`; каталога модели нет — `IXC_GIT_MODEL_NOT_IN_REF`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '409':
+          description: |
+            Содержимое модели изменилось после отчёта — `INV-IXC-012`, нужен новый отчёт;
+            модель не заблокирована вызывающим — `INV-MDL-006`; нет привязки — `IXC_GIT_NOT_BOUND`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '422':
+          description: |
+            Каталог не собирается в документ — `IXC_CORRUPT_DOCUMENT`; строгий режим
+            и нарушения методологии — `IXC_STRICT_IMPORT_REJECTED`; поля не заданы —
+            `IXC_INVALID_REQUEST`. Отказ после разбора несёт `sessionId` и `findings`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+        '503':
+          description: Репозиторий недоступен — `IXC_GIT_UNREACHABLE`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+
 # ───────────────────────────────────────────────────────────────────
-# Появятся со своими use case'ами:
+# Появится со своим use case'ом:
 #
-#   POST /models/{id}/git/pull          этап 7b
 #   POST /models/{id}/git/merge         этап 7c
 #
 # Импорта из OEF и CSV в этом списке нет и не будет: единственный
@@ -469,11 +554,88 @@ components:
           description: |
             SYNCED — все версии в репозитории; PENDING — версии ждут публикации;
             DIVERGED — каталог модели в ветке изменён не сервером (FR-37),
-            очередь стоит до импорта (7b) или слияния (7c).
+            очередь стоит до импорта головы ветки (UC-IXC-006) или слияния (7c).
         pending:   { type: integer, description: "Сколько версий ждут публикации." }
         versionNo: { type: integer, format: int64, description: "Последняя опубликованная версия." }
         gitSha:    { type: string, pattern: '^[0-9a-f]{40}$' }
         divergedVersionNo: { type: integer, format: int64 }
+
+    GitPullPreviewRequest:
+      type: object
+      required: [ref]
+      properties:
+        ref: { type: string, maxLength: 255, examples: ["main", "v2026.10", "3f9c2e1"] }
+
+    GitPullRequest:
+      type: object
+      required: [ref, commitSha, baseHash]
+      properties:
+        ref:       { type: string, maxLength: 255, description: "Ссылка из отчёта — для сессии и комментария." }
+        commitSha: { type: string, pattern: '^[0-9a-f]{40}$', description: "Коммит из отчёта." }
+        baseHash:  { type: string, pattern: '^[0-9a-f]{64}$', description: "Отпечаток содержимого модели из отчёта." }
+        comment:   { type: string, maxLength: 2000 }
+
+    GitPullPreview:
+      type: object
+      required: [modelId, ref, refKind, commitSha, baseHash, targetHash, unchanged, applicable, summary, changes, findings]
+      properties:
+        modelId:       { type: string, format: uuid }
+        ref:           { type: string }
+        refKind:       { type: string, enum: [BRANCH, TAG, COMMIT] }
+        commitSha:     { type: string, pattern: '^[0-9a-f]{40}$' }
+        baseVersionNo: { type: integer, format: int64, description: "Последняя версия модели; нет версий — поля нет." }
+        baseHash:      { type: string, pattern: '^[0-9a-f]{64}$', description: "Отпечаток текущего содержимого модели." }
+        targetHash:    { type: string, pattern: '^[0-9a-f]{64}$', description: "Отпечаток состояния из коммита." }
+        unchanged:     { type: boolean, description: "Состояние из коммита совпадает с текущим." }
+        applicable:    { type: boolean, description: "Применение пройдёт разбор и строгий режим пространства." }
+        summary:
+          type: array
+          items: { $ref: '#/components/schemas/GitChangeCount' }
+        changes:
+          type: array
+          items: { $ref: '#/components/schemas/GitChange' }
+        findings:
+          type: array
+          items: { $ref: '#/components/schemas/ImportFinding' }
+
+    GitChangeCount:
+      type: object
+      required: [kind, added, removed, changed]
+      properties:
+        kind:    { type: string, enum: [MODEL, FOLDER, ELEMENT, RELATIONSHIP, VIEW] }
+        added:   { type: integer }
+        removed: { type: integer }
+        changed: { type: integer }
+
+    GitChange:
+      type: object
+      required: [kind, change, archiId, fields]
+      properties:
+        kind:     { type: string, enum: [MODEL, FOLDER, ELEMENT, RELATIONSHIP, VIEW] }
+        change:   { type: string, enum: [ADDED, REMOVED, CHANGED] }
+        archiId:  { type: string }
+        type:     { type: string, description: "Тип ArchiMate; у папок нет.", examples: ["ApplicationComponent"] }
+        name:     { type: string, description: "Имя после изменения, у удалённого — до." }
+        fields:
+          type: array
+          description: Изменённые поля; у добавленных и удалённых пусто.
+          items:
+            type: string
+            examples: [name, type, documentation, properties, folder, source, target, diagram, order, raw_xml]
+
+    GitPullResult:
+      type: object
+      required: [sessionId, status, modelId, versionNo, created, commitSha]
+      properties:
+        sessionId: { type: string, format: uuid }
+        status:    { type: string, enum: [APPLIED] }
+        modelId:   { type: string, format: uuid }
+        versionNo: { type: integer, format: int64 }
+        created:   { type: boolean, description: "Ложь — содержимое совпало с текущим, версия прежняя." }
+        commitSha: { type: string, pattern: '^[0-9a-f]{40}$' }
+        findings:
+          type: array
+          items: { $ref: '#/components/schemas/ImportFinding' }
 
     ImportSettings:
       type: object
