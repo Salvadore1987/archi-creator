@@ -61,7 +61,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  *
  * <p>Чужой коммит, тронувший каталог модели, или переписанная история — расхождение:
  * сервер ничего не перезаписывает, очередь модели встаёт до импорта или слияния.
- * Чужие коммиты вне каталога расхождением не считаются: наш ложится сверху.
+ * Чужие коммиты вне каталога расхождением не считаются: наш ложится сверху. Не считается
+ * им и чужая правка, уже принятая импортом: она входит в последний опубликованный коммит
+ * модели, или каталог в голове уже несёт содержимое версии — тогда версия получает голову.
  */
 public final class GitPublishingService {
 
@@ -300,7 +302,11 @@ public final class GitPublishingService {
         String directory = directory(remote, head, entry.model(), version.modelName());
         if (head.isPresent()) {
             Optional<GitRepositoryPort.Commit> last = repository.lastChange(remote, head.get(), directory);
-            if (last.isPresent() && !entry.model().value().toString().equals(last.get().trailers().get(TRAILER_MODEL))) {
+            if (last.isPresent() && !entry.model().value().toString().equals(last.get().trailers().get(TRAILER_MODEL))
+                    && !accepted(remote, entry.model(), last.get().sha())) {
+                if (carries(remote, head.get(), directory, version)) {
+                    return recorded(entry, binding, version, head.get(), head.get(), 0);
+                }
                 return diverged(entry, binding, head);
             }
         }
@@ -331,6 +337,26 @@ public final class GitPublishingService {
                 yield Outcome.RETRY;
             }
         };
+    }
+
+    /**
+     * Чужая правка каталога уже принята: она входит в коммит, который записан последней
+     * опубликованной версией модели, — так бывает после импорта головы ветки. Переписывать
+     * поверх неё нечего.
+     */
+    private boolean accepted(Remote remote, ModelId model, GitSha change) {
+        return unitOfWork.read(() -> versions.lastPublished(model))
+                .filter(published -> repository.contains(remote, change, published.sha())).isPresent();
+    }
+
+    /** Каталог в голове ветки собирается ровно в содержимое версии — коммит не нужен. */
+    private boolean carries(Remote remote, GitSha head, String directory, PublishedVersions.Version version) {
+        try {
+            byte[] xml = new ArchiXmlWriter().write(reader.read(repository.read(remote, head, directory)));
+            return ContentHash.of(xml).value().equals(version.contentHash());
+        } catch (InvalidValueException unreadable) {
+            return false;
+        }
     }
 
     /** {@code git_sha}, запись outbox и голова привязки — одной транзакцией; событие — после неё. */

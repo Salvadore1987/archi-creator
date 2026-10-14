@@ -1658,9 +1658,10 @@ Undo/redo и zoom/pan заведены на этапе 3 — здесь они �
 
 ### 7b.5 Расхождение разрешается импортом
 
-- ⬜ Закрытие старых записей outbox и голова привязки при импорте головы ветки;
+- ✅ Закрытие старых записей outbox и голова привязки при импорте головы ветки;
       два правила публикации; `GitImportIT#importOfHeadResolvesDivergence`,
-      `GitPublisherTest#foreignChangeAlreadyPublishedIsNotDivergence`
+      `GitPublisherTest#foreignChangeAlreadyPublishedIsNotDivergence`, `#headCarryingVersionIsAdopted`;
+      закрытие очереди — в коммите 7b.4 (`GitImportTest#importOfHeadSupersedesQueue`)
 
 ### 7b.6 Закрытие
 

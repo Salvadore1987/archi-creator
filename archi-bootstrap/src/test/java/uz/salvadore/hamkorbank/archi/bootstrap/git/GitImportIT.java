@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.git;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -94,6 +95,43 @@ class GitImportIT extends GitApiTest {
     }
 
     @Test
+    @DisplayName("FR-37, UC-IXC-006: импорт головы ветки снимает расхождение, публикация идёт дальше fast-forward")
+    void importOfHeadResolvesDivergence() throws Exception {
+        UUID model = importModel(Fixtures.fixture("styled_objects"));
+        publishing.publishPending();
+        lock(model);
+        RevCommit foreign = externalCommit("main", text -> text.replace("\nname: АБС\n", "\nname: АБС «Git»\n"));
+        rename(model, "АБС", "АБС «API»");
+        save(model, "правка мимо ветки");
+        publishing.publishPending();
+        assertThat(gitSha(model, 2)).as("чужая правка каталога — расхождение").isEmpty();
+
+        String baseHash = read(preview(model, "main").andExpect(status().isOk())
+                .andExpect(jsonPath("$.baseVersionNo").value(2))
+                .andExpect(jsonPath("$.changes[0].name").value("АБС «Git»")).andReturn(), "$.baseHash");
+        pull(model, "main", foreign.name(), baseHash, null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.versionNo").value(3));
+
+        assertThat(column("select status from outbox_event where partition_key = ? "
+                + "and (payload ->> 'versionNo')::bigint = 2", String.class, model)).containsExactly("SKIPPED");
+        assertThat(column("select last_commit_sha from git_binding", String.class)).containsExactly(foreign.name());
+        publishing.publishPending();
+        assertThat(gitSha(model, 3)).as("версия из головы получает голову").contains(foreign.name());
+        assertThat(history()).hasSize(2);
+        mvc.perform(post("/api/v1/models/" + model + "/git/push").with(architect())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("SYNCED"));
+
+        rename(model, "АБС «Git»", "АБС «Ядро»");
+        save(model, "после импорта");
+        publishing.publishPending();
+
+        List<RevCommit> history = history();
+        assertThat(history).hasSize(3);
+        assertThat(history.getFirst().getParent(0)).isEqualTo(foreign);
+        assertThat(gitSha(model, 4)).contains(history.getFirst().name());
+    }
+
+    @Test
     @DisplayName("UC-IXC-006: неизвестная ссылка — 404, пустая — 422, VIEWER — 403")
     void refusals() throws Exception {
         UUID model = importModel(Fixtures.fixture("styled_objects"));
@@ -118,6 +156,14 @@ class GitImportIT extends GitApiTest {
                 + (comment == null ? "" : ",\"comment\":\"" + comment + "\"") + "}";
         return mvc.perform(post("/api/v1/models/" + model + "/git/pull").with(architect())
                 .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    private void rename(UUID model, String from, String to) throws Exception {
+        List<String> ids = read(mvc.perform(get("/api/v1/models/" + model).with(architect())).andReturn(),
+                "$.elements[?(@.name == '" + from + "')].id");
+        mvc.perform(patch("/api/v1/elements/" + ids.getFirst()).with(architect())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"" + to + "\"}"))
+                .andExpect(status().isOk());
     }
 
     private void lock(UUID model) throws Exception {
