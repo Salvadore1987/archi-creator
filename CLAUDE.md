@@ -92,8 +92,10 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 в `@RestController` или `@RestControllerAdvice` роняет сборку
 (`RestLayerConventionsTest`, ArchUnit).
 
-Application-слои без Spring: транзакция — порт `UnitOfWork`, события — после коммита,
-роль проверяется на границе use case'а по таблице `spec/nfr/<bc>.yaml`, а не URL.
+Application-слои без Spring: транзакция — порт `UnitOfWork`
+([`ADR-0024`](spec/adr/0024-unit-of-work.md), `@Transactional` роняет `TransactionBoundaryTest`),
+события — после коммита, роль проверяется на границе use case'а по таблице
+`spec/nfr/<bc>.yaml`, а не URL.
 
 Модули доменов друг от друга **не зависят**: Maven не допускает цикла, а partnership
 в карте контекстов двусторонний. Поэтому у interchange свой `ArchiId`, а проверка

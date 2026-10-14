@@ -115,7 +115,7 @@ Javadoc, JSpecify, `proxyBeanMethods`, пагинация, JaCoCo — D-02, D-14
       Сделано: `TransactionBoundaryTest` — нет `@Transactional` (Spring и Jakarta) ни на классе,
       ни на методе; пакеты `org.springframework.transaction..` и `jakarta.transaction..` —
       только в `bootstrap.wiring`. Временный класс в `bootstrap.web` ронял оба правила.
-- [ ] **8. Ссылка в `CLAUDE.md`.** Абзац «Application-слои без Spring: транзакция —
+- [x] **8. Ссылка в `CLAUDE.md`.** Абзац «Application-слои без Spring: транзакция —
       порт `UnitOfWork`…» получает ссылку на `ADR-0024`, как у остальных решений; текст
       не дублируется.
 
