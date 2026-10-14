@@ -285,6 +285,7 @@ decisions:
     adr_file: 0021-source-style.md
     affects: [modeling, interchange, advisor]
     requirements: []
+    implemented: 2026-10-14
     deviates_from:
       standard: java-spring-code-guidelines-v2@97bce16
       sections: ['§2.4', '§2.6.1', '§2.2.3']
@@ -299,6 +300,7 @@ decisions:
     adr_file: 0022-error-contract.md
     affects: [modeling, interchange, advisor]
     requirements: []
+    implemented: 2026-10-14
     deviates_from:
       standard: java-spring-code-guidelines-v2@97bce16
       sections: ['§4.3.3', 'D.1 №13', 'D.2 №17']
@@ -313,6 +315,7 @@ decisions:
     adr_file: 0023-events-from-aggregate.md
     affects: [modeling, interchange, advisor]
     requirements: []
+    implemented: 2026-10-14
     deviates_from:
       standard: java-spring-code-guidelines-v2@97bce16
       sections: ['§3.3.6.6', 'D.1 №6']
@@ -327,6 +330,7 @@ decisions:
     adr_file: 0024-unit-of-work.md
     affects: [modeling, interchange, advisor]
     requirements: []
+    implemented: 2026-10-14
     deviates_from:
       standard: java-spring-code-guidelines-v2@97bce16
       sections: ['§4.8.1']
@@ -341,6 +345,7 @@ decisions:
     adr_file: 0025-logging-logback-ecs.md
     affects: [modeling, interchange, advisor]
     requirements: []
+    implemented: 2026-10-14
     deviates_from:
       standard: java-spring-code-guidelines-v2@97bce16
       sections: ['§4.4.1', '§4.4.3', 'D.2 №19']
@@ -355,6 +360,7 @@ decisions:
     adr_file: 0026-config-values-in-yaml.md
     affects: [modeling, interchange, advisor]
     requirements: []
+    implemented: 2026-10-14
     deviates_from:
       standard: java-spring-code-guidelines-v2@97bce16
       sections: ['§2.1.5', '§4.6.2']
