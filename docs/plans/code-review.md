@@ -78,7 +78,7 @@
 | D-03 | §4.3.3, D.2 №17 — ошибки `{code(6 цифр), message, timestamp, path, traceId}`; `ProblemDetail` только по ADR и с `code` расширением | `problem+json`, коды-строки (`INV-MDL-006`, `MDL_NOT_FOUND`) | `spec/contracts/*/rest-api.openapi.yaml`; ADR нет | принято, ADR-0022 |
 | D-04 | §2.1.7, D.1 №13 — 500 клиенту не отдаётся | `500 IXC_OEF_SCHEMA_VIOLATION` | UC-IXC-005 | принято, ADR-0022 |
 | D-05 | §3.3.4, D.2 №22 — адаптеры пакетами `infrastructure`; отдельные модули по ADR | модуль на адаптер, 4 модуля-слоя × 3 контекста + `archi-bootstrap` | ADR-0001 | ✅ принято |
-| D-06 | §3.3.6.6 — методы агрегата вызываются только из Domain Service | проверить: application-сервисы зовут агрегаты напрямую? | — | нужен ADR |
+| D-06 | §3.3.6.6 — методы агрегата вызываются только из Domain Service | проверить: application-сервисы зовут агрегаты напрямую? | — | принято, ADR-0023 |
 | D-07 | D.1 №6 — Domain Service создаёт и возвращает событие | outbox и события после коммита | ADR-0003 | ✅ принято |
 | D-08 | §4.8 — `@Transactional` на сервисе | порт `UnitOfWork`, в application без Spring | `CLAUDE.md`, enforcer | ✅ принято |
 | D-09 | §4.4.1, D.2 №19 — Log4j2 + `JsonTemplateLayout`; INFO/ERROR в прикладном коде | проверить фреймворк логов и уровни | — | нужен ADR, вопрос владельцу |
@@ -99,7 +99,7 @@ Logback и ECS; нарушения (D-02 покрытие Javadoc, D-14…D-17) 
 
 - [x] `ADR-0021` стиль исходников: отступ 4, строка 120, без `@author`/`@since`, тесты фразой — D-01, D-02 (теги), D-12
 - [x] `ADR-0022` контракт ошибок: Problem Details со строковым кодом, 500 на дефект выгрузки — D-03, D-04
-- [ ] `ADR-0023` события создаёт агрегат, Domain Service не вводится — D-06
+- [x] `ADR-0023` события создаёт агрегат, Domain Service не вводится — D-06
 - [ ] `ADR-0024` транзакция — порт `UnitOfWork`, application без Spring — D-08 (было только в `CLAUDE.md`)
 - [ ] `ADR-0025` логирование: Logback и ECS — D-09
 - [ ] `ADR-0026` значения из требований — в YAML, окружением — секреты и адреса — D-10

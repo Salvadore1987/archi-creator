@@ -294,3 +294,14 @@ decisions:
     requirements: []
     note: |
       Записывает формат ответа, действующий с этапа 2; отступление от стандарта Java/Spring (§4.3.3, прил. D №13, №17).
+
+  - id: ADR-0023
+    title: События создаёт агрегат, Domain Service не вводится
+    status: accepted
+    date: 2026-10-14
+    kind: architecture
+    adr_file: 0023-events-from-aggregate.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    note: |
+      Дополняет ADR-0003 (доставка) решением о создании событий; отступление от стандарта Java/Spring (§3.3.6.6, прил. D №6).
