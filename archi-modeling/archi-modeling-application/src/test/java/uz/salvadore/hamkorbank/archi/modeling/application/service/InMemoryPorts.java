@@ -283,6 +283,11 @@ final class InMemoryPorts {
         }
 
         @Override
+        public Optional<Workspace> first() {
+            return Optional.of(workspace);
+        }
+
+        @Override
         public Optional<Workspace> find(WorkspaceId id) {
             return Optional.of(workspace).filter(w -> w.id().equals(id));
         }

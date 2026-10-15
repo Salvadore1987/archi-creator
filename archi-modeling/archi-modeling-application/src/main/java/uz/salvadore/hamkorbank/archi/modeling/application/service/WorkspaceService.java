@@ -40,7 +40,7 @@ public final class WorkspaceService {
      * Пространств нет вовсе — отказ «не найдено», а не сбой.
      */
     public WorkspaceId resolve(Optional<WorkspaceId> requested) {
-        return requested.orElseGet(() -> list().stream().findFirst()
+        return requested.orElseGet(() -> unitOfWork.read(workspaces::first)
                 .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.ANY_WORKSPACE))).id());
     }
 
@@ -49,7 +49,7 @@ public final class WorkspaceService {
      * на текущем языке; записывается один раз и дальше хранится как данные.
      */
     public Workspace ensureDefault(Optional<String> name) {
-        return unitOfWork.write(() -> workspaces.findAll().stream().findFirst().orElseGet(() -> {
+        return unitOfWork.write(() -> workspaces.first().orElseGet(() -> {
             String title = name.orElseGet(() -> texts.text(Message.of(ModelingMessages.DEFAULT_WORKSPACE_NAME)));
             Workspace workspace = new Workspace(WorkspaceId.next(new UuidV7(clock)), title, clock.instant());
             workspaces.insert(workspace);

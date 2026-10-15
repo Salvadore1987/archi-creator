@@ -25,6 +25,12 @@ public class JpaWorkspaceRepository implements WorkspaceRepository {
     }
 
     @Override
+    public Optional<Workspace> first() {
+        return em.createQuery("select w from WorkspaceEntity w order by w.createdAt, w.id", WorkspaceEntity.class)
+                .setMaxResults(1).getResultStream().findFirst().map(JpaWorkspaceRepository::toDomain);
+    }
+
+    @Override
     public Optional<Workspace> find(WorkspaceId id) {
         return Optional.ofNullable(em.find(WorkspaceEntity.class, id.value())).map(JpaWorkspaceRepository::toDomain);
     }

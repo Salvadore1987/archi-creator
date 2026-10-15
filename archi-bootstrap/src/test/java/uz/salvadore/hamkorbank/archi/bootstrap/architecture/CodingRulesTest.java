@@ -1,14 +1,17 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.architecture;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.codeUnits;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 
 import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaCodeUnit;
 import com.tngtech.archunit.core.domain.JavaEnumConstant;
 import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.domain.JavaParameterizedType;
 import com.tngtech.archunit.core.domain.JavaType;
 import com.tngtech.archunit.core.domain.JavaWildcardType;
@@ -93,6 +96,39 @@ class CodingRulesTest {
                         events.add(SimpleConditionEvent.violated(field,
                                 field.getFullName() + " is fetched eagerly by @"
                                         + annotation.getRawType().getSimpleName()));
+                    }
+                }
+            }
+        };
+    }
+
+    /**
+     * Выборка «всё» без предела — только там, где список отдаётся целиком по контракту API
+     * и ждёт пагинации; искать одну запись среди всех нельзя.
+     */
+    private static final Set<String> UNBOUNDED_LIST_CALLERS = Set.of(
+            ROOT + ".modeling.application.service.WorkspaceService.list()");
+
+    @Test
+    @DisplayName("findAll() порта без предела — только в списках, которые ждут пагинации")
+    void noUnboundedFindAll() {
+        codeUnits().should(notCallUnboundedFindAll())
+                .because("выборка без предела растёт вместе с базой; одна запись читается запросом с LIMIT")
+                .check(classes);
+    }
+
+    private static ArchCondition<JavaCodeUnit> notCallUnboundedFindAll() {
+        return new ArchCondition<>("not call findAll() of a port without a bound") {
+            @Override
+            public void check(JavaCodeUnit unit, ConditionEvents events) {
+                if (UNBOUNDED_LIST_CALLERS.contains(unit.getFullName())) {
+                    return;
+                }
+                for (JavaMethodCall call : unit.getMethodCallsFromSelf()) {
+                    if (call.getName().equals("findAll") && call.getTarget().getRawParameterTypes().isEmpty()
+                            && call.getTargetOwner().getPackageName().contains(".application.port")) {
+                        events.add(SimpleConditionEvent.violated(unit, unit.getFullName() + " calls "
+                                + call.getTarget().getFullName()));
                     }
                 }
             }

@@ -62,6 +62,11 @@ class WorkspaceServiceTest {
             }
 
             @Override
+            public Optional<Workspace> first() {
+                return stored.stream().findFirst();
+            }
+
+            @Override
             public Optional<Workspace> find(WorkspaceId id) {
                 return stored.stream().filter(w -> w.id().equals(id)).findFirst();
             }
