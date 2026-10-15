@@ -278,7 +278,7 @@ decisions:
     requirements: []
 
   - id: ADR-0021
-    title: Стиль исходников — отступ 4, строка 120, без @author, имена тестов фразой
+    title: Стиль исходников — отступ 4, строка 120, импорты Google, сложность до 25, без @author, тесты фразой
     status: accepted
     date: 2026-10-14
     kind: architecture
@@ -288,9 +288,9 @@ decisions:
     implemented: 2026-10-14
     deviates_from:
       standard: java-spring-code-guidelines-v2@97bce16
-      sections: ['§2.4', '§2.6.1', '§2.2.3']
+      sections: ['§2.2.3', '§2.3', '§2.4', '§2.6.1', '§2.11']
     note: |
-      Отступление от внутреннего стандарта Java/Spring (§2.4, §2.6.1, §2.2.3), найдено на этапе 0 ревью кода — docs/plans/code-review.md.
+      Отступление от внутреннего стандарта Java/Spring (§2.2.3, §2.3, §2.4, §2.6.1, §2.11), найдено на этапах 0 и 1 ревью кода — docs/plans/code-review.md.
 
   - id: ADR-0022
     title: Контракт ошибок — Problem Details со строковым кодом
