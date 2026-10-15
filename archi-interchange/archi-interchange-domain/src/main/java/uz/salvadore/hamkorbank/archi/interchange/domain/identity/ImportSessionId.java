@@ -10,6 +10,7 @@ public record ImportSessionId(UUID value) {
         Objects.requireNonNull(value, "ImportSessionId");
     }
 
+    /** Новый идентификатор сессии импорта. */
     public static ImportSessionId next(UuidV7 uuids) {
         return new ImportSessionId(uuids.next());
     }

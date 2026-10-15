@@ -87,6 +87,7 @@ public final class DocumentDecomposer {
                            Instant now, long version) {
     }
 
+    /** Раскладывает документ по строкам модели, представлений и остатку XML. */
     public ModelContent decompose(ModelDocument document, Identity identity) {
         return new Run(document, identity).decompose();
     }

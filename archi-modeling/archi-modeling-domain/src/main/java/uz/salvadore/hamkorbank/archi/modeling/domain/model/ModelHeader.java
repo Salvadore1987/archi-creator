@@ -23,6 +23,7 @@ public record ModelHeader(ModelId id, WorkspaceId workspaceId, ArchiId archiId, 
                           List<PropertyEntry> properties, Optional<RawXml> rawXml, String createdBy,
                           Instant createdAt, Instant updatedAt, long version) {
 
+    /** Версия Archi, которая пишется в файл новой модели. */
     public static final String DEFAULT_ARCHI_VERSION = "5.0.0";
     private static final Pattern ARCHI_VERSION = Pattern.compile("^\\d+\\.\\d+\\.\\d+$");
 
@@ -43,6 +44,7 @@ public record ModelHeader(ModelId id, WorkspaceId workspaceId, ArchiId archiId, 
         }
     }
 
+    /** Подходит ли строка как версия Archi: три числа через точку. */
     public static boolean validArchiVersion(String value) {
         return value != null && ARCHI_VERSION.matcher(value).matches();
     }

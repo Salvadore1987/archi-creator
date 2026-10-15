@@ -148,6 +148,7 @@ public final class ImportSession {
         return pulled;
     }
 
+    /** Число находок каждого уровня, включая уровни без находок. */
     public Map<Severity, Integer> findingCounts() {
         Map<Severity, Integer> counts = new EnumMap<>(Severity.class);
         for (Severity severity : Severity.values()) {
@@ -168,38 +169,47 @@ public final class ImportSession {
         finishedAt = Objects.requireNonNull(now, "now");
     }
 
+    /** Идентификатор сессии. */
     public ImportSessionId id() {
         return id;
     }
 
+    /** Пространство, в которое идёт импорт. */
     public WorkspaceId workspaceId() {
         return workspaceId;
     }
 
+    /** Модель, содержимое которой заменяет импорт; у импорта новой модели пусто. */
     public Optional<ModelId> targetModelId() {
         return targetModelId;
     }
 
+    /** Имя файла или ссылки, из которой пришло содержимое. */
     public String sourceName() {
         return sourceName;
     }
 
+    /** Отпечаток присланного содержимого. */
     public ContentHash sourceHash() {
         return sourceHash;
     }
 
+    /** Размер присланного содержимого в байтах. */
     public long sourceSize() {
         return sourceSize;
     }
 
+    /** Ключ идемпотентности. */
     public String idempotencyKey() {
         return idempotencyKey;
     }
 
+    /** Включён ли строгий режим: находки уровня {@code ERROR} отклоняют импорт. */
     public boolean strictMode() {
         return strictMode;
     }
 
+    /** Состояние сессии. */
     public ImportStatus status() {
         return status;
     }
@@ -209,14 +219,17 @@ public final class ImportSession {
         return Optional.ofNullable(document);
     }
 
+    /** Находки проверок в порядке появления. */
     public List<ImportFinding> findings() {
         return List.copyOf(findings);
     }
 
+    /** Кто начал импорт. */
     public String startedBy() {
         return startedBy;
     }
 
+    /** Когда начат импорт. */
     public Instant startedAt() {
         return startedAt;
     }

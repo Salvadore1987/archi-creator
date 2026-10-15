@@ -8,5 +8,6 @@ import java.util.UUID;
  */
 public sealed interface ConceptRef permits ElementId, RelationshipId {
 
+    /** Внутренний ключ элемента или связи. */
     UUID value();
 }

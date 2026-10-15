@@ -12,7 +12,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
  */
 public final class RelationNotPermittedException extends RuntimeException {
 
+    /** Код отказа для клиента: такую связь между этими типами создавать нельзя. */
     public static final String CODE = ModelingCodes.RELATION_NOT_PERMITTED;
+    /** Код правила, которое нарушено: новая связь обязана быть допустимой по матрице. */
     public static final String INVARIANT = ModelingCodes.RELATION_MATRIX;
 
     private final ArchiType source;
@@ -40,22 +42,27 @@ public final class RelationNotPermittedException extends RuntimeException {
                 target.simpleName(), permitted);
     }
 
+    /** Код отказа для клиента API. */
     public String code() {
         return CODE;
     }
 
+    /** Тип источника связи, которую пытались создать. */
     public ArchiType source() {
         return source;
     }
 
+    /** Тип цели связи, которую пытались создать. */
     public ArchiType target() {
         return target;
     }
 
+    /** Тип связи, в котором отказано. */
     public RelationshipType relationship() {
         return relationship;
     }
 
+    /** Типы связей, которые матрица допускает для этой пары. */
     public Set<RelationshipType> permitted() {
         return permitted;
     }

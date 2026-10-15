@@ -12,6 +12,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
  */
 public interface UseCaseMetrics {
 
+    /** Выполняет сценарий, учитывая запрос, исход, длительность и код ошибки. */
     <T> T observe(String useCase, Supplier<T> work);
 
     /**

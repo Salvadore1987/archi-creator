@@ -20,6 +20,7 @@ public final class CorruptDocumentException extends RuntimeException {
         this.defects = List.copyOf(defects);
     }
 
+    /** Все найденные дефекты документа. */
     public List<DocumentDefect> defects() {
         return defects;
     }

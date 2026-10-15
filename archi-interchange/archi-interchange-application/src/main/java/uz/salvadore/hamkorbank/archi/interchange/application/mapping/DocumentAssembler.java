@@ -53,6 +53,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
  */
 public final class DocumentAssembler {
 
+    /** Собирает документ {@code .archimate} из строк модели и остатка XML. */
     public ModelDocument assemble(ModelContent content) {
         return new Run(content).assemble();
     }

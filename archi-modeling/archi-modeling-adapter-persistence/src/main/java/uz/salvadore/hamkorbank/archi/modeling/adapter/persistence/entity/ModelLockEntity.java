@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
+/** Блокировка модели на запись: владелец и срок; не больше одной строки на модель. */
 @Entity
 @Table(name = "model_lock")
 public class ModelLockEntity {

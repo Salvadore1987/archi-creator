@@ -28,6 +28,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 public final class RequestCorrelationFilter extends OncePerRequestFilter {
 
+    /** Заголовок ответа с идентификатором трассировки запроса — тем же, что попадает в журнал. */
     public static final String TRACE_HEADER = "X-Trace-Id";
 
     private static final Pattern TRACEPARENT = Pattern.compile("^[0-9a-f]{2}-([0-9a-f]{32})-[0-9a-f]{16}-[0-9a-f]{2}$");

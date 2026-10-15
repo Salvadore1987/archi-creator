@@ -8,8 +8,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 /** История версий. Список отдаётся без снимков: сотня версий по 150 КБ в список не нужна. */
 public interface ModelVersionRepository {
 
+    /** Версия модели по номеру, со снимком, если он ещё не очищен. */
     Optional<ModelVersion> find(ModelId modelId, long versionNo);
 
+    /** Последняя версия модели; у модели без версий пусто. */
     Optional<ModelVersion> last(ModelId modelId);
 
     /** Версии без снимков, от новых к старым; наличие снимка — в {@code snapshot().isPresent()}. */

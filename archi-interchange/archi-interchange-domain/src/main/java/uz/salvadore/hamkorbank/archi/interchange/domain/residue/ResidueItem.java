@@ -12,6 +12,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueExcep
  */
 public sealed interface ResidueItem permits ResidueItem.Slot, ResidueItem.Value, ResidueItem.Fragment {
 
+    /** Позиция среди содержимого узла. */
     long order();
 
     /**

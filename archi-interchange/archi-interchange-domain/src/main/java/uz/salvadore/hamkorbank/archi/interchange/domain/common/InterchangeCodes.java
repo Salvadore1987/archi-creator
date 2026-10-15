@@ -21,20 +21,33 @@ public final class InterchangeCodes {
     /** Импорт по ссылке применяет только то, что было в отчёте: модель с тех пор не менялась. */
     public static final String GIT_IMPORT = "INV-IXC-012";
 
+    /** Объект запроса — рабочее пространство, привязка к Git или сессия импорта — не найден. */
     public static final String NOT_FOUND = "IXC_NOT_FOUND";
+    /** Роль пользователя не допускает запрошенную операцию импорта или выгрузки. */
     public static final String ACCESS_DENIED = "IXC_ACCESS_DENIED";
+    /** Запрос не разобран: поле не задано или значение не того вида. */
     public static final String INVALID_REQUEST = "IXC_INVALID_REQUEST";
+    /** Ключ идемпотентности уже использован для другого файла. */
     public static final String IDEMPOTENCY_CONFLICT = "IXC_IDEMPOTENCY_CONFLICT";
     /** В рабочее пространство уже идёт импорт: импорты в одно пространство последовательны. */
     public static final String IMPORT_BUSY = "IXC_IMPORT_BUSY";
+    /** Файл или состояние модели в коммите повреждены и не собираются — отказ при любом режиме. */
     public static final String CORRUPT_DOCUMENT = "IXC_CORRUPT_DOCUMENT";
+    /** Строгий импорт отклонён: в модели есть связи, которые не допускает матрица ArchiMate. */
     public static final String STRICT_IMPORT_REJECTED = "IXC_STRICT_IMPORT_REJECTED";
+    /** Формат выгрузки известен, но пока не поддерживается. */
     public static final String FORMAT_NOT_AVAILABLE = "IXC_FORMAT_NOT_AVAILABLE";
+    /** Запрошен неизвестный формат выгрузки. */
     public static final String UNKNOWN_FORMAT = "IXC_UNKNOWN_FORMAT";
+    /** Находка импорта: тип объекта неизвестен метамодели, объект сохранён как есть. */
     public static final String UNKNOWN_ELEMENT_TYPE = "IXC_UNKNOWN_ELEMENT_TYPE";
+    /** Загружаемый файл больше допустимого размера. */
     public static final String FILE_TOO_LARGE = "IXC_FILE_TOO_LARGE";
+    /** Представления нет в зафиксированной версии — картинка строится только из сохранённого. */
     public static final String VIEW_NOT_IN_VERSION = "IXC_VIEW_NOT_IN_VERSION";
+    /** Картинка представления при заданной плотности больше предела по стороне. */
     public static final String IMAGE_TOO_LARGE = "IXC_IMAGE_TOO_LARGE";
+    /** Параметр выгрузки картинки задан недопустимым значением. */
     public static final String INVALID_EXPORT_OPTION = "IXC_INVALID_EXPORT_OPTION";
     /** Выгрузка в OEF не прошла официальную схему — дефект сервера, файл не отдан. */
     public static final String OEF_SCHEMA_VIOLATION = "IXC_OEF_SCHEMA_VIOLATION";

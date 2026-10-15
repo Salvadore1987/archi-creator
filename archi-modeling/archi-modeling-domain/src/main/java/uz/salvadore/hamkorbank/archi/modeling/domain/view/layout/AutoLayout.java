@@ -58,6 +58,7 @@ public final class AutoLayout {
         this.strategy = strategy;
     }
 
+    /** Новая геометрия узлов верхнего уровня по графу и стратегии; сам граф не меняется. */
     public static LayoutProposal propose(LayoutGraph graph, LayoutStrategy strategy) {
         return new AutoLayout(graph, strategy).run();
     }

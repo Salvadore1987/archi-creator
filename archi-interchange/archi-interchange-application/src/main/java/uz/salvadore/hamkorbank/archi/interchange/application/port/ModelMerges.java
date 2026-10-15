@@ -15,5 +15,6 @@ public interface ModelMerges {
     /** В транзакции вызывающего: вместе с версией слияния. Прежний слитый коммит заменяется. */
     void record(ModelId model, GitSha sha, Instant at);
 
+    /** Последний слитый в модель коммит, если слияние было. */
     Optional<GitSha> last(ModelId model);
 }

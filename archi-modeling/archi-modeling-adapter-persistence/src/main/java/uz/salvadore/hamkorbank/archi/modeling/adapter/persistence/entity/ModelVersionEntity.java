@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
+/** Строка версии модели: номер, автор, комментарий, метка, сжатый снимок с отпечатком и коммит Git. */
 @Entity
 @Table(name = "model_version")
 public class ModelVersionEntity {

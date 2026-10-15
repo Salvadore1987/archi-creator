@@ -17,7 +17,9 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.FindingId;
 public record Finding(FindingId id, Severity severity, String code, String message, TargetKind targetKind,
                       ElementRef target, Optional<String> suggestion) {
 
+    /** Наибольшая длина текста замечания и совета, в символах. */
     public static final int TEXT_MAX = 2000;
+    /** Наибольшая длина кода замечания. */
     public static final int CODE_MAX = 64;
 
     public Finding {

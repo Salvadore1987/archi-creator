@@ -12,14 +12,17 @@ public record VersionId(UUID value) {
         Objects.requireNonNull(value, "VersionId");
     }
 
+    /** Ключ из готового значения. */
     public static VersionId of(UUID value) {
         return new VersionId(value);
     }
 
+    /** Ключ из строкового представления UUID. */
     public static VersionId of(String value) {
         return new VersionId(UUIDUtil.uuid(value));
     }
 
+    /** Новый ключ от генератора приложения. */
     public static VersionId next(UuidV7 uuids) {
         return new VersionId(uuids.next());
     }

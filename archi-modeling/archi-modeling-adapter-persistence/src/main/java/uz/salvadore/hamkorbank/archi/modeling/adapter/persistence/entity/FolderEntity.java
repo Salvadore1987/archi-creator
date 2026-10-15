@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.UUID;
 
+/** Строка папки дерева модели: родитель, тип корневой папки, порядок среди соседей и остаток XML. */
 @Entity
 @Table(name = "model_folder")
 public class FolderEntity {

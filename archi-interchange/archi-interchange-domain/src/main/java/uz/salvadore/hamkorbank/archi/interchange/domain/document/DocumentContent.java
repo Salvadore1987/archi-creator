@@ -9,5 +9,6 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.document;
  */
 public sealed interface DocumentContent permits DocumentNode, DocumentValue, RawXmlFragment {
 
+    /** Позиция в содержимом родителя. */
     DocumentOrder order();
 }

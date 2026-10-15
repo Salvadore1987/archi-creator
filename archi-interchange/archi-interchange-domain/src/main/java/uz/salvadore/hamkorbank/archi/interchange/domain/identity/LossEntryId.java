@@ -10,6 +10,7 @@ public record LossEntryId(UUID value) {
         Objects.requireNonNull(value, "LossEntryId");
     }
 
+    /** Новый идентификатор записи отчёта о потерях. */
     public static LossEntryId next(UuidV7 uuids) {
         return new LossEntryId(uuids.next());
     }

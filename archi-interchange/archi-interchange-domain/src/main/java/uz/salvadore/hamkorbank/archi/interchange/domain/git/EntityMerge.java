@@ -119,6 +119,7 @@ public final class EntityMerge {
             return conflicts.stream().allMatch(c -> c.resolution().isPresent());
         }
 
+        /** Адреса конфликтов, по которым ещё нет выбора. */
         public List<String> unresolved() {
             return conflicts.stream().filter(c -> c.resolution().isEmpty()).map(Conflict::id).toList();
         }
@@ -133,6 +134,7 @@ public final class EntityMerge {
     private EntityMerge() {
     }
 
+    /** Сливает три состояния модели по объектам и полям с учётом выборов по конфликтам. */
     public static Result merge(ModelDocument base, ModelDocument ours, ModelDocument theirs,
                                Map<String, Side> resolutions) {
         return new Merger(base, ours, theirs, Map.copyOf(resolutions)).run();

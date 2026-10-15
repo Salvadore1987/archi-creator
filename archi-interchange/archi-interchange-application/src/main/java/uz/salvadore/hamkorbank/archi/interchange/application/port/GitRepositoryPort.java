@@ -82,9 +82,11 @@ public interface GitRepositoryPort {
         }
     }
 
+    /** Автор или коммиттер коммита и время подписи. */
     record Person(String name, String email, Instant when) {
     }
 
+    /** Коммит ветки и его трейлеры по имени. */
     record Commit(GitSha sha, Map<String, String> trailers) {
 
         public Commit {
@@ -114,6 +116,7 @@ public interface GitRepositoryPort {
         }
     }
 
+    /** Итог отправки коммита в ветку. */
     sealed interface PushResult permits Pushed, Unchanged, Rejected {
     }
 

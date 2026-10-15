@@ -12,14 +12,17 @@ public record ViewId(UUID value) {
         Objects.requireNonNull(value, "ViewId");
     }
 
+    /** Ключ из готового значения. */
     public static ViewId of(UUID value) {
         return new ViewId(value);
     }
 
+    /** Ключ из строкового представления UUID. */
     public static ViewId of(String value) {
         return new ViewId(UUIDUtil.uuid(value));
     }
 
+    /** Новый ключ от генератора приложения. */
     public static ViewId next(UuidV7 uuids) {
         return new ViewId(uuids.next());
     }

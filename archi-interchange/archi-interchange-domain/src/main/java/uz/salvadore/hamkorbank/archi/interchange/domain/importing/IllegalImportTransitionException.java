@@ -7,6 +7,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 /** Переход, которого автомат сессии не допускает. */
 public final class IllegalImportTransitionException extends IllegalStateException {
 
+    /** Код нарушенного правила переходов сессии импорта. */
     public static final String INVARIANT = InterchangeCodes.IMPORT_TRANSITION;
 
     private final ImportStatus from;
@@ -18,14 +19,17 @@ public final class IllegalImportTransitionException extends IllegalStateExceptio
         this.command = command;
     }
 
+    /** Сообщение с ключом, которое переводится на язык запроса. */
     public Message reason() {
         return Message.of(InterchangeMessages.IMPORT_TRANSITION, command, from);
     }
 
+    /** Состояние, из которого переход не допускается. */
     public ImportStatus from() {
         return from;
     }
 
+    /** Команда, которую отклонил автомат. */
     public String command() {
         return command;
     }

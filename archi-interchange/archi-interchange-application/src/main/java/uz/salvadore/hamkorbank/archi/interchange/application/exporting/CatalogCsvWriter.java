@@ -53,6 +53,7 @@ public final class CatalogCsvWriter {
     private static final long FIXED_ENTRY_TIME = 0L;
     private static final ArchiTypeRegistry REGISTRY = ArchiTypeRegistry.archimate32();
 
+    /** Каталог элементов и связей модели в zip из двух файлов CSV. */
     public byte[] write(byte[] archimate, CatalogCsvOptions options) {
         ModelDocument document = new StaxArchiDocumentReader().read(new ByteArrayInputStream(archimate));
         Catalog catalog = new Catalog(document, options);

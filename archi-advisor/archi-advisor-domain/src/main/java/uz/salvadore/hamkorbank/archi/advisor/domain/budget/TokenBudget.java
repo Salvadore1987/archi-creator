@@ -24,6 +24,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
  */
 public final class TokenBudget {
 
+    /** Порог предупреждения по умолчанию, процент израсходованного лимита. */
     public static final int DEFAULT_WARNING_PERCENT = 80;
 
     private final TokenBudgetId id;
@@ -98,6 +99,7 @@ public final class TokenBudget {
         transition(now);
     }
 
+    /** Включить или выключить помощника; расход и состояние бюджета не меняются. */
     public void toggle(boolean enabled) {
         advisorEnabled = enabled;
     }
@@ -142,38 +144,47 @@ public final class TokenBudget {
         return (double) consumedTokens / limitTokens;
     }
 
+    /** Ключ бюджета. */
     public TokenBudgetId id() {
         return id;
     }
 
+    /** Пространство, чей это бюджет. */
     public WorkspaceId workspaceId() {
         return workspaceId;
     }
 
+    /** Месяц, за который учитывается расход. */
     public BudgetPeriod period() {
         return period;
     }
 
+    /** Действующий месячный лимит токенов. */
     public long limitTokens() {
         return limitTokens;
     }
 
+    /** Израсходовано за период — с отказами и неуспешными сессиями. */
     public long consumedTokens() {
         return consumedTokens;
     }
 
+    /** Процент лимита, с которого бюджет переходит в {@code WARNING}. */
     public int warningThresholdPercent() {
         return warningThresholdPercent;
     }
 
+    /** Состояние, выведенное из расхода и лимита. */
     public BudgetStatus status() {
         return status;
     }
 
+    /** Включён ли помощник в пространстве. */
     public boolean advisorEnabled() {
         return advisorEnabled;
     }
 
+    /** Версия строки в хранении — для оптимистичной блокировки. */
     public long version() {
         return version;
     }

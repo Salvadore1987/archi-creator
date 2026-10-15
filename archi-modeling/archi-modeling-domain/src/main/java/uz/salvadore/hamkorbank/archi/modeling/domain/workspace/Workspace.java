@@ -12,6 +12,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
  */
 public record Workspace(WorkspaceId id, String name, Instant createdAt) {
 
+    /** Предел длины имени пространства. */
     public static final int NAME_MAX = 200;
 
     public Workspace {

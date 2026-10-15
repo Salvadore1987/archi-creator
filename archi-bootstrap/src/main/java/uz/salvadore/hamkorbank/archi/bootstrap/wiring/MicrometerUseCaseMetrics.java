@@ -25,6 +25,10 @@ public final class MicrometerUseCaseMetrics {
         this.errorCode = errorCode;
     }
 
+    /**
+     * Выполняет сценарий и пишет счётчик запросов с исходом, длительность и, при отказе, ошибку с её кодом. Исключение
+     * пробрасывается дальше без изменений.
+     */
     public <T> T observe(String useCase, Supplier<T> work) {
         Timer.Sample sample = Timer.start(registry);
         String outcome = "success";

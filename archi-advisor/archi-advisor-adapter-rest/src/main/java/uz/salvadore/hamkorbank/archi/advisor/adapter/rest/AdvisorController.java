@@ -56,6 +56,7 @@ public class AdvisorController {
         this.executor = executor;
     }
 
+    /** Ревью модели или одного представления — замечания потоком SSE. */
     @PostMapping("/review")
     public ResponseEntity<SseEmitter> review(Requester requester, @RequestBody ReviewRequest body,
                                                         @RequestHeader(IDEMPOTENCY_KEY) Optional<String> key,
@@ -64,6 +65,7 @@ public class AdvisorController {
                 key(key), locale));
     }
 
+    /** Подсказка по выбранному элементу и его окрестности — ответ потоком SSE. */
     @PostMapping("/explain")
     public ResponseEntity<SseEmitter> explain(Requester requester, @RequestBody ExplainRequest body,
                                                          @RequestHeader(IDEMPOTENCY_KEY) Optional<String> key,
@@ -72,6 +74,7 @@ public class AdvisorController {
                 key(key), locale));
     }
 
+    /** План фрагмента архитектуры по описанию — предложение элементов и связей, модель не меняется. */
     @PostMapping("/plan")
     public ResponseEntity<SseEmitter> plan(Requester requester, @RequestBody PlanRequest body,
                                                       @RequestHeader(IDEMPOTENCY_KEY) Optional<String> key,
@@ -80,6 +83,7 @@ public class AdvisorController {
                 locale));
     }
 
+    /** Документация по модели, представлению или элементу — текст потоком SSE. */
     @PostMapping("/document")
     public ResponseEntity<SseEmitter> document(Requester requester, @RequestBody DocumentRequest body,
                                                           @RequestHeader(IDEMPOTENCY_KEY) Optional<String> key,

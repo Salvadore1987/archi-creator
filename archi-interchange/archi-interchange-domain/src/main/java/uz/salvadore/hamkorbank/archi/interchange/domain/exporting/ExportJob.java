@@ -117,54 +117,67 @@ public final class ExportJob {
         }
     }
 
+    /** Идентификатор выгрузки. */
     public ExportJobId id() {
         return id;
     }
 
+    /** Пространство, в котором лежит модель. */
     public WorkspaceId workspaceId() {
         return workspaceId;
     }
 
+    /** Выгружаемая модель. */
     public ModelId modelId() {
         return modelId;
     }
 
+    /** Представление — у выгрузки картинки; у выгрузки модели пусто. */
     public Optional<ViewId> viewId() {
         return viewId;
     }
 
+    /** Формат выгрузки. */
     public ExportFormat format() {
         return format;
     }
 
+    /** Параметры выгрузки. */
     public ExportOptions options() {
         return options;
     }
 
+    /** Номер версии, по которой строится результат; фиксируется при запросе. */
     public long sourceVersionNo() {
         return sourceVersionNo;
     }
 
+    /** Состояние выгрузки. */
     public ExportStatus status() {
         return status;
     }
 
+    /** Готовый файл; есть после построения. */
     public Optional<Artifact> artifact() {
         return Optional.ofNullable(artifact);
     }
 
+    /** Отчёт о потерях; есть после построения. */
     public Optional<LossReport> lossReport() {
         return Optional.ofNullable(lossReport);
     }
 
+    /** Причина сбоя; есть у упавшей выгрузки. */
     public Optional<String> failureReason() {
         return Optional.ofNullable(failureReason);
     }
 
+    /** Кто запросил выгрузку. */
     public String requestedBy() {
         return requestedBy;
     }
 
+    /** Когда выгрузка запрошена. */
     public Instant requestedAt() {
         return requestedAt;
     }

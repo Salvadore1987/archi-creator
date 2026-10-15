@@ -8,5 +8,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
  */
 public interface GitBinding {
 
+    /** Привязано ли пространство к репозиторию Git и отвечает ли репозиторий сейчас. */
     boolean boundAndReachable(WorkspaceId workspaceId);
 }

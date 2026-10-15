@@ -46,16 +46,19 @@ public record Relationship(RelationshipId id, FolderId folderId, ArchiId archiId
         }
     }
 
+    /** Служит ли концепт концом этой связи — источником или целью. */
     public boolean touches(ConceptRef concept) {
         return source.equals(concept) || target.equals(concept);
     }
 
+    /** Та же связь с новыми именем, документацией и свойствами; концы и тип не меняются. */
     public Relationship edited(Optional<String> newName, Optional<String> newDocumentation,
                                List<PropertyEntry> newProperties) {
         return new Relationship(id, folderId, archiId, archiType, source, target, newName, newDocumentation,
                 accessType, directed, newProperties, sortOrder, supported, rawXml);
     }
 
+    /** Та же связь в другой папке и на другой позиции. */
     public Relationship movedTo(FolderId folder, SortOrder order) {
         return new Relationship(id, folder, archiId, archiType, source, target, name, documentation, accessType,
                 directed, properties, order, supported, rawXml);

@@ -8,5 +8,6 @@ import java.time.Instant;
  */
 public interface DomainEvent {
 
+    /** Момент, когда событие произошло в домене, по часам приложения. */
     Instant occurredAt();
 }

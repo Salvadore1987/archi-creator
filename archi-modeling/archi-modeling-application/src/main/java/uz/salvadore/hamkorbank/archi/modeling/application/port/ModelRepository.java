@@ -16,8 +16,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
  */
 public interface ModelRepository {
 
+    /** Агрегат модели целиком: заголовок, дерево папок, элементы, связи, места представлений. */
     Optional<ArchitectureModel> load(ModelId id);
 
+    /** Только заголовок модели — для проверки доступа и статуса без загрузки дерева. */
     Optional<ModelHeader> findHeader(ModelId id);
 
     /** Модели рабочего пространства, кроме физически удалённых. */
@@ -55,5 +57,6 @@ public interface ModelRepository {
     /** Где элемент или связь вообще упоминаются на представлениях — чтобы снять размещения. */
     List<ViewId> viewsReferencing(ElementId elementId);
 
+    /** Представления, на которых связь нарисована ребром. */
     List<ViewId> viewsReferencing(RelationshipId relationshipId);
 }

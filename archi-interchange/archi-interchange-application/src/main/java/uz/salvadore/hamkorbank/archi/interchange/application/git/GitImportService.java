@@ -84,6 +84,7 @@ public final class GitImportService {
             findings = List.copyOf(findings);
         }
 
+        /** Содержимое по ссылке совпадает с текущим: применение версии не создаст. */
         public boolean unchanged() {
             return baseHash.equals(targetHash);
         }

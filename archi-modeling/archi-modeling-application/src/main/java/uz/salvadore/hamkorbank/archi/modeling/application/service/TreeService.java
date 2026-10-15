@@ -38,6 +38,7 @@ public final class TreeService {
         this.relationships = relationships;
     }
 
+    /** Создание папки с идентификаторами от сервера. */
     public ModelFolder createFolder(EditorIdentity actor, ModelId modelId, FolderId parentId, String name,
                                     Optional<String> idempotencyKey) {
         return createFolder(actor, modelId, parentId, name, RequestedIds.NONE, idempotencyKey);

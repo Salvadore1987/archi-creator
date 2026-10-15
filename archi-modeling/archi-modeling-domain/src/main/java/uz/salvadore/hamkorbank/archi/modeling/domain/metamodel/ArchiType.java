@@ -25,6 +25,7 @@ public record ArchiType(String value) {
         }
     }
 
+    /** Тип из строки в нотации файла; строка без префикса {@code archimate:} отклоняется. */
     public static ArchiType of(String value) {
         return new ArchiType(value);
     }

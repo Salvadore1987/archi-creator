@@ -12,14 +12,17 @@ public record AuditEntryId(UUID value) {
         Objects.requireNonNull(value, "AuditEntryId");
     }
 
+    /** Ключ из значения UUID. */
     public static AuditEntryId of(UUID value) {
         return new AuditEntryId(value);
     }
 
+    /** Ключ из строки UUID; неверный формат — {@link IllegalArgumentException}. */
     public static AuditEntryId of(String value) {
         return new AuditEntryId(UUIDUtil.uuid(value));
     }
 
+    /** Новый ключ от генератора приложения. */
     public static AuditEntryId next(UuidV7 uuids) {
         return new AuditEntryId(uuids.next());
     }

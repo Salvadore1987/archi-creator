@@ -71,6 +71,10 @@ public final class ModelImportService {
     public record Replaced(ModelVersion version, boolean created, int opaqueObjects) {
     }
 
+    /**
+     * Текущее содержимое модели в формате {@code .archimate} и номер последней версии — основа для замены и сравнения.
+     * Удалённая модель — {@code 409}.
+     */
     public CurrentContent current(EditorIdentity actor, ModelId modelId) {
         return kernel.unitOfWork.read(() -> {
             ModelHeader header = kernel.visibleHeader(modelId, actor, AclAccess.WRITE);

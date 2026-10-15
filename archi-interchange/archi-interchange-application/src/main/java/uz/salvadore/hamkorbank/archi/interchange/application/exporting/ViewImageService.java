@@ -64,10 +64,15 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
  */
 public final class ViewImageService {
 
+    /** Картинка в SVG. */
     public static final String FORMAT_SVG = "svg";
+    /** Картинка в PNG, растеризованная из SVG. */
     public static final String FORMAT_PNG = "png";
+    /** Фон цвета бумаги, как на холсте. */
     public static final String BACKGROUND_PAPER = "paper";
+    /** Прозрачный фон. */
     public static final String BACKGROUND_TRANSPARENT = "transparent";
+    /** Имя файла отчёта о потерях внутри архива картинок. */
     public static final String LOSS_REPORT_FILE = "loss-report.json";
 
     private static final Map<String, ExportFormat> FORMATS = Map.of(FORMAT_SVG, ExportFormat.SVG,

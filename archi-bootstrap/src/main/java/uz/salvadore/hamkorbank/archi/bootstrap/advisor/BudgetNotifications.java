@@ -15,6 +15,7 @@ public final class BudgetNotifications {
 
     private static final Logger LOG = LoggerFactory.getLogger(BudgetNotifications.class);
 
+    /** Расход пространства пересёк порог бюджета месяца — предупреждение в журнал. */
     @EventListener
     public void thresholdReached(TokenBudgetThresholdReached event) {
         LOG.warn("advisor budget threshold reached: workspace={} period={} consumed={} limit={} threshold={}%",
@@ -22,6 +23,7 @@ public final class BudgetNotifications {
                 event.thresholdPercent());
     }
 
+    /** Бюджет месяца исчерпан — предупреждение в журнал; дальнейшие обращения отклоняются до нового периода. */
     @EventListener
     public void exhausted(TokenBudgetExhausted event) {
         LOG.warn("advisor budget exhausted: workspace={} period={} consumed={} limit={}",

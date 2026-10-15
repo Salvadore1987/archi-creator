@@ -18,9 +18,11 @@ public record ImportRequest(WorkspaceId workspaceId, Optional<ModelId> targetMod
                             ContentHash sourceHash, long sourceSize, String idempotencyKey,
                             boolean strictMode, String startedBy) {
 
+    /** Наибольшая длина имени файла. */
     public static final int SOURCE_NAME_MAX = 500;
     /** Имя файла, когда клиент его не передал: сессия импорта без имени источника не бывает. */
     public static final String DEFAULT_SOURCE_NAME = "model.archimate";
+    /** Наибольшая длина ключа идемпотентности. */
     public static final int IDEMPOTENCY_KEY_MAX = 64;
 
     public ImportRequest {
@@ -47,6 +49,7 @@ public record ImportRequest(WorkspaceId workspaceId, Optional<ModelId> targetMod
         return fileName.filter(name -> !name.isBlank()).orElse(DEFAULT_SOURCE_NAME);
     }
 
+    /** Запрос импорта с отпечатком и размером присланного содержимого. */
     public static ImportRequest of(WorkspaceId workspaceId, Optional<ModelId> targetModelId, String sourceName,
                                    byte[] content, String idempotencyKey, boolean strictMode, String startedBy) {
         return new ImportRequest(workspaceId, targetModelId, sourceName, ContentHash.of(content), content.length,

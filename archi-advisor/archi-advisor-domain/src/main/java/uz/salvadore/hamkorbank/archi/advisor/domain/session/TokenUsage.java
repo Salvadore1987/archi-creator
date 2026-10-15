@@ -6,6 +6,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException
 /** Расход одного обращения: входные и выходные токены. */
 public record TokenUsage(long promptTokens, long completionTokens) {
 
+    /** Нулевой расход — у сессии, не дошедшей до внешнего API. */
     public static final TokenUsage NONE = new TokenUsage(0, 0);
 
     public TokenUsage {
@@ -14,10 +15,12 @@ public record TokenUsage(long promptTokens, long completionTokens) {
         }
     }
 
+    /** Входные и выходные токены вместе. */
     public long total() {
         return promptTokens + completionTokens;
     }
 
+    /** Сумма двух расходов. */
     public TokenUsage plus(TokenUsage other) {
         return new TokenUsage(promptTokens + other.promptTokens, completionTokens + other.completionTokens);
     }

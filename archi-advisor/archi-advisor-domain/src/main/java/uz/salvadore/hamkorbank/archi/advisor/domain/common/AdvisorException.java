@@ -29,11 +29,13 @@ public class AdvisorException extends RuntimeException {
         this.details = Map.copyOf(details);
     }
 
+    /** Объект не найден; {@code what} — подпись объекта, переводится вместе с фразой. */
     public static AdvisorException notFound(Message what) {
         return new AdvisorException(AdvisorCodes.NOT_FOUND, Failure.NOT_FOUND,
                 Message.of(AdvisorMessages.NOT_FOUND, what));
     }
 
+    /** Неверный ввод с причиной. */
     public static AdvisorException invalid(Message reason) {
         return new AdvisorException(AdvisorCodes.INVALID_INPUT, Failure.UNPROCESSABLE, reason);
     }
@@ -44,18 +46,22 @@ public class AdvisorException extends RuntimeException {
                 : Message.of(AdvisorMessages.INVALID_VALUE));
     }
 
+    /** Код отказа для клиента API. */
     public String code() {
         return code;
     }
 
+    /** Класс отказа, из которого адаптер выводит HTTP-статус. */
     public Failure failure() {
         return failure;
     }
 
+    /** Причина для человека — ключ сообщения и аргументы. */
     public Message reason() {
         return reason;
     }
 
+    /** Детали для клиента: дата сброса бюджета, секунды до повтора. */
     public Map<String, Object> details() {
         return details;
     }

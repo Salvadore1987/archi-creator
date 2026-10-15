@@ -30,6 +30,7 @@ public final class NestingRules {
         this.matrix = matrix;
     }
 
+    /** Правила вложенности поверх матрицы ArchiMate 3.2. */
     public static NestingRules archimate32() {
         return ARCHIMATE_32;
     }

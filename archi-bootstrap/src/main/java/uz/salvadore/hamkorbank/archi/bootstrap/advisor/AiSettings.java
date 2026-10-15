@@ -38,6 +38,7 @@ public record AiSettings(String apiKey,
                          @DefaultValue("20") int workspaceRequestsPerMinute,
                          @DefaultValue("Asia/Tashkent") ZoneId budgetZone) {
 
+    /** Задан ли ключ API: без него помощник отвечает «недоступен», остальное приложение работает. */
     public boolean configured() {
         return apiKey != null && !apiKey.isBlank();
     }

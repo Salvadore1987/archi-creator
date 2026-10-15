@@ -32,10 +32,12 @@ public final class UuidV7 {
         });
     }
 
+    /** Генератор на системных часах UTC. */
     public static UuidV7 systemUtc() {
         return new UuidV7(Clock.systemUTC());
     }
 
+    /** Следующий UUID версии 7. */
     public UUID next() {
         return generator.generate();
     }

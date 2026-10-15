@@ -14,10 +14,12 @@ public record LossReport(List<LossEntry> entries, boolean complete) {
         entries = List.copyOf(entries);
     }
 
+    /** Полный отчёт без потерь. */
     public static LossReport lossless() {
         return new LossReport(List.of(), true);
     }
 
+    /** Ничего не потеряно. */
     public boolean empty() {
         return entries.isEmpty();
     }

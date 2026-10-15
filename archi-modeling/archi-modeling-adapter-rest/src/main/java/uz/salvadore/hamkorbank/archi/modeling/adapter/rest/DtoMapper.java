@@ -49,12 +49,14 @@ public final class DtoMapper {
     private DtoMapper() {
     }
 
+    /** Заголовок модели для списка и ответов на правку. */
     public static ModelSummary summary(ModelHeader h) {
         return new ModelSummary(h.id().value(), h.workspaceId().value(), h.archiId().value(), h.name(),
                 h.documentation().orElse(null), h.status().name(), h.archiVersion(), h.createdBy(), h.createdAt(),
                 h.updatedAt());
     }
 
+    /** Открытая модель целиком: заголовок, папки, элементы, связи, представления и их размещения. */
     public static ModelTree tree(ModelQueryService.OpenedModel opened) {
         ArchitectureModel model = opened.model();
         return new ModelTree(summary(model.header()),
@@ -70,17 +72,20 @@ public final class DtoMapper {
                         p.relationshipIds().stream().map(r -> r.value()).toList())).toList());
     }
 
+    /** Папка дерева; у корневой — тип, у вложенной — родитель. */
     public static FolderDto folder(ModelFolder f) {
         return new FolderDto(f.id().value(), f.parentId().map(FolderId::value).orElse(null), f.archiId().value(),
                 f.name(), f.folderType().map(Enum::name).orElse(null), f.sortOrder().value());
     }
 
+    /** Элемент со свойствами в порядке документа. */
     public static ElementDto element(Element e) {
         return new ElementDto(e.id().value(), e.folderId().value(), e.archiId().value(), e.archiType().value(),
                 e.layer().name(), e.name(), e.documentation().orElse(null), properties(e.properties()), e.supported(),
                 e.sortOrder().value());
     }
 
+    /** Связь; {@code edgeId} — ребро, нарисованное вместе с ней, иначе {@code null}. */
     public static RelationshipDto relationship(Relationship r, java.util.UUID edgeId) {
         return new RelationshipDto(r.id().value(), r.folderId().value(), r.archiId().value(), r.archiType().value(),
                 r.source().value(), r.target().value(), r.name().orElse(null), r.documentation().orElse(null),
@@ -88,17 +93,20 @@ public final class DtoMapper {
                 r.supported(), r.sortOrder().value(), edgeId);
     }
 
+    /** Представление из дерева модели — без узлов и рёбер. */
     public static ViewSummary view(ViewRef v) {
         return new ViewSummary(v.id().value(), v.folderId().value(), v.archiId().value(), v.archiType().value(),
                 v.name(), v.sortOrder().value());
     }
 
+    /** Заголовок загруженного представления — без узлов и рёбер. */
     public static ViewSummary view(View v) {
         ViewHeader h = v.header();
         return new ViewSummary(h.id().value(), h.folderId().value(), h.archiId().value(), h.archiType().value(),
                 h.name(), h.sortOrder().value());
     }
 
+    /** Представление целиком: заголовок, узлы и рёбра с геометрией и стилем. */
     public static ViewPayload payload(View view) {
         ViewHeader h = view.header();
         return new ViewPayload(h.id().value(), h.modelId().value(), h.folderId().value(), h.archiId().value(),
@@ -110,6 +118,7 @@ public final class DtoMapper {
                         .toList());
     }
 
+    /** Узел представления; границы — относительно родителя. */
     public static ViewNodeDto node(ViewNode n) {
         return new ViewNodeDto(n.id().value(), n.parentId().map(p -> p.value()).orElse(null), n.archiId().value(),
                 n.archiType().value(), n.kind().name(), n.elementId().map(e -> e.value()).orElse(null),
@@ -117,6 +126,7 @@ public final class DtoMapper {
                 n.label().orElse(null), n.content().orElse(null), n.sortOrder().value());
     }
 
+    /** Ребро представления с точками перегиба и стилем. */
     public static ViewEdgeDto edge(ViewEdge e) {
         return new ViewEdgeDto(e.id().value(), e.archiId().value(), e.archiType().value(),
                 e.relationshipId().map(r -> r.value()).orElse(null), e.source().value(), e.target().value(),
@@ -124,11 +134,13 @@ public final class DtoMapper {
                 style(e.style()), e.sortOrder().value());
     }
 
+    /** Версия модели без снимка; есть ли снимок — отдельным флагом. */
     public static VersionInfo version(ModelVersion v) {
         return new VersionInfo(v.versionNo(), v.author(), v.comment().orElse(null), v.label().orElse(null),
                 v.createdAt(), v.snapshot().isPresent(), v.gitSha().orElse(null));
     }
 
+    /** Блокировка модели: владелец и срок. */
     public static LockInfo lock(ModelLock l) {
         return new LockInfo(l.modelId().value(), l.owner(), l.acquiredAt(), l.expiresAt());
     }

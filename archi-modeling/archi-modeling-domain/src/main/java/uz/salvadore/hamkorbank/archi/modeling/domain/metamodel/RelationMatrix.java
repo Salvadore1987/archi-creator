@@ -43,6 +43,7 @@ public final class RelationMatrix {
         this.permitted = permitted;
     }
 
+    /** Матрица ArchiMate 3.2, загруженная из ресурса один раз на всё приложение. */
     public static RelationMatrix archimate32() {
         return ARCHIMATE_32;
     }
@@ -55,6 +56,7 @@ public final class RelationMatrix {
         return permitted.getOrDefault(concept(source), Map.of()).getOrDefault(concept(target), Set.of());
     }
 
+    /** Допускает ли матрица связь этого типа от {@code source} к {@code target}. */
     public boolean isPermitted(ArchiType source, ArchiType target, RelationshipType relationship) {
         return permitted(source, target).contains(relationship);
     }

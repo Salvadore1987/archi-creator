@@ -47,6 +47,7 @@ public final class ViewService {
         this.kernel = kernel;
     }
 
+    /** Создание представления с идентификаторами от сервера; без папки — в корень представлений. */
     public View create(EditorIdentity actor, ModelId modelId, String name, Optional<FolderId> folderId,
                        Optional<String> idempotencyKey) {
         return create(actor, modelId, name, folderId, RequestedIds.NONE, idempotencyKey);

@@ -17,6 +17,7 @@ public interface PublishedVersions {
     /** В транзакции вызывающего: вместе с закрытием записи outbox. */
     void recordGitSha(ModelId model, long versionNo, GitSha sha);
 
+    /** Последняя версия модели, попавшая в Git, и её коммит. */
     Optional<Published> lastPublished(ModelId model);
 
     /** Пространство модели, если актор её видит; иначе — «не найдено». */
@@ -36,6 +37,7 @@ public interface PublishedVersions {
         }
     }
 
+    /** Опубликованная версия модели и коммит, в котором она лежит. */
     record Published(long versionNo, GitSha sha) {
     }
 }

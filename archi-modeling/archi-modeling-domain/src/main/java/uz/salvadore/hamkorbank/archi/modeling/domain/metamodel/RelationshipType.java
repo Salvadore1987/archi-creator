@@ -35,6 +35,7 @@ public enum RelationshipType {
         this.archiType = ArchiType.ofSimpleName(name + "Relationship");
     }
 
+    /** Тип связи в нотации файла: {@code archimate:CompositionRelationship} и подобные. */
     public ArchiType archiType() {
         return archiType;
     }
@@ -43,6 +44,7 @@ public enum RelationshipType {
         return key;
     }
 
+    /** Тип связи по нотации файла; пусто — это не одна из одиннадцати связей ArchiMate. */
     public static Optional<RelationshipType> fromArchiType(ArchiType type) {
         return Arrays.stream(values()).filter(r -> r.archiType.equals(type)).findFirst();
     }

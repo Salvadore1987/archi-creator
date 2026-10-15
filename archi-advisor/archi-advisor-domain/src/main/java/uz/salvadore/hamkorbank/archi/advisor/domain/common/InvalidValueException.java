@@ -19,6 +19,7 @@ public final class InvalidValueException extends IllegalArgumentException {
         this(Message.of(key, args));
     }
 
+    /** Причина отказа — ключ сообщения и аргументы. */
     public Message reason() {
         return reason;
     }

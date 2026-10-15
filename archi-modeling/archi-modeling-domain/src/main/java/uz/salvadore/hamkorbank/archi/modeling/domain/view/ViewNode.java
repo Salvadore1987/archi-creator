@@ -54,6 +54,7 @@ public record ViewNode(ViewNodeId id, Optional<ViewNodeId> parentId, ArchiId arc
         }
     }
 
+    /** Вид узла по его типу в файле. */
     public ViewNodeKind kind() {
         return ViewNodeKind.of(archiType);
     }
@@ -64,6 +65,7 @@ public record ViewNode(ViewNodeId id, Optional<ViewNodeId> parentId, ArchiId arc
                 newLabel.filter(l -> !l.isEmpty()), newContent.filter(c -> !c.isEmpty()), sortOrder, rawXml);
     }
 
+    /** Тот же узел с новым собственным стилем. */
     public ViewNode withStyle(StyleOverride newStyle) {
         return new ViewNode(id, parentId, archiId, archiType, elementId, bounds, newStyle, label, content, sortOrder,
                 rawXml);
@@ -75,6 +77,7 @@ public record ViewNode(ViewNodeId id, Optional<ViewNodeId> parentId, ArchiId arc
                 rawXml);
     }
 
+    /** Тот же узел с новой геометрией в прежнем родителе. */
     public ViewNode withBounds(Bounds newBounds) {
         return new ViewNode(id, parentId, archiId, archiType, elementId, newBounds, style, label, content, sortOrder,
                 rawXml);

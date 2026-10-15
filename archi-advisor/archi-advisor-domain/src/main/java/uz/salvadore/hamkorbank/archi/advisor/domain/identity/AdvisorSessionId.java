@@ -12,14 +12,17 @@ public record AdvisorSessionId(UUID value) {
         Objects.requireNonNull(value, "AdvisorSessionId");
     }
 
+    /** Ключ из значения UUID. */
     public static AdvisorSessionId of(UUID value) {
         return new AdvisorSessionId(value);
     }
 
+    /** Ключ из строки UUID; неверный формат — {@link IllegalArgumentException}. */
     public static AdvisorSessionId of(String value) {
         return new AdvisorSessionId(UUIDUtil.uuid(value));
     }
 
+    /** Новый ключ от генератора приложения. */
     public static AdvisorSessionId next(UuidV7 uuids) {
         return new AdvisorSessionId(uuids.next());
     }

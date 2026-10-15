@@ -187,11 +187,13 @@ public final class ArchitectureModel {
 
     // ── Жизненный цикл ──────────────────────────────────────────────
 
+    /** Перевод активной модели в удалённые; событие об удалении публикуется после коммита. */
     public void delete(EditorIdentity by, Instant now) {
         transition(ModelStatus.ACTIVE, ModelStatus.DELETED, "DeleteModel", now);
         events.add(new ModelDeleted(id, workspaceId, by.subject(), now));
     }
 
+    /** Возврат удалённой модели в активные. */
     public void restoreDeleted(Instant now) {
         transition(ModelStatus.DELETED, ModelStatus.ACTIVE, "RestoreModel", now);
     }
@@ -218,6 +220,7 @@ public final class ArchitectureModel {
         }
     }
 
+    /** Отметка, что заголовок модели изменён: время правки и запись строки модели. */
     public void touch(Instant now) {
         updatedAt = now;
         headerChanged = true;
@@ -225,12 +228,14 @@ public final class ArchitectureModel {
 
     // ── Собственные поля ────────────────────────────────────────────
 
+    /** Новое имя модели; пустое отклоняется. */
     public void rename(String newName, Instant now) {
         requireActive();
         name = Names.required(newName, Names.MODEL);
         touch(now);
     }
 
+    /** Новая документация модели; пустая строка — документации нет. */
     public void changeDocumentation(Optional<String> newDocumentation, Instant now) {
         requireActive();
         documentation = newDocumentation.filter(d -> !d.isEmpty());
@@ -239,6 +244,7 @@ public final class ArchitectureModel {
 
     // ── Папки ───────────────────────────────────────────────────────
 
+    /** Новая пользовательская папка в конце родителя; родитель должен быть в этой модели. */
     public ModelFolder createFolder(FolderId parentId, String folderName, FolderId newId, ArchiId newArchiId,
                                     Instant now) {
         requireActive();
@@ -251,6 +257,7 @@ public final class ArchitectureModel {
         return folder;
     }
 
+    /** Новое имя папки; пустое отклоняется. */
     public ModelFolder renameFolder(FolderId folderId, String newName, Instant now) {
         requireActive();
         ModelFolder renamed = requireFolder(folderId).withName(Names.required(newName, Names.FOLDER));
@@ -366,6 +373,7 @@ public final class ArchitectureModel {
         return element;
     }
 
+    /** Правка имени, документации и свойств элемента; нередактируемый тип отклоняется. */
     public Element updateElement(ElementId elementId, String newName, Optional<String> newDocumentation,
                                  List<PropertyEntry> newProperties, Instant now) {
         requireActive();
@@ -445,6 +453,7 @@ public final class ArchitectureModel {
         return new Created<>(relationship, true);
     }
 
+    /** Правка имени, документации и свойств связи; пустое имя — имени нет. */
     public Relationship updateRelationship(RelationshipId relationshipId, Optional<String> newName,
                                            Optional<String> newDocumentation, List<PropertyEntry> newProperties,
                                            Instant now) {
@@ -494,12 +503,14 @@ public final class ArchitectureModel {
         return ref;
     }
 
+    /** Модель забывает представление: его место в дереве освобождается. */
     public void forgetView(ViewId viewId, Instant now) {
         requireActive();
         views.remove(viewId);
         touch(now);
     }
 
+    /** Новое имя в месте представления; вызывается вместе с переименованием самого представления. */
     public void renameView(ViewId viewId, String newName) {
         ViewRef view = views.get(viewId);
         if (view != null) {
@@ -510,17 +521,20 @@ public final class ArchitectureModel {
 
     // ── Проверки и выборки ──────────────────────────────────────────
 
+    /** Папка этой модели; чужая или несуществующая — отказ. */
     public ModelFolder requireFolder(FolderId folderId) {
         return folders.get(folderId)
                 .orElseThrow(() -> new ModelingException(ModelingCodes.NOT_FOUND, Failure.UNPROCESSABLE,
                         Message.of(ModelingMessages.FOLDER_OF_OTHER_MODEL, folderId, id)));
     }
 
+    /** Элемент этой модели; нет такого — «не найдено». */
     public Element requireElement(ElementId elementId) {
         return elements.get(elementId)
                 .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.ELEMENT, elementId)));
     }
 
+    /** Связь этой модели; нет такой — «не найдено». */
     public Relationship requireRelationship(RelationshipId relationshipId) {
         return relationships.get(relationshipId)
                 .orElseThrow(() -> ModelingException.notFound(
@@ -562,6 +576,7 @@ public final class ArchitectureModel {
         }
     }
 
+    /** Занят ли {@code archiId} самой моделью, её папкой, элементом, связью или представлением. */
     public boolean archiIdTaken(ArchiId candidate) {
         return candidate.equals(archiId)
                 || folders.values().stream().anyMatch(f -> f.archiId().equals(candidate))
@@ -626,35 +641,43 @@ public final class ArchitectureModel {
 
     // ── Состояние для хранилища и чтения ────────────────────────────
 
+    /** Собственные поля модели для записи в хранилище. */
     public ModelHeader header() {
         return new ModelHeader(id, workspaceId, archiId, name, documentation, archiVersion, status, properties,
                 rawXml, createdBy, createdAt, updatedAt, version);
     }
 
+    /** Внутренний ключ модели. */
     public ModelId id() {
         return id;
     }
 
+    /** Пространство, которому принадлежит модель. */
     public WorkspaceId workspaceId() {
         return workspaceId;
     }
 
+    /** Идентификатор модели в файле Archi. */
     public ArchiId archiId() {
         return archiId;
     }
 
+    /** Текущее имя модели. */
     public String name() {
         return name;
     }
 
+    /** Состояние жизненного цикла. */
     public ModelStatus status() {
         return status;
     }
 
+    /** Subject автора модели. */
     public String createdBy() {
         return createdBy;
     }
 
+    /** Версия строки модели для оптимистичной блокировки. */
     public long version() {
         return version;
     }
@@ -664,26 +687,32 @@ public final class ArchitectureModel {
         return fresh;
     }
 
+    /** Нужно ли записать заголовок модели: модель новая или её поля менялись. */
     public boolean headerChanged() {
         return fresh || headerChanged;
     }
 
+    /** Папки с учётом изменений. */
     public TrackedMap<FolderId, ModelFolder> folders() {
         return folders;
     }
 
+    /** Элементы с учётом изменений. */
     public TrackedMap<ElementId, Element> elements() {
         return elements;
     }
 
+    /** Связи с учётом изменений. */
     public TrackedMap<RelationshipId, Relationship> relationships() {
         return relationships;
     }
 
+    /** Места представлений в дереве модели, копией. */
     public Collection<ViewRef> views() {
         return List.copyOf(views.values());
     }
 
+    /** Место представления в дереве; пусто — в этой модели его нет. */
     public Optional<ViewRef> view(ViewId viewId) {
         return Optional.ofNullable(views.get(viewId));
     }

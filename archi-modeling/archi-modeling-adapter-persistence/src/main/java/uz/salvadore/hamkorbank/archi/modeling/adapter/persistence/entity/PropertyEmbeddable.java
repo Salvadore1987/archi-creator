@@ -26,14 +26,17 @@ public class PropertyEmbeddable {
         this.value = value;
     }
 
+    /** Позиция свойства в списке объекта. */
     public long sortOrder() {
         return sortOrder;
     }
 
+    /** Ключ свойства. */
     public String key() {
         return key;
     }
 
+    /** Значение свойства. */
     public String value() {
         return value;
     }

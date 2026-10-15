@@ -22,6 +22,7 @@ public interface TokenBudgetRepository {
      */
     TokenBudget lock(WorkspaceId workspaceId, BudgetPeriod period, BudgetPolicy policy, TokenBudgetId newId);
 
+    /** Записать накопленный расход бюджета и его состояние. */
     void save(TokenBudget budget);
 
     /** Действующие настройки: выключатель и лимит, уже с подставленным значением по умолчанию. */

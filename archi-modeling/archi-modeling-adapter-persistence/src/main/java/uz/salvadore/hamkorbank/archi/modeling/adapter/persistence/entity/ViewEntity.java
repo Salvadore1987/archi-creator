@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/** Строка представления: место в дереве папок, точка зрения и остаток XML. */
 @Entity
 @Table(name = "view")
 public class ViewEntity {

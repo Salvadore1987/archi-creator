@@ -22,6 +22,7 @@ public final class ArchiIdGenerator {
         this.uuids = Objects.requireNonNull(uuids, "uuids");
     }
 
+    /** Новый идентификатор в формате Archi; занятость в модели не проверяется. */
     public ArchiId next() {
         return ArchiId.of("id-" + uuids.get().toString().replace("-", ""));
     }

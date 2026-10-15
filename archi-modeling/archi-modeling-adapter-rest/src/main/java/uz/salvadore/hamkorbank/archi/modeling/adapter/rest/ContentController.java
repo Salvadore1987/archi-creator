@@ -68,6 +68,7 @@ public class ContentController {
 
     // ── Элементы ────────────────────────────────────────────────────
 
+    /** Создаёт элемент в модели — {@code 201} с адресом нового элемента. */
     @PostMapping("/models/{id}/elements")
     public ResponseEntity<ElementDto> createElement(EditorIdentity actor, @PathVariable UUID id,
                                                     @RequestBody CreateElementRequest request,
@@ -78,6 +79,7 @@ public class ContentController {
         return ResponseEntity.created(URI.create("/api/v1/elements/" + element.id())).body(DtoMapper.element(element));
     }
 
+    /** Правит имя, описание и свойства элемента; не переданное поле не меняется. */
     @PatchMapping("/elements/{id}")
     public ElementDto updateElement(EditorIdentity actor, @PathVariable UUID id, @RequestBody ElementPatch patch) {
         return DtoMapper.element(elements.update(actor, ElementId.of(id), Optional.ofNullable(patch.name()),
@@ -115,6 +117,7 @@ public class ContentController {
                 : ResponseEntity.ok(body);
     }
 
+    /** Правит имя, описание и свойства связи; не переданное поле не меняется. */
     @PatchMapping("/relationships/{id}")
     public RelationshipDto updateRelationship(EditorIdentity actor, @PathVariable UUID id,
                                               @RequestBody ElementPatch patch) {
@@ -123,6 +126,7 @@ public class ContentController {
                 properties(patch.properties())), null);
     }
 
+    /** Удаляет связь вместе с её рёбрами на представлениях. */
     @DeleteMapping("/relationships/{id}")
     public ResponseEntity<Void> deleteRelationship(EditorIdentity actor, @PathVariable UUID id) {
         relationships.delete(actor, RelationshipId.of(id));
@@ -131,6 +135,7 @@ public class ContentController {
 
     // ── Дерево ──────────────────────────────────────────────────────
 
+    /** Создаёт папку в дереве модели — {@code 201}. */
     @PostMapping("/models/{id}/folders")
     public ResponseEntity<FolderDto> createFolder(EditorIdentity actor, @PathVariable UUID id,
                                                   @RequestBody CreateFolderRequest request,
@@ -141,6 +146,7 @@ public class ContentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(DtoMapper.folder(folder));
     }
 
+    /** Переименовывает папку, элемент, связь или представление в дереве. */
     @PatchMapping("/models/{id}/tree/{itemId}")
     public ResponseEntity<Void> rename(EditorIdentity actor, @PathVariable UUID id, @PathVariable UUID itemId,
                                        @RequestBody RenameRequest request) {
@@ -148,6 +154,7 @@ public class ContentController {
         return ResponseEntity.noContent().build();
     }
 
+    /** Переносит объекты дерева в папку. */
     @PostMapping("/models/{id}/tree/move")
     public ResponseEntity<Void> move(EditorIdentity actor, @PathVariable UUID id, @RequestBody MoveRequest request) {
         tree.move(actor, ModelId.of(id), FolderId.of(require(request.targetFolderId(), "targetFolderId")),

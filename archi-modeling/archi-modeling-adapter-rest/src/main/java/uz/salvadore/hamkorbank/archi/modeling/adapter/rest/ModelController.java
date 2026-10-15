@@ -65,6 +65,7 @@ public class ModelController {
         this.workspaces = workspaces;
     }
 
+    /** Рабочие пространства. */
     @GetMapping("/workspaces")
     public List<WorkspaceDto> workspaces() {
         return workspaces.list().stream().map(w -> new WorkspaceDto(w.id().value(), w.name())).toList();
@@ -76,6 +77,7 @@ public class ModelController {
         return queries.list(actor, workspace(workspaceId)).stream().map(DtoMapper::summary).toList();
     }
 
+    /** Создаёт модель — {@code 201} с адресом; без {@code workspaceId} — в первом пространстве. */
     @PostMapping("/models")
     public ResponseEntity<ModelSummary> create(EditorIdentity actor, @RequestBody CreateModelRequest request,
                                                @RequestHeader("Idempotency-Key") Optional<String> key) {
@@ -85,28 +87,33 @@ public class ModelController {
                 .body(DtoMapper.summary(model.header()));
     }
 
+    /** Открывает модель: дерево, элементы, связи и размещения на представлениях. */
     @GetMapping("/models/{id}")
     public ModelTree open(EditorIdentity actor, @PathVariable UUID id) {
         return DtoMapper.tree(queries.openWithPlacements(actor, ModelId.of(id)));
     }
 
+    /** Правит имя и описание модели; не переданное поле не меняется. */
     @PatchMapping("/models/{id}")
     public ModelSummary edit(EditorIdentity actor, @PathVariable UUID id, @RequestBody ModelPatch patch) {
         return DtoMapper.summary(lifecycle.edit(actor, ModelId.of(id), Optional.ofNullable(patch.name()),
                 Optional.ofNullable(patch.documentation())).header());
     }
 
+    /** Мягко удаляет модель: данные и история остаются. */
     @DeleteMapping("/models/{id}")
     public ResponseEntity<Void> delete(EditorIdentity actor, @PathVariable UUID id) {
         lifecycle.delete(actor, ModelId.of(id));
         return ResponseEntity.noContent().build();
     }
 
+    /** Возвращает мягко удалённую модель в работу. */
     @PostMapping("/models/{id}/restore")
     public ModelSummary restore(EditorIdentity actor, @PathVariable UUID id) {
         return DtoMapper.summary(lifecycle.restore(actor, ModelId.of(id)).header());
     }
 
+    /** Физически уничтожает удалённую модель. */
     @PostMapping("/models/{id}/purge")
     public ResponseEntity<Void> purge(EditorIdentity actor, @PathVariable UUID id) {
         lifecycle.purge(actor, ModelId.of(id));
@@ -115,17 +122,20 @@ public class ModelController {
 
     // ── Блокировка ──────────────────────────────────────────────────
 
+    /** Текущая блокировка модели; нет блокировки — {@code 204}. */
     @GetMapping("/models/{id}/lock")
     public ResponseEntity<LockInfo> lock(EditorIdentity actor, @PathVariable UUID id) {
         return queries.lock(actor, ModelId.of(id)).map(l -> ResponseEntity.ok(DtoMapper.lock(l)))
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
+    /** Захватывает или продлевает блокировку модели на запись. */
     @PostMapping("/models/{id}/lock")
     public LockInfo acquire(EditorIdentity actor, @PathVariable UUID id) {
         return DtoMapper.lock(locks.acquire(actor, ModelId.of(id)));
     }
 
+    /** Снимает блокировку модели. */
     @DeleteMapping("/models/{id}/lock")
     public ResponseEntity<Void> release(EditorIdentity actor, @PathVariable UUID id) {
         locks.release(actor, ModelId.of(id));
@@ -134,17 +144,20 @@ public class ModelController {
 
     // ── Валидация и доступ ──────────────────────────────────────────
 
+    /** Находки проверки модели. */
     @GetMapping("/models/{id}/validate")
     public List<Finding> validate(EditorIdentity actor, @PathVariable UUID id) {
         return queries.validate(actor, ModelId.of(id)).stream().map(f -> DtoMapper.finding(f, text)).toList();
     }
 
+    /** Список доступа модели. */
     @GetMapping("/models/{id}/acl")
     public List<AclEntryDto> acl(EditorIdentity actor, @PathVariable UUID id) {
         return accessLists.get(actor, ModelId.of(id)).entries().stream()
                 .map(e -> new AclEntryDto(e.principalType().name(), e.principal(), e.access().name())).toList();
     }
 
+    /** Заменяет список доступа модели целиком и возвращает итог. */
     @PutMapping("/models/{id}/acl")
     public List<AclEntryDto> replaceAcl(EditorIdentity actor, @PathVariable UUID id,
                                         @RequestBody List<AclEntryDto> entries) {

@@ -23,6 +23,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
  */
 public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Instant expiresAt) {
 
+    /** Код отказа при записи без действующей собственной блокировки модели. */
     public static final String INVARIANT = ModelingCodes.LOCK_REQUIRED;
 
     public ModelLock {
@@ -35,10 +36,12 @@ public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Insta
         }
     }
 
+    /** Действует ли блокировка в момент {@code now} или уже просрочена. */
     public LockStatus status(Instant now) {
         return now.isBefore(expiresAt) ? LockStatus.HELD : LockStatus.EXPIRED;
     }
 
+    /** Даёт ли блокировка право на запись пользователю {@code subject} в момент {@code now}. */
     public boolean heldBy(String subject, Instant now) {
         return status(now) == LockStatus.HELD && owner.equals(subject);
     }

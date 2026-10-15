@@ -30,16 +30,27 @@ public final class ModelingCodes {
     /** Список доступа сужает роли, но не расширяет. */
     public static final String ACCESS_LIST = "INV-MDL-011";
 
+    /** Матрица ArchiMate не допускает связь этого типа между выбранными концами. */
     public static final String RELATION_NOT_PERMITTED = "RELATION_NOT_PERMITTED";
+    /** Модель удалена: выгрузка и замена её содержимого недоступны. */
     public static final String MODEL_DELETED = "MODEL_DELETED";
+    /** Запрошенный объект не найден или не виден автору запроса. */
     public static final String NOT_FOUND = "MDL_NOT_FOUND";
+    /** Запрос не разбирается: поле не задано или значение не того формата. */
     public static final String INVALID_INPUT = "MDL_INVALID_INPUT";
+    /** Роли или списка доступа автора не хватает для операции. */
     public static final String ACCESS_DENIED = "MDL_ACCESS_DENIED";
+    /** Тип объекта не редактируется в текущей фазе метамодели. */
     public static final String TYPE_NOT_EDITABLE = "MDL_TYPE_NOT_EDITABLE";
+    /** Объект неподдержанного типа хранится как есть; находка проверки модели, а не отказ. */
     public static final String OPAQUE_OBJECT = "MDL_OPAQUE_OBJECT";
+    /** Удаляемая папка не пуста. */
     public static final String FOLDER_NOT_EMPTY = "MDL_FOLDER_NOT_EMPTY";
+    /** Снимок версии очищен по сроку хранения, и восстановить его неоткуда. */
     public static final String SNAPSHOT_PURGED = "MDL_SNAPSHOT_PURGED";
+    /** Ключ идемпотентности уже использован для запроса с другим содержимым. */
     public static final String IDEMPOTENCY_CONFLICT = "MDL_IDEMPOTENCY_KEY_REUSED";
+    /** Запись нарушила ограничение целостности базы данных. */
     public static final String INTEGRITY_CONFLICT = "MDL_INTEGRITY_CONFLICT";
     /** Идентификатор, заданный клиентом для нового объекта, уже занят. */
     public static final String ID_TAKEN = "MDL_ID_TAKEN";

@@ -43,6 +43,7 @@ public record DocumentNode(String tag, DocumentOrder order, Attributes attribute
         }
     }
 
+    /** Идентификатор узла из атрибута {@code id}. */
     public ArchiId archiId() {
         return ArchiId.of(attributes.get("id").orElseThrow());
     }
@@ -52,6 +53,7 @@ public record DocumentNode(String tag, DocumentOrder order, Attributes attribute
         return attributes.get("xsi:type");
     }
 
+    /** Значение атрибута узла по имени. */
     public Optional<String> attribute(String name) {
         return attributes.get(name);
     }
@@ -61,14 +63,17 @@ public record DocumentNode(String tag, DocumentOrder order, Attributes attribute
         return ContentOrder.only(content, DocumentNode.class);
     }
 
+    /** Значения с данным тегом в порядке файла. */
     public List<DocumentValue> values(String tag) {
         return ContentOrder.only(content, DocumentValue.class).stream().filter(v -> v.tag().equals(tag)).toList();
     }
 
+    /** Фрагменты XML, которые читатель не разобрал, в порядке файла. */
     public List<RawXmlFragment> rawFragments() {
         return ContentOrder.only(content, RawXmlFragment.class);
     }
 
+    /** Текст первого {@code <documentation>} узла. */
     public Optional<String> documentation() {
         return values("documentation").stream().findFirst().flatMap(DocumentValue::text);
     }

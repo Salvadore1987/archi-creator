@@ -10,6 +10,7 @@ public record ExportJobId(UUID value) {
         Objects.requireNonNull(value, "ExportJobId");
     }
 
+    /** Новый идентификатор выгрузки. */
     public static ExportJobId next(UuidV7 uuids) {
         return new ExportJobId(uuids.next());
     }

@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/** Строка привязки рабочего пространства к Git-репозиторию: адрес, ветка, ссылка на секрет и авторы. */
 @Entity
 @Table(name = "git_binding")
 public class GitBindingEntity {
@@ -45,6 +46,7 @@ public class GitBindingEntity {
     @OrderColumn(name = "sort_order")
     public List<Author> authors = new ArrayList<>();
 
+    /** Автор коммитов от имени пользователя Keycloak; порядок в списке хранится столбцом {@code sort_order}. */
     @Embeddable
     public static class Author {
 

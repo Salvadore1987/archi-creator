@@ -39,6 +39,7 @@ public final class GitBindingService {
         this.clock = clock;
     }
 
+    /** Привязка пространства к репозиторию; нет привязки — «не найдено». */
     public GitBinding binding(EditorIdentity actor, UUID workspaceId) {
         InterchangeOperation.CONFIGURE_GIT_BINDING.require(actor);
         return unitOfWork.read(() -> require(new WorkspaceId(workspaceId)));

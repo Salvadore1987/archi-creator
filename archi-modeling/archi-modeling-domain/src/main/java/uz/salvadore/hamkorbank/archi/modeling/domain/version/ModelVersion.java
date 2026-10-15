@@ -25,8 +25,11 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
                            Optional<String> label, Instant createdAt, Optional<byte[]> snapshot, String contentHash,
                            Optional<String> gitSha) {
 
+    /** Код отказа при попытке изменить версию сверх метки и очистки снимка. */
     public static final String INVARIANT = ModelingCodes.VERSION;
+    /** Предел длины комментария версии. */
     public static final int COMMENT_MAX = 1000;
+    /** Предел длины метки версии. */
     public static final int LABEL_MAX = 100;
     private static final Pattern SHA256 = Pattern.compile("^[0-9a-f]{64}$");
     private static final Pattern GIT_SHA = Pattern.compile("^[0-9a-f]{40}$");

@@ -10,6 +10,7 @@ public record FindingId(UUID value) {
         Objects.requireNonNull(value, "FindingId");
     }
 
+    /** Новый идентификатор находки. */
     public static FindingId next(UuidV7 uuids) {
         return new FindingId(uuids.next());
     }

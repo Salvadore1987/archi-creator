@@ -32,6 +32,7 @@ public class VersionController {
         this.versions = versions;
     }
 
+    /** История версий модели, от новых к старым. */
     @GetMapping
     public List<VersionInfo> list(EditorIdentity actor, @PathVariable UUID id) {
         return versions.list(actor, ModelId.of(id)).stream().map(DtoMapper::version).toList();
@@ -48,6 +49,7 @@ public class VersionController {
                 .body(new SaveResult(DtoMapper.version(result.version()), result.created()));
     }
 
+    /** Откатывает модель к версии; откат фиксируется новой версией. */
     @PostMapping("/{no}/restore")
     public VersionInfo restore(EditorIdentity actor, @PathVariable UUID id, @PathVariable long no,
                                @RequestBody(required = false) CommentRequest request) {
@@ -55,6 +57,7 @@ public class VersionController {
                 Optional.ofNullable(request).map(CommentRequest::comment)));
     }
 
+    /** Ставит или снимает метку версии. */
     @PutMapping("/{no}/label")
     public VersionInfo label(EditorIdentity actor, @PathVariable UUID id, @PathVariable long no,
                              @RequestBody LabelRequest request) {

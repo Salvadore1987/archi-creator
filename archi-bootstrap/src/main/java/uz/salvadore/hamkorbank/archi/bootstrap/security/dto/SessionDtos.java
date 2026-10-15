@@ -16,6 +16,7 @@ public final class SessionDtos {
     public record UiConfig(OidcConfig oidc) {
     }
 
+    /** Куда вести браузер на вход: адрес провайдера OIDC и идентификатор клиента SPA. */
     public record OidcConfig(String authority, String clientId) {
     }
 }

@@ -19,6 +19,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
  */
 public final class IdempotentCommand {
 
+    /** Код отказа, когда ключ идемпотентности повторён с другим телом команды. */
     public static final String INVARIANT = ModelingCodes.IDEMPOTENCY;
     private static final String DIGEST = "SHA-256";
 
@@ -37,6 +38,11 @@ public final class IdempotentCommand {
     public record Replay(String resultRef) implements Decision {
     }
 
+    /**
+     * Решение по команде: выполнить заново или отдать первый результат.
+     *
+     * @throws ModelingException ключ уже использован с другим отпечатком тела
+     */
     public static Decision decide(Optional<IdempotencyRecord> existing, String fingerprint) {
         if (existing.isEmpty()) {
             return new Execute();
@@ -64,6 +70,7 @@ public final class IdempotentCommand {
         }
     }
 
+    /** Проверка ключа идемпотентности: не пустой и не длиннее предела. */
     public static void requireValidKey(String key) {
         if (key == null || key.isBlank() || key.length() > IdempotencyRecord.KEY_MAX) {
             throw ModelingException.invalid(

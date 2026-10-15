@@ -36,6 +36,7 @@ public class SessionController {
         this.settings = settings;
     }
 
+    /** Кто вошёл: subject, отображаемое имя из токена и роли продукта. Без аутентификации — {@code 401}. */
     @GetMapping("/me")
     public Me me(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {

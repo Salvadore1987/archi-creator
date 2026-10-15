@@ -20,6 +20,7 @@ public final class InvalidValueException extends IllegalArgumentException {
         this(Message.of(key, args));
     }
 
+    /** Сообщение с ключом, которое переводится на язык запроса. */
     public Message reason() {
         return reason;
     }

@@ -28,12 +28,14 @@ public final class TrackedMap<K, V> {
         persisted.add(key);
     }
 
+    /** Добавление или замена: запись помечается изменённой, отметка об удалении снимается. */
     public void put(K key, V value) {
         values.put(key, value);
         upserted.add(key);
         removed.remove(key);
     }
 
+    /** Удаление; хранилище узнает о нём, только если сущность была в нём сохранена. */
     public void remove(K key) {
         if (values.remove(key) != null) {
             upserted.remove(key);
@@ -43,18 +45,22 @@ public final class TrackedMap<K, V> {
         }
     }
 
+    /** Сущность по ключу; пусто — её нет или она удалена. */
     public Optional<V> get(K key) {
         return Optional.ofNullable(values.get(key));
     }
 
+    /** Есть ли сущность с таким ключом сейчас. */
     public boolean contains(K key) {
         return values.containsKey(key);
     }
 
+    /** Текущие сущности в порядке вставки. */
     public Collection<V> values() {
         return values.values();
     }
 
+    /** Число текущих сущностей. */
     public int size() {
         return values.size();
     }
@@ -76,6 +82,7 @@ public final class TrackedMap<K, V> {
         return persisted.contains(key);
     }
 
+    /** Есть ли что записать: добавленные, изменённые или удалённые с момента загрузки. */
     public boolean changed() {
         return !upserted.isEmpty() || !removed.isEmpty();
     }

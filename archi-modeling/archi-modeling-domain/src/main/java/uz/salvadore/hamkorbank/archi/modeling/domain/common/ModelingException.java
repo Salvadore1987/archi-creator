@@ -37,6 +37,7 @@ public class ModelingException extends RuntimeException {
                 Message.of(ModelingMessages.NOT_FOUND, what));
     }
 
+    /** Отказ в неразборчивом вводе: поле не задано или значение не того формата. */
     public static ModelingException invalid(Message reason) {
         return new ModelingException(ModelingCodes.INVALID_INPUT, Failure.UNPROCESSABLE, reason);
     }
@@ -47,18 +48,22 @@ public class ModelingException extends RuntimeException {
                 : Message.of(ModelingMessages.INVALID_VALUE));
     }
 
+    /** Код отказа для клиента API — константа из {@link ModelingCodes}. */
     public String code() {
         return code;
     }
 
+    /** Вид отказа, по которому адаптер выбирает HTTP-статус. */
     public Failure failure() {
         return failure;
     }
 
+    /** Сообщение с ключом, которое адаптер переводит на язык запроса. */
     public Message reason() {
         return reason;
     }
 
+    /** Подробности отказа для клиента: владелец блокировки, мешающие связи и подобное. */
     public Map<String, Object> details() {
         return details;
     }

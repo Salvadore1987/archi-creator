@@ -34,6 +34,7 @@ public interface Typesetter {
     record Face(String family, double size, int weight, boolean italic, double tracking) {
     }
 
+    /** Вертикальные метрики шрифта: подъём над базовой линией и спуск под неё. */
     record Metrics(double ascent, double descent) {
     }
 }

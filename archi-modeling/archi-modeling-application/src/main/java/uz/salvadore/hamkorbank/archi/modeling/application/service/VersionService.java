@@ -104,6 +104,7 @@ public final class VersionService {
         return committed.version();
     }
 
+    /** История версий модели, от новых к старым, без снимков. */
     public List<ModelVersion> list(EditorIdentity actor, ModelId modelId) {
         return kernel.run(Operation.LIST_VERSIONS, actor, () -> kernel.unitOfWork.read(() -> {
             kernel.visibleHeader(modelId, actor, AclAccess.READ);

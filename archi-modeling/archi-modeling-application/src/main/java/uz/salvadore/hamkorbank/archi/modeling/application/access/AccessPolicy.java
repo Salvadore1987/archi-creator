@@ -18,6 +18,7 @@ public final class AccessPolicy {
     private AccessPolicy() {
     }
 
+    /** Отказывает с {@code 403}, если ни одна роль автора не допускает операцию. */
     public static void require(EditorIdentity actor, Operation operation) {
         if (actor.roles().stream().noneMatch(operation.roles()::contains)) {
             throw new ModelingException(ModelingCodes.ACCESS_DENIED, Failure.FORBIDDEN,

@@ -31,6 +31,7 @@ public final class WorkspaceService {
         this.clock = clock;
     }
 
+    /** Все рабочие пространства. */
     public List<Workspace> list() {
         return unitOfWork.read(workspaces::findAll);
     }

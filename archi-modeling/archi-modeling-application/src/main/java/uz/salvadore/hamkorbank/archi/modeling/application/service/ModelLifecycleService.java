@@ -80,6 +80,7 @@ public final class ModelLifecycleService {
         }));
     }
 
+    /** Возвращает мягко удалённую модель в работу; только {@code ADMIN}. */
     public ArchitectureModel restore(EditorIdentity actor, ModelId modelId) {
         return kernel.run(Operation.RESTORE_MODEL, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.visibleModel(modelId, actor, AclAccess.WRITE);

@@ -23,6 +23,7 @@ public final class Dtos {
                                List<FindingDto> findings) {
     }
 
+    /** Настройка импорта пространства: строгий режим отклоняет файл с находками уровня {@code ERROR}. */
     public record ImportSettings(boolean strictImport) {
     }
 
@@ -34,6 +35,7 @@ public final class Dtos {
     public record GitBindingSettingsDto(String repoUrl, String branch, String tokenRef, List<GitAuthorDto> authors) {
     }
 
+    /** Привязка пространства к репозиторию: состояние, последний известный коммит ветки и время проверки. */
     public record GitBindingDto(String repoUrl, String branch, String tokenRef, String status, String lastCommitSha,
                                 Instant lastCheckedAt, List<GitAuthorDto> authors) {
     }
@@ -46,6 +48,7 @@ public final class Dtos {
     public record GitPullRequestDto(String ref, String commitSha, String baseHash, String comment) {
     }
 
+    /** Сколько объектов одного вида добавлено, удалено и изменено. */
     public record GitChangeCountDto(String kind, int added, int removed, int changed) {
     }
 
@@ -93,6 +96,7 @@ public final class Dtos {
                                        int width, int height) {
     }
 
+    /** Узлы, которые слияние добавит в представление, — для контуров на холсте. */
     public record GitMergeViewDto(String archiId, List<GitMergeAddedNodeDto> addedNodes) {
     }
 

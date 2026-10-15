@@ -8,6 +8,7 @@ public enum SessionStatus {
     FAILED,
     REJECTED;
 
+    /** Конечное ли состояние: из него переходов нет. */
     public boolean terminal() {
         return this == COMPLETED || this == FAILED || this == REJECTED;
     }

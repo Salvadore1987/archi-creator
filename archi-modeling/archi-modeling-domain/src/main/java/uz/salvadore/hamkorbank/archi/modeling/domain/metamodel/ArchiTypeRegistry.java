@@ -41,10 +41,12 @@ public final class ArchiTypeRegistry {
         this.concepts = Collections.unmodifiableMap(concepts);
     }
 
+    /** Каталог ArchiMate 3.2, общий для всего приложения. */
     public static ArchiTypeRegistry archimate32() {
         return ARCHIMATE_32;
     }
 
+    /** Определение типа в каталоге; пусто — тип каталогу не известен. */
     public Optional<ConceptDefinition> find(ArchiType type) {
         return Optional.ofNullable(concepts.get(type));
     }
@@ -58,6 +60,7 @@ public final class ArchiTypeRegistry {
         }
     }
 
+    /** Слой типа; у типа вне каталога — {@link Layer#OTHER}. */
     public Layer layerOf(ArchiType type) {
         return find(type).map(ConceptDefinition::layer).orElse(Layer.OTHER);
     }

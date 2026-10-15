@@ -14,6 +14,7 @@ public final class XmlEscaping {
     private XmlEscaping() {
     }
 
+    /** Значение для атрибута XML: экранирует разметку, кавычки и переводы строк. */
     public static String attribute(String value) {
         StringBuilder out = new StringBuilder(value.length() + 8);
         for (int i = 0; i < value.length(); i++) {
@@ -32,6 +33,7 @@ public final class XmlEscaping {
         return out.toString();
     }
 
+    /** Значение для текста элемента XML: экранирует разметку и возврат каретки. */
     public static String text(String value) {
         StringBuilder out = new StringBuilder(value.length() + 8);
         for (int i = 0; i < value.length(); i++) {

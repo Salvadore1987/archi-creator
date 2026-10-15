@@ -4,7 +4,7 @@
         "https://checkstyle.org/dtds/configuration_1_3.dtd">
 <!--
     Форматирование, которое держит сборка: длина строки и табуляция — по тексту
-    файла, импорты — по дереву разбора.
+    файла, импорты и Javadoc — по дереву разбора.
 -->
 <module name="Checker">
     <property name="charset" value="UTF-8"/>
@@ -23,6 +23,12 @@
         <property name="eachLine" value="true"/>
     </module>
 
+    <!-- Javadoc обязателен в основном коде; тесты читаются по @DisplayName. -->
+    <module name="SuppressionSingleFilter">
+        <property name="checks" value="MissingJavadocType|MissingJavadocMethod|JavadocVariable"/>
+        <property name="files" value="[\\/]src[\\/]test[\\/]"/>
+    </module>
+
     <module name="TreeWalker">
         <module name="AvoidStarImport"/>
         <module name="UnusedImports"/>
@@ -32,6 +38,28 @@
             <property name="customImportOrderRules" value="STATIC###THIRD_PARTY_PACKAGE"/>
             <property name="sortImportsInGroupAlphabetically" value="true"/>
             <property name="separateLineBetweenGroups" value="true"/>
+        </module>
+
+        <!--
+            Javadoc у публичных типов, публичных и protected методов и публичных констант.
+            Метод с @Override описан в объявлении, которое он реализует.
+        -->
+        <module name="MissingJavadocType">
+            <property name="scope" value="public"/>
+        </module>
+        <module name="MissingJavadocMethod">
+            <property name="scope" value="protected"/>
+            <property name="allowMissingPropertyJavadoc" value="false"/>
+            <property name="tokens" value="METHOD_DEF,ANNOTATION_FIELD_DEF"/>
+        </module>
+        <module name="JavadocVariable">
+            <property name="accessModifiers" value="public"/>
+            <property name="tokens" value="VARIABLE_DEF"/>
+        </module>
+        <!-- Публичное поле, а не константа: поле JPA-сущности, его описывает столбец. -->
+        <module name="SuppressionXpathSingleFilter">
+            <property name="checks" value="JavadocVariable"/>
+            <property name="query" value="//VARIABLE_DEF[not(./MODIFIERS/LITERAL_STATIC and ./MODIFIERS/FINAL)]"/>
         </module>
     </module>
 </module>

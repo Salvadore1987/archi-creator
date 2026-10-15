@@ -20,6 +20,7 @@ public final class InvalidValueException extends IllegalArgumentException {
         this(Message.of(key, args));
     }
 
+    /** Почему значение отклонено — сообщение с ключом для перевода на границе. */
     public Message reason() {
         return reason;
     }

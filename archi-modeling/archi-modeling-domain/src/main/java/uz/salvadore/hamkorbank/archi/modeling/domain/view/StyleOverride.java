@@ -15,6 +15,7 @@ public record StyleOverride(Optional<String> fillColor, Optional<String> font, O
 
     private static final Pattern COLOR = Pattern.compile("^#[0-9a-fA-F]{6}$");
 
+    /** Отсутствие собственного стиля: всё берётся из токенов слоя. */
     public static final StyleOverride NONE =
             new StyleOverride(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
 
@@ -29,6 +30,7 @@ public record StyleOverride(Optional<String> fillColor, Optional<String> font, O
         lineColor.ifPresent(c -> requireColor(c, "lineColor"));
     }
 
+    /** Подходит ли строка как цвет: {@code #} и шесть шестнадцатеричных цифр. */
     public static boolean validColor(String value) {
         return value != null && COLOR.matcher(value).matches();
     }
@@ -39,6 +41,7 @@ public record StyleOverride(Optional<String> fillColor, Optional<String> font, O
         }
     }
 
+    /** Нет ли переопределений вовсе. */
     public boolean empty() {
         return this.equals(NONE);
     }

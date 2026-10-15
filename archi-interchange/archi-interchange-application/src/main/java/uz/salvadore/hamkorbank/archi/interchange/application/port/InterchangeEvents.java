@@ -6,5 +6,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.DomainEvent;
 /** События interchange ({@code ImportApplied}, {@code ExportCompleted}) — после коммита. */
 public interface InterchangeEvents {
 
+    /** Отправляет события после коммита транзакции. */
     void publish(Collection<DomainEvent> events);
 }

@@ -39,15 +39,18 @@ public record Element(ElementId id, FolderId folderId, ArchiId archiId, ArchiTyp
         }
     }
 
+    /** Слой ArchiMate по типу элемента; у незнакомого типа — прочее. */
     public Layer layer() {
         return ArchiTypeRegistry.archimate32().layerOf(archiType);
     }
 
+    /** Тот же элемент с новыми именем, документацией и свойствами; место в дереве не меняется. */
     public Element edited(String newName, Optional<String> newDocumentation, List<PropertyEntry> newProperties) {
         return new Element(id, folderId, archiId, archiType, newName, newDocumentation, newProperties, sortOrder,
                 supported, rawXml);
     }
 
+    /** Тот же элемент в другой папке и на другой позиции. */
     public Element movedTo(FolderId folder, SortOrder order) {
         return new Element(id, folder, archiId, archiType, name, documentation, properties, order, supported, rawXml);
     }

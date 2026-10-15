@@ -91,6 +91,7 @@ public final class GitMergeService {
                             int x, int y, int width, int height) {
     }
 
+    /** Узлы, которые слияние добавит в представление. */
     public record ViewAdditions(ArchiId view, List<AddedNode> nodes) {
 
         public ViewAdditions {
@@ -118,6 +119,7 @@ public final class GitMergeService {
             findings = List.copyOf(findings);
         }
 
+        /** Итог слияния совпадает с текущим содержимым: применение версии не создаст. */
         public boolean unchanged() {
             return baseHash.equals(targetHash);
         }

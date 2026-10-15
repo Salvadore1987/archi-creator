@@ -144,6 +144,7 @@ public final class OefWriter {
         }
     }
 
+    /** Документ модели в Open Exchange Format вместе с отчётом о потерях. */
     public Written write(ModelDocument document) {
         return new Run(document).write();
     }

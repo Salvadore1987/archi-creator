@@ -20,10 +20,12 @@ public record BudgetPeriod(String value) {
         }
     }
 
+    /** Период календарного месяца. */
     public static BudgetPeriod of(YearMonth month) {
         return new BudgetPeriod(month.toString());
     }
 
+    /** Период из строки {@code YYYY-MM}; иной формат — {@link InvalidValueException}. */
     public static BudgetPeriod parse(String value) {
         try {
             return of(YearMonth.parse(value));
@@ -37,6 +39,7 @@ public record BudgetPeriod(String value) {
         return of(YearMonth.from(instant.atZone(zone)));
     }
 
+    /** Календарный месяц периода. */
     public YearMonth month() {
         return YearMonth.parse(value);
     }

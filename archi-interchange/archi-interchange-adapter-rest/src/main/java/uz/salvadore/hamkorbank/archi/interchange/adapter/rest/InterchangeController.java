@@ -142,11 +142,13 @@ public class InterchangeController {
         return image(images.allViewImages(actor, id, new ImageRequest(fmt, scale, outline, background, version)));
     }
 
+    /** Настройка импорта рабочего пространства: включён ли строгий режим. */
     @GetMapping("/workspaces/{id}/import-settings")
     public ImportSettings importSettings(@PathVariable UUID id) {
         return new ImportSettings(imports.strictImport(id));
     }
 
+    /** Включает или выключает строгий режим импорта пространства и отдаёт итоговую настройку. */
     @PutMapping("/workspaces/{id}/import-settings")
     public ImportSettings configure(EditorIdentity actor, @PathVariable UUID id, @RequestBody ImportSettings settings) {
         imports.configureStrictImport(actor, id, settings.strictImport());

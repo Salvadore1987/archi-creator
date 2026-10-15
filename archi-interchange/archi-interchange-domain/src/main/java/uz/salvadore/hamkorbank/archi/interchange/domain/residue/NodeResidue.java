@@ -31,6 +31,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
  */
 public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> items) {
 
+    /** Остаток без атрибутов и содержимого. */
     public static final NodeResidue EMPTY = new NodeResidue(List.of(), List.of());
 
     public NodeResidue {
@@ -38,10 +39,12 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
         items = List.copyOf(items);
     }
 
+    /** Остатка нет: ни атрибутов, ни содержимого. */
     public boolean empty() {
         return attributes.isEmpty() && items.isEmpty();
     }
 
+    /** Атрибут остатка по имени. */
     public Optional<ResidueAttribute> attribute(String name) {
         return attributes.stream().filter(a -> a.name().equals(name)).findFirst();
     }
@@ -52,6 +55,7 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
                 .map(ResidueItem.Slot.class::cast).toList();
     }
 
+    /** Строковая форма остатка для хранения. */
     public String encode() {
         StringWriter out = new StringWriter();
         try {
@@ -95,6 +99,7 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
         return out.toString();
     }
 
+    /** Остаток из строковой формы. */
     public static NodeResidue decode(String encoded) {
         Objects.requireNonNull(encoded, "encoded");
         try {

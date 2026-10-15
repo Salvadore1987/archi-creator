@@ -10,6 +10,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueExcep
  */
 public record GitAuthor(String subject, String name, String email) {
 
+    /** Наибольшая длина субъекта, имени и почты автора. */
     public static final int FIELD_MAX = 200;
     private static final Pattern EMAIL = Pattern.compile("^[^\\s<>@]+@[^\\s<>@]+$");
 

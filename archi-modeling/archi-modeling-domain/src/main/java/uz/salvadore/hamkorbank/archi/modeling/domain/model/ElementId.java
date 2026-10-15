@@ -12,14 +12,17 @@ public record ElementId(UUID value) implements ConceptRef {
         Objects.requireNonNull(value, "ElementId");
     }
 
+    /** Ключ из готового значения. */
     public static ElementId of(UUID value) {
         return new ElementId(value);
     }
 
+    /** Ключ из строкового представления UUID. */
     public static ElementId of(String value) {
         return new ElementId(UUIDUtil.uuid(value));
     }
 
+    /** Новый ключ от генератора приложения. */
     public static ElementId next(UuidV7 uuids) {
         return new ElementId(uuids.next());
     }

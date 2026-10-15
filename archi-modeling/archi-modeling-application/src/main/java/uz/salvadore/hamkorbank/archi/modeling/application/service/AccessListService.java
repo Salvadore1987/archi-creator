@@ -18,6 +18,7 @@ public final class AccessListService {
         this.kernel = kernel;
     }
 
+    /** Список доступа модели; читать его может любой, кому модель видна. */
     public ModelAccessList get(EditorIdentity actor, ModelId modelId) {
         return kernel.run(Operation.OPEN_MODEL, actor, () -> kernel.unitOfWork.read(() -> {
             kernel.visibleHeader(modelId, actor, AclAccess.READ);

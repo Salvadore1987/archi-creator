@@ -9,5 +9,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
  */
 public interface TextCatalog {
 
+    /** Текст сообщения на языке текущего запроса. */
     String text(Message message);
 }

@@ -12,14 +12,17 @@ public record RelationshipId(UUID value) implements ConceptRef {
         Objects.requireNonNull(value, "RelationshipId");
     }
 
+    /** Ключ из готового значения. */
     public static RelationshipId of(UUID value) {
         return new RelationshipId(value);
     }
 
+    /** Ключ из строкового представления UUID. */
     public static RelationshipId of(String value) {
         return new RelationshipId(UUIDUtil.uuid(value));
     }
 
+    /** Новый ключ от генератора приложения. */
     public static RelationshipId next(UuidV7 uuids) {
         return new RelationshipId(uuids.next());
     }

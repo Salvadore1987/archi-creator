@@ -8,10 +8,13 @@ import java.util.function.Supplier;
  */
 public interface UnitOfWork {
 
+    /** Выполняет работу в транзакции на запись и возвращает её результат. */
     <T> T write(Supplier<T> work);
 
+    /** Выполняет работу в транзакции только на чтение. */
     <T> T read(Supplier<T> work);
 
+    /** Транзакция на запись для работы без результата. */
     default void write(Runnable work) {
         write(() -> {
             work.run();

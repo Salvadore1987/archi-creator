@@ -40,6 +40,7 @@ public record ImportFinding(FindingId id, Severity severity, String code, Messag
         return Message.of(InterchangeMessages.STORED_TEXT, text);
     }
 
+    /** Находка уровня {@code ERROR} по дефекту разбора документа. */
     public static ImportFinding of(FindingId id, DocumentDefect defect) {
         Optional<ArchiId> archiId = defect.archiId().filter(ArchiId::isValid).map(ArchiId::of);
         return new ImportFinding(id, Severity.ERROR, defect.code(), defect.message(), archiId, defect.line());

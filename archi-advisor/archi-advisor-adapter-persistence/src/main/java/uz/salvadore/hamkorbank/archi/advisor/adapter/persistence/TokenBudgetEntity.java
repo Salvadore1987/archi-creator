@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
+/** Строка бюджета периода: только расход и порог; лимит и выключатель хранятся в настройках пространства. */
 @Entity
 @Table(name = "token_budget")
 public class TokenBudgetEntity {

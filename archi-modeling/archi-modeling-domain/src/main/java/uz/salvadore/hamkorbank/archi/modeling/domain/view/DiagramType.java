@@ -18,10 +18,15 @@ public record DiagramType(String value) {
 
     private static final Pattern FORMAT = Pattern.compile("^[A-Za-z][A-Za-z0-9]*:[A-Za-z][A-Za-z0-9]*$");
 
+    /** Диаграмма ArchiMate — единственный вид представления, который редактируется. */
     public static final DiagramType DIAGRAM_MODEL = new DiagramType("archimate:ArchimateDiagramModel");
+    /** Узел над элементом модели. */
     public static final DiagramType DIAGRAM_OBJECT = new DiagramType("archimate:DiagramObject");
+    /** Группа на представлении. */
     public static final DiagramType GROUP = new DiagramType("archimate:Group");
+    /** Заметка на представлении. */
     public static final DiagramType NOTE = new DiagramType("archimate:Note");
+    /** Ребро представления. */
     public static final DiagramType CONNECTION = new DiagramType("archimate:Connection");
 
     public DiagramType {
@@ -31,10 +36,12 @@ public record DiagramType(String value) {
         }
     }
 
+    /** Тип из строки; строка не в виде {@code префикс:Имя} отклоняется. */
     public static DiagramType of(String value) {
         return new DiagramType(value);
     }
 
+    /** Подходит ли строка как тип: проверка без исключения. */
     public static boolean valid(String value) {
         return value != null && FORMAT.matcher(value).matches();
     }

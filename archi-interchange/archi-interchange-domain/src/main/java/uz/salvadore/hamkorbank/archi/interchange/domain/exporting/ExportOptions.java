@@ -24,6 +24,7 @@ public record ExportOptions(Optional<BigDecimal> scale, Optional<Boolean> outlin
         }
     }
 
+    /** Параметры по умолчанию: ни один не задан. */
     public static ExportOptions none() {
         return new ExportOptions(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.empty());

@@ -6,5 +6,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 /** Поиск сессии по ключу идемпотентности. Реализует хранилище сессий (этап 2). */
 public interface ImportSessionLookup {
 
+    /** Сессия пространства с данным ключом идемпотентности. */
     Optional<ImportSession> findByIdempotencyKey(WorkspaceId workspaceId, String idempotencyKey);
 }

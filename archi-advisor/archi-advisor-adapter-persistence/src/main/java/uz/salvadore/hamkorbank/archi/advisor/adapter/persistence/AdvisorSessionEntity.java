@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
+/** Строка сессии помощника: параметры обращения, состояние, расход и результат в столбце {@code result}. */
 @Entity
 @Table(name = "advisor_session")
 public class AdvisorSessionEntity {

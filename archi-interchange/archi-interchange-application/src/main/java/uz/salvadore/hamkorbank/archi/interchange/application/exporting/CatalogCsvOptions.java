@@ -22,6 +22,10 @@ public record CatalogCsvOptions(char separator, Optional<String> folderArchiId) 
         }
     }
 
+    /**
+     * Параметры из запроса: разделитель одним символом или словом {@code tab}, по умолчанию {@code ;};
+     * пустая папка — вся модель.
+     */
     public static CatalogCsvOptions of(Optional<String> separator, Optional<String> folderArchiId) {
         String value = separator.orElse(";");
         if (value.length() != 1 && !value.equals("tab")) {

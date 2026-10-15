@@ -70,7 +70,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  */
 public final class GitPublishingService {
 
+    /** Трейлер коммита с идентификатором модели — по нему узнаётся свой коммит при повторе. */
     public static final String TRAILER_MODEL = "Archi-Model-Id";
+    /** Трейлер коммита с номером опубликованной версии. */
     public static final String TRAILER_VERSION = "Archi-Version";
     static final String MODELS_DIR = GitRemotes.MODELS_DIR;
     static final String GITATTRIBUTES = ".gitattributes";
@@ -86,6 +88,7 @@ public final class GitPublishingService {
     public record ModelGitStatus(ModelId model, State state, int pending, Optional<PublishedVersions.Published> last,
                                  Optional<Long> divergedVersionNo) {
 
+        /** Всё опубликовано, версии ждут очереди или публикация встала на расхождении с веткой. */
         public enum State { SYNCED, PENDING, DIVERGED }
     }
 
@@ -170,6 +173,7 @@ public final class GitPublishingService {
         });
     }
 
+    /** Состояние публикации модели: очередь, последняя опубликованная версия, расхождение. */
     public ModelGitStatus status(ModelId model) {
         return unitOfWork.read(() -> {
             Optional<GitOutbox.Entry> head = outbox.head(model);

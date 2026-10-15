@@ -28,14 +28,17 @@ public record ModelFolder(FolderId id, Optional<FolderId> parentId, ArchiId arch
         }
     }
 
+    /** Корневая ли папка: у корня есть тип и нет родителя. */
     public boolean root() {
         return folderType.isPresent();
     }
 
+    /** Та же папка с новым именем. */
     public ModelFolder withName(String newName) {
         return new ModelFolder(id, parentId, archiId, newName, folderType, sortOrder, rawXml);
     }
 
+    /** Та же папка под другим родителем и на другой позиции. */
     public ModelFolder movedTo(FolderId newParent, SortOrder newOrder) {
         return new ModelFolder(id, Optional.of(newParent), archiId, name, folderType, newOrder, rawXml);
     }

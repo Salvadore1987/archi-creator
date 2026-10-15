@@ -35,10 +35,12 @@ public enum InterchangeOperation {
         this.roles = EnumSet.of(first, rest);
     }
 
+    /** Имя сценария — для метрик и сообщения об отказе. */
     public String useCase() {
         return useCase;
     }
 
+    /** Отказывает с запретом доступа, если ни одна роль актора не допускает операцию. */
     public void require(EditorIdentity actor) {
         if (actor.roles().stream().noneMatch(roles::contains)) {
             throw new InterchangeException(InterchangeCodes.ACCESS_DENIED, Failure.FORBIDDEN,

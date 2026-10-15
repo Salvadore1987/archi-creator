@@ -12,14 +12,17 @@ public record TokenBudgetId(UUID value) {
         Objects.requireNonNull(value, "TokenBudgetId");
     }
 
+    /** Ключ из значения UUID. */
     public static TokenBudgetId of(UUID value) {
         return new TokenBudgetId(value);
     }
 
+    /** Ключ из строки UUID; неверный формат — {@link IllegalArgumentException}. */
     public static TokenBudgetId of(String value) {
         return new TokenBudgetId(UUIDUtil.uuid(value));
     }
 
+    /** Новый ключ от генератора приложения. */
     public static TokenBudgetId next(UuidV7 uuids) {
         return new TokenBudgetId(uuids.next());
     }

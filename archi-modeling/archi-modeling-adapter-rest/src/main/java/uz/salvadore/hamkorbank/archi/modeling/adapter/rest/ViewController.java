@@ -75,6 +75,7 @@ public class ViewController {
         this.views = views;
     }
 
+    /** Создаёт представление — {@code 201} с адресом. */
     @PostMapping("/models/{id}/views")
     public ResponseEntity<ViewSummary> create(EditorIdentity actor, @PathVariable UUID id,
                                               @RequestBody CreateViewRequest request,
@@ -85,11 +86,13 @@ public class ViewController {
         return ResponseEntity.created(URI.create("/api/v1/views/" + view.id())).body(DtoMapper.view(view));
     }
 
+    /** Открывает представление: узлы, рёбра и их оформление. */
     @GetMapping("/views/{id}")
     public ViewPayload open(EditorIdentity actor, @PathVariable UUID id) {
         return DtoMapper.payload(queries.openView(actor, ViewId.of(id)));
     }
 
+    /** Сохраняет границы узлов и точки перегиба рёбер — {@code 204}. */
     @PutMapping("/views/{id}/layout")
     public ResponseEntity<Void> layout(EditorIdentity actor, @PathVariable UUID id, @RequestBody LayoutPatch patch) {
         Map<ViewNodeId, Bounds> nodes = new LinkedHashMap<>();
@@ -129,6 +132,7 @@ public class ViewController {
                 : ResponseEntity.ok(body);
     }
 
+    /** Переносит узел в другой родительский узел или на верхний уровень представления. */
     @PutMapping("/view-nodes/{id}/parent")
     public ViewNodeDto moveToParent(EditorIdentity actor, @PathVariable UUID id,
                                     @RequestBody MoveNodeRequest request) {
@@ -136,6 +140,7 @@ public class ViewController {
                 Optional.ofNullable(request.parentId()).map(ViewNodeId::of), request.x(), request.y()));
     }
 
+    /** Правит подпись, текст и собственный стиль узла. */
     @PatchMapping("/view-nodes/{id}")
     public ViewNodeDto editNode(EditorIdentity actor, @PathVariable UUID id, @RequestBody EditNodeRequest request) {
         return DtoMapper.node(views.editNode(actor, ViewNodeId.of(id), Optional.ofNullable(request.label()),
@@ -143,12 +148,14 @@ public class ViewController {
                 Optional.ofNullable(request.style()).map(ViewController::style)));
     }
 
+    /** Правит собственный стиль ребра. */
     @PatchMapping("/view-edges/{id}")
     public ViewEdgeDto editEdge(EditorIdentity actor, @PathVariable UUID id, @RequestBody EditEdgeRequest request) {
         return DtoMapper.edge(views.editEdge(actor, ViewEdgeId.of(id),
                 Optional.ofNullable(request.style()).map(ViewController::style).orElse(StyleOverride.NONE)));
     }
 
+    /** Удаляет ребро с представления; связь в модели остаётся. */
     @DeleteMapping("/view-edges/{id}")
     public ResponseEntity<Void> removeEdge(EditorIdentity actor, @PathVariable UUID id) {
         views.removeEdge(actor, ViewEdgeId.of(id));
@@ -170,6 +177,7 @@ public class ViewController {
         return edge.created() ? ResponseEntity.status(HttpStatus.CREATED).body(body) : ResponseEntity.ok(body);
     }
 
+    /** Удаляет узел с представления; элемент в модели остаётся. */
     @DeleteMapping("/view-nodes/{id}")
     public ResponseEntity<Void> remove(EditorIdentity actor, @PathVariable UUID id) {
         views.removeNode(actor, ViewNodeId.of(id));

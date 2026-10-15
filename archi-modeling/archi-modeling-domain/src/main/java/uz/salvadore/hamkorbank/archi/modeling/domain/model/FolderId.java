@@ -12,14 +12,17 @@ public record FolderId(UUID value) {
         Objects.requireNonNull(value, "FolderId");
     }
 
+    /** Ключ из готового значения. */
     public static FolderId of(UUID value) {
         return new FolderId(value);
     }
 
+    /** Ключ из строкового представления UUID. */
     public static FolderId of(String value) {
         return new FolderId(UUIDUtil.uuid(value));
     }
 
+    /** Новый ключ от генератора приложения. */
     public static FolderId next(UuidV7 uuids) {
         return new FolderId(uuids.next());
     }

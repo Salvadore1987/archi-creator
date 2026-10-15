@@ -14,10 +14,12 @@ public final class ExportRuleViolationException extends IllegalStateException {
         this.reason = reason;
     }
 
+    /** Сообщение с ключом, которое переводится на язык запроса. */
     public Message reason() {
         return reason;
     }
 
+    /** Код нарушенного правила выгрузки. */
     public String invariant() {
         return invariant;
     }

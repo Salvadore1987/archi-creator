@@ -30,6 +30,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
  */
 public final class AdvisorSession {
 
+    /** Наибольшая длина ключа идемпотентности. */
     public static final int IDEMPOTENCY_KEY_MAX = 64;
 
     private final AdvisorSessionId id;
@@ -199,82 +200,102 @@ public final class AdvisorSession {
         return fingerprint.equals(request.fingerprint());
     }
 
+    /** Ключ сессии. */
     public AdvisorSessionId id() {
         return id;
     }
 
+    /** Пространство, в бюджет которого идёт расход. */
     public WorkspaceId workspaceId() {
         return workspaceId;
     }
 
+    /** Модель, о которой спрошено. */
     public ModelId modelId() {
         return modelId;
     }
 
+    /** Функция помощника. */
     public AdvisorFunction function() {
         return function;
     }
 
+    /** Представление, если область — одно представление. */
     public Optional<ViewId> viewId() {
         return viewId;
     }
 
+    /** Элемент, {@code archiId}, если область — элемент. */
     public Optional<String> elementId() {
         return elementId;
     }
 
+    /** Ключ идемпотентности, переданный клиентом. */
     public String idempotencyKey() {
         return idempotencyKey;
     }
 
+    /** Отпечаток параметров запроса — отличает повтор от конфликта. */
     public String fingerprint() {
         return fingerprint;
     }
 
+    /** {@code subject} автора обращения. */
     public String requestedBy() {
         return requestedBy;
     }
 
+    /** Когда обращение поступило. */
     public Instant requestedAt() {
         return requestedAt;
     }
 
+    /** Текущее состояние. */
     public SessionStatus status() {
         return status;
     }
 
+    /** Размер контекста в токенах; пусто, пока поток не начался. */
     public Optional<Integer> contextSize() {
         return contextSize;
     }
 
+    /** Пришлось ли усечь контекст модели. */
     public boolean contextTruncated() {
         return contextTruncated;
     }
 
+    /** Израсходованные токены; у отклонённой сессии — ноль. */
     public TokenUsage usage() {
         return usage;
     }
 
+    /** Замечания ревью в порядке поступления. */
     public List<Finding> findings() {
         return List.copyOf(findings);
     }
 
+    /** План — у завершённой функции плана. */
     public Optional<ModelPlan> plan() {
         return plan;
     }
 
+    /** Ответ — у завершённых подсказки и документации. */
     public Optional<AdvisorAnswer> answer() {
         return answer;
     }
 
+    /** Причина отказа — у отклонённой сессии. */
     public Optional<RejectionReason> rejectionReason() {
         return rejectionReason;
     }
 
+    /** Когда пришёл первый токен ответа. */
     public Optional<Instant> firstTokenAt() {
         return firstTokenAt;
     }
 
+    /** Когда сессия стала терминальной. */
     public Optional<Instant> finishedAt() {
         return finishedAt;
     }

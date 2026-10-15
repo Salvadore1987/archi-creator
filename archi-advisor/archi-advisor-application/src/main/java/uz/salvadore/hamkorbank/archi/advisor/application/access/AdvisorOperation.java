@@ -37,10 +37,12 @@ public enum AdvisorOperation {
         };
     }
 
+    /** Имя use case'а — метка метрик и аудита. */
     public String useCase() {
         return useCase;
     }
 
+    /** Роли, которым операция доступна. */
     public Set<Role> roles() {
         return roles;
     }

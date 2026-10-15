@@ -7,13 +7,18 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 /** Пределы имён из aggregates.yaml: одинаковые для модели, папки, элемента, связи и представления. */
 public final class Names {
 
+    /** Предел длины имени. */
     public static final int MAX = 500;
 
     /** Чьё имя проверяется — подпись в сообщении об ошибке. */
     public static final Message MODEL = Message.of(ModelingMessages.NAME_OF_MODEL);
+    /** Подпись папки в сообщении о неверном имени. */
     public static final Message FOLDER = Message.of(ModelingMessages.NAME_OF_FOLDER);
+    /** Подпись элемента в сообщении о неверном имени. */
     public static final Message ELEMENT = Message.of(ModelingMessages.NAME_OF_ELEMENT);
+    /** Подпись связи в сообщении о неверном имени. */
     public static final Message RELATIONSHIP = Message.of(ModelingMessages.NAME_OF_RELATIONSHIP);
+    /** Подпись представления в сообщении о неверном имени. */
     public static final Message VIEW = Message.of(ModelingMessages.NAME_OF_VIEW);
 
     private Names() {

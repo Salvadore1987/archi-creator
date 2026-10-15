@@ -19,6 +19,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
  */
 public record ModelAccessList(ModelId modelId, List<AclEntry> entries) {
 
+    /** Код отказа, когда список доступа не пускает пользователя к модели. */
     public static final String INVARIANT = ModelingCodes.ACCESS_LIST;
 
     public ModelAccessList {
@@ -26,10 +27,12 @@ public record ModelAccessList(ModelId modelId, List<AclEntry> entries) {
         entries = List.copyOf(new LinkedHashSet<>(entries));
     }
 
+    /** Пустой список: модель открыта всем по ролям. */
     public static ModelAccessList open(ModelId modelId) {
         return new ModelAccessList(modelId, List.of());
     }
 
+    /** Пускает ли список автора команды с уровнем {@code needed}; {@code ADMIN} проходит всегда. */
     public boolean permits(EditorIdentity editor, AclAccess needed) {
         return editor.isAdmin() || entries.isEmpty()
                 || entries.stream().anyMatch(e -> e.names(editor) && e.access().covers(needed));

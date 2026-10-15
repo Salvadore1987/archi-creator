@@ -11,10 +11,12 @@ public record WorkspaceId(UUID value) {
         Objects.requireNonNull(value, "WorkspaceId");
     }
 
+    /** Ключ из значения UUID. */
     public static WorkspaceId of(UUID value) {
         return new WorkspaceId(value);
     }
 
+    /** Ключ из строки UUID; неверный формат — {@link IllegalArgumentException}. */
     public static WorkspaceId of(String value) {
         return new WorkspaceId(UUIDUtil.uuid(value));
     }

@@ -12,6 +12,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueExcep
  */
 public record GitRef(String value) {
 
+    /** Наибольшая длина ссылки. */
     public static final int MAX = 255;
     private static final Pattern NAME = Pattern.compile("^(?![/-])(?!.*//)(?!.*\\.\\.)(?!.*@\\{)(?!.*\\.lock$)"
             + "(?!.*/$)(?!.*\\.$)[^\\s~^:?*\\[\\\\\\x00-\\x1f\\x7f]+$");
@@ -24,6 +25,7 @@ public record GitRef(String value) {
         }
     }
 
+    /** Ссылка из строки без пробелов по краям. */
     public static GitRef of(String value) {
         return new GitRef(String.valueOf(value).strip());
     }

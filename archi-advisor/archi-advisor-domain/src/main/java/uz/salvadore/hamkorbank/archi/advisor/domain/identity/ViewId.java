@@ -11,10 +11,12 @@ public record ViewId(UUID value) {
         Objects.requireNonNull(value, "ViewId");
     }
 
+    /** Ключ из значения UUID. */
     public static ViewId of(UUID value) {
         return new ViewId(value);
     }
 
+    /** Ключ из строки UUID; неверный формат — {@link IllegalArgumentException}. */
     public static ViewId of(String value) {
         return new ViewId(UUIDUtil.uuid(value));
     }

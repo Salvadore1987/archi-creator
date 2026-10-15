@@ -18,6 +18,7 @@ import java.util.Map;
  */
 public final class SnapshotRetention {
 
+    /** Сколько дней снимки хранятся без исключений. */
     public static final Duration RECENT = Duration.ofDays(30);
 
     private final ZoneId zone;

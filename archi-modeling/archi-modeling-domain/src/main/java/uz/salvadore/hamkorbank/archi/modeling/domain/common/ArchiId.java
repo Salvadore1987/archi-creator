@@ -21,6 +21,7 @@ public record ArchiId(String value) {
         }
     }
 
+    /** Идентификатор из строки файла; строка проверяется по допустимому формату. */
     public static ArchiId of(String value) {
         return new ArchiId(value);
     }

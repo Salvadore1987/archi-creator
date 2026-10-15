@@ -8,6 +8,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AdvisorSessionId;
  */
 public interface AdvisorStream {
 
+    /** Сессия, которой принадлежит ответ, — известна до начала потока. */
     AdvisorSessionId sessionId();
 
     /** Отдать ответ целиком; блокирует поток выполнения до последнего кадра. */

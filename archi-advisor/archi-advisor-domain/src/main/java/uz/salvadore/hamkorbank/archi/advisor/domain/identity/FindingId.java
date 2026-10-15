@@ -12,14 +12,17 @@ public record FindingId(UUID value) {
         Objects.requireNonNull(value, "FindingId");
     }
 
+    /** Ключ из значения UUID. */
     public static FindingId of(UUID value) {
         return new FindingId(value);
     }
 
+    /** Ключ из строки UUID; неверный формат — {@link IllegalArgumentException}. */
     public static FindingId of(String value) {
         return new FindingId(UUIDUtil.uuid(value));
     }
 
+    /** Новый ключ от генератора приложения. */
     public static FindingId next(UuidV7 uuids) {
         return new FindingId(uuids.next());
     }

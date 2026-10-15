@@ -9,6 +9,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceReposito
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.Workspace;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
+/** Рабочие пространства в таблице {@code workspace}: modeling читает и вставляет только имя и время создания. */
 @Repository
 public class JpaWorkspaceRepository implements WorkspaceRepository {
 

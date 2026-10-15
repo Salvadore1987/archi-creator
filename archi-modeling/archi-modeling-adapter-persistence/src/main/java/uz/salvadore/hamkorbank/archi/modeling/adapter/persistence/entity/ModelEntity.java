@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/** Строка заголовка модели: имя, статус жизненного цикла, автор, версия строки и остаток XML корня. */
 @Entity
 @Table(name = "model")
 public class ModelEntity {

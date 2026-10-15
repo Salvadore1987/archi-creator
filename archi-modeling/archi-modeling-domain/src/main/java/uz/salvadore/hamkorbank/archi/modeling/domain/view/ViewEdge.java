@@ -36,15 +36,18 @@ public record ViewEdge(ViewEdgeId id, ArchiId archiId, DiagramType archiType, Op
         }
     }
 
+    /** Служит ли узел или ребро концом этого ребра. */
     public boolean touches(ViewEndpoint endpoint) {
         return source.equals(endpoint) || target.equals(endpoint);
     }
 
+    /** То же ребро с новым собственным стилем. */
     public ViewEdge withStyle(StyleOverride newStyle) {
         return new ViewEdge(id, archiId, archiType, relationshipId, source, target, bendpoints, newStyle, sortOrder,
                 rawXml);
     }
 
+    /** То же ребро с новыми точками перегиба. */
     public ViewEdge withBendpoints(List<Bendpoint> newBendpoints) {
         return new ViewEdge(id, archiId, archiType, relationshipId, source, target, newBendpoints, style, sortOrder,
                 rawXml);

@@ -97,6 +97,7 @@ public final class View {
         return view;
     }
 
+    /** Загрузка из хранилища: изменением не считается. */
     public static View restore(ViewHeader header, Collection<ViewNode> nodes, Collection<ViewEdge> edges) {
         View view = new View(header, false);
         nodes.forEach(n -> view.nodes.load(n.id(), n));
@@ -369,11 +370,13 @@ public final class View {
 
     // ── Собственные поля ────────────────────────────────────────────
 
+    /** Новое имя представления. */
     public void rename(String newName) {
         name = Names.limited(newName, Names.VIEW);
         headerChanged = true;
     }
 
+    /** Правка собственных полей: имени, документации, точки зрения и свойств; пустые строки — значения нет. */
     public void edit(String newName, Optional<String> newDocumentation, Optional<String> newViewpoint,
                      List<PropertyEntry> newProperties) {
         name = Names.limited(newName, Names.VIEW);
@@ -383,6 +386,7 @@ public final class View {
         headerChanged = true;
     }
 
+    /** Перенос в новое место дерева модели: папка и позиция берутся из места. */
     public void moveTo(ViewRef place) {
         folderId = place.folderId();
         sortOrder = place.sortOrder();
@@ -433,11 +437,13 @@ public final class View {
         return container;
     }
 
+    /** Узел этого представления; нет такого — «не найдено». */
     public ViewNode requireNode(ViewNodeId nodeId) {
         return nodes.get(nodeId)
                 .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW_NODE, nodeId)));
     }
 
+    /** Ребро этого представления; нет такого — «не найдено». */
     public ViewEdge requireEdge(ViewEdgeId edgeId) {
         return edges.get(edgeId)
                 .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW_EDGE, edgeId)));
@@ -493,47 +499,58 @@ public final class View {
 
     // ── Состояние ───────────────────────────────────────────────────
 
+    /** Собственные поля представления для записи в хранилище. */
     public ViewHeader header() {
         return new ViewHeader(id, modelId, folderId, archiId, archiType, name, documentation, viewpoint, properties,
                 sortOrder, rawXml, version);
     }
 
+    /** Внутренний ключ представления. */
     public ViewId id() {
         return id;
     }
 
+    /** Модель, которой принадлежит представление. */
     public ModelId modelId() {
         return modelId;
     }
 
+    /** Идентификатор представления в файле Archi. */
     public ArchiId archiId() {
         return archiId;
     }
 
+    /** Текущее имя представления. */
     public String name() {
         return name;
     }
 
+    /** Версия строки представления для оптимистичной блокировки. */
     public long version() {
         return version;
     }
 
+    /** Ещё не записано в хранилище: создано или импортировано в этой транзакции. */
     public boolean fresh() {
         return fresh;
     }
 
+    /** Нужно ли записать заголовок: представление новое или его поля менялись. */
     public boolean headerChanged() {
         return fresh || headerChanged;
     }
 
+    /** Узлы с учётом изменений. */
     public TrackedMap<ViewNodeId, ViewNode> nodes() {
         return nodes;
     }
 
+    /** Рёбра с учётом изменений. */
     public TrackedMap<ViewEdgeId, ViewEdge> edges() {
         return edges;
     }
 
+    /** Есть ли что записать: заголовок, узлы или рёбра. */
     public boolean changed() {
         return headerChanged() || nodes.changed() || edges.changed();
     }

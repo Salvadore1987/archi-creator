@@ -92,6 +92,7 @@ public final class SvgWriter {
         }
     }
 
+    /** Представление в SVG с отчётом о потерях и использованными глифами. */
     public Rendered write(ModelDocument document, DocumentNode view, Options options) {
         return new Drawing(new ViewScene(document, view, notation), options).draw();
     }

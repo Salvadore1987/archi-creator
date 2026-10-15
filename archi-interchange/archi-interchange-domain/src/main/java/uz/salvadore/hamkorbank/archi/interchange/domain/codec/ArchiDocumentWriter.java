@@ -13,6 +13,7 @@ public interface ArchiDocumentWriter {
      */
     void write(ModelDocument document, OutputStream out);
 
+    /** Документ в байтах {@code .archimate}. */
     default byte[] write(ModelDocument document) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         write(document, out);

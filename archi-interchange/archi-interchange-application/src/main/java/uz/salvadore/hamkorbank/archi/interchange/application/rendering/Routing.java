@@ -16,11 +16,14 @@ public final class Routing {
     private Routing() {
     }
 
+    /** Точка на холсте. */
     public record Point(double x, double y) {
     }
 
+    /** Прямоугольник фигуры в абсолютных координатах. */
     public record Rect(double x, double y, double width, double height) {
 
+        /** Центр прямоугольника. */
         public Point center() {
             return new Point(x + width / 2, y + height / 2);
         }

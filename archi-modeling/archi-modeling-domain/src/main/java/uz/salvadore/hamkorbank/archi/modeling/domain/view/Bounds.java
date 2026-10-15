@@ -11,14 +11,19 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
  */
 public record Bounds(int x, int y, int width, int height) {
 
+    /** Размер «по умолчанию» Archi: так записан узел, размер которого не меняли. */
     public static final int DEFAULT_SIZE = -1;
     /** Размер нового узла элемента, когда клиент его не задал, — как у Archi. */
     public static final int ELEMENT_WIDTH = 120;
+    /** Высота нового узла элемента, когда клиент её не задал. */
     public static final int ELEMENT_HEIGHT = 55;
     /** Размер новой группы и заметки — тоже как у Archi. */
     public static final int GROUP_WIDTH = 400;
+    /** Высота новой группы, когда клиент её не задал. */
     public static final int GROUP_HEIGHT = 140;
+    /** Ширина новой заметки, когда клиент её не задал. */
     public static final int NOTE_WIDTH = 185;
+    /** Высота новой заметки, когда клиент её не задал. */
     public static final int NOTE_HEIGHT = 80;
 
     public Bounds {
@@ -41,6 +46,7 @@ public record Bounds(int x, int y, int width, int height) {
         };
     }
 
+    /** Допустим ли размер: положительный или «по умолчанию». */
     public static boolean validSize(int size) {
         return size > 0 || size == DEFAULT_SIZE;
     }

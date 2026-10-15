@@ -35,6 +35,7 @@ public interface ModelStates {
             return Arrays.copyOf(xml, xml.length);
         }
 
+        /** Отпечаток содержимого в шестнадцатеричном виде. */
         public String hash() {
             return ContentHash.of(xml).value();
         }

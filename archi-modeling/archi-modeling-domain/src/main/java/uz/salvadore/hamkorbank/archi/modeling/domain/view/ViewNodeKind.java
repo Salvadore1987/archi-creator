@@ -21,6 +21,7 @@ public enum ViewNodeKind {
         };
     }
 
+    /** Вид узла по типу; незнакомый тип — {@link #OTHER}. */
     public static ViewNodeKind of(DiagramType type) {
         return switch (type.value()) {
             case "archimate:DiagramObject" -> DIAGRAM_OBJECT;

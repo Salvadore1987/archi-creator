@@ -14,6 +14,7 @@ import java.util.UUID;
  */
 public record RequestedIds(Optional<UUID> id, Optional<String> archiId) {
 
+    /** Клиент идентификаторов не выбирал. */
     public static final RequestedIds NONE = new RequestedIds(Optional.empty(), Optional.empty());
 
     public RequestedIds {
@@ -21,6 +22,7 @@ public record RequestedIds(Optional<UUID> id, Optional<String> archiId) {
         Objects.requireNonNull(archiId, "archiId");
     }
 
+    /** Идентификаторы из запроса; {@code null} — не заданы. */
     public static RequestedIds of(UUID id, String archiId) {
         return new RequestedIds(Optional.ofNullable(id), Optional.ofNullable(archiId));
     }

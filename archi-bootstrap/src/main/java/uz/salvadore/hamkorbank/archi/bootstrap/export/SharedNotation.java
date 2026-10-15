@@ -40,6 +40,10 @@ public final class SharedNotation {
     private SharedNotation() {
     }
 
+    /**
+     * Собирает нотацию из общих с фронтендом файлов classpath: размеры и силуэты фигур, токены стиля и иконки; подписи
+     * набираются семейством {@code family}.
+     */
     public static Notation load(String family) {
         JsonNode shapes = JsonMapper.builder().build().readTree(text(SHAPES));
         Map<String, Size> sizes = new HashMap<>();

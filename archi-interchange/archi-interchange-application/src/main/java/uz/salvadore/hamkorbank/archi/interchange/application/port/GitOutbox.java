@@ -19,16 +19,19 @@ public interface GitOutbox {
     /** Голова очереди каждой модели — самая ранняя незакрытая запись. */
     List<Entry> heads();
 
+    /** Самая ранняя незакрытая запись модели. */
     Optional<Entry> head(ModelId model);
 
     /** Сколько версий модели ещё не опубликовано. */
     int open(ModelId model);
 
+    /** Версия опубликована: запись закрывается. */
     void done(UUID id, Instant at);
 
     /** Публиковать нечего или некуда: модели нет, привязки нет. */
     void skipped(UUID id, Instant at);
 
+    /** Публикация встала: ветка разошлась с нашей историей. */
     void diverged(UUID id, String reason, Instant at);
 
     /**
@@ -37,10 +40,13 @@ public interface GitOutbox {
      */
     void supersede(ModelId model, long throughVersionNo, Instant at);
 
+    /** Сбой сети или сервера: запись повторится не раньше {@code next}. */
     void retryLater(UUID id, String reason, Instant next);
 
+    /** Состояние открытой записи: ждёт публикации или встала на расхождении. */
     enum Status { PENDING, DIVERGED }
 
+    /** Открытая запись очереди: версия модели, число попыток и время следующей. */
     record Entry(UUID id, WorkspaceId workspace, ModelId model, long versionNo, Status status, int attempts,
                  Optional<Instant> nextAttemptAt) {
     }

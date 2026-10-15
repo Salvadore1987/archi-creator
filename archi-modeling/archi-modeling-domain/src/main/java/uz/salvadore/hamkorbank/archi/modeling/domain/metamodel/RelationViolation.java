@@ -9,6 +9,7 @@ import java.util.Set;
 public record RelationViolation(ArchiType source, ArchiType target, RelationshipType relationship,
                                 Set<RelationshipType> permitted) {
 
+    /** Код находки отчёта: тот же, что у отказа при создании недопустимой связи. */
     public static final String CODE = RelationNotPermittedException.CODE;
 
     public RelationViolation {

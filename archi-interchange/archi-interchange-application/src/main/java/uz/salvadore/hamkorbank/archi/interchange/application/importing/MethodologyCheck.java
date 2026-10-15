@@ -29,11 +29,13 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationViolation
  */
 public final class MethodologyCheck {
 
+    /** Код находки о типе, которого нет в метамодели. */
     public static final String UNKNOWN_TYPE = InterchangeCodes.UNKNOWN_ELEMENT_TYPE;
 
     private final RelationMatrix matrix = RelationMatrix.archimate32();
     private final ArchiTypeRegistry registry = ArchiTypeRegistry.archimate32();
 
+    /** Находки методологии по документу: недопустимые связи и неизвестные типы. */
     public List<ImportFinding> check(ModelDocument document, Supplier<FindingId> ids) {
         Map<String, String> types = new HashMap<>();
         document.allNodes().forEach(n -> n.archiType().ifPresent(t -> types.put(n.archiId().value(), t)));

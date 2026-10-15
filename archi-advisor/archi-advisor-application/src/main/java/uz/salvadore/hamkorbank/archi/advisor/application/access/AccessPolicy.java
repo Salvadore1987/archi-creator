@@ -14,6 +14,7 @@ public final class AccessPolicy {
     private AccessPolicy() {
     }
 
+    /** Отказывает, если ни одна роль автора не даёт права на операцию. */
     public static void require(Requester requester, AdvisorOperation operation) {
         if (requester.roles().stream().noneMatch(operation.roles()::contains)) {
             throw new AdvisorException(AdvisorCodes.ACCESS_DENIED, Failure.FORBIDDEN,

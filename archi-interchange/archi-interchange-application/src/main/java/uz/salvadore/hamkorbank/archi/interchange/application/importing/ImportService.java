@@ -80,6 +80,10 @@ public final class ImportService {
         this.gate = new ImportGate(maxParallelImportsPerWorkspace);
     }
 
+    /**
+     * Импортирует файл {@code .archimate} новой моделью пространства; повтор с тем же ключом
+     * идемпотентности возвращает прежний итог.
+     */
     public ImportReport importFile(EditorIdentity actor, UUID workspaceId, String fileName, byte[] content,
                                    Optional<String> idempotencyKey) {
         InterchangeOperation operation = InterchangeOperation.IMPORT_ARCHIMATE_FILE;
@@ -108,6 +112,7 @@ public final class ImportService {
         });
     }
 
+    /** Включён ли строгий режим импорта пространства. */
     public boolean strictImport(UUID workspaceId) {
         return unitOfWork.read(() -> policy.strictImport(new WorkspaceId(workspaceId)));
     }

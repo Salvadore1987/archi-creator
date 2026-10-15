@@ -11,13 +11,16 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 /** Хранилище представлений: payload открывается по требованию, сборка — одним запросом. */
 public interface ViewRepository {
 
+    /** Представление с узлами и рёбрами. */
     Optional<View> load(ViewId id);
 
     /** Все представления модели — для снимка версии и экспорта. */
     List<View> loadAll(ModelId modelId);
 
+    /** Представление, которому принадлежит узел. */
     Optional<ViewId> viewOfNode(ViewNodeId nodeId);
 
+    /** Представление, которому принадлежит ребро. */
     Optional<ViewId> viewOfEdge(ViewEdgeId edgeId);
 
     /**
@@ -27,7 +30,9 @@ public interface ViewRepository {
      */
     List<ViewPlacements> placements(ModelId modelId);
 
+    /** Записывает представление с узлами и рёбрами. */
     void save(View view);
 
+    /** Удаляет представление вместе с узлами и рёбрами. */
     void delete(ViewId id);
 }

@@ -33,13 +33,21 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
  */
 public record ModelChanges(List<Change> changes) {
 
+    /** Поле: тип ArchiMate объекта. */
     public static final String TYPE = "type";
+    /** Поле: описание объекта. */
     public static final String DOCUMENTATION = "documentation";
+    /** Поле: свойства объекта списком. */
     public static final String PROPERTIES = "properties";
+    /** Поле: папка или родитель объекта. */
     public static final String FOLDER = "folder";
+    /** Поле: диаграмма представления целиком — узлы и рёбра. */
     public static final String DIAGRAM = "diagram";
+    /** Поле: относительный порядок детей. */
     public static final String ORDER = "order";
+    /** Поле: остаток XML, который столбцы не знают. */
     public static final String RAW_XML = "raw_xml";
+    /** Поле: идентификатор модели. */
     public static final String ID = "id";
 
     private static final String XSI_TYPE = "xsi:type";
@@ -81,6 +89,7 @@ public record ModelChanges(List<Change> changes) {
         changes = List.copyOf(changes);
     }
 
+    /** Изменения при переходе от одного состояния модели к другому. */
     public static ModelChanges between(ModelDocument before, ModelDocument after) {
         Map<ArchiId, Entry> old = index(before);
         Map<ArchiId, Entry> now = index(after);
@@ -103,6 +112,7 @@ public record ModelChanges(List<Change> changes) {
         return new ModelChanges(changes);
     }
 
+    /** Состояния не различаются. */
     public boolean isEmpty() {
         return changes.isEmpty();
     }

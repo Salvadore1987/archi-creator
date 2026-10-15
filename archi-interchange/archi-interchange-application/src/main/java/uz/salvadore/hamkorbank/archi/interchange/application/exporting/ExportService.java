@@ -55,13 +55,17 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  */
 public final class ExportService {
 
+    /** Тип содержимого файла {@code .archimate} в ответе. */
     public static final String ARCHIMATE_MEDIA_TYPE = "application/xml";
+    /** Имя файла отчёта о потерях внутри архива выгрузки. */
     public static final String LOSS_REPORT_FILE = "loss-report.json";
     private static final long FIXED_ENTRY_TIME = 0L;
 
     /** Имена форматов в запросе — как в контракте API; формат по умолчанию — файл модели. */
     public static final String FORMAT_ARCHIMATE = "archimate";
+    /** Каталог элементов и связей в CSV. */
     public static final String FORMAT_CSV = "csv";
+    /** Файл Open Exchange Format с отчётом о потерях. */
     public static final String FORMAT_OEF = "oef";
 
     private static final Map<String, ExportFormat> FORMATS = Map.of(
@@ -118,6 +122,7 @@ public final class ExportService {
         };
     }
 
+    /** Файл {@code .archimate} зафиксированной версии модели; без номера — последней. */
     public Export archimate(EditorIdentity actor, UUID modelId, Optional<Long> versionNo) {
         InterchangeOperation operation = InterchangeOperation.EXPORT_ARCHIMATE;
         return metrics.observe(operation.useCase(), () -> {

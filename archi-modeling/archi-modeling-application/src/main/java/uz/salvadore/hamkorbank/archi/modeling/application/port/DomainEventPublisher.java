@@ -9,5 +9,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.DomainEvent;
  */
 public interface DomainEventPublisher {
 
+    /** Публикует события после коммита текущей транзакции, вне транзакции — сразу. */
     void publish(Collection<DomainEvent> events);
 }

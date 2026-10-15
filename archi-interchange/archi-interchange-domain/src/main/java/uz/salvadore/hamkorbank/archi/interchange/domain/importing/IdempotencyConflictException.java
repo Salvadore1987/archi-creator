@@ -11,7 +11,9 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
  */
 public final class IdempotencyConflictException extends RuntimeException {
 
+    /** Код ошибки: ключ идемпотентности уже занят файлом с другим содержимым. */
     public static final String CODE = InterchangeCodes.IDEMPOTENCY_CONFLICT;
+    /** Код нарушенного правила идемпотентности импорта. */
     public static final String INVARIANT = InterchangeCodes.IMPORT_IDEMPOTENCY;
 
     private final transient ImportSession existing;
@@ -23,6 +25,7 @@ public final class IdempotencyConflictException extends RuntimeException {
         this.submitted = submitted;
     }
 
+    /** Сообщение с ключом: ключ, прежний и присланный отпечатки. */
     public Message reason() {
         return reason(existing, submitted);
     }
@@ -32,6 +35,7 @@ public final class IdempotencyConflictException extends RuntimeException {
                 submitted);
     }
 
+    /** Сессия, которая уже заняла ключ. */
     public ImportSession existing() {
         return existing;
     }

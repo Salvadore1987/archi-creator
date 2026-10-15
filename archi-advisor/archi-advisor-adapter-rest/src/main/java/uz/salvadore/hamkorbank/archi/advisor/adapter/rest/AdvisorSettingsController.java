@@ -29,16 +29,19 @@ public class AdvisorSettingsController {
         this.admin = admin;
     }
 
+    /** Включён ли помощник и в каком состоянии бюджет текущего месяца. */
     @GetMapping("/status")
     public StatusDto status(Requester requester, @RequestParam Optional<UUID> workspaceId) {
         return DtoMapper.status(admin.status(requester, workspace(workspaceId)));
     }
 
+    /** Выключатель и месячный лимит токенов пространства. */
     @GetMapping("/settings")
     public SettingsDto settings(Requester requester, @RequestParam Optional<UUID> workspaceId) {
         return DtoMapper.settings(admin.settings(requester, workspace(workspaceId)));
     }
 
+    /** Изменить выключатель и лимит; без поля {@code enabled} запрос не разбирается. */
     @PutMapping("/settings")
     public SettingsDto change(Requester requester, @RequestParam Optional<UUID> workspaceId,
                               @RequestBody SettingsDto body) {
@@ -49,6 +52,7 @@ public class AdvisorSettingsController {
                 Optional.ofNullable(body.monthlyTokenLimit())));
     }
 
+    /** Расход токенов за период — по авторам и по функциям. */
     @GetMapping("/usage")
     public UsageDto usage(Requester requester, @RequestParam Optional<UUID> workspaceId,
                           @RequestParam Optional<String> period) {

@@ -23,6 +23,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.ViewId;
 public record AdvisorRequest(AdvisorFunction function, ModelId modelId, Optional<ViewId> viewId,
                              Optional<String> elementId, Optional<String> prompt) {
 
+    /** Наибольшая длина описания для плана, в символах. */
     public static final int PROMPT_MAX = 4000;
 
     public AdvisorRequest {
@@ -56,20 +57,24 @@ public record AdvisorRequest(AdvisorFunction function, ModelId modelId, Optional
         }
     }
 
+    /** Ревью всей модели или одного представления. */
     public static AdvisorRequest review(ModelId modelId, Optional<ViewId> viewId) {
         return new AdvisorRequest(AdvisorFunction.REVIEW, modelId, viewId, Optional.empty(), Optional.empty());
     }
 
+    /** Подсказка по элементу с этим {@code archiId}. */
     public static AdvisorRequest explain(ModelId modelId, String elementId) {
         return new AdvisorRequest(AdvisorFunction.EXPLAIN, modelId, Optional.empty(), Optional.ofNullable(elementId),
                 Optional.empty());
     }
 
+    /** План фрагмента архитектуры по описанию. */
     public static AdvisorRequest plan(ModelId modelId, String prompt) {
         return new AdvisorRequest(AdvisorFunction.PLAN, modelId, Optional.empty(), Optional.empty(),
                 Optional.ofNullable(prompt));
     }
 
+    /** Документация по модели, представлению или элементу. */
     public static AdvisorRequest document(ModelId modelId, Optional<ViewId> viewId, Optional<String> elementId) {
         return new AdvisorRequest(AdvisorFunction.DOCUMENT, modelId, viewId, elementId, Optional.empty());
     }

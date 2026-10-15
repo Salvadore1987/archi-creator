@@ -9,6 +9,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 /** Запись списка доступа: кто и с каким уровнем. */
 public record AclEntry(PrincipalType principalType, String principal, AclAccess access) {
 
+    /** Предел длины имени пользователя или группы в записи. */
     public static final int PRINCIPAL_MAX = 200;
 
     public AclEntry {
@@ -19,6 +20,7 @@ public record AclEntry(PrincipalType principalType, String principal, AclAccess 
         }
     }
 
+    /** Относится ли запись к автору команды: по {@code subject} для пользователя, по членству для группы. */
     public boolean names(EditorIdentity editor) {
         return switch (principalType) {
             case USER -> principal.equals(editor.subject());

@@ -72,6 +72,7 @@ public final class RelationshipService {
     public record Details(Optional<String> name, Optional<FolderId> folderId, Optional<AccessType> accessType,
                           Optional<Boolean> directed, RequestedIds ids) {
 
+        /** Детали, в которых задано только имя. */
         public static Details named(Optional<String> name) {
             return new Details(name, Optional.empty(), Optional.empty(), Optional.empty(), RequestedIds.NONE);
         }
@@ -81,6 +82,7 @@ public final class RelationshipService {
     public record Result(Relationship relationship, boolean created, Optional<ViewEdgeId> edge) {
     }
 
+    /** Создание связи только с именем и идентификаторами от сервера; дубль возвращается как есть. */
     public Result create(EditorIdentity actor, ModelId modelId, ArchiType archiType, UUID sourceId, UUID targetId,
                          Optional<String> name, Optional<EdgePlacement> placement, Optional<String> idempotencyKey) {
         return create(actor, modelId, archiType, sourceId, targetId, Details.named(name), placement, idempotencyKey);
@@ -141,6 +143,7 @@ public final class RelationshipService {
         return edge.value().id();
     }
 
+    /** Правка имени, описания и свойств связи; незаданное поле остаётся прежним. Нужна блокировка модели. */
     public Relationship update(EditorIdentity actor, RelationshipId relationshipId, Optional<String> name,
                                Optional<String> documentation,
                                Optional<List<ElementService.PropertyValue>> properties) {

@@ -86,17 +86,20 @@ public class GitController {
         return GitDtoMapper.status(publishing.push(actor, new ModelId(id)));
     }
 
+    /** Текущая привязка рабочего пространства к репозиторию. */
     @GetMapping("/workspaces/{id}/git-binding")
     public GitBindingDto binding(EditorIdentity actor, @PathVariable UUID id) {
         return GitDtoMapper.binding(bindings.binding(actor, id));
     }
 
+    /** Задаёт привязку пространства заново: адрес, ветку, ссылку на токен и авторов. */
     @PutMapping("/workspaces/{id}/git-binding")
     public GitBindingDto configure(EditorIdentity actor, @PathVariable UUID id,
                                    @RequestBody GitBindingSettingsDto settings) {
         return GitDtoMapper.binding(bindings.configure(actor, id, GitDtoMapper.settings(settings)));
     }
 
+    /** Снимает привязку пространства к репозиторию; ответ без тела. */
     @DeleteMapping("/workspaces/{id}/git-binding")
     public ResponseEntity<Void> disable(EditorIdentity actor, @PathVariable UUID id) {
         bindings.disable(actor, id);

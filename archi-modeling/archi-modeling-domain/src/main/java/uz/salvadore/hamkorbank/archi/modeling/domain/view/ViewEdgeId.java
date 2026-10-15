@@ -12,14 +12,17 @@ public record ViewEdgeId(UUID value) implements ViewEndpoint {
         Objects.requireNonNull(value, "ViewEdgeId");
     }
 
+    /** Ключ из готового значения. */
     public static ViewEdgeId of(UUID value) {
         return new ViewEdgeId(value);
     }
 
+    /** Ключ из строкового представления UUID. */
     public static ViewEdgeId of(String value) {
         return new ViewEdgeId(UUIDUtil.uuid(value));
     }
 
+    /** Новый ключ от генератора приложения. */
     public static ViewEdgeId next(UuidV7 uuids) {
         return new ViewEdgeId(uuids.next());
     }

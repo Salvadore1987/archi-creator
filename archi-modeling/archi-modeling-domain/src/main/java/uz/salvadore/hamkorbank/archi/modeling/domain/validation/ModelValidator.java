@@ -23,6 +23,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.Relationship;
  */
 public final class ModelValidator {
 
+    /** Код находки об объекте, который хранится, но не редактируется. */
     public static final String OPAQUE_CODE = ModelingCodes.OPAQUE_OBJECT;
 
     private final RelationMatrix matrix;
@@ -33,10 +34,12 @@ public final class ModelValidator {
         this.registry = registry;
     }
 
+    /** Валидатор по матрице и каталогу ArchiMate 3.2. */
     public static ModelValidator archimate32() {
         return new ModelValidator(RelationMatrix.archimate32(), ArchiTypeRegistry.archimate32());
     }
 
+    /** Находки по всей модели: нарушения матрицы связей и нередактируемые объекты. */
     public List<ValidationFinding> validate(ArchitectureModel model) {
         List<ValidationFinding> findings = new ArrayList<>();
         for (Relationship relationship : model.relationships().values()) {

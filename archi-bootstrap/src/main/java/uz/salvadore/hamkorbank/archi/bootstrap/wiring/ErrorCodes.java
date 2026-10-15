@@ -11,6 +11,7 @@ public final class ErrorCodes {
     private ErrorCodes() {
     }
 
+    /** Код отказа исключения контекста; у прочих исключений — простое имя класса. */
     public static String of(Throwable failure) {
         return switch (failure) {
             case ModelingException m -> m.code();

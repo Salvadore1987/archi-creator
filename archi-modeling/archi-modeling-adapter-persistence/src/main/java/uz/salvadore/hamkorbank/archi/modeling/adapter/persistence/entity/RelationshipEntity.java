@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/** Строка связи: тип, концы (элемент или другая связь), атрибуты Access и Association, остаток XML. */
 @Entity
 @Table(name = "relationship")
 public class RelationshipEntity {

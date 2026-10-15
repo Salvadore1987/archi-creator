@@ -8,6 +8,7 @@ public enum ImportStatus {
     APPLIED,
     REJECTED;
 
+    /** Сессия завершена: дальше переходов нет. */
     public boolean terminal() {
         return this == APPLIED || this == REJECTED;
     }

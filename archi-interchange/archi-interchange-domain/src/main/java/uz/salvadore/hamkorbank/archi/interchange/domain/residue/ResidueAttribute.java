@@ -19,14 +19,17 @@ public record ResidueAttribute(String name, Optional<String> value) {
         }
     }
 
+    /** Метка типизированного атрибута: значение придёт из столбца. */
     public static ResidueAttribute placeholder(String name) {
         return new ResidueAttribute(name, Optional.empty());
     }
 
+    /** Атрибут со значением, которого столбцы не знают. */
     public static ResidueAttribute literal(String name, String value) {
         return new ResidueAttribute(name, Optional.of(value));
     }
 
+    /** Метка типизированного атрибута, а не значение. */
     public boolean typed() {
         return value.isEmpty();
     }

@@ -39,6 +39,7 @@ public record Attributes(List<Attribute> list) implements Iterable<Attribute> {
         return new Attributes(list);
     }
 
+    /** Значение атрибута по имени. */
     public Optional<String> get(String name) {
         return list.stream().filter(a -> a.name().equals(name)).map(Attribute::value).findFirst();
     }

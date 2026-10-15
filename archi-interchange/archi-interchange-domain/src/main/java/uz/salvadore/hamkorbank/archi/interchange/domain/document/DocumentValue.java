@@ -33,6 +33,7 @@ public record DocumentValue(String tag, DocumentOrder order, Attributes attribut
         }
     }
 
+    /** Значение атрибута по имени. */
     public Optional<String> attribute(String name) {
         return attributes.get(name);
     }

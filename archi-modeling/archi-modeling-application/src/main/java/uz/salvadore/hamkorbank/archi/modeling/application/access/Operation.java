@@ -45,10 +45,12 @@ public enum Operation {
         this.roles = EnumSet.of(first, rest);
     }
 
+    /** Имя сценария — метка метрик и аудита. */
     public String useCase() {
         return useCase;
     }
 
+    /** Роли, которым операция доступна. */
     public Set<Role> roles() {
         return roles;
     }

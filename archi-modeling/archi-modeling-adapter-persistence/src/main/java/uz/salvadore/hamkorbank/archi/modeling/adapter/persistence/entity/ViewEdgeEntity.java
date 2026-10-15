@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import java.util.UUID;
 import org.hibernate.annotations.ColumnTransformer;
 
+/** Ребро представления: связь, которую оно рисует, концы (узел или другое ребро), точки перегиба и стиль. */
 @Entity
 @Table(name = "view_edge")
 public class ViewEdgeEntity {

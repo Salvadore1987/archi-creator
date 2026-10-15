@@ -23,8 +23,11 @@ public record GitBinding(WorkspaceId workspaceId, String repoUrl, String branch,
                          GitBindingStatus status, Optional<GitSha> lastCommitSha, Optional<Instant> lastCheckedAt,
                          List<GitAuthor> authors) {
 
+    /** Наибольшая длина адреса репозитория. */
     public static final int URL_MAX = 1000;
+    /** Наибольшая длина имени ветки. */
     public static final int BRANCH_MAX = 200;
+    /** Ветка, если в привязке она не задана. */
     public static final String DEFAULT_BRANCH = "main";
     private static final Pattern URL = Pattern.compile("^(https?|ssh|git|file)://\\S+$|^[\\w.-]+@[\\w.-]+:\\S+$");
     private static final Pattern BRANCH = Pattern.compile("^(?!/)(?!.*//)(?!.*\\.\\.)(?!.*@\\{)(?!.*\\.lock$)"
@@ -94,6 +97,7 @@ public record GitBinding(WorkspaceId workspaceId, String repoUrl, String branch,
                 lastCheckedAt, authors);
     }
 
+    /** Автор коммитов для данного субъекта Keycloak, если он есть в привязке. */
     public Optional<GitAuthor> authorOf(String subject) {
         return authors.stream().filter(a -> a.subject().equals(subject)).findFirst();
     }

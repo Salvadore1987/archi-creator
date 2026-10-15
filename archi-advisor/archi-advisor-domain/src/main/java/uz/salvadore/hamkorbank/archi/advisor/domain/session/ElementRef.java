@@ -20,6 +20,7 @@ public record ElementRef(String archiId, String name) {
         Objects.requireNonNull(name, "name");
     }
 
+    /** Ссылка на объект; недопустимый идентификатор — {@link InvalidValueException}. */
     public static ElementRef of(String archiId, String name) {
         return new ElementRef(archiId, name);
     }

@@ -13,6 +13,7 @@ import java.util.Optional;
  */
 public record SortOrder(long value) implements Comparable<SortOrder> {
 
+    /** Шаг между соседями при раскладке: оставляет место для вставок без перенумерации. */
     public static final long STEP = 1000;
 
     public SortOrder {
@@ -21,6 +22,7 @@ public record SortOrder(long value) implements Comparable<SortOrder> {
         }
     }
 
+    /** Позиция с заданным значением; значение должно быть положительным. */
     public static SortOrder of(long value) {
         return new SortOrder(value);
     }

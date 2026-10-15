@@ -15,6 +15,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 public record IdempotencyRecord(String scope, String actor, String key, String fingerprint, String resultRef,
                                 Instant createdAt) {
 
+    /** Предел длины ключа идемпотентности. */
     public static final int KEY_MAX = 64;
     private static final Pattern SHA256 = Pattern.compile("^[0-9a-f]{64}$");
 
