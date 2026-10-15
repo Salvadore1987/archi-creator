@@ -31,7 +31,7 @@
 | 6 | Внедрение только конструктором: `EntityManager` в 16 адаптерах | 01-04 | ArchUnit | ✅ |
 | 7 | Связи без `EAGER`: авторы привязки Git | 01-05 | ArchUnit | ✅ |
 | 8 | `findAll()` без предела: первое пространство | 01-06 | ArchUnit | ✅ |
-| 9 | Jackson 3 вместо Jackson 2 в клиенте Anthropic | 01-07 | ArchUnit | ⬜ |
+| 9 | Jackson 3 вместо Jackson 2 в клиенте Anthropic | 01-07 | ArchUnit | ✅ |
 | 10 | Ошибка потока помощника — в журнал | 01-12 | — (PMD из задачи 3 ловит только пустой `catch`) | ⬜ |
 | 11 | Javadoc по стандарту | 01-13 | Checkstyle `MissingJavadocType`, `MissingJavadocMethod`, `JavadocVariable` | ⬜ |
 | 12 | JaCoCo и пороги покрытия | 01-14 | `jacoco:check` | ⬜ |

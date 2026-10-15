@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.architecture;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.codeUnits;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 
 import com.tngtech.archunit.core.domain.JavaAnnotation;
@@ -100,6 +101,15 @@ class CodingRulesTest {
                 }
             }
         };
+    }
+
+    @Test
+    @DisplayName("JSON — Jackson 3: ни Jackson 2, ни его исключений в коде")
+    void jacksonThreeOnly() {
+        noClasses().should().dependOnClassesThat().resideInAnyPackage("com.fasterxml.jackson.databind..",
+                        "com.fasterxml.jackson.core..")
+                .because("Jackson 2 устарел в Spring Boot 4; вторая версия рядом — два набора настроек и ошибок")
+                .check(classes);
     }
 
     /**

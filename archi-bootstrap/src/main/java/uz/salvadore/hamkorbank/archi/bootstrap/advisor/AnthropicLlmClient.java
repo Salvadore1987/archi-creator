@@ -12,13 +12,14 @@ import com.anthropic.models.messages.RawContentBlockDelta;
 import com.anthropic.models.messages.RawContentBlockStartEvent;
 import com.anthropic.models.messages.RawMessageStreamEvent;
 import com.anthropic.models.messages.Tool;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.LlmListener;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.LlmPort;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.LlmRequest;
@@ -39,7 +40,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
  */
 public final class AnthropicLlmClient implements LlmPort {
 
-    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final TypeReference<Map<String, Object>> MAP = new TypeReference<>() {
     };
 
@@ -158,7 +159,7 @@ public final class AnthropicLlmClient implements LlmPort {
         private static Map<String, Object> parse(StringBuilder json) {
             try {
                 return json == null || json.isEmpty() ? Map.of() : JSON.readValue(json.toString(), MAP);
-            } catch (com.fasterxml.jackson.core.JsonProcessingException unreadable) {
+            } catch (JacksonException unreadable) {
                 // Вход не разобрался — вызов пропускается: разбор результата отбросит пустую находку.
                 return Map.of();
             }
