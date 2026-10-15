@@ -145,14 +145,19 @@ public final class JGitRepository implements GitRepositoryPort {
             List<ObjectId> candidates = new ArrayList<>(reader.resolve(AbbreviatedObjectId.fromString(ref.value())));
             List<RevCommit> commits = new ArrayList<>();
             for (ObjectId candidate : candidates) {
-                try {
-                    commits.add(walk.parseCommit(candidate));
-                } catch (IncorrectObjectTypeException | MissingObjectException notCommit) {
-                    // не коммит или его нет: полный идентификатор разрешается и без объекта
-                }
+                parsedCommit(walk, candidate).ifPresent(commits::add);
             }
             return commits.size() == 1 ? Optional.of(new ResolvedRef(ref, RefKind.COMMIT, sha(commits.getFirst())))
                     : Optional.empty();
+        }
+    }
+
+    /** Коммит-кандидат; не коммит или объекта нет — пусто: полный идентификатор разрешается и без объекта. */
+    private static Optional<RevCommit> parsedCommit(RevWalk walk, ObjectId candidate) throws IOException {
+        try {
+            return Optional.of(walk.parseCommit(candidate));
+        } catch (IncorrectObjectTypeException | MissingObjectException notCommit) {
+            return Optional.empty();
         }
     }
 

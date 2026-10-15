@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!--
+    Правила PMD, которые держит сборка: сложность метода, пустой catch, вывод в консоль.
+    Основной код и тесты всех модулей.
+-->
+<ruleset name="archi-creator"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+    <description>Правила стиля и сложности, проверяемые на сборке.</description>
+
+    <!-- Предел сложности метода — 25; сложность класса не ограничивается. -->
+    <rule ref="category/java/design.xml/CyclomaticComplexity">
+        <properties>
+            <property name="methodReportLevel" value="26"/>
+            <property name="classReportLevel" value="100000"/>
+        </properties>
+    </rule>
+
+    <!-- Ошибка не исчезает молча: пустой catch запрещён и с комментарием. -->
+    <rule ref="category/java/errorprone.xml/EmptyCatchBlock">
+        <properties>
+            <property name="allowCommentedBlocks" value="false"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/bestpractices.xml/SystemPrintln"/>
+    <rule ref="category/java/bestpractices.xml/AvoidPrintStackTrace"/>
+</ruleset>

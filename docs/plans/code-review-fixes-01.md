@@ -25,7 +25,7 @@
 |---|---|---|---|---|
 | 1 | ADR-0021: предел сложности 25, порядок импортов Google | 01-09, 01-11 | — | ✅ |
 | 2 | Импорты: без `*`, без неиспользуемых, порядок Google | 01-02, 01-08, 01-09 | Checkstyle `AvoidStarImport`, `UnusedImports`, `CustomImportOrder` | ✅ |
-| 3 | PMD в сборке: сложность ≤ 25, пустой `catch`, `System.out`; разбить `GitYamlReader.node` | 01-10, 01-12 (часть), 01-15 | PMD `CyclomaticComplexity`, `EmptyCatchBlock`, `SystemPrintln`, `AvoidPrintStackTrace` | ⬜ |
+| 3 | PMD в сборке: сложность ≤ 25, пустой `catch`, `System.out`; разбить `GitYamlReader.node` | 01-10, 01-12 (часть), 01-15 | PMD `CyclomaticComplexity`, `EmptyCatchBlock`, `SystemPrintln`, `AvoidPrintStackTrace` | ✅ |
 | 4 | `var` → явный тип | 01-01 | PMD `UseExplicitTypes` | ⬜ |
 | 5 | Wildcard в параметрах публичных методов: порты публикации событий | 01-03 | ArchUnit | ⬜ |
 | 6 | Внедрение только конструктором: `EntityManager` в 16 адаптерах | 01-04 | ArchUnit | ⬜ |
@@ -39,7 +39,10 @@
 
 ## Расхождения плана с фактом
 
-_(заполняется по ходу)_
+- **Задача 3.** Пустой `catch` нашёлся и в `JGitRepository` (узкий, с комментарием —
+  на этапе 1 не считался находкой). `EmptyCatchBlock` запрещает пустой блок и с комментарием,
+  поэтому разбор кандидата вынесен в метод, возвращающий `Optional`; `AdvisorService` пишет
+  об ушедшем клиенте строку `INFO`.
 
 ## Отменённые варианты
 

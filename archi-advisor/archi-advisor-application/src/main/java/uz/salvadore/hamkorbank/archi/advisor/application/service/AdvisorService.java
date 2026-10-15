@@ -364,6 +364,8 @@ public final class AdvisorService {
                     sink.meta(SessionMeta.of(session));
                 } catch (RuntimeException clientGone) {
                     // Клиент ушёл — сообщить итог некому; сессия и расход уже записаны.
+                    LOG.log(System.Logger.Level.INFO, "advisor stream: client gone before result, session {0}",
+                            session.id());
                 }
             } finally {
                 active.release(session.requestedBy(), upstream);

@@ -257,61 +257,12 @@ public final class GitYamlReader {
                 .orElseThrow(() -> new InvalidValueException(InterchangeMessages.GIT_FIELD_MISSING, fields.file, K_ID));
         Map<Kind, Deque<IntFunction<DocumentContent>>> byKind = new EnumMap<>(Kind.class);
         for (Kind kind : CONTENT_ORDER) {
-            if (!fields.has(kind.key)) {
-                continue;
-            }
-            Deque<IntFunction<DocumentContent>> queue = new ArrayDeque<>();
-            if (kind.single()) {
-                String text = kind == Kind.BOUNDS ? null : fields.required(kind.key);
-                queue.add(switch (kind) {
-                    case BOUNDS -> points(TAG_BOUNDS, fields.map(kind.key));
-                    case TEXT -> order -> textValue(TAG_CONTENT, order, text);
-                    case PURPOSE -> order -> textValue(TAG_PURPOSE, order, text);
-                    default -> order -> textValue(TAG_DOCUMENTATION, order, text);
-                });
-            } else if (kind == Kind.RAW) {
-                for (String xml : fields.strings(kind.key)) {
-                    queue.add(order -> new RawXmlFragment(xml, Optional.of(ArchiId.of(id)), DocumentOrder.of(order)));
-                }
-            } else {
-                for (Map<String, Object> raw : fields.maps(kind.key)) {
-                    Fields item = new Fields(fields.file, raw);
-                    queue.add(switch (kind) {
-                        case PROPERTY -> {
-                            Attributes property = propertyAttributes(item);
-                            yield order -> new DocumentValue(TAG_PROPERTY, DocumentOrder.of(order), property,
-                                    Optional.empty());
-                        }
-                        case BENDPOINT -> points(TAG_BENDPOINT, item);
-                        case CHILD -> node(item, TAG_CHILD);
-                        case CONNECTION -> node(item, TAG_CONNECTION);
-                        case NODE -> node(item, "");
-                        default -> genericValue(item);
-                    });
-                    item.done();
-                }
-            }
-            byKind.put(kind, queue);
-        }
-        List<Kind> sequence = new ArrayList<>();
-        Optional<List<String>> explicit = fields.optionalStrings(K_CONTENT_ORDER);
-        if (explicit.isPresent()) {
-            for (String token : explicit.get()) {
-                Kind kind = Kind.ofToken(token);
-                if (kind == null) {
-                    throw fields.invalid(K_CONTENT_ORDER);
-                }
-                sequence.add(kind);
-            }
-        } else {
-            for (Kind kind : CONTENT_ORDER) {
-                for (int i = 0; i < byKind.getOrDefault(kind, new ArrayDeque<>()).size(); i++) {
-                    sequence.add(kind);
-                }
+            if (fields.has(kind.key)) {
+                byKind.put(kind, contentOf(fields, kind, id));
             }
         }
         List<IntFunction<DocumentContent>> content = new ArrayList<>();
-        for (Kind kind : sequence) {
+        for (Kind kind : sequence(fields, byKind)) {
             Deque<IntFunction<DocumentContent>> queue = byKind.get(kind);
             if (queue == null || queue.isEmpty()) {
                 throw fields.invalid(K_CONTENT_ORDER);
@@ -331,6 +282,79 @@ public final class GitYamlReader {
             }
             return new DocumentNode(tag, DocumentOrder.of(order), attributes, built);
         };
+    }
+
+    /** Содержимое узла одного вида в порядке записи в файле. */
+    private static Deque<IntFunction<DocumentContent>> contentOf(Fields fields, Kind kind, String id) {
+        Deque<IntFunction<DocumentContent>> queue = new ArrayDeque<>();
+        if (kind.single()) {
+            queue.add(single(fields, kind));
+        } else if (kind == Kind.RAW) {
+            for (String xml : fields.strings(kind.key)) {
+                queue.add(order -> new RawXmlFragment(xml, Optional.of(ArchiId.of(id)), DocumentOrder.of(order)));
+            }
+        } else {
+            for (Map<String, Object> raw : fields.maps(kind.key)) {
+                Fields item = new Fields(fields.file, raw);
+                queue.add(repeated(item, kind));
+                item.done();
+            }
+        }
+        return queue;
+    }
+
+    /** Вид, который встречается в узле не больше одного раза: рамка или текст. */
+    private static IntFunction<DocumentContent> single(Fields fields, Kind kind) {
+        if (kind == Kind.BOUNDS) {
+            return points(TAG_BOUNDS, fields.map(kind.key));
+        }
+        String text = fields.required(kind.key);
+        String tag = switch (kind) {
+            case TEXT -> TAG_CONTENT;
+            case PURPOSE -> TAG_PURPOSE;
+            default -> TAG_DOCUMENTATION;
+        };
+        return order -> textValue(tag, order, text);
+    }
+
+    /** Один элемент списка повторяющегося вида: свойство, точка перегиба, вложенный узел, значение. */
+    private static IntFunction<DocumentContent> repeated(Fields item, Kind kind) {
+        return switch (kind) {
+            case PROPERTY -> {
+                Attributes property = propertyAttributes(item);
+                yield order -> new DocumentValue(TAG_PROPERTY, DocumentOrder.of(order), property, Optional.empty());
+            }
+            case BENDPOINT -> points(TAG_BENDPOINT, item);
+            case CHILD -> node(item, TAG_CHILD);
+            case CONNECTION -> node(item, TAG_CONNECTION);
+            case NODE -> node(item, "");
+            default -> genericValue(item);
+        };
+    }
+
+    /**
+     * Порядок видов содержимого: явный {@code content_order}, если записан, иначе канонический —
+     * все записи каждого вида подряд.
+     */
+    private static List<Kind> sequence(Fields fields, Map<Kind, Deque<IntFunction<DocumentContent>>> byKind) {
+        List<Kind> sequence = new ArrayList<>();
+        Optional<List<String>> explicit = fields.optionalStrings(K_CONTENT_ORDER);
+        if (explicit.isPresent()) {
+            for (String token : explicit.get()) {
+                Kind kind = Kind.ofToken(token);
+                if (kind == null) {
+                    throw fields.invalid(K_CONTENT_ORDER);
+                }
+                sequence.add(kind);
+            }
+            return sequence;
+        }
+        for (Kind kind : CONTENT_ORDER) {
+            for (int i = 0; i < byKind.getOrDefault(kind, new ArrayDeque<>()).size(); i++) {
+                sequence.add(kind);
+            }
+        }
+        return sequence;
     }
 
     private static DocumentValue textValue(String tag, int order, String text) {
