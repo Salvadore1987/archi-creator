@@ -27,7 +27,7 @@ public final class OutboxEventPublisher implements DomainEventPublisher {
     }
 
     @Override
-    public void publish(Collection<? extends DomainEvent> events) {
+    public void publish(Collection<DomainEvent> events) {
         for (DomainEvent event : events) {
             if (event instanceof ModelVersionCommitted committed) {
                 outbox.enqueue(new WorkspaceId(committed.workspaceId().value()),

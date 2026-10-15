@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
@@ -16,7 +17,8 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
  */
 public record ExportCompleted(ExportJobId exportJobId, WorkspaceId workspaceId, ModelId modelId,
                               Optional<ViewId> viewId, ExportFormat format, long sourceVersionNo,
-                              ContentHash artifactHash, long artifactSize, int lossEntryCount, Instant occurredAt) {
+                              ContentHash artifactHash, long artifactSize, int lossEntryCount, Instant occurredAt)
+        implements DomainEvent {
 
     public ExportCompleted {
         Objects.requireNonNull(exportJobId, "exportJobId");

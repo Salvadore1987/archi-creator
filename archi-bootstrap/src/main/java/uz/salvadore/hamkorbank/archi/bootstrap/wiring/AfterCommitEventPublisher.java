@@ -19,11 +19,17 @@ public final class AfterCommitEventPublisher {
         this.publisher = publisher;
     }
 
-    public void publish(Collection<?> events) {
+    /**
+     * Публикует события после коммита текущей транзакции, вне транзакции — сразу.
+     *
+     * @param events события любого контекста; у каждого контекста свой тип события
+     * @param <E> тип события контекста
+     */
+    public <E> void publish(Collection<E> events) {
         if (events.isEmpty()) {
             return;
         }
-        List<?> copy = List.copyOf(events);
+        List<E> copy = List.copyOf(events);
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override

@@ -9,5 +9,5 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.DomainEvent;
  */
 public interface DomainEventPublisher {
 
-    void publish(Collection<? extends DomainEvent> events);
+    void publish(Collection<DomainEvent> events);
 }

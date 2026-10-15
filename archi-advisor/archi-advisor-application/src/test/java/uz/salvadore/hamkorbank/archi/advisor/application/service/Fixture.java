@@ -7,7 +7,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -234,7 +233,7 @@ final class Fixture {
     }
 
     AdvisorEvents events() {
-        return (Collection<? extends DomainEvent> published) -> events.addAll(published);
+        return published -> events.addAll(published);
     }
 
     static AdvisorMetrics metrics() {
