@@ -26,3 +26,4 @@
 | Этап | Файл | Находок |
 |---|---|---|
 | 0. Подготовка | [`00-podgotovka.md`](00-podgotovka.md) | — (реестр отклонений) |
+| 1. Механические проверки | [`01-mekhanicheskie-proverki.md`](01-mekhanicheskie-proverki.md) | 15 |
