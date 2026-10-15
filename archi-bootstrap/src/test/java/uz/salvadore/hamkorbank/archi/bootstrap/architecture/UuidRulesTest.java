@@ -3,8 +3,14 @@ package uz.salvadore.hamkorbank.archi.bootstrap.architecture;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaConstructorReference;
+import com.tngtech.archunit.core.domain.JavaMethodReference;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.lang.ArchCondition;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -38,10 +44,16 @@ class UuidRulesTest {
     private static final Path REPOSITORY = Path.of("..");
     /** Сборка, зависимости и Node — исходников проекта там нет, а файлов десятки тысяч. */
     private static final Set<String> SKIPPED = Set.of("target", "node_modules", ".node", ".git", ".mvn");
-    /** Фабрики и конструктор {@code java.util.UUID} в исходнике, с полным именем класса или без. */
+    /**
+     * Фабрики и конструктор {@code java.util.UUID} в исходнике, с полным именем класса или без,
+     * вызовом или ссылкой на метод ({@code UUID::randomUUID}, {@code UUID::new}).
+     */
     private static final Pattern FORBIDDEN = Pattern.compile(
             "\\b(?:java\\.util\\.)?UUID\\s*\\.\\s*(?:randomUUID|nameUUIDFromBytes|fromString)\\s*\\("
-                    + "|\\bnew\\s+(?:java\\.util\\.)?UUID\\s*\\(");
+                    + "|\\bnew\\s+(?:java\\.util\\.)?UUID\\s*\\("
+                    + "|\\b(?:java\\.util\\.)?UUID\\s*::\\s*(?:randomUUID|nameUUIDFromBytes|fromString|new)\\b");
+    /** Фабрики {@code java.util.UUID}, которые проект не вызывает и не передаёт ссылкой. */
+    private static final Set<String> FACTORIES = Set.of("randomUUID", "nameUUIDFromBytes", "fromString");
 
     @Test
     @DisplayName("основной код не создаёт и не разбирает UUID средствами java.util.UUID")
@@ -51,10 +63,31 @@ class UuidRulesTest {
                 .orShould().callMethod(UUID.class, "nameUUIDFromBytes", byte[].class)
                 .orShould().callMethod(UUID.class, "fromString", String.class)
                 .orShould().callConstructor(UUID.class, long.class, long.class)
+                .orShould(referenceUuidFactories())
                 .because("UUID проекта создаёт и разбирает java-uuid-generator")
                 .check(new ClassFileImporter()
                         .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
                         .importPackages(ROOT));
+    }
+
+    /** Ссылка на фабрику или конструктор {@code UUID} — тот же вызов, отложенный до {@code get()}. */
+    private static ArchCondition<JavaClass> referenceUuidFactories() {
+        return new ArchCondition<>("reference factories or constructor of java.util.UUID") {
+            @Override
+            public void check(JavaClass javaClass, ConditionEvents events) {
+                for (JavaMethodReference reference : javaClass.getMethodReferencesFromSelf()) {
+                    if (reference.getTargetOwner().isEquivalentTo(UUID.class)
+                            && FACTORIES.contains(reference.getName())) {
+                        events.add(SimpleConditionEvent.satisfied(javaClass, reference.getDescription()));
+                    }
+                }
+                for (JavaConstructorReference reference : javaClass.getConstructorReferencesFromSelf()) {
+                    if (reference.getTargetOwner().isEquivalentTo(UUID.class)) {
+                        events.add(SimpleConditionEvent.satisfied(javaClass, reference.getDescription()));
+                    }
+                }
+            }
+        };
     }
 
     @Test

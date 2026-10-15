@@ -36,7 +36,7 @@
 | 11 | Javadoc по стандарту | 01-13 | Checkstyle `MissingJavadocType`, `MissingJavadocMethod`, `JavadocVariable` | ✅ |
 | 12 | JaCoCo и пороги покрытия | 01-14 | `tools/check-coverage.py` по общему отчёту JaCoCo, шаг CI | ✅ |
 | 13 | `CLAUDE.md`, отметки в `code-review.md` и в отчёте этапа 1 | — | — | ⬜ |
-| 14 | `UUID::randomUUID` в генераторах идентификаторов Archi — правило проекта о UUID | вне этапа 1 | `UuidRulesTest`: ссылка на метод, а не только вызов | ⬜ |
+| 14 | `UUID::randomUUID` в генераторах идентификаторов Archi — правило проекта о UUID | вне этапа 1 | `UuidRulesTest`: ссылка на метод, а не только вызов | ✅ |
 
 ## Расхождения плана с фактом
 
@@ -64,7 +64,10 @@
 - **Задача 14 (найдено при Javadoc, 2026-10-15).** `ArchiIdGenerator` в modeling и interchange
   и `DocumentMappingTest` берут UUID ссылкой на метод `UUID::randomUUID`. `UuidRulesTest`
   этого не видит: ArchUnit проверял вызов метода, а скан исходников — `randomUUID(` со скобкой.
-  Сначала проверка ловит и ссылку на метод, затем перенос на JUG.
+  Сначала проверка ловит и ссылку на метод, затем перенос на JUG. Ошибка при вводе
+  правила ArchUnit: в `noClasses()` своё условие отрицается, поэтому найденная ссылка —
+  событие `satisfied`, а не `violated`; с `violated` правило молча проходило. Пойман
+  прогоном на старом коде — шаг «проверка обязана упасть» не пропускать.
 
 ## Отменённые варианты
 

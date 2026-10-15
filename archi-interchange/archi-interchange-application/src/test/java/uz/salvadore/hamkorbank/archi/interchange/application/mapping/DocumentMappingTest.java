@@ -15,7 +15,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -147,7 +146,7 @@ class DocumentMappingTest {
 
     static ModelContent decompose(ModelDocument document) {
         ArchiIdGenerator archiIds = new ArchiIdGenerator();
-        return new DocumentDecomposer(UUID::randomUUID, archiIds::next).decompose(document,
+        return new DocumentDecomposer(IDS::generate, archiIds::next).decompose(document,
                 new DocumentDecomposer.Identity(ModelId.of(IDS.generate()), WorkspaceId.of(IDS.generate()),
                         "architect", NOW, NOW, 0));
     }

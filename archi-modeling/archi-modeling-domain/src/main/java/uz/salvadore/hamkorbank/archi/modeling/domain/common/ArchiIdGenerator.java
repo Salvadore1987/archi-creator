@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.common;
 
+import com.fasterxml.uuid.Generators;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -15,7 +16,7 @@ public final class ArchiIdGenerator {
     private final Supplier<UUID> uuids;
 
     public ArchiIdGenerator() {
-        this(UUID::randomUUID);
+        this(Generators.timeBasedEpochGenerator()::generate);
     }
 
     public ArchiIdGenerator(Supplier<UUID> uuids) {
