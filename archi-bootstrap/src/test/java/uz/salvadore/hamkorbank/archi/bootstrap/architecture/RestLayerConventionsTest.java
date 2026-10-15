@@ -1,9 +1,9 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.architecture;
 
 import static com.tngtech.archunit.core.domain.JavaAccess.Predicates.target;
-import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
-import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.type;
+import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
+import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
@@ -17,7 +17,6 @@ import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import java.util.List;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,6 +24,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 
 /**
  * Устройство REST-слоя: контроллер принимает запрос и вызывает сценарий,

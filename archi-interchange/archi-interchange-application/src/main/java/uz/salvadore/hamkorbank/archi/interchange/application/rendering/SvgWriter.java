@@ -21,7 +21,6 @@ import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Point;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Rect;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.ViewScene.Edge;
-import uz.salvadore.hamkorbank.archi.interchange.application.rendering.ViewScene.Kind;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.ViewScene.Node;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.ViewScene.Style;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;

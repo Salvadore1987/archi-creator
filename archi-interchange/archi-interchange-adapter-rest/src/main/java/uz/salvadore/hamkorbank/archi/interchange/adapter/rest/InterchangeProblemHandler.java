@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import uz.salvadore.hamkorbank.archi.interchange.application.ExportDefectException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
-import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 

@@ -1,7 +1,5 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.exporting;
 
-import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
-import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -20,6 +18,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 
 class CatalogCsvWriterTest {
 

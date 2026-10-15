@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.Objects;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.Names;
 
 /**
  * Рабочее пространство — арендатор и граница видимости моделей. Политики других

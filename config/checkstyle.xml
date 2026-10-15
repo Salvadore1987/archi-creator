@@ -3,9 +3,8 @@
         "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
         "https://checkstyle.org/dtds/configuration_1_3.dtd">
 <!--
-    Форматирование, которое держит сборка: длина строки и табуляция.
-    Обе проверки работают по тексту файла, без разбора Java, поэтому
-    не зависят от того, какую версию языка понимает Checkstyle.
+    Форматирование, которое держит сборка: длина строки и табуляция — по тексту
+    файла, импорты — по дереву разбора.
 -->
 <module name="Checker">
     <property name="charset" value="UTF-8"/>
@@ -22,5 +21,17 @@
     </module>
     <module name="FileTabCharacter">
         <property name="eachLine" value="true"/>
+    </module>
+
+    <module name="TreeWalker">
+        <module name="AvoidStarImport"/>
+        <module name="UnusedImports"/>
+        <module name="RedundantImport"/>
+        <!-- Статические импорты первым блоком, пустая строка, остальные одним блоком по алфавиту. -->
+        <module name="CustomImportOrder">
+            <property name="customImportOrderRules" value="STATIC###THIRD_PARTY_PACKAGE"/>
+            <property name="sortImportsInGroupAlphabetically" value="true"/>
+            <property name="separateLineBetweenGroups" value="true"/>
+        </module>
     </module>
 </module>
