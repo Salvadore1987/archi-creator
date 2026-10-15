@@ -234,6 +234,28 @@
                     <classesDirectory>${project.build.outputDirectory}</classesDirectory>
                 </configuration>
             </plugin>
+            <!--
+                Общий отчёт покрытия: классы всех модулей реактора, данные юнит-
+                и интеграционных тестов. Пороги проверяет tools/check-coverage.py
+                по target/site/jacoco-aggregate/jacoco.xml: цель check видит
+                только классы своего модуля, а адаптеры покрывают тесты этого.
+            -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>aggregate</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report-aggregate</goal>
+                        </goals>
+                        <configuration>
+                            <includeCurrentProject>true</includeCurrentProject>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

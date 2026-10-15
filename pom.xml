@@ -53,6 +53,7 @@
         <checkstyle.version>14.3.0</checkstyle.version>
         <maven-pmd-plugin.version>3.28.0</maven-pmd-plugin.version>
         <pmd.version>7.28.0</pmd.version>
+        <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
 
         <!--
             Node и npm ставит сборка, а не разработчик: иначе версия
@@ -369,6 +370,29 @@
                         <phase>validate</phase>
                         <goals>
                             <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!--
+                Покрытие: агент JaCoCo на юнит-тестах (jacoco.exec) и интеграционных
+                (jacoco-it.exec) каждого модуля; общий отчёт собирает archi-bootstrap.
+            -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>agent-it</id>
+                        <goals>
+                            <goal>prepare-agent-integration</goal>
                         </goals>
                     </execution>
                 </executions>

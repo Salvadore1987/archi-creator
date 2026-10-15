@@ -143,8 +143,13 @@ jobs:
       # Профиль frontend включён по умолчанию: jar обязан уехать
       # со статикой внутри, и выключать его в CI нельзя.
       # Интеграционные уже прошли шагом выше — здесь не повторяются.
+      # Без clean: данные покрытия интеграционных тестов (jacoco-it.exec)
+      # остаются в target/ и входят в общий отчёт JaCoCo.
       - name: mvn verify
-        run: ./mvnw -B --no-transfer-progress clean verify -DskipITs
+        run: ./mvnw -B --no-transfer-progress verify -DskipITs
+
+      - name: Покрытие тестами
+        run: tools/check-coverage.py
 
       - name: Собранный jar
         uses: actions/upload-artifact@v4

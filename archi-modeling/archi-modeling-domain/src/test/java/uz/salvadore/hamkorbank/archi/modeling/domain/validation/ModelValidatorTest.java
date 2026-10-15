@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.validation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
 
@@ -8,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
@@ -58,5 +60,36 @@ class ModelValidatorTest {
         assertEquals("RELATION_NOT_PERMITTED", findings.getFirst().code());
         assertEquals(Severity.ERROR, findings.getFirst().severity());
         assertEquals(forbidden.archiId().value(), findings.getFirst().targetId());
+    }
+
+    @Test
+    @DisplayName("Неподдержанный элемент и связь неизвестного типа — сведения в отчёте, не ошибка")
+    void opaqueObjectsAreReportedAsInfo() {
+        Optional<RawXml> residue = Optional.of(new RawXml("<element/>"));
+        FolderId other = FolderId.next(UUIDS);
+        FolderId relations = FolderId.next(UUIDS);
+        List<ModelFolder> roots = List.of(
+                FolderTreeInitializer.root(FolderType.OTHER, other, Models.archiId(), SortOrder.ofPosition(0)),
+                FolderTreeInitializer.root(FolderType.RELATIONS, relations, Models.archiId(), SortOrder.ofPosition(1)));
+        Element first = new Element(ElementId.next(UUIDS), other, Models.archiId(), ArchiType.ofSimpleName("Location"),
+                "Ташкент", Optional.empty(), List.of(), SortOrder.ofPosition(0), false, residue);
+        Element second = new Element(ElementId.next(UUIDS), other, Models.archiId(), ArchiType.ofSimpleName("Location"),
+                "Самарканд", Optional.empty(), List.of(), SortOrder.ofPosition(1), false, residue);
+        Relationship unknown = new Relationship(RelationshipId.next(UUIDS), relations, Models.archiId(),
+                ArchiType.ofSimpleName("TeleportRelationship"), first.id(), second.id(), Optional.empty(),
+                Optional.empty(), Optional.empty(), Optional.empty(), List.of(), SortOrder.ofPosition(0), false,
+                residue);
+        ModelHeader header = new ModelHeader(ModelId.next(UUIDS), WorkspaceId.next(UUIDS), Models.archiId(), "Файл",
+                Optional.empty(), "5.0.0", ModelStatus.ACTIVE, List.of(), Optional.empty(), "a", NOW, NOW, 0);
+
+        ArchitectureModel model = ArchitectureModel.imported(header, roots, List.of(first, second),
+                List.of(unknown), List.of(), () -> FolderId.next(UUIDS), Models::archiId);
+        List<ValidationFinding> findings = ModelValidator.archimate32().validate(model);
+
+        for (String target : List.of(first.archiId().value(), second.archiId().value(), unknown.archiId().value())) {
+            assertTrue(findings.stream().anyMatch(f -> f.targetId().equals(target)
+                    && f.code().equals(ModelValidator.OPAQUE_CODE) && f.severity() == Severity.INFO),
+                    () -> target + " " + findings);
+        }
     }
 }
