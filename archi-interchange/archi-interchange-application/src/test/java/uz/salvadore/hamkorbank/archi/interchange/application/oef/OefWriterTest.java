@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation;
@@ -172,7 +173,7 @@ class OefWriterTest {
     @Test
     @DisplayName("FR-43: каждая фикстура даёт файл, валидный по XSD")
     void everyFixtureIsSchemaValid() throws IOException {
-        try (var files = Files.list(FIXTURES)) {
+        try (Stream<Path> files = Files.list(FIXTURES)) {
             for (Path file : files.filter(f -> f.toString().endsWith(".archimate")).sorted().toList()) {
                 assertEquals(Optional.empty(), SCHEMA.violation(WRITER.write(read(Files.readAllBytes(file))).xml()),
                         file.getFileName().toString());

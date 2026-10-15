@@ -10,6 +10,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
+import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelLockReleased;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
@@ -32,7 +33,7 @@ public final class LockService {
                 throw new ModelingException(ModelingCodes.LIFECYCLE, Failure.CONFLICT,
                         Message.of(ModelingMessages.DELETED_NOT_EDITABLE));
             }
-            var current = kernel.locks.find(modelId);
+            Optional<ModelLock> current = kernel.locks.find(modelId);
             current.filter(l -> !l.heldBy(actor.subject(), kernel.now()) && l.status(kernel.now())
                             == uz.salvadore.hamkorbank.archi.modeling.domain.lock.LockStatus.HELD)
                     .ifPresent(l -> kernel.metrics.lockWait(modelId,
@@ -51,7 +52,7 @@ public final class LockService {
             kernel.visibleHeader(modelId, actor, AclAccess.READ);
             Optional<ModelLock> lock = kernel.locks.find(modelId);
             lock.ifPresent(l -> {
-                var released = l.release(actor, kernel.now());
+                ModelLockReleased released = l.release(actor, kernel.now());
                 kernel.locks.delete(modelId);
                 kernel.events.publish(List.of(released));
             });

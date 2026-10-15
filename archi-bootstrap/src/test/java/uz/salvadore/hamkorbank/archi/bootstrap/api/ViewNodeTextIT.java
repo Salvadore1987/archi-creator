@@ -12,6 +12,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.MvcResult;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 
@@ -32,7 +33,8 @@ class ViewNodeTextIT extends ApiTest {
         List<String> views = read(mvc.perform(get("/api/v1/models/" + model).with(viewer()))
                 .andExpect(status().isOk()).andReturn(), "$.views[*].id");
         String view = views.getFirst();
-        var payload = mvc.perform(get("/api/v1/views/" + view).with(viewer())).andExpect(status().isOk()).andReturn();
+        MvcResult payload = mvc.perform(get("/api/v1/views/" + view).with(viewer()))
+                .andExpect(status().isOk()).andReturn();
         assertEquals(List.of(LEGEND), read(payload, "$.nodes[?(@.archiId == '" + NOTE + "')].content"));
         assertEquals(List.of("NOTE"), read(payload, "$.nodes[?(@.archiId == '" + NOTE + "')].kind"));
 
@@ -51,7 +53,7 @@ class ViewNodeTextIT extends ApiTest {
         List<String> view = column("select view_id::text from view_node where model_id = ?::uuid and label = ?"
                 + " and kind = 'GROUP' order by archi_id", String.class, model, "Каналы");
         assertEquals(1, view.size(), "группа «Каналы» эталона — подпись в столбце");
-        var payload = mvc.perform(get("/api/v1/views/" + view.getFirst()).with(viewer()))
+        MvcResult payload = mvc.perform(get("/api/v1/views/" + view.getFirst()).with(viewer()))
                 .andExpect(status().isOk()).andReturn();
         assertEquals(List.of("GROUP"), read(payload, "$.nodes[?(@.label == 'Каналы')].kind"));
         List<Object> objectLabels = read(payload, "$.nodes[?(@.kind == 'DIAGRAM_OBJECT')].label");

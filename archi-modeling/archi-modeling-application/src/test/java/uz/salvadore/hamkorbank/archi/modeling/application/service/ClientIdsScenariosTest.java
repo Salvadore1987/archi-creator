@@ -20,6 +20,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.AccessType;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelFolder;
@@ -73,7 +74,8 @@ class ClientIdsScenariosTest {
                 Optional.empty(), RequestedIds.of(nodeId, "id-node-1")).value();
         ViewNode actorNode = ports.viewService.place(ALICE, view.id(), actor.id(), new Bounds(300, 10, 120, 55),
                 Optional.empty());
-        var serving = ports.relationships.create(ALICE, model, SERVING, elementId, actor.id().value(),
+        RelationshipService.Result serving = ports.relationships.create(ALICE, model, SERVING, elementId,
+                actor.id().value(),
                 new RelationshipService.Details(Optional.empty(), Optional.empty(), Optional.empty(),
                         Optional.empty(), RequestedIds.of(relationshipId, "id-serving")),
                 Optional.of(new RelationshipService.EdgePlacement(view.id(), nodeId, actorNode.id().value(),
@@ -166,7 +168,8 @@ class ClientIdsScenariosTest {
 
         ViewNode restored = ports.viewService.place(ALICE, view.id(), component.id(), c.bounds(), Optional.empty(),
                 RequestedIds.of(c.id().value(), c.archiId().value())).value();
-        var again = ports.viewService.placeEdge(ALICE, view.id(), serving.id(), restored.id().value(),
+        ArchitectureModel.Created<ViewEdge> again = ports.viewService.placeEdge(ALICE, view.id(), serving.id(),
+                restored.id().value(),
                 a.id().value(), edge.bendpoints(), RequestedIds.of(edge.id().value(), edge.archiId().value()));
 
         assertTrue(again.created());
@@ -176,7 +179,8 @@ class ClientIdsScenariosTest {
         assertEquals(bend, again.value().bendpoints());
         assertEquals(restored.id(), again.value().source(), "ребро лежит в содержимом узла-источника");
 
-        var duplicate = ports.viewService.placeEdge(ALICE, view.id(), serving.id(), restored.id().value(),
+        ArchitectureModel.Created<ViewEdge> duplicate = ports.viewService.placeEdge(ALICE, view.id(), serving.id(),
+                restored.id().value(),
                 a.id().value(), List.of(), RequestedIds.NONE);
         assertFalse(duplicate.created(), "то же ребро между теми же концами не дублируется");
         assertEquals(edge.id(), duplicate.value().id());

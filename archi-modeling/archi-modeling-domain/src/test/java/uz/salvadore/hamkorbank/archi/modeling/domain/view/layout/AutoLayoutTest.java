@@ -52,10 +52,10 @@ class AutoLayoutTest {
     @Test
     @DisplayName("UI-005: бизнес выше приложений, приложения выше технологий; размер узла не меняется")
     void layersGoTopDown() {
-        var tech = node("Node", 0, 0);
-        var app = node("ApplicationComponent", 0, 0);
-        var business = node("BusinessProcess", 0, 0);
-        var wide = new LayoutGraph.Node(IDS.generate(), Optional.empty(), type("ApplicationService"),
+        LayoutGraph.Node tech = node("Node", 0, 0);
+        LayoutGraph.Node app = node("ApplicationComponent", 0, 0);
+        LayoutGraph.Node business = node("BusinessProcess", 0, 0);
+        LayoutGraph.Node wide = new LayoutGraph.Node(IDS.generate(), Optional.empty(), type("ApplicationService"),
                 new Bounds(500, 500, 300, -1));
         LayoutGraph graph = new LayoutGraph(List.of(tech, app, wide, business), List.of());
 
@@ -71,10 +71,10 @@ class AutoLayoutTest {
     @Test
     @DisplayName("FR-15: порядок в полосе убирает пересечение связей")
     void barycentersRemoveCrossing() {
-        var a1 = node("BusinessProcess", 0, 0);
-        var a2 = node("BusinessProcess", 0, 0);
-        var b1 = node("ApplicationService", 0, 0);
-        var b2 = node("ApplicationService", 0, 0);
+        LayoutGraph.Node a1 = node("BusinessProcess", 0, 0);
+        LayoutGraph.Node a2 = node("BusinessProcess", 0, 0);
+        LayoutGraph.Node b1 = node("ApplicationService", 0, 0);
+        LayoutGraph.Node b2 = node("ApplicationService", 0, 0);
         LayoutGraph graph = new LayoutGraph(List.of(a1, a2, b1, b2),
                 List.of(edge(a1, b2), edge(a2, b1)));
 
@@ -88,9 +88,9 @@ class AutoLayoutTest {
     @Test
     @DisplayName("FR-15: ярусы — источник связи выше цели, цикл не зацикливает раскладку")
     void hierarchyPutsSourcesAbove() {
-        var root = node("BusinessActor", 0, 0);
-        var middle = node("BusinessRole", 0, 0);
-        var leaf = node("BusinessProcess", 0, 0);
+        LayoutGraph.Node root = node("BusinessActor", 0, 0);
+        LayoutGraph.Node middle = node("BusinessRole", 0, 0);
+        LayoutGraph.Node leaf = node("BusinessProcess", 0, 0);
         LayoutGraph graph = new LayoutGraph(List.of(leaf, middle, root),
                 List.of(edge(root, middle), edge(middle, leaf), edge(leaf, root)));
 
@@ -104,12 +104,12 @@ class AutoLayoutTest {
     @Test
     @DisplayName("UI-004: контейнер переносится целиком, дети не перечислены; группа — в полосе своего содержимого")
     void containersMoveWhole() {
-        var group = new LayoutGraph.Node(IDS.generate(), Optional.empty(), Optional.empty(),
+        LayoutGraph.Node group = new LayoutGraph.Node(IDS.generate(), Optional.empty(), Optional.empty(),
                 new Bounds(0, 0, 400, 140));
-        var inside = new LayoutGraph.Node(IDS.generate(), Optional.of(group.id()), type("Node"),
+        LayoutGraph.Node inside = new LayoutGraph.Node(IDS.generate(), Optional.of(group.id()), type("Node"),
                 new Bounds(10, 10, 120, 55));
-        var business = node("BusinessProcess", 0, 0);
-        var app = node("ApplicationComponent", 0, 0);
+        LayoutGraph.Node business = node("BusinessProcess", 0, 0);
+        LayoutGraph.Node app = node("ApplicationComponent", 0, 0);
         LayoutGraph graph = new LayoutGraph(List.of(group, inside, business, app), List.of(edge(app, inside)));
 
         Map<UUID, Bounds> placed = AutoLayout.propose(graph, LayoutStrategy.LAYERED).nodes();

@@ -56,17 +56,18 @@ public class JpaModelRepository implements ModelRepository {
             return Optional.empty();
         }
         UUID modelId = id.value();
-        var folders = em.createQuery("select f from FolderEntity f where f.modelId = :m", FolderEntity.class)
+        List<FolderEntity> folders = em.createQuery(
+                        "select f from FolderEntity f where f.modelId = :m", FolderEntity.class)
                 .setParameter("m", modelId).getResultList();
-        var elements = em.createQuery(
+        List<ElementEntity> elements = em.createQuery(
                         "select distinct e from ElementEntity e left join fetch e.properties where e.modelId = :m",
                         ElementEntity.class)
                 .setParameter("m", modelId).getResultList();
-        var relationships = em.createQuery(
+        List<RelationshipEntity> relationships = em.createQuery(
                         "select distinct r from RelationshipEntity r left join fetch r.properties where r.modelId = :m",
                         RelationshipEntity.class)
                 .setParameter("m", modelId).getResultList();
-        var views = em.createQuery("select v from ViewEntity v where v.modelId = :m", ViewEntity.class)
+        List<ViewEntity> views = em.createQuery("select v from ViewEntity v where v.modelId = :m", ViewEntity.class)
                 .setParameter("m", modelId).getResultList();
         return Optional.of(ArchitectureModel.restore(EntityMapper.toHeader(model),
                 folders.stream().map(EntityMapper::toFolder).toList(),

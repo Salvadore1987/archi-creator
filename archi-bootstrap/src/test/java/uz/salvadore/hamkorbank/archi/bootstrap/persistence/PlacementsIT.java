@@ -62,7 +62,8 @@ class PlacementsIT extends IntegrationTest {
         View empty = views.create(ARCHITECT, model, "Пустое", Optional.empty(), Optional.empty());
         ViewNode c = views.place(ARCHITECT, context.id(), component.id(), new Bounds(0, 0, 120, 55), Optional.empty());
         ViewNode a = views.place(ARCHITECT, context.id(), actor.id(), new Bounds(300, 0, 120, 55), Optional.empty());
-        var serving = relationships.create(ARCHITECT, model, ArchiType.ofSimpleName("ServingRelationship"),
+        RelationshipService.Result serving = relationships.create(ARCHITECT, model,
+                ArchiType.ofSimpleName("ServingRelationship"),
                 component.id().value(), actor.id().value(), Optional.empty(),
                 Optional.of(new RelationshipService.EdgePlacement(context.id(), c.id().value(), a.id().value())),
                 Optional.empty());

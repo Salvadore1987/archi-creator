@@ -79,7 +79,8 @@ class ModelPersistenceIT extends IntegrationTest {
         View view = views.create(ARCHITECT, model, "Контекст", Optional.empty(), Optional.empty());
         ViewNode c = views.place(ARCHITECT, view.id(), component.id(), new Bounds(20, 60, 150, 60), Optional.empty());
         ViewNode a = views.place(ARCHITECT, view.id(), actor.id(), new Bounds(300, 60, 150, 60), Optional.empty());
-        var serving = relationships.create(ARCHITECT, model, ArchiType.ofSimpleName("ServingRelationship"),
+        RelationshipService.Result serving = relationships.create(ARCHITECT, model,
+                ArchiType.ofSimpleName("ServingRelationship"),
                 component.id().value(), actor.id().value(), Optional.of("обслуживает"),
                 Optional.of(new RelationshipService.EdgePlacement(view.id(), c.id().value(), a.id().value())),
                 Optional.empty());

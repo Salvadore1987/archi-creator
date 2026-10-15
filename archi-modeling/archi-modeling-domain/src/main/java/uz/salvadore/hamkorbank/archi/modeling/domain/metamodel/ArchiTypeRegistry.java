@@ -73,7 +73,7 @@ public final class ArchiTypeRegistry {
     }
 
     private static Map<ArchiType, ConceptDefinition> catalog() {
-        var catalog = new Catalog();
+        Catalog catalog = new Catalog();
 
         catalog.elements(Layer.BUSINESS, PHASE_1,
                 "BusinessActor", "BusinessRole", "BusinessCollaboration", "BusinessInterface",

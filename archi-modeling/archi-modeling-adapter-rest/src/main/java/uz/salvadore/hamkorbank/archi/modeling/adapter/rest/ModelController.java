@@ -37,6 +37,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
@@ -78,7 +79,8 @@ public class ModelController {
     @PostMapping("/models")
     public ResponseEntity<ModelSummary> create(EditorIdentity actor, @RequestBody CreateModelRequest request,
                                                @RequestHeader("Idempotency-Key") Optional<String> key) {
-        var model = lifecycle.create(actor, workspace(Optional.ofNullable(request.workspaceId())), request.name(), key);
+        ArchitectureModel model = lifecycle.create(actor, workspace(Optional.ofNullable(request.workspaceId())),
+                request.name(), key);
         return ResponseEntity.created(URI.create("/api/v1/models/" + model.id()))
                 .body(DtoMapper.summary(model.header()));
     }

@@ -108,7 +108,8 @@ public final class ElementService {
     }
 
     private static FolderId defaultFolder(ArchitectureModel model, ArchiType archiType) {
-        var layer = uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry.archimate32()
+        uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer layer =
+                uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry.archimate32()
                 .layerOf(archiType);
         return model.roots().get(uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderType.forLayer(layer)).id();
     }

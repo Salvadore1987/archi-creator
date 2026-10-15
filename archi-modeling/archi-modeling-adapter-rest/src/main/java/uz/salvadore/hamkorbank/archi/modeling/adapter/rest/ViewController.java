@@ -39,6 +39,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
@@ -46,8 +47,11 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bendpoint;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.StyleOverride;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdge;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeKind;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutGraph;
@@ -75,7 +79,7 @@ public class ViewController {
     public ResponseEntity<ViewSummary> create(EditorIdentity actor, @PathVariable UUID id,
                                               @RequestBody CreateViewRequest request,
                                               @RequestHeader("Idempotency-Key") Optional<String> key) {
-        var view = views.create(actor, ModelId.of(id), request.name(),
+        View view = views.create(actor, ModelId.of(id), request.name(),
                 Optional.ofNullable(request.folderId()).map(FolderId::of),
                 RequestedIds.of(request.id(), request.archiId()), key);
         return ResponseEntity.created(URI.create("/api/v1/views/" + view.id())).body(DtoMapper.view(view));
@@ -112,7 +116,8 @@ public class ViewController {
     @PostMapping("/views/{id}/nodes")
     public ResponseEntity<ViewNodeDto> place(EditorIdentity actor, @PathVariable UUID id,
                                              @RequestBody PlaceNodeRequest request) {
-        var node = views.placeNode(actor, ViewId.of(id), new ViewService.NewNode(kind(request.kind()),
+        ArchitectureModel.Created<ViewNode> node = views.placeNode(actor, ViewId.of(id),
+                new ViewService.NewNode(kind(request.kind()),
                 Optional.ofNullable(request.elementId()).map(ElementId::of), Optional.ofNullable(request.label()),
                 Optional.ofNullable(request.content()), request.x(), request.y(),
                 Optional.ofNullable(request.width()), Optional.ofNullable(request.height()),
@@ -157,7 +162,8 @@ public class ViewController {
         if (request.relationshipId() == null || request.sourceId() == null || request.targetId() == null) {
             throw ModelingException.invalid(Message.of(ModelingMessages.FIELDS_MISSING, EDGE_FIELDS));
         }
-        var edge = views.placeEdge(actor, ViewId.of(id), RelationshipId.of(request.relationshipId()),
+        ArchitectureModel.Created<ViewEdge> edge = views.placeEdge(actor, ViewId.of(id),
+                RelationshipId.of(request.relationshipId()),
                 request.sourceId(), request.targetId(), bendpoints(request.bendpoints()),
                 RequestedIds.of(request.id(), request.archiId()));
         ViewEdgeDto body = DtoMapper.edge(edge.value());

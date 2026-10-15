@@ -6,7 +6,9 @@ import com.anthropic.core.JsonValue;
 import com.anthropic.core.http.StreamResponse;
 import com.anthropic.errors.AnthropicException;
 import com.anthropic.models.messages.MessageCreateParams;
+import com.anthropic.models.messages.MessageDeltaUsage;
 import com.anthropic.models.messages.OutputConfig;
+import com.anthropic.models.messages.RawContentBlockDelta;
 import com.anthropic.models.messages.RawContentBlockStartEvent;
 import com.anthropic.models.messages.RawMessageStreamEvent;
 import com.anthropic.models.messages.Tool;
@@ -125,7 +127,7 @@ public final class AnthropicLlmClient implements LlmPort {
                         });
                     } else if (event.isContentBlockDelta()) {
                         long index = event.asContentBlockDelta().index();
-                        var delta = event.asContentBlockDelta().delta();
+                        RawContentBlockDelta delta = event.asContentBlockDelta().delta();
                         delta.text().ifPresent(text -> listener.text(text.text()));
                         delta.inputJson().ifPresent(json -> toolInputs
                                 .computeIfAbsent(index, k -> new StringBuilder()).append(json.partialJson()));
@@ -137,7 +139,7 @@ public final class AnthropicLlmClient implements LlmPort {
                             listener.toolCall(name, parse(json));
                         }
                     } else if (event.isMessageDelta()) {
-                        var usage = event.asMessageDelta().usage();
+                        MessageDeltaUsage usage = event.asMessageDelta().usage();
                         input = usage.inputTokens().orElse(input);
                         output = usage.outputTokens();
                         listener.usage(new TokenUsage(input, output));

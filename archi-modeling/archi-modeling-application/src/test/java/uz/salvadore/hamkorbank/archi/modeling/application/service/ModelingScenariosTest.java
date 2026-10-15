@@ -142,7 +142,7 @@ class ModelingScenariosTest {
         View empty = ports.viewService.create(ALICE, model, "Пустое", Optional.empty(), Optional.empty());
         ports.viewService.place(ALICE, placed.id(), component.id(), new Bounds(10, 10, 120, 55), Optional.empty());
 
-        var opened = ports.queries.openWithPlacements(READER, model);
+        ModelQueryService.OpenedModel opened = ports.queries.openWithPlacements(READER, model);
 
         assertEquals(List.of(placed.id(), empty.id()), opened.placements().stream().map(p -> p.viewId()).toList());
         assertEquals(List.of(component.id()), opened.placements().getFirst().elementIds());
@@ -157,7 +157,8 @@ class ModelingScenariosTest {
         Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(), Optional.empty());
         Element actor = ports.elements.create(ALICE, model, ArchiType.ofSimpleName("BusinessActor"), "Клиент",
                 Optional.empty(), Optional.empty());
-        var serving = ports.relationships.create(ALICE, model, ArchiType.ofSimpleName("ServingRelationship"),
+        RelationshipService.Result serving = ports.relationships.create(ALICE, model,
+                ArchiType.ofSimpleName("ServingRelationship"),
                 component.id().value(), actor.id().value(), Optional.empty(), Optional.empty(), Optional.empty());
         View view = ports.viewService.create(ALICE, model, "Контекст", Optional.empty(), Optional.empty());
         ports.viewService.place(ALICE, view.id(), component.id(), new Bounds(10, 10, 120, 55), Optional.empty());
@@ -175,19 +176,22 @@ class ModelingScenariosTest {
     @Test
     @DisplayName("UI-004: среди допустимых связей пары помечена подразумеваемая вложением — одна или ни одной")
     void suggestionsMarkNestingRelationship() {
-        var nodeInNode = RelationshipService.suggestions(ArchiType.ofSimpleName("Node"),
+        List<RelationshipService.Suggestion> nodeInNode =
+                RelationshipService.suggestions(ArchiType.ofSimpleName("Node"),
                 ArchiType.ofSimpleName("SystemSoftware"));
         assertEquals(List.of("COMPOSITION"), nodeInNode.stream().filter(RelationshipService.Suggestion::nesting)
                 .map(x -> x.type().name()).toList(), "где допустимы обе — composition");
         assertTrue(nodeInNode.getFirst().byDefault());
         assertEquals(1, nodeInNode.stream().filter(RelationshipService.Suggestion::byDefault).count());
 
-        var actorInRole = RelationshipService.suggestions(ArchiType.ofSimpleName("BusinessActor"),
+        List<RelationshipService.Suggestion> actorInRole =
+                RelationshipService.suggestions(ArchiType.ofSimpleName("BusinessActor"),
                 ArchiType.ofSimpleName("BusinessRole"));
         assertEquals(List.of("ASSIGNMENT"), actorInRole.stream().filter(RelationshipService.Suggestion::nesting)
                 .map(x -> x.type().name()).toList());
 
-        var componentInProcess = RelationshipService.suggestions(COMPONENT, ArchiType.ofSimpleName("BusinessProcess"));
+        List<RelationshipService.Suggestion> componentInProcess =
+                RelationshipService.suggestions(COMPONENT, ArchiType.ofSimpleName("BusinessProcess"));
         assertFalse(componentInProcess.stream().anyMatch(RelationshipService.Suggestion::nesting),
                 "вложенность связи не подразумевает");
     }

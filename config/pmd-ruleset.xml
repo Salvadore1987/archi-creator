@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-    Правила PMD, которые держит сборка: сложность метода, пустой catch, вывод в консоль.
+    Правила PMD, которые держит сборка: сложность метода, пустой catch, var, вывод в консоль.
     Основной код и тесты всех модулей.
 -->
 <ruleset name="archi-creator"
@@ -23,6 +23,9 @@
             <property name="allowCommentedBlocks" value="false"/>
         </properties>
     </rule>
+
+    <!-- Тип переменной виден в диффе: var запрещён. -->
+    <rule ref="category/java/codestyle.xml/UseExplicitTypes"/>
 
     <rule ref="category/java/bestpractices.xml/SystemPrintln"/>
     <rule ref="category/java/bestpractices.xml/AvoidPrintStackTrace"/>

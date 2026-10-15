@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 
 class ModelAclIT extends ApiTest {
@@ -31,8 +32,9 @@ class ModelAclIT extends ApiTest {
         mvc.perform(get("/api/v1/models").with(as("stranger", "ARCHITECT")))
                 .andExpect(jsonPath("$[?(@.id == '" + model + "')]").isEmpty());
 
-        var auditor = jwt().jwt(j -> j.subject("auditor").claim("groups", List.of("/audit")))
-                .authorities(new SimpleGrantedAuthority("ROLE_VIEWER"));
+        SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor auditor =
+                jwt().jwt(j -> j.subject("auditor").claim("groups", List.of("/audit")))
+                        .authorities(new SimpleGrantedAuthority("ROLE_VIEWER"));
         mvc.perform(get("/api/v1/models/" + model).with(auditor)).andExpect(status().isOk());
         mvc.perform(get("/api/v1/models/" + model).with(admin())).andExpect(status().isOk());
     }

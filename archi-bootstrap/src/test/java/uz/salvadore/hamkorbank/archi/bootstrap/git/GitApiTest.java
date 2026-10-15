@@ -20,6 +20,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
+import java.util.stream.Stream;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -151,7 +152,7 @@ abstract class GitApiTest extends ApiTest {
                 git.checkout().setCreateBranch(true).setName(branch).call();
             }
             boolean changed = false;
-            try (var files = Files.walk(work.resolve("models"))) {
+            try (Stream<Path> files = Files.walk(work.resolve("models"))) {
                 for (Path file : files.filter(p -> p.toString().endsWith(".yaml")).toList()) {
                     String text = Files.readString(file, StandardCharsets.UTF_8);
                     String edited = edit.apply(text);

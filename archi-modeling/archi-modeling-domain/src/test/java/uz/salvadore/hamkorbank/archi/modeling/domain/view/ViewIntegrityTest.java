@@ -53,7 +53,8 @@ class ViewIntegrityTest {
 
         ViewNode first = view.placeElement(model, component.id(), BOX, Optional.empty(), ViewNodeId.next(UUIDS),
                 Models.archiId()).value();
-        var second = view.placeElement(model, component.id(), new Bounds(300, 10, 120, 55), Optional.empty(),
+        ArchitectureModel.Created<ViewNode> second = view.placeElement(model, component.id(),
+                new Bounds(300, 10, 120, 55), Optional.empty(),
                 ViewNodeId.next(UUIDS), Models.archiId());
 
         assertFalse(second.created());

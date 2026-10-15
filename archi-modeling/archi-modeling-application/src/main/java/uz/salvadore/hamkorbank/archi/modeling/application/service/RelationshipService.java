@@ -105,7 +105,7 @@ public final class RelationshipService {
                                 .filter(r -> r.archiType().equals(archiType) && r.source().equals(source)
                                         && r.target().equals(target))
                                 .findFirst();
-                        var result = duplicate.isPresent()
+                        ArchitectureModel.Created<Relationship> result = duplicate.isPresent()
                                 ? new ArchitectureModel.Created<>(duplicate.get(), false)
                                 : model.addRelationship(archiType, source, target, details.name(), details.folderId(),
                                         details.accessType(), details.directed(),
@@ -134,7 +134,7 @@ public final class RelationshipService {
         if (drawn.isPresent()) {
             return drawn.get().id();
         }
-        var edge = view.connect(model, relationship.id(), source, target,
+        ArchitectureModel.Created<ViewEdge> edge = view.connect(model, relationship.id(), source, target,
                 ViewEdgeId.of(kernel.newId(placement.edgeIds())),
                 kernel.newArchiId(model, view, placement.edgeIds()));
         kernel.views.save(view);

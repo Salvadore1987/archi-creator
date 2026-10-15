@@ -17,6 +17,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 
 /** Правка представления — группы, заметки, стиль, рёбра — через REST, базу и выгрузку. */
@@ -179,7 +180,7 @@ class ViewEditingIT extends ApiTest {
                 + "\"width\":120,\"height\":55}],\"edges\":[{\"id\":\"" + IDS.generate() + "\",\"sourceId\":\""
                 + appNode + "\",\"targetId\":\"" + unsaved + "\"}]}";
 
-        var proposal = mvc.perform(post("/api/v1/views/" + view + "/auto-layout").with(architect())
+        MvcResult proposal = mvc.perform(post("/api/v1/views/" + view + "/auto-layout").with(architect())
                         .contentType(MediaType.APPLICATION_JSON).content(graph))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nodes.length()").value(2))

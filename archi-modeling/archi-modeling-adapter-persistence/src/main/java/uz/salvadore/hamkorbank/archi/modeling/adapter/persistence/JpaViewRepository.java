@@ -47,9 +47,11 @@ public class JpaViewRepository implements ViewRepository {
         if (view == null) {
             return Optional.empty();
         }
-        var nodes = em.createQuery("select n from ViewNodeEntity n where n.viewId = :v", ViewNodeEntity.class)
+        List<ViewNodeEntity> nodes = em.createQuery(
+                        "select n from ViewNodeEntity n where n.viewId = :v", ViewNodeEntity.class)
                 .setParameter("v", id.value()).getResultList();
-        var edges = em.createQuery("select x from ViewEdgeEntity x where x.viewId = :v", ViewEdgeEntity.class)
+        List<ViewEdgeEntity> edges = em.createQuery(
+                        "select x from ViewEdgeEntity x where x.viewId = :v", ViewEdgeEntity.class)
                 .setParameter("v", id.value()).getResultList();
         return Optional.of(View.restore(EntityMapper.toViewHeader(view),
                 nodes.stream().map(EntityMapper::toNode).toList(), edges.stream().map(EntityMapper::toEdge).toList()));
@@ -58,7 +60,7 @@ public class JpaViewRepository implements ViewRepository {
     /** Все представления модели тремя запросами — для снимка версии. */
     @Override
     public List<View> loadAll(ModelId modelId) {
-        var views = em.createQuery(
+        List<ViewEntity> views = em.createQuery(
                         "select distinct v from ViewEntity v left join fetch v.properties where v.modelId = :m",
                         ViewEntity.class)
                 .setParameter("m", modelId.value()).getResultList();

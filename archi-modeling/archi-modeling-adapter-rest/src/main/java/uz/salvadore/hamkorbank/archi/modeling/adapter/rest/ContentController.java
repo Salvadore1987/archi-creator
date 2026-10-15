@@ -41,8 +41,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ConceptKind;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.AccessType;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelFolder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
@@ -70,7 +72,7 @@ public class ContentController {
     public ResponseEntity<ElementDto> createElement(EditorIdentity actor, @PathVariable UUID id,
                                                     @RequestBody CreateElementRequest request,
                                                     @RequestHeader("Idempotency-Key") Optional<String> key) {
-        var element = elements.create(actor, ModelId.of(id), archiType(request.archiType()), request.name(),
+        Element element = elements.create(actor, ModelId.of(id), archiType(request.archiType()), request.name(),
                 Optional.ofNullable(request.folderId()).map(FolderId::of),
                 RequestedIds.of(request.id(), request.archiId()), key);
         return ResponseEntity.created(URI.create("/api/v1/elements/" + element.id())).body(DtoMapper.element(element));
@@ -96,13 +98,14 @@ public class ContentController {
     public ResponseEntity<RelationshipDto> createRelationship(EditorIdentity actor, @PathVariable UUID id,
                                                               @RequestBody CreateRelationshipRequest request,
                                                               @RequestHeader("Idempotency-Key") Optional<String> key) {
-        var placement = Optional.ofNullable(request.view()).map(v -> new RelationshipService.EdgePlacement(
-                ViewId.of(require(v.viewId(), "view.viewId")), require(v.sourceNodeId(), "view.sourceNodeId"),
-                require(v.targetNodeId(), "view.targetNodeId"), RequestedIds.of(v.edgeId(), v.edgeArchiId())));
-        var details = new RelationshipService.Details(Optional.ofNullable(request.name()),
+        Optional<RelationshipService.EdgePlacement> placement = Optional.ofNullable(request.view())
+                .map(v -> new RelationshipService.EdgePlacement(ViewId.of(require(v.viewId(), "view.viewId")),
+                        require(v.sourceNodeId(), "view.sourceNodeId"), require(v.targetNodeId(), "view.targetNodeId"),
+                        RequestedIds.of(v.edgeId(), v.edgeArchiId())));
+        RelationshipService.Details details = new RelationshipService.Details(Optional.ofNullable(request.name()),
                 Optional.ofNullable(request.folderId()).map(FolderId::of), accessType(request.accessType()),
                 Optional.ofNullable(request.directed()), RequestedIds.of(request.id(), request.archiId()));
-        var result = relationships.create(actor, ModelId.of(id), archiType(request.archiType()),
+        RelationshipService.Result result = relationships.create(actor, ModelId.of(id), archiType(request.archiType()),
                 require(request.sourceId(), "sourceId"), require(request.targetId(), "targetId"), details,
                 placement, key);
         RelationshipDto body = DtoMapper.relationship(result.relationship(),
@@ -132,7 +135,8 @@ public class ContentController {
     public ResponseEntity<FolderDto> createFolder(EditorIdentity actor, @PathVariable UUID id,
                                                   @RequestBody CreateFolderRequest request,
                                                   @RequestHeader("Idempotency-Key") Optional<String> key) {
-        var folder = tree.createFolder(actor, ModelId.of(id), FolderId.of(require(request.parentId(), "parentId")),
+        ModelFolder folder = tree.createFolder(actor, ModelId.of(id),
+                FolderId.of(require(request.parentId(), "parentId")),
                 request.name(), RequestedIds.of(request.id(), request.archiId()), key);
         return ResponseEntity.status(HttpStatus.CREATED).body(DtoMapper.folder(folder));
     }

@@ -207,7 +207,8 @@ public final class ExportService {
     private static byte[] zip(String fileName, byte[] file, byte[] report) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (ZipOutputStream zip = new ZipOutputStream(out, StandardCharsets.UTF_8)) {
-            for (var entry : List.of(Map.entry(fileName, file), Map.entry(LOSS_REPORT_FILE, report))) {
+            for (Map.Entry<String, byte[]> entry
+                    : List.of(Map.entry(fileName, file), Map.entry(LOSS_REPORT_FILE, report))) {
                 ZipEntry zipEntry = new ZipEntry(entry.getKey());
                 zipEntry.setTime(FIXED_ENTRY_TIME);
                 zip.putNextEntry(zipEntry);

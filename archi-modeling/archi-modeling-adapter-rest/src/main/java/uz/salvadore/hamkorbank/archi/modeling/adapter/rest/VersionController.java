@@ -42,7 +42,7 @@ public class VersionController {
     public ResponseEntity<SaveResult> save(EditorIdentity actor, @PathVariable UUID id,
                                            @RequestBody(required = false) CommentRequest request,
                                            @RequestHeader("Idempotency-Key") Optional<String> key) {
-        var result = versions.save(actor, ModelId.of(id),
+        VersionService.SaveResult result = versions.save(actor, ModelId.of(id),
                 Optional.ofNullable(request).map(CommentRequest::comment), key);
         return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)
                 .body(new SaveResult(DtoMapper.version(result.version()), result.created()));

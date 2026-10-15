@@ -489,7 +489,8 @@ public final class DocumentAssembler {
     }
 
     private static DocumentNode node(String tag, ArchiId archiId, List<Attribute> attributes, Content content) {
-        var id = uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId.of(archiId.value());
+        uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId id =
+                uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId.of(archiId.value());
         return new DocumentNode(tag, DocumentOrder.of(0), new Attributes(attributes), content.build(Optional.of(id)));
     }
 
