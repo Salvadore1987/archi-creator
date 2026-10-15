@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -23,8 +22,11 @@ public class JpaModelVersionRepository implements ModelVersionRepository {
 
     private static final byte[] NOT_LOADED = new byte[0];
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public JpaModelVersionRepository(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public Optional<ModelVersion> find(ModelId modelId, long versionNo) {

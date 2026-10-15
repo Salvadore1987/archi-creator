@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
-import jakarta.persistence.PersistenceContext;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,12 +39,12 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 @Repository
 public class JpaModelRepository implements ModelRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
 
     private final ViewRepository views;
 
-    public JpaModelRepository(ViewRepository views) {
+    public JpaModelRepository(EntityManager em, ViewRepository views) {
+        this.em = em;
         this.views = views;
     }
 

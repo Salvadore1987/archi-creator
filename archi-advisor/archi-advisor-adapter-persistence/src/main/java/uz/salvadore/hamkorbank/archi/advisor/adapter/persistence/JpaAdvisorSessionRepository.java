@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.AdvisorSessionRepository;
@@ -24,8 +23,11 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
 @Repository
 public class JpaAdvisorSessionRepository implements AdvisorSessionRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public JpaAdvisorSessionRepository(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public Optional<AdvisorSession> findByKey(String requestedBy, String idempotencyKey) {

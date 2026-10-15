@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.advisor.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
-import jakarta.persistence.PersistenceContext;
 import java.time.Clock;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
@@ -20,12 +19,12 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
 @Repository
 public class JpaTokenBudgetRepository implements TokenBudgetRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
 
     private final Clock clock;
 
-    public JpaTokenBudgetRepository(Clock clock) {
+    public JpaTokenBudgetRepository(EntityManager em, Clock clock) {
+        this.em = em;
         this.clock = clock;
     }
 

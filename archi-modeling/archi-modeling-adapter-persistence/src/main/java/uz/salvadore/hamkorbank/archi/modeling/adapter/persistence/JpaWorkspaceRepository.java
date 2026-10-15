@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
@@ -13,8 +12,11 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 @Repository
 public class JpaWorkspaceRepository implements WorkspaceRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public JpaWorkspaceRepository(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public List<Workspace> findAll() {

@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.interchange.adapter.persistence;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -29,12 +28,12 @@ public class JpaGitOutbox implements GitOutbox {
     private static final String COLUMNS = "id, payload ->> 'workspaceId', payload ->> 'modelId', "
             + "(payload ->> 'versionNo')::bigint, status, attempts, next_attempt_at";
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
 
     private final UuidV7 ids;
 
-    public JpaGitOutbox(Clock clock) {
+    public JpaGitOutbox(EntityManager em, Clock clock) {
+        this.em = em;
         this.ids = new UuidV7(clock);
     }
 

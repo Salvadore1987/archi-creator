@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
@@ -19,8 +18,11 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
 @Repository
 public class NativeQueryAdvisorSettings implements AdvisorSettingsRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public NativeQueryAdvisorSettings(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public StoredSettings find(WorkspaceId workspaceId) {

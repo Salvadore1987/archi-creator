@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
-import jakarta.persistence.PersistenceContext;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -38,8 +37,11 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 @Repository
 public class JpaViewRepository implements ViewRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public JpaViewRepository(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public Optional<View> load(ViewId id) {

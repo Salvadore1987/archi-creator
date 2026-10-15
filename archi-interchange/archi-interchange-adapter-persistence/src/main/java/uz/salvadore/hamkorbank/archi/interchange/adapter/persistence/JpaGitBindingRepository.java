@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
@@ -16,8 +15,11 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 @Repository
 public class JpaGitBindingRepository implements GitBindingRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public JpaGitBindingRepository(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public Optional<GitBinding> find(WorkspaceId workspaceId) {

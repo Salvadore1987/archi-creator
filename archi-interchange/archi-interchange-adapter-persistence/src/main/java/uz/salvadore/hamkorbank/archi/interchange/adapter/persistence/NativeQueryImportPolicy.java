@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Repository;
@@ -20,8 +19,11 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 @Repository
 public class NativeQueryImportPolicy implements ImportPolicy {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public NativeQueryImportPolicy(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public boolean strictImport(WorkspaceId workspaceId) {

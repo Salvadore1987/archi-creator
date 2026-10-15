@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -21,8 +20,11 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 @Repository
 public class JpaModelAccessListRepository implements ModelAccessListRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public JpaModelAccessListRepository(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public ModelAccessList find(ModelId modelId) {

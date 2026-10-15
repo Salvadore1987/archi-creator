@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
@@ -20,8 +19,11 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 @Repository
 public class JpaModelLockRepository implements ModelLockRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public JpaModelLockRepository(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public Optional<ModelLock> find(ModelId modelId) {

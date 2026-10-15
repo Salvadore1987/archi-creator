@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import java.util.List;
 import java.util.Map;
@@ -33,13 +32,13 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 @Repository
 public class JpaImportSessionRepository implements ImportSessionRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
 
     private final TextCatalog texts;
 
     /** Находка хранится текстом на языке запроса, в котором прошёл импорт: это отчёт, а не сообщение. */
-    public JpaImportSessionRepository(TextCatalog texts) {
+    public JpaImportSessionRepository(EntityManager em, TextCatalog texts) {
+        this.em = em;
         this.texts = texts;
     }
 

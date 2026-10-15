@@ -28,7 +28,7 @@
 | 3 | PMD в сборке: сложность ≤ 25, пустой `catch`, `System.out`; разбить `GitYamlReader.node` | 01-10, 01-12 (часть), 01-15 | PMD `CyclomaticComplexity`, `EmptyCatchBlock`, `SystemPrintln`, `AvoidPrintStackTrace` | ✅ |
 | 4 | `var` → явный тип | 01-01 | PMD `UseExplicitTypes` | ✅ |
 | 5 | Wildcard в параметрах публичных методов: порты публикации событий | 01-03 | ArchUnit | ✅ |
-| 6 | Внедрение только конструктором: `EntityManager` в 16 адаптерах | 01-04 | ArchUnit | ⬜ |
+| 6 | Внедрение только конструктором: `EntityManager` в 16 адаптерах | 01-04 | ArchUnit | ✅ |
 | 7 | Связи без `EAGER`: авторы привязки Git | 01-05 | ArchUnit | ⬜ |
 | 8 | `findAll()` без предела: первое пространство | 01-06 | ArchUnit | ⬜ |
 | 9 | Jackson 3 вместо Jackson 2 в клиенте Anthropic | 01-07 | ArchUnit | ⬜ |

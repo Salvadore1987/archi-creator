@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
@@ -18,8 +17,11 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentComma
 @Repository
 public class JpaIdempotencyRepository implements IdempotencyRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public JpaIdempotencyRepository(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public Optional<IdempotencyRecord> find(String scope, String actor, String key) {

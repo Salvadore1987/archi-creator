@@ -1,6 +1,8 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.architecture;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethod;
@@ -39,6 +41,21 @@ class CodingRulesTest {
         methods().that().arePublic().or().areProtected()
                 .should(haveNoWildcardParameters())
                 .because("тип параметра — контракт метода: конкретный тип или параметр типа, а не `?`")
+                .check(classes);
+    }
+
+    @Test
+    @DisplayName("Зависимости — только через конструктор: поле не внедряется и в бине неизменяемо")
+    void constructorInjectionOnly() {
+        noFields().should().beAnnotatedWith(jakarta.persistence.PersistenceContext.class)
+                .orShould().beAnnotatedWith(org.springframework.beans.factory.annotation.Autowired.class)
+                .orShould().beAnnotatedWith(org.springframework.beans.factory.annotation.Value.class)
+                .because("зависимость видна в конструкторе, и бин без контейнера собирается вызовом new")
+                .check(classes);
+        fields().that().areNotStatic()
+                .and().areDeclaredInClassesThat().areMetaAnnotatedWith(org.springframework.stereotype.Component.class)
+                .should().beFinal()
+                .because("поле бина задаётся один раз в конструкторе")
                 .check(classes);
     }
 
