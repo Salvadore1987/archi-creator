@@ -3,6 +3,8 @@ package uz.salvadore.hamkorbank.archi.advisor.adapter.rest;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.http.CacheControl;
@@ -36,6 +38,8 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorRequest;
 @RestController
 @RequestMapping("/api/v1/ai")
 public class AdvisorController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AdvisorController.class);
 
     private static final String IDEMPOTENCY_KEY = "Idempotency-Key";
     /** Дольше самого долгого обращения: документация по модели — до пяти минут. */
@@ -92,6 +96,7 @@ public class AdvisorController {
                 stream.run(new SseWriter(emitter, json));
                 emitter.complete();
             } catch (RuntimeException broken) {
+                LOG.error("advisor stream failed", broken);
                 emitter.completeWithError(broken);
             }
         });
