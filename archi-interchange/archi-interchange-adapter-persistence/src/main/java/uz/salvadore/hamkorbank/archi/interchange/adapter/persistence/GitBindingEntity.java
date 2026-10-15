@@ -5,7 +5,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OrderColumn;
@@ -41,7 +40,7 @@ public class GitBindingEntity {
     @Column(name = "last_checked_at")
     public Instant lastCheckedAt;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection
     @CollectionTable(name = "git_author", joinColumns = @JoinColumn(name = "workspace_id"))
     @OrderColumn(name = "sort_order")
     public List<Author> authors = new ArrayList<>();

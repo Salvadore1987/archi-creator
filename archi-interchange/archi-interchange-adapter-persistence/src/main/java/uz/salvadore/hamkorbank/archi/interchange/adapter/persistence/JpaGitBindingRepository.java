@@ -23,7 +23,10 @@ public class JpaGitBindingRepository implements GitBindingRepository {
 
     @Override
     public Optional<GitBinding> find(WorkspaceId workspaceId) {
-        return Optional.ofNullable(em.find(GitBindingEntity.class, workspaceId.value())).map(e -> new GitBinding(
+        return em.createQuery("select b from GitBindingEntity b left join fetch b.authors where b.workspaceId = :w",
+                        GitBindingEntity.class)
+                .setParameter("w", workspaceId.value())
+                .getResultStream().findFirst().map(e -> new GitBinding(
                 new WorkspaceId(e.workspaceId), e.repoUrl, e.branch, SecretRef.of(e.tokenRef),
                 GitBindingStatus.valueOf(e.status), Optional.ofNullable(e.lastCommitSha).map(GitSha::of),
                 Optional.ofNullable(e.lastCheckedAt),

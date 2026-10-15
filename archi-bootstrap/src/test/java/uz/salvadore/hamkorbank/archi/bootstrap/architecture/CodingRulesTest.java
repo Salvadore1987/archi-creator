@@ -4,7 +4,10 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 
+import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaEnumConstant;
+import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaParameterizedType;
 import com.tngtech.archunit.core.domain.JavaType;
@@ -14,6 +17,8 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,6 +30,11 @@ import org.junit.jupiter.api.Test;
 class CodingRulesTest {
 
     private static final String ROOT = "uz.salvadore.hamkorbank.archi";
+    private static final String JPA = "jakarta.persistence.";
+    /** Связи, у которых JPA по умолчанию загружает сразу: им нужен явный LAZY. */
+    private static final Set<String> EAGER_BY_DEFAULT = Set.of(JPA + "ManyToOne", JPA + "OneToOne");
+    private static final Set<String> FETCHING = Set.of(JPA + "ManyToOne", JPA + "OneToOne", JPA + "OneToMany",
+            JPA + "ManyToMany", JPA + "ElementCollection", JPA + "Basic");
 
     private static JavaClasses classes;
 
@@ -57,6 +67,36 @@ class CodingRulesTest {
                 .should().beFinal()
                 .because("поле бина задаётся один раз в конструкторе")
                 .check(classes);
+    }
+
+    @Test
+    @DisplayName("Связи и коллекции JPA загружаются лениво")
+    void noEagerFetch() {
+        fields().should(fetchLazily())
+                .because("EAGER тянет граф при каждом чтении сущности; нужное читается JOIN FETCH в запросе")
+                .check(classes);
+    }
+
+    private static ArchCondition<JavaField> fetchLazily() {
+        return new ArchCondition<>("fetch lazily") {
+            @Override
+            public void check(JavaField field, ConditionEvents events) {
+                for (JavaAnnotation<JavaField> annotation : field.getAnnotations()) {
+                    String type = annotation.getRawType().getName();
+                    if (!FETCHING.contains(type)) {
+                        continue;
+                    }
+                    Optional<String> fetch = annotation.get("fetch")
+                            .map(value -> ((JavaEnumConstant) value).name());
+                    boolean eager = fetch.map("EAGER"::equals).orElse(EAGER_BY_DEFAULT.contains(type));
+                    if (eager) {
+                        events.add(SimpleConditionEvent.violated(field,
+                                field.getFullName() + " is fetched eagerly by @"
+                                        + annotation.getRawType().getSimpleName()));
+                    }
+                }
+            }
+        };
     }
 
     private static ArchCondition<JavaMethod> haveNoWildcardParameters() {
