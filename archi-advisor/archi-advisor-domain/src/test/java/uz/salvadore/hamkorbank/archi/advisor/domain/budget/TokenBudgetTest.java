@@ -75,6 +75,19 @@ class TokenBudgetTest {
     }
 
     @Test
+    @DisplayName("INV-ADV-006: расход без переполнения — огромное число отклоняется, а не уменьшает израсходованное")
+    void usageDoesNotOverflow() {
+        assertThrows(InvalidValueException.class, () -> new TokenUsage(Long.MAX_VALUE, 1));
+        TokenUsage large = new TokenUsage(Long.MAX_VALUE - 1, 0);
+        assertThrows(InvalidValueException.class, () -> large.plus(new TokenUsage(2, 0)));
+
+        TokenBudget budget = budget(10_000);
+        budget.record(new TokenUsage(100, 0), NOW);
+        assertThrows(InvalidValueException.class, () -> budget.record(large, NOW));
+        assertEquals(100, budget.consumedTokens());
+    }
+
+    @Test
     @DisplayName("INV-ADV-006: неуспешная сессия тоже расходует бюджет")
     void failedSessionStillConsumes() {
         TokenBudget budget = budget(1000);

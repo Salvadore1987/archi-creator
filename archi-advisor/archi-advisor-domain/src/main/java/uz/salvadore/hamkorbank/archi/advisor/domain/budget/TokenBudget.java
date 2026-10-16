@@ -88,7 +88,7 @@ public final class TokenBudget extends AggregateRoot<TokenBudgetId> {
 
     /** Учесть расход сессии — любой, включая неуспешную. */
     public void record(TokenUsage usage, Instant now) {
-        consumedTokens = Math.addExact(consumedTokens, Objects.requireNonNull(usage, "usage").total());
+        consumedTokens = TokenUsage.sum(consumedTokens, Objects.requireNonNull(usage, "usage").total());
         transition(now);
     }
 
