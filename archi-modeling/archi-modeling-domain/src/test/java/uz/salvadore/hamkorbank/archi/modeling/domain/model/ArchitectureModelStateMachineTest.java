@@ -12,7 +12,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
-import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelDeleted;
+import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelDeletedEvent;
 
 class ArchitectureModelStateMachineTest {
 
@@ -27,7 +27,7 @@ class ArchitectureModelStateMachineTest {
 
         model.delete(ARCHITECT, NOW);
         assertEquals(ModelStatus.DELETED, model.status());
-        assertEquals(ModelDeleted.class, model.pullEvents().getFirst().getClass());
+        assertEquals(ModelDeletedEvent.class, model.pullEvents().getFirst().getClass());
 
         model.restoreDeleted(NOW);
         assertEquals(ModelStatus.ACTIVE, model.status());

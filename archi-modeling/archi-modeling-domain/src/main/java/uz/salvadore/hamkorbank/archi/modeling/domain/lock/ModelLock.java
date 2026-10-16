@@ -12,7 +12,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
-import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelLockReleased;
+import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelLockReleasedEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
 /**
@@ -52,15 +52,15 @@ public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Insta
      */
     public static Acquisition acquire(ModelId modelId, Optional<ModelLock> current, EditorIdentity by, Instant now,
                                       Duration ttl) {
-        Optional<ModelLockReleased> expired = Optional.empty();
+        Optional<ModelLockReleasedEvent> expired = Optional.empty();
         if (current.isPresent()) {
             ModelLock lock = current.get();
             if (lock.status(now) == LockStatus.HELD && !lock.owner.equals(by.subject())) {
                 throw heldByOther(lock);
             }
             if (lock.status(now) == LockStatus.EXPIRED) {
-                expired = Optional.of(new ModelLockReleased(modelId, lock.owner, lock.owner, LockReleaseReason.EXPIRED,
-                        now));
+                expired = Optional.of(new ModelLockReleasedEvent(modelId, lock.owner, lock.owner,
+                        LockReleaseReason.EXPIRED, now));
             } else {
                 return new Acquisition(new ModelLock(modelId, lock.owner, lock.acquiredAt, now.plus(ttl)), expired);
             }
@@ -72,15 +72,15 @@ public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Insta
      * Снятие. Владелец снимает свою, {@code ADMIN} — любую принудительно;
      * архитектору чужую снимать нельзя.
      */
-    public ModelLockReleased release(EditorIdentity by, Instant now) {
+    public ModelLockReleasedEvent release(EditorIdentity by, Instant now) {
         if (status(now) == LockStatus.EXPIRED) {
-            return new ModelLockReleased(modelId, owner, owner, LockReleaseReason.EXPIRED, now);
+            return new ModelLockReleasedEvent(modelId, owner, owner, LockReleaseReason.EXPIRED, now);
         }
         if (owner.equals(by.subject())) {
-            return new ModelLockReleased(modelId, owner, by.subject(), LockReleaseReason.RELEASED_BY_OWNER, now);
+            return new ModelLockReleasedEvent(modelId, owner, by.subject(), LockReleaseReason.RELEASED_BY_OWNER, now);
         }
         if (by.isAdmin()) {
-            return new ModelLockReleased(modelId, owner, by.subject(), LockReleaseReason.FORCED_BY_ADMIN, now);
+            return new ModelLockReleasedEvent(modelId, owner, by.subject(), LockReleaseReason.FORCED_BY_ADMIN, now);
         }
         throw new ModelingDomainException(ModelingCodes.ACCESS_DENIED, Failure.FORBIDDEN,
                 Message.of(ModelingMessages.LOCK_FOREIGN_RELEASE), Map.of("lockOwner", owner));
@@ -112,6 +112,6 @@ public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Insta
     }
 
     /** Итог захвата: новая блокировка и, если была просроченная, событие о её истечении. */
-    public record Acquisition(ModelLock lock, Optional<ModelLockReleased> expiredPrevious) {
+    public record Acquisition(ModelLock lock, Optional<ModelLockReleasedEvent> expiredPrevious) {
     }
 }

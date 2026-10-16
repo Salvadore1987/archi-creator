@@ -28,7 +28,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessag
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
-import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportCompleted;
+import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportCompletedEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportFormat;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportJob;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportOptions;
@@ -192,7 +192,7 @@ public final class ExportService {
     private Export deliver(ExportJob job, VersionSnapshot snapshot, Artifact artifact, LossReport report) {
         job.render(snapshot.versionNo(), artifact, report);
         job.deliver();
-        events.publish(List.of(ExportCompleted.of(job, clock.instant())));
+        events.publish(List.of(ExportCompletedEvent.of(job, clock.instant())));
         metrics.exportLosses(job.format().name(), report.entries().size());
         return new Export(artifact, snapshot.versionNo(), report.entries().size());
     }

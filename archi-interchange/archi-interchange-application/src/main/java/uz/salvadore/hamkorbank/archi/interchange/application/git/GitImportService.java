@@ -34,7 +34,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
-import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportApplied;
+import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportAppliedEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
@@ -204,7 +204,7 @@ public final class GitImportService {
                     }
                     ModelStates.Replaced replaced = states.replace(actor, model, xml, comment);
                     Instant at = clock.instant();
-                    ImportApplied event = session.apply(model, replaced.versionNo(), replaced.opaqueObjects(), at);
+                    ImportAppliedEvent event = session.apply(model, replaced.versionNo(), replaced.opaqueObjects(), at);
                     sessions.save(session);
                     if (adopt) {
                         adopt(binding, model, replaced, sha, at);
@@ -229,7 +229,7 @@ public final class GitImportService {
     private record Fetched(Optional<GitSha> head, Candidate candidate) {
     }
 
-    private record Applied(ModelStates.Replaced replaced, ImportApplied event) {
+    private record Applied(ModelStates.Replaced replaced, ImportAppliedEvent event) {
     }
 
     /**

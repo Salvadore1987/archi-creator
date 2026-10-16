@@ -25,7 +25,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.UuidV7;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.IdempotencyConflictException;
-import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportApplied;
+import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportAppliedEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportIntake;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
@@ -149,7 +149,7 @@ public final class ImportService {
                 texts.text(Message.of(InterchangeMessages.COMMENT_IMPORTED, session.sourceName())));
         int opaque = (int) (model.model().elements().values().stream().filter(e -> !e.supported()).count()
                 + model.model().relationships().values().stream().filter(r -> !r.supported()).count());
-        ImportApplied applied = session.apply(
+        ImportAppliedEvent applied = session.apply(
                 new uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId(modelId.value()),
                 version.versionNo(), opaque, now);
         sessions.save(session);

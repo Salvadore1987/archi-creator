@@ -9,7 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
-import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommitted;
+import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommittedEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Models;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
@@ -43,7 +43,7 @@ class ModelVersionTest {
                 WORKSPACE, "architect-1", Optional.of("  "), Models.NOW, new byte[] {1}, HASH,
                 new ModelVersion.ModelSize(12, 7));
 
-        ModelVersionCommitted event = committed.event();
+        ModelVersionCommittedEvent event = committed.event();
         assertEquals(MODEL, event.modelId());
         assertEquals(WORKSPACE, event.workspaceId());
         assertEquals(committed.version().versionNo(), event.versionNo());

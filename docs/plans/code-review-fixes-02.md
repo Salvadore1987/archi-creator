@@ -65,7 +65,7 @@
 | B2 | Идентификаторы → `BaseId<UUID>`: modeling | ArchUnit: `*Id` домена наследуют `BaseId` | ⬜ |
 | B3 | То же: interchange, advisor | то же правило без исключений | ⬜ |
 | B4 | Корни агрегатов → `AggregateRoot`, создание фабрикой (record-агрегаты `ModelLock`, `ModelVersion`, `ModelAccessList` — в классы с `restore`) | ArchUnit: корни наследуют `AggregateRoot`, публичных конструкторов нет | ⬜ |
-| B5 | События → `{Aggregate}{Action}Event`, базовый `{Aggregate}Event` | ArchUnit: реализации `DomainEvent` оканчиваются на `Event` | ⬜ |
+| B5 | События → `{Aggregate}{Action}Event`, базовый `{Aggregate}Event` | ArchUnit: реализации `DomainEvent` оканчиваются на `Event` | ✅ |
 | B6a | Исключения домена modeling → `DomainException` / `ModelingDomainException`; `InvalidValueException`, `RelationNotPermittedException` в общей иерархии | ArchUnit: исключения домена наследуют корень контекста | ✅ |
 | B6b | То же: interchange | правило расширено на interchange | ✅ |
 | B6c | То же: advisor | правило расширено на advisor | ✅ |
@@ -133,6 +133,13 @@
   теперь `AdvisorDomainException`. `ResultReader` ловит его явно: нечитаемая находка модели ИИ
   по-прежнему пропускается. К этапу 4 ревью: `IllegalSessionTransitionException` передаёт
   в сообщение `from.name()` и имя перехода латиницей — тот же дефект, что 02-09.
+- **B5.** Базовый тип событий агрегата — `sealed interface {Агрегат}Event extends DomainEvent`,
+  а не абстрактный класс со ссылкой на агрегат, как в стандарте: события — record со снимком
+  полей (уходят в outbox и после коммита), а record не наследует класс. Маркер `DomainEvent`
+  без параметра типа: порты публикации принимают `Collection<DomainEvent>`, а `DomainEvent<T>`
+  потребовал бы wildcard в параметре, который запрещает задача 5 этапа 1. `GitSnapshotCommittedEvent`
+  создаёт сервис публикации, а не агрегат (смешанный способ из ADR-0023) — отнесён к агрегату
+  привязки `GitBindingEvent`. Тип на проводе (`outbox_event.event_type`, AsyncAPI) не изменился.
 
 ## Отменённые варианты
 

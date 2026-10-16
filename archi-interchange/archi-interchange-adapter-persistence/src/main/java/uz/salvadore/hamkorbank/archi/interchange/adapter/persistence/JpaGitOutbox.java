@@ -17,7 +17,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
 /**
  * Очередь публикации в Git поверх {@code outbox_event}: события
- * {@code ModelVersionCommitted}, ключ — модель, порядок — номер версии.
+ * {@code ModelVersionCommittedEvent}, ключ — модель, порядок — номер версии.
  * Нагрузка — JSON с пространством, моделью и номером версии.
  */
 @Repository

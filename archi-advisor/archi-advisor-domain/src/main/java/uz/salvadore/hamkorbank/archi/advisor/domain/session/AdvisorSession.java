@@ -177,7 +177,7 @@ public final class AdvisorSession {
         this.finishedAt = Optional.of(now);
         this.auditEntry = Optional.of(new AuditEntry(auditId, requestedBy, function, usage, outcome,
                 rejectionReason, now));
-        events.add(new AdvisorSessionCompleted(id, workspaceId, modelId, function, outcome, rejectionReason,
+        events.add(new AdvisorSessionCompletedEvent(id, workspaceId, modelId, function, outcome, rejectionReason,
                 usage.promptTokens(), usage.completionTokens(), contextTruncated, findings.size(),
                 Duration.between(requestedAt, now).toMillis(), requestedBy, now));
     }

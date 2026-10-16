@@ -8,7 +8,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
 /**
- * Очередь версий на публикацию — записи {@code ModelVersionCommitted} в outbox.
+ * Очередь версий на публикацию — записи {@code ModelVersionCommittedEvent} в outbox.
  * Пишется той же транзакцией, что версия; читается по порядку версий внутри модели.
  */
 public interface GitOutbox {

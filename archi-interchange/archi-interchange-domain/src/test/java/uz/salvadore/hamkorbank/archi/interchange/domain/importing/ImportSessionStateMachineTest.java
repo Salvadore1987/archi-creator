@@ -28,7 +28,7 @@ class ImportSessionStateMachineTest {
         assertThrows(IllegalImportTransitionException.class, () -> received.apply(MODEL, 1, 0, NOW));
 
         received.validate(List.of(), NOW);
-        ImportApplied applied = received.apply(MODEL, 1, 0, NOW);
+        ImportAppliedEvent applied = received.apply(MODEL, 1, 0, NOW);
 
         assertEquals(ImportStatus.APPLIED, received.status());
         assertEquals(MODEL, applied.modelId());

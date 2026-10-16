@@ -13,7 +13,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
-import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelLockReleased;
+import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelLockReleasedEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Models;
 
@@ -71,7 +71,7 @@ class ModelLockTest {
 
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> alices.release(BOB, NOW)).failure());
-        ModelLockReleased forced = alices.release(ADMIN, NOW);
+        ModelLockReleasedEvent forced = alices.release(ADMIN, NOW);
         assertEquals(LockReleaseReason.FORCED_BY_ADMIN, forced.reason());
         assertEquals(LockReleaseReason.RELEASED_BY_OWNER, alices.release(ALICE, NOW).reason());
     }

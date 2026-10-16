@@ -10,7 +10,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
-import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelLockReleased;
+import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelLockReleasedEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
@@ -52,7 +52,7 @@ public final class LockService {
             kernel.visibleHeader(modelId, actor, AclAccess.READ);
             Optional<ModelLock> lock = kernel.locks.find(modelId);
             lock.ifPresent(l -> {
-                ModelLockReleased released = l.release(actor, kernel.now());
+                ModelLockReleasedEvent released = l.release(actor, kernel.now());
                 kernel.locks.delete(modelId);
                 kernel.events.publish(List.of(released));
             });

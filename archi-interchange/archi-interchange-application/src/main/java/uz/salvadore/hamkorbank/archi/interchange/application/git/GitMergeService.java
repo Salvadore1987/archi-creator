@@ -43,7 +43,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
-import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportApplied;
+import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportAppliedEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
@@ -287,7 +287,7 @@ public final class GitMergeService {
                     }
                     ModelStates.Replaced replaced = states.replace(actor, model, attempt.xml(), comment);
                     Instant at = clock.instant();
-                    ImportApplied event = session.apply(model, replaced.versionNo(), replaced.opaqueObjects(), at);
+                    ImportAppliedEvent event = session.apply(model, replaced.versionNo(), replaced.opaqueObjects(), at);
                     sessions.save(session);
                     merges.record(model, sha, at);
                     if (sides.absorbsHead() && outbox.head(model)
@@ -312,7 +312,7 @@ public final class GitMergeService {
         });
     }
 
-    private record Applied(ModelStates.Replaced replaced, ImportApplied event) {
+    private record Applied(ModelStates.Replaced replaced, ImportAppliedEvent event) {
     }
 
     /**

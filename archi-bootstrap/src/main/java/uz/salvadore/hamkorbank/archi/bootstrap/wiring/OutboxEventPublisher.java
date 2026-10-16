@@ -7,7 +7,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.DomainEventPublisher;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.DomainEvent;
-import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommitted;
+import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommittedEvent;
 
 /**
  * События modeling: зафиксированная версия пишется в outbox сразу — в транзакции
@@ -29,7 +29,7 @@ public final class OutboxEventPublisher implements DomainEventPublisher {
     @Override
     public void publish(Collection<DomainEvent> events) {
         for (DomainEvent event : events) {
-            if (event instanceof ModelVersionCommitted committed) {
+            if (event instanceof ModelVersionCommittedEvent committed) {
                 outbox.enqueue(new WorkspaceId(committed.workspaceId().value()),
                         new ModelId(committed.modelId().value()), committed.versionNo(), clock.instant());
             }

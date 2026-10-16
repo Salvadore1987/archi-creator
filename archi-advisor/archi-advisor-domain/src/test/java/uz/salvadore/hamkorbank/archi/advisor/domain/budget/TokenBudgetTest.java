@@ -52,7 +52,7 @@ class TokenBudgetTest {
 
         assertEquals(BudgetStatus.WARNING, budget.status());
         assertEquals(Optional.empty(), budget.admission());
-        TokenBudgetThresholdReached event = assertInstanceOf(TokenBudgetThresholdReached.class,
+        TokenBudgetThresholdReachedEvent event = assertInstanceOf(TokenBudgetThresholdReachedEvent.class,
                 budget.pullEvents().getFirst());
         assertEquals(80, event.thresholdPercent());
 
@@ -89,7 +89,7 @@ class TokenBudgetTest {
     void raisingLimitLeavesExhausted() {
         TokenBudget budget = budget(1000);
         budget.record(new TokenUsage(1000, 0), NOW);
-        assertInstanceOf(TokenBudgetExhausted.class, budget.pullEvents().getFirst());
+        assertInstanceOf(TokenBudgetExhaustedEvent.class, budget.pullEvents().getFirst());
 
         budget.changeLimit(1200, NOW);
         assertEquals(BudgetStatus.WARNING, budget.status());

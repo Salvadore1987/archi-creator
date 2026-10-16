@@ -48,7 +48,7 @@ public final class ImportSession {
     private Instant finishedAt;
     private ModelId appliedModelId;
     private long appliedVersionNo;
-    private final List<ImportApplied> events = new ArrayList<>();
+    private final List<ImportAppliedEvent> events = new ArrayList<>();
 
     private ImportSession(ImportSessionId id, ImportRequest request, Instant startedAt) {
         this.id = Objects.requireNonNull(id, "id");
@@ -130,20 +130,20 @@ public final class ImportSession {
      * разбор без проверки не даёт права писать в модель, а повтор терминальной сессии
      * удвоил бы модель.
      */
-    public ImportApplied apply(ModelId modelId, long versionNo, int opaqueObjectCount, Instant now) {
+    public ImportAppliedEvent apply(ModelId modelId, long versionNo, int opaqueObjectCount, Instant now) {
         require(ImportStatus.VALIDATED, "ApplyImport");
         finish(ImportStatus.APPLIED, now);
         this.appliedModelId = Objects.requireNonNull(modelId, "modelId");
         this.appliedVersionNo = versionNo;
-        ImportApplied applied = new ImportApplied(id, workspaceId, modelId, versionNo, sourceName, sourceHash,
+        ImportAppliedEvent applied = new ImportAppliedEvent(id, workspaceId, modelId, versionNo, sourceName, sourceHash,
                 strictMode, findingCounts(), opaqueObjectCount, now);
         events.add(applied);
         return applied;
     }
 
     /** События, накопленные с последнего вызова; публикует их слой приложения после коммита. */
-    public List<ImportApplied> pullEvents() {
-        List<ImportApplied> pulled = List.copyOf(events);
+    public List<ImportAppliedEvent> pullEvents() {
+        List<ImportAppliedEvent> pulled = List.copyOf(events);
         events.clear();
         return pulled;
     }

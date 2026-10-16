@@ -18,7 +18,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
-import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommitted;
+import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommittedEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
@@ -107,7 +107,7 @@ class ModelingScenariosTest {
         assertEquals(2, saved.version().versionNo());
         assertEquals(2, replay.version().versionNo());
         assertEquals(2, ports.versions.size());
-        assertEquals(2, ports.published.stream().filter(ModelVersionCommitted.class::isInstance).count());
+        assertEquals(2, ports.published.stream().filter(ModelVersionCommittedEvent.class::isInstance).count());
     }
 
     @Test

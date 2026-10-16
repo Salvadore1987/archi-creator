@@ -13,12 +13,12 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.advisor.domain.budget.BudgetPeriod;
-import uz.salvadore.hamkorbank.archi.advisor.domain.budget.TokenBudgetExhausted;
+import uz.salvadore.hamkorbank.archi.advisor.domain.budget.TokenBudgetExhaustedEvent;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorRequest;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorSession;
-import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorSessionCompleted;
+import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorSessionCompletedEvent;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.RejectionReason;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.SessionStatus;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
@@ -47,7 +47,7 @@ class AdvisorServiceTest {
         AdvisorSession session = fixture.onlySession();
         assertEquals(SessionStatus.REJECTED, session.status());
         assertTrue(session.auditEntry().isPresent());
-        assertTrue(fixture.events.stream().anyMatch(AdvisorSessionCompleted.class::isInstance));
+        assertTrue(fixture.events.stream().anyMatch(AdvisorSessionCompletedEvent.class::isInstance));
     }
 
     @Test
@@ -57,7 +57,7 @@ class AdvisorServiceTest {
         fixture.limit = Optional.of(100L);
         AdvisorService service = fixture.service();
         service.ask(Fixture.ALICE, review(), "k1", RU).run(new Fixture.Recorded());
-        assertTrue(fixture.events.stream().anyMatch(TokenBudgetExhausted.class::isInstance));
+        assertTrue(fixture.events.stream().anyMatch(TokenBudgetExhaustedEvent.class::isInstance));
 
         AdvisorDomainException refused = assertThrows(AdvisorDomainException.class,
                 () -> service.ask(Fixture.ALICE, review(), "k2", RU));

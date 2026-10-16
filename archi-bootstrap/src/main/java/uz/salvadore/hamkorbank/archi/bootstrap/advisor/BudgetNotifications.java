@@ -3,8 +3,8 @@ package uz.salvadore.hamkorbank.archi.bootstrap.advisor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
-import uz.salvadore.hamkorbank.archi.advisor.domain.budget.TokenBudgetExhausted;
-import uz.salvadore.hamkorbank.archi.advisor.domain.budget.TokenBudgetThresholdReached;
+import uz.salvadore.hamkorbank.archi.advisor.domain.budget.TokenBudgetExhaustedEvent;
+import uz.salvadore.hamkorbank.archi.advisor.domain.budget.TokenBudgetThresholdReachedEvent;
 
 /**
  * Уведомление администратора о бюджете. Почты в стеке нет: канал — журнал уровня
@@ -17,7 +17,7 @@ public final class BudgetNotifications {
 
     /** Расход пространства пересёк порог бюджета месяца — предупреждение в журнал. */
     @EventListener
-    public void thresholdReached(TokenBudgetThresholdReached event) {
+    public void thresholdReached(TokenBudgetThresholdReachedEvent event) {
         LOG.warn("advisor budget threshold reached: workspace={} period={} consumed={} limit={} threshold={}%",
                 event.workspaceId(), event.period(), event.consumedTokens(), event.limitTokens(),
                 event.thresholdPercent());
@@ -25,7 +25,7 @@ public final class BudgetNotifications {
 
     /** Бюджет месяца исчерпан — предупреждение в журнал; дальнейшие обращения отклоняются до нового периода. */
     @EventListener
-    public void exhausted(TokenBudgetExhausted event) {
+    public void exhausted(TokenBudgetExhaustedEvent event) {
         LOG.warn("advisor budget exhausted: workspace={} period={} consumed={} limit={}",
                 event.workspaceId(), event.period(), event.consumedTokens(), event.limitTokens());
     }

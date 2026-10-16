@@ -11,7 +11,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
-import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommitted;
+import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommittedEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
@@ -77,7 +77,7 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
         long number = last.map(v -> v.versionNo + 1).orElse(1L);
         ModelVersion version = new ModelVersion(id, modelId, number, author, comment.filter(c -> !c.isBlank()),
                 Optional.empty(), now, Optional.of(snapshot), contentHash, Optional.empty());
-        ModelVersionCommitted event = new ModelVersionCommitted(modelId, workspaceId, number, author,
+        ModelVersionCommittedEvent event = new ModelVersionCommittedEvent(modelId, workspaceId, number, author,
                 version.comment, modelSize.elements(), modelSize.relationships(), now);
         return new Committed(version, event);
     }
@@ -156,7 +156,7 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
     }
 
     /** Зафиксированная версия и событие о ней: событие публикуется после записи версии. */
-    public record Committed(ModelVersion version, ModelVersionCommitted event) {
+    public record Committed(ModelVersion version, ModelVersionCommittedEvent event) {
 
         public Committed {
             Objects.requireNonNull(version, "version");

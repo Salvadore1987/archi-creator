@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 
 import java.time.Instant;
 import java.util.Optional;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AdvisorSessionId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
@@ -12,9 +11,10 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
  * исходов, включая отказ: аудит и метрики должны видеть отказы. Содержимого
  * ответа здесь нет — событие про факт и стоимость обращения.
  */
-public record AdvisorSessionCompleted(AdvisorSessionId sessionId, WorkspaceId workspaceId, ModelId modelId,
+public record AdvisorSessionCompletedEvent(AdvisorSessionId sessionId, WorkspaceId workspaceId, ModelId modelId,
                                       AdvisorFunction function, SessionStatus outcome,
                                       Optional<RejectionReason> rejectionReason, long promptTokens,
                                       long completionTokens, boolean contextTruncated, int findingCount,
-                                      long durationMs, String actor, Instant occurredAt) implements DomainEvent {
+                                      long durationMs, String actor, Instant occurredAt)
+        implements AdvisorSessionEvent {
 }

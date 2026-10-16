@@ -37,7 +37,7 @@ class AdvisorSessionTest {
 
             List<DomainEvent> events = session.pullEvents();
             assertEquals(1, events.size(), "событие завершения — на каждый исход");
-            assertEquals(outcome, ((AdvisorSessionCompleted) events.getFirst()).outcome());
+            assertEquals(outcome, ((AdvisorSessionCompletedEvent) events.getFirst()).outcome());
         });
     }
 

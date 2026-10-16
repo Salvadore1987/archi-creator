@@ -8,6 +8,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 
 import com.tngtech.archunit.core.domain.JavaAnnotation;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
 import com.tngtech.archunit.core.domain.JavaEnumConstant;
@@ -150,6 +151,34 @@ class CodingRulesTest {
                     .because("отказ домена — одна иерархия: код, вид отказа и сообщение с ключом у всех")
                     .check(classes);
         }
+    }
+
+    @Test
+    @DisplayName("Событие домена — {Агрегат}{Действие}Event и реализует базовый тип событий своего агрегата")
+    void domainEventsFollowNamingAndBaseType() {
+        for (String context : DOMAIN_EXCEPTION_ROOTS) {
+            String marker = ROOT + "." + context + ".domain.common.DomainEvent";
+            classes().that().areAssignableTo(marker).and().areNotInterfaces()
+                    .should().haveSimpleNameEndingWith("Event")
+                    .andShould(implementAggregateEventType(marker))
+                    .because("событие называет действие в прошедшем времени и принадлежит одному агрегату")
+                    .check(classes);
+        }
+    }
+
+    private static ArchCondition<JavaClass> implementAggregateEventType(String marker) {
+        return new ArchCondition<>("implement the event type of its aggregate") {
+            @Override
+            public void check(JavaClass event, ConditionEvents events) {
+                boolean viaAggregateType = event.getRawInterfaces().stream()
+                        .anyMatch(type -> !type.getName().equals(marker) && type.isAssignableTo(marker)
+                                && type.getSimpleName().endsWith("Event"));
+                if (!viaAggregateType) {
+                    events.add(SimpleConditionEvent.violated(event,
+                            event.getName() + " implements DomainEvent directly, not through its aggregate's type"));
+                }
+            }
+        };
     }
 
     @Test

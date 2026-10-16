@@ -108,9 +108,9 @@ public final class TokenBudget {
         BudgetStatus next = statusFor(consumedTokens, limitTokens);
         if (next.ordinal() > status.ordinal()) {
             if (next == BudgetStatus.EXHAUSTED) {
-                events.add(new TokenBudgetExhausted(workspaceId, period, limitTokens, consumedTokens, now));
+                events.add(new TokenBudgetExhaustedEvent(workspaceId, period, limitTokens, consumedTokens, now));
             } else {
-                events.add(new TokenBudgetThresholdReached(workspaceId, period, limitTokens, consumedTokens,
+                events.add(new TokenBudgetThresholdReachedEvent(workspaceId, period, limitTokens, consumedTokens,
                         warningThresholdPercent, now));
             }
         }
