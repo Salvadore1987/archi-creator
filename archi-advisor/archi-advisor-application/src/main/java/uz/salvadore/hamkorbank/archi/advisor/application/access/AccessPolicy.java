@@ -18,7 +18,7 @@ public final class AccessPolicy {
     public static void require(Requester requester, AdvisorOperation operation) {
         if (requester.roles().stream().noneMatch(operation.roles()::contains)) {
             throw new AdvisorDomainException(AdvisorCodes.ACCESS_DENIED, Failure.FORBIDDEN,
-                    Message.of(AdvisorMessages.OPERATION_DENIED, operation.useCase(), operation.roles()),
+                    Message.of(AdvisorMessages.OPERATION_DENIED, operation.label()),
                     Map.of("operation", operation.useCase()));
         }
     }

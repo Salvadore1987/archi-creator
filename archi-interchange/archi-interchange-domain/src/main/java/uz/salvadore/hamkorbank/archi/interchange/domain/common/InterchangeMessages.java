@@ -60,8 +60,30 @@ public final class InterchangeMessages {
     /** Узлы файла вложены глубже предела разбора. */
     public static final String NESTING_TOO_DEEP = "interchange.document.nesting-too-deep";
 
-    /** Операция недоступна роли пользователя; в тексте — операция и допущенные роли. */
+    /** Операция недоступна роли пользователя; в тексте — название операции. */
     public static final String OPERATION_DENIED = "interchange.access.operation-denied";
+    /** Название операции в отказе роли: импорт файла .archimate. */
+    public static final String OPERATION_IMPORT_ARCHIMATE_FILE = "interchange.operation.import-archimate-file";
+    /** Название операции в отказе роли: выгрузка .archimate. */
+    public static final String OPERATION_EXPORT_ARCHIMATE = "interchange.operation.export-archimate";
+    /** Название операции в отказе роли: выгрузка в Open Exchange. */
+    public static final String OPERATION_EXPORT_OPEN_EXCHANGE = "interchange.operation.export-open-exchange";
+    /** Название операции в отказе роли: выгрузка каталога в CSV. */
+    public static final String OPERATION_EXPORT_CATALOG_CSV = "interchange.operation.export-catalog-csv";
+    /** Название операции в отказе роли: выгрузка картинки представления. */
+    public static final String OPERATION_EXPORT_VIEW_IMAGE = "interchange.operation.export-view-image";
+    /** Название операции в отказе роли: выгрузка картинок всех представлений. */
+    public static final String OPERATION_EXPORT_ALL_VIEW_IMAGES = "interchange.operation.export-all-view-images";
+    /** Название операции в отказе роли: настройка импорта. */
+    public static final String OPERATION_CONFIGURE_IMPORT_POLICY = "interchange.operation.configure-import-policy";
+    /** Название операции в отказе роли: публикация в Git. */
+    public static final String OPERATION_PUSH_MODEL_TO_GIT = "interchange.operation.push-model-to-git";
+    /** Название операции в отказе роли: импорт из Git. */
+    public static final String OPERATION_PULL_MODEL_FROM_GIT = "interchange.operation.pull-model-from-git";
+    /** Название операции в отказе роли: слияние ветки Git. */
+    public static final String OPERATION_MERGE_MODEL_BRANCH = "interchange.operation.merge-model-branch";
+    /** Название операции в отказе роли: привязка к Git. */
+    public static final String OPERATION_CONFIGURE_GIT_BINDING = "interchange.operation.configure-git-binding";
     /** Значение «нет» логического поля в выгрузке CSV. */
     public static final String CSV_NO = "interchange.csv.no";
     /** Разделитель CSV выбран не из допустимых. */

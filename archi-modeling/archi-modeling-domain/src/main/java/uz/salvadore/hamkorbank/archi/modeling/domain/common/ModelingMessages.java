@@ -8,6 +8,56 @@ public final class ModelingMessages {
 
     /** Операция недоступна ролям автора запроса. */
     public static final String OPERATION_DENIED = "modeling.access.operation-denied";
+    /** Название операции в отказе роли: открытие модели. */
+    public static final String OPERATION_OPEN_MODEL = "modeling.operation.open-model";
+    /** Название операции в отказе роли: открытие представления. */
+    public static final String OPERATION_OPEN_VIEW = "modeling.operation.open-view";
+    /** Название операции в отказе роли: проверка модели. */
+    public static final String OPERATION_VALIDATE_MODEL = "modeling.operation.validate-model";
+    /** Название операции в отказе роли: просмотр версий. */
+    public static final String OPERATION_LIST_VERSIONS = "modeling.operation.list-versions";
+    /** Название операции в отказе роли: создание модели. */
+    public static final String OPERATION_CREATE_MODEL = "modeling.operation.create-model";
+    /** Название операции в отказе роли: переименование модели. */
+    public static final String OPERATION_RENAME_MODEL = "modeling.operation.rename-model";
+    /** Название операции в отказе роли: захват блокировки. */
+    public static final String OPERATION_ACQUIRE_LOCK = "modeling.operation.acquire-lock";
+    /** Название операции в отказе роли: снятие блокировки. */
+    public static final String OPERATION_RELEASE_LOCK = "modeling.operation.release-lock";
+    /** Название операции в отказе роли: создание элемента. */
+    public static final String OPERATION_CREATE_ELEMENT = "modeling.operation.create-element";
+    /** Название операции в отказе роли: правка элемента. */
+    public static final String OPERATION_UPDATE_ELEMENT = "modeling.operation.update-element";
+    /** Название операции в отказе роли: удаление элемента. */
+    public static final String OPERATION_DELETE_ELEMENT = "modeling.operation.delete-element";
+    /** Название операции в отказе роли: создание связи. */
+    public static final String OPERATION_CREATE_RELATIONSHIP = "modeling.operation.create-relationship";
+    /** Название операции в отказе роли: правка связи. */
+    public static final String OPERATION_UPDATE_RELATIONSHIP = "modeling.operation.update-relationship";
+    /** Название операции в отказе роли: удаление связи. */
+    public static final String OPERATION_DELETE_RELATIONSHIP = "modeling.operation.delete-relationship";
+    /** Название операции в отказе роли: создание представления. */
+    public static final String OPERATION_CREATE_VIEW = "modeling.operation.create-view";
+    /** Название операции в отказе роли: правка представления. */
+    public static final String OPERATION_SAVE_VIEW_LAYOUT = "modeling.operation.save-view-layout";
+    /** Название операции в отказе роли: авторазметка представления. */
+    public static final String OPERATION_AUTO_LAYOUT_VIEW = "modeling.operation.auto-layout-view";
+    /** Название операции в отказе роли: правка дерева модели. */
+    public static final String OPERATION_REORGANIZE_TREE = "modeling.operation.reorganize-tree";
+    /** Название операции в отказе роли: сохранение модели. */
+    public static final String OPERATION_SAVE_MODEL = "modeling.operation.save-model";
+    /** Название операции в отказе роли: откат к версии. */
+    public static final String OPERATION_RESTORE_VERSION = "modeling.operation.restore-version";
+    /** Название операции в отказе роли: пометка версии. */
+    public static final String OPERATION_LABEL_VERSION = "modeling.operation.label-version";
+    /** Название операции в отказе роли: удаление модели. */
+    public static final String OPERATION_DELETE_MODEL = "modeling.operation.delete-model";
+    /** Название операции в отказе роли: восстановление модели. */
+    public static final String OPERATION_RESTORE_MODEL = "modeling.operation.restore-model";
+    /** Название операции в отказе роли: уничтожение модели. */
+    public static final String OPERATION_PURGE_MODEL = "modeling.operation.purge-model";
+    /** Название операции в отказе роли: управление доступом к модели. */
+    public static final String OPERATION_MANAGE_MODEL_ACCESS = "modeling.operation.manage-model-access";
     /** Запись списка доступа без субъекта или со слишком длинным субъектом. */
     public static final String ACL_ENTRY_INVALID = "modeling.acl.entry-invalid";
     /** Список доступа модели пытается изменить не администратор и не её автор. */

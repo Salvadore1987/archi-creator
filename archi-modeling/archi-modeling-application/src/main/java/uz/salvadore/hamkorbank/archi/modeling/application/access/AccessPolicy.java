@@ -22,7 +22,7 @@ public final class AccessPolicy {
     public static void require(EditorIdentity actor, Operation operation) {
         if (actor.roles().stream().noneMatch(operation.roles()::contains)) {
             throw new ModelingDomainException(ModelingCodes.ACCESS_DENIED, Failure.FORBIDDEN,
-                    Message.of(ModelingMessages.OPERATION_DENIED, operation.useCase(), operation.roles()),
+                    Message.of(ModelingMessages.OPERATION_DENIED, operation.label()),
                     Map.of("operation", operation.useCase()));
         }
     }

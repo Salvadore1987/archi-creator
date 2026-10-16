@@ -15,7 +15,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.PrincipalType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommittedEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
@@ -59,6 +61,15 @@ class ModelingScenariosTest {
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> ports.lockService.acquire(READER, model)).failure());
         assertEquals("Ландшафт", ports.queries.open(READER, model).name());
+    }
+
+    @Test
+    @DisplayName("FR-28: отказ роли называет операцию сообщением, а не именем сценария и списком ролей")
+    void roleDenialNamesOperationByKey() {
+        ModelingDomainException denied = assertThrows(ModelingDomainException.class,
+                () -> ports.lifecycle.create(READER, ports.workspace.id(), "x", null));
+
+        assertEquals(List.of(Message.of(ModelingMessages.OPERATION_CREATE_MODEL)), denied.reason().args());
     }
 
     @Test

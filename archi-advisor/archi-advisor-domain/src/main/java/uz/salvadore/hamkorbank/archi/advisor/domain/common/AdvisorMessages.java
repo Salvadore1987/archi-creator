@@ -8,6 +8,22 @@ public final class AdvisorMessages {
 
     /** Роль автора не даёт права на операцию. */
     public static final String OPERATION_DENIED = "advisor.access.operation-denied";
+    /** Название операции в отказе роли: ревью модели. */
+    public static final String OPERATION_REVIEW_MODEL = "advisor.operation.review-model";
+    /** Название операции в отказе роли: подсказка по элементу. */
+    public static final String OPERATION_EXPLAIN_ELEMENT = "advisor.operation.explain-element";
+    /** Название операции в отказе роли: план фрагмента архитектуры. */
+    public static final String OPERATION_PLAN_MODEL = "advisor.operation.plan-model";
+    /** Название операции в отказе роли: документация по модели. */
+    public static final String OPERATION_GENERATE_DOCUMENTATION = "advisor.operation.generate-documentation";
+    /** Название операции в отказе роли: состояние помощника. */
+    public static final String OPERATION_ADVISOR_STATUS = "advisor.operation.advisor-status";
+    /** Название операции в отказе роли: включение помощника. */
+    public static final String OPERATION_TOGGLE_ADVISOR = "advisor.operation.toggle-advisor";
+    /** Название операции в отказе роли: лимит токенов. */
+    public static final String OPERATION_SET_TOKEN_BUDGET = "advisor.operation.set-token-budget";
+    /** Название операции в отказе роли: просмотр расхода токенов. */
+    public static final String OPERATION_VIEW_TOKEN_USAGE = "advisor.operation.view-token-usage";
     /** Помощник выключен администратором пространства. */
     public static final String ADVISOR_DISABLED = "advisor.admission.disabled";
     /** Месячный бюджет исчерпан; аргумент — дата, когда помощник заработает снова. */
