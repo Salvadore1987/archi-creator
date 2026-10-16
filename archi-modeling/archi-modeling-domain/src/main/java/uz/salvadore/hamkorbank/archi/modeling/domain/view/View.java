@@ -274,9 +274,14 @@ public final class View {
         removeNodesCascading(List.of(nodeId));
     }
 
-    /** Новая геометрия узлов и точек перегиба после перемещений (PUT /views/{id}/layout). */
+    /**
+     * Новая геометрия узлов и точек перегиба после перемещений. Чужой узел или ребро
+     * отклоняют разметку целиком — до того, как изменится хоть один.
+     */
     public void applyLayout(Map<ViewNodeId, Bounds> nodeBounds, Map<ViewEdgeId, List<Bendpoint>> edgeBendpoints) {
         requireEditable();
+        nodeBounds.keySet().forEach(this::requireNode);
+        edgeBendpoints.keySet().forEach(this::requireEdge);
         nodeBounds.forEach((nodeId, bounds) -> nodes.put(nodeId, requireNode(nodeId).withBounds(bounds)));
         edgeBendpoints.forEach((edgeId, points) -> edges.put(edgeId, requireEdge(edgeId).withBendpoints(points)));
     }

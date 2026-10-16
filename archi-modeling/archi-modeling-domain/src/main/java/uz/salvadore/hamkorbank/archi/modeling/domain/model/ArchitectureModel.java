@@ -295,50 +295,62 @@ public final class ArchitectureModel {
     public List<ViewRef> moveToFolder(FolderId targetId, List<UUID> itemIds, Instant now) {
         requireActive();
         FolderType targetRoot = rootOf(requireFolder(targetId)).folderType().orElseThrow();
+        for (UUID itemId : itemIds) {
+            requireMovable(itemId, targetId, targetRoot);
+        }
         List<ViewRef> movedViews = new ArrayList<>();
         for (UUID itemId : itemIds) {
-            FolderId asFolder = FolderId.of(itemId);
-            ElementId asElement = ElementId.of(itemId);
-            RelationshipId asRelationship = RelationshipId.of(itemId);
-            ViewId asView = ViewId.of(itemId);
-            if (folders.contains(asFolder)) {
-                moveFolder(asFolder, targetId, targetRoot);
-            } else if (elements.contains(asElement)) {
-                Element element = elements.get(asElement).orElseThrow();
-                requireSameRoot(element.folderId(), targetRoot, Message.of(ModelingMessages.ELEMENT, element.name()));
-                elements.put(asElement, element.movedTo(targetId, nextOrderIn(targetId)));
-            } else if (relationships.contains(asRelationship)) {
-                Relationship relationship = relationships.get(asRelationship).orElseThrow();
-                requireSameRoot(relationship.folderId(), targetRoot,
-                        Message.of(ModelingMessages.RELATIONSHIP, relationship.archiId()));
-                relationships.put(asRelationship, relationship.movedTo(targetId, nextOrderIn(targetId)));
-            } else if (views.containsKey(asView)) {
-                ViewRef view = views.get(asView);
-                requireSameRoot(view.folderId(), targetRoot, Message.of(ModelingMessages.VIEW, view.name()));
+            if (folders.contains(FolderId.of(itemId))) {
+                FolderId folderId = FolderId.of(itemId);
+                folders.put(folderId, requireFolder(folderId).movedTo(targetId, nextOrderIn(targetId)));
+            } else if (elements.contains(ElementId.of(itemId))) {
+                Element element = elements.get(ElementId.of(itemId)).orElseThrow();
+                elements.put(element.id(), element.movedTo(targetId, nextOrderIn(targetId)));
+            } else if (relationships.contains(RelationshipId.of(itemId))) {
+                Relationship relationship = relationships.get(RelationshipId.of(itemId)).orElseThrow();
+                relationships.put(relationship.id(), relationship.movedTo(targetId, nextOrderIn(targetId)));
+            } else {
+                ViewRef view = views.get(ViewId.of(itemId));
                 ViewRef moved = new ViewRef(view.id(), targetId, view.archiId(), view.archiType(), view.name(),
                         nextOrderIn(targetId));
-                views.put(asView, moved);
+                views.put(view.id(), moved);
                 movedViews.add(moved);
-            } else {
-                throw ModelingException.notFound(Message.of(ModelingMessages.OBJECT_IN_MODEL, itemId));
             }
         }
         touch(now);
         return movedViews;
     }
 
-    private void moveFolder(FolderId folderId, FolderId targetId, FolderType targetRoot) {
-        ModelFolder folder = requireFolder(folderId);
-        if (folder.root()) {
-            throw new ModelingException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
-                    Message.of(ModelingMessages.ROOT_FOLDER_UNMOVABLE, folder.name()));
+    /**
+     * Проверка одного объекта переноса — до любых изменений. У переноса одна целевая папка,
+     * и ранние шаги кладут объекты только внутрь неё, не меняя её предков: проверка
+     * по исходному дереву равносильна пошаговой.
+     */
+    private void requireMovable(UUID itemId, FolderId targetId, FolderType targetRoot) {
+        if (folders.contains(FolderId.of(itemId))) {
+            ModelFolder folder = requireFolder(FolderId.of(itemId));
+            if (folder.root()) {
+                throw new ModelingException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
+                        Message.of(ModelingMessages.ROOT_FOLDER_UNMOVABLE, folder.name()));
+            }
+            if (isWithin(targetId, folder.id())) {
+                throw new ModelingException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
+                        Message.of(ModelingMessages.FOLDER_INTO_ITSELF, folder.name()));
+            }
+            requireSameRoot(folder.id(), targetRoot, Message.of(ModelingMessages.FOLDER, folder.name()));
+        } else if (elements.contains(ElementId.of(itemId))) {
+            Element element = elements.get(ElementId.of(itemId)).orElseThrow();
+            requireSameRoot(element.folderId(), targetRoot, Message.of(ModelingMessages.ELEMENT, element.name()));
+        } else if (relationships.contains(RelationshipId.of(itemId))) {
+            Relationship relationship = relationships.get(RelationshipId.of(itemId)).orElseThrow();
+            requireSameRoot(relationship.folderId(), targetRoot,
+                    Message.of(ModelingMessages.RELATIONSHIP, relationship.archiId()));
+        } else if (views.containsKey(ViewId.of(itemId))) {
+            ViewRef view = views.get(ViewId.of(itemId));
+            requireSameRoot(view.folderId(), targetRoot, Message.of(ModelingMessages.VIEW, view.name()));
+        } else {
+            throw ModelingException.notFound(Message.of(ModelingMessages.OBJECT_IN_MODEL, itemId));
         }
-        if (isWithin(targetId, folderId)) {
-            throw new ModelingException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
-                    Message.of(ModelingMessages.FOLDER_INTO_ITSELF, folder.name()));
-        }
-        requireSameRoot(folderId, targetRoot, Message.of(ModelingMessages.FOLDER, folder.name()));
-        folders.put(folderId, folder.movedTo(targetId, nextOrderIn(targetId)));
     }
 
     private void requireSameRoot(FolderId current, FolderType targetRoot, Message what) {

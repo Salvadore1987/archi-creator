@@ -1,11 +1,14 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -134,5 +137,22 @@ class ViewEditingTest {
         assertEquals(3, view.nodes().size());
         assertTrue(model.relationships().contains(serving.id()));
         assertThrows(ModelingException.class, () -> view.removeEdge(edge.id()));
+    }
+
+    @Test
+    @DisplayName("UC-MDL-008: разметка с чужим узлом не меняет и остальные узлы")
+    void layoutWithUnknownNodeChangesNothing() {
+        Element element = Models.element(model, "Node", FolderType.TECHNOLOGY, "Сервер");
+        ViewNode node = view.placeElement(model, element.id(), BOX, Optional.empty(), ViewNodeId.next(UUIDS),
+                Models.archiId()).value();
+        view.markPersisted();
+        Map<ViewNodeId, Bounds> layout = new LinkedHashMap<>();
+        layout.put(node.id(), new Bounds(400, 40, 120, 55));
+        layout.put(ViewNodeId.next(UUIDS), new Bounds(0, 0, 120, 55));
+
+        assertThrows(ModelingException.class, () -> view.applyLayout(layout, Map.of()));
+
+        assertEquals(BOX, view.requireNode(node.id()).bounds());
+        assertFalse(view.nodes().changed(), "отклонённая разметка ничего не оставила для записи");
     }
 }

@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
@@ -86,5 +87,23 @@ class FolderTreeTest {
                 () -> model.removeFolder(masters.id(), NOW));
 
         assertEquals(ModelingCodes.FOLDER_NOT_EMPTY, notEmpty.code());
+    }
+
+    @Test
+    @DisplayName("UC-MDL-006: нарушение у одного объекта — перенос не меняет ни одного")
+    void rejectedBatchChangesNothing() {
+        ArchitectureModel model = Models.empty();
+        FolderId application = Models.root(model, FolderType.APPLICATION);
+        ModelFolder target = model.createFolder(application, "Мастер-системы", FolderId.next(UUIDS),
+                Models.archiId(), NOW);
+        Element component = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
+        Element actor = Models.element(model, "BusinessActor", FolderType.BUSINESS, "Клиент");
+        model.markPersisted();
+
+        assertThrows(ModelingException.class, () -> model.moveToFolder(target.id(),
+                List.of(component.id().value(), actor.id().value()), NOW));
+
+        assertEquals(application, model.elements().get(component.id()).orElseThrow().folderId());
+        assertFalse(model.elements().changed(), "отклонённый перенос ничего не оставил для записи");
     }
 }
