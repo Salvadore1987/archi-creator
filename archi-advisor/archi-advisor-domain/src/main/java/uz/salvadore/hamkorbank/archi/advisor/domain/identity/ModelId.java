@@ -1,14 +1,15 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.identity;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
-import java.util.Objects;
 import java.util.UUID;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.BaseId;
 
 /** Модель — непрозрачный ключ из modeling. */
-public record ModelId(UUID value) {
+public final class ModelId extends BaseId<UUID> {
 
-    public ModelId {
-        Objects.requireNonNull(value, "ModelId");
+    /** Ключ над значением UUID. */
+    public ModelId(UUID value) {
+        super(value);
     }
 
     /** Ключ из значения UUID. */
@@ -19,10 +20,5 @@ public record ModelId(UUID value) {
     /** Ключ из строки UUID; неверный формат — {@link IllegalArgumentException}. */
     public static ModelId of(String value) {
         return new ModelId(UUIDUtil.uuid(value));
-    }
-
-    @Override
-    public String toString() {
-        return value.toString();
     }
 }

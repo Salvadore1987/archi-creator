@@ -63,7 +63,7 @@
 |---|---|---|---|
 | B1 | `BaseId`, `BaseEntity`, `AggregateRoot`, `{Ctx}DomainException` в `common` трёх доменов — вводятся вместе с задачами, которым нужны (B2–B4, B6) | — | ✅ |
 | B2 | Идентификаторы → `BaseId<UUID>`: modeling | ArchUnit: `*Id` домена наследуют `BaseId` | ✅ |
-| B3 | То же: interchange, advisor | то же правило без исключений | ⬜ |
+| B3 | То же: interchange, advisor | то же правило без исключений | ✅ |
 | B4 | Корни агрегатов → `AggregateRoot`, создание фабрикой (record-агрегаты `ModelLock`, `ModelVersion`, `ModelAccessList` — в классы с `restore`) | ArchUnit: корни наследуют `AggregateRoot`, публичных конструкторов нет | ⬜ |
 | B5 | События → `{Aggregate}{Action}Event`, базовый `{Aggregate}Event` | ArchUnit: реализации `DomainEvent` оканчиваются на `Event` | ✅ |
 | B6a | Исключения домена modeling → `DomainException` / `ModelingDomainException`; `InvalidValueException`, `RelationNotPermittedException` в общей иерархии | ArchUnit: исключения домена наследуют корень контекста | ✅ |

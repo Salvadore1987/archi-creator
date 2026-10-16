@@ -1,14 +1,15 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.identity;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
-import java.util.Objects;
 import java.util.UUID;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.BaseId;
 
 /** Рабочее пространство — непрозрачный ключ из modeling. */
-public record WorkspaceId(UUID value) {
+public final class WorkspaceId extends BaseId<UUID> {
 
-    public WorkspaceId {
-        Objects.requireNonNull(value, "WorkspaceId");
+    /** Ключ над значением UUID. */
+    public WorkspaceId(UUID value) {
+        super(value);
     }
 
     /** Ключ из значения UUID. */
@@ -19,10 +20,5 @@ public record WorkspaceId(UUID value) {
     /** Ключ из строки UUID; неверный формат — {@link IllegalArgumentException}. */
     public static WorkspaceId of(String value) {
         return new WorkspaceId(UUIDUtil.uuid(value));
-    }
-
-    @Override
-    public String toString() {
-        return value.toString();
     }
 }

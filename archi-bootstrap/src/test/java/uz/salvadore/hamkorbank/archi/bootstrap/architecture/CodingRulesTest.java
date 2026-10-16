@@ -41,7 +41,7 @@ class CodingRulesTest {
     /** Контексты, исключения домена которых уже сведены под общий корень. */
     private static final List<String> DOMAIN_EXCEPTION_ROOTS = List.of("modeling", "interchange", "advisor");
     /** Контексты, ключи сущностей которых уже наследуют BaseId. */
-    private static final List<String> BASE_ID_CONTEXTS = List.of("modeling");
+    private static final List<String> BASE_ID_CONTEXTS = List.of("modeling", "interchange", "advisor");
     private static final String TRACKED_MAP = ROOT + ".modeling.domain.common.TrackedMap";
     /** Агрегаты, которые держат свои сущности в {@code TrackedMap}, и сам класс. */
     private static final Set<String> TRACKED_OWNERS = Set.of(TRACKED_MAP,

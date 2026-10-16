@@ -1,15 +1,16 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.identity;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
-import java.util.Objects;
 import java.util.UUID;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.BaseId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.UuidV7;
 
 /** Ключ находки ревью — UUIDv7 приложения. */
-public record FindingId(UUID value) {
+public final class FindingId extends BaseId<UUID> {
 
-    public FindingId {
-        Objects.requireNonNull(value, "FindingId");
+    /** Ключ над значением UUID. */
+    public FindingId(UUID value) {
+        super(value);
     }
 
     /** Ключ из значения UUID. */
@@ -25,10 +26,5 @@ public record FindingId(UUID value) {
     /** Новый ключ от генератора приложения. */
     public static FindingId next(UuidV7 uuids) {
         return new FindingId(uuids.next());
-    }
-
-    @Override
-    public String toString() {
-        return value.toString();
     }
 }
