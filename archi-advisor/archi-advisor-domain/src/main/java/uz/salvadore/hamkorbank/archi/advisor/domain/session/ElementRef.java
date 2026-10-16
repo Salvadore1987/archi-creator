@@ -14,10 +14,15 @@ public record ElementRef(String archiId, String name) {
     private static final Pattern ARCHI_ID = Pattern.compile("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,254}$");
 
     public ElementRef {
-        if (archiId == null || !ARCHI_ID.matcher(archiId).matches()) {
+        if (!validArchiId(archiId)) {
             throw new InvalidValueException(AdvisorMessages.ARCHI_ID_INVALID, archiId);
         }
         Objects.requireNonNull(name, "name");
+    }
+
+    /** Годится ли строка идентификатором объекта модели: вид и длина идентификатора Archi. */
+    public static boolean validArchiId(String archiId) {
+        return archiId != null && ARCHI_ID.matcher(archiId).matches();
     }
 
     /** Ссылка на объект; недопустимый идентификатор — {@link InvalidValueException}. */

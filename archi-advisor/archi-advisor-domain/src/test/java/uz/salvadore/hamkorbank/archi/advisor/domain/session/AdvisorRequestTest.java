@@ -28,4 +28,14 @@ class AdvisorRequestTest {
         assertNotEquals(first, AdvisorRequest.plan(Sessions.MODEL, "Кредитный конвейер").fingerprint());
         assertEquals(64, first.length());
     }
+
+    @Test
+    @DisplayName("идентификатор элемента — вида идентификатора Archi: строка любой длины в сессию не попадает")
+    void elementIdIsArchiId() {
+        assertThrows(InvalidValueException.class, () -> AdvisorRequest.explain(Sessions.MODEL, "a".repeat(10_000)));
+        assertThrows(InvalidValueException.class, () -> AdvisorRequest.explain(Sessions.MODEL, "id 1"));
+        assertThrows(InvalidValueException.class,
+                () -> AdvisorRequest.document(Sessions.MODEL, null, "<script>"));
+        assertEquals("id-e1", AdvisorRequest.explain(Sessions.MODEL, "id-e1").elementId());
+    }
 }

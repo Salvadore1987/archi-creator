@@ -17,7 +17,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.ViewId;
  *
  * @param viewId    область — одно представление (ревью, документация); {@code null} — не задано
  * @param elementId элемент, {@code archiId}: подсказка по нему или анализ влияния; {@code null} — не задан,
- *                  пустой приводится к {@code null}
+ *                  пустой приводится к {@code null}; вид — как у {@link ElementRef}
  * @param prompt    описание фрагмента архитектуры для плана; {@code null} — не задано, пустое
  *                  приводится к {@code null}
  */
@@ -32,6 +32,9 @@ public record AdvisorRequest(AdvisorFunction function, ModelId modelId, ViewId v
         Objects.requireNonNull(modelId, "modelId");
         if (elementId != null && elementId.isBlank()) {
             elementId = null;
+        }
+        if (elementId != null && !ElementRef.validArchiId(elementId)) {
+            throw new InvalidValueException(AdvisorMessages.ELEMENT_ID_INVALID);
         }
         if (prompt != null) {
             prompt = prompt.strip();
