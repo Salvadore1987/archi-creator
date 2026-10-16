@@ -4,7 +4,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
-/** Пределы имён из aggregates.yaml: одинаковые для модели, папки, элемента, связи и представления. */
+/** Пределы имён — одинаковые для модели, папки, элемента, связи и представления. */
 public final class Names {
 
     /** Предел длины имени. */
