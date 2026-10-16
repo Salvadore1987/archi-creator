@@ -76,8 +76,7 @@ public final class TreeService {
             } else if (model.view(ViewId.of(itemId)).isPresent()) {
                 View view = kernel.views.load(ViewId.of(itemId)).orElseThrow();
                 view.rename(name);
-                model.renameView(view.id(), name);
-                model.touch(kernel.now());
+                model.renameView(view.id(), name, kernel.now());
                 kernel.views.save(view);
             } else {
                 throw ModelingException.notFound(Message.of(ModelingMessages.OBJECT_IN_MODEL, itemId));

@@ -16,6 +16,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationNotPermittedException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.DiagramType;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 
 class ArchitectureModelTest {
 
@@ -124,5 +126,23 @@ class ArchitectureModelTest {
         ModelingException blocked = assertThrows(ModelingException.class,
                 () -> model.removeRelationship(serving.id(), NOW));
         assertEquals("INV-MDL-004", blocked.code());
+    }
+
+    @Test
+    @DisplayName("Переименование представления — правила модели: длина имени, активная модель")
+    void renamingViewFollowsModelRules() {
+        ArchitectureModel model = Models.empty();
+        ViewRef view = model.placeNewView(ViewId.next(UUIDS), DiagramType.DIAGRAM_MODEL, "Контекст",
+                Models.root(model, FolderType.DIAGRAMS), Models.archiId(), NOW);
+
+        assertThrows(ModelingException.class, () -> model.renameView(view.id(), "x".repeat(Names.MAX + 1), NOW));
+        assertThrows(ModelingException.class, () -> new ViewRef(view.id(), view.folderId(), view.archiId(),
+                view.archiType(), "x".repeat(Names.MAX + 1), view.sortOrder()));
+
+        model.renameView(view.id(), "Ландшафт", NOW);
+        assertEquals("Ландшафт", model.view(view.id()).orElseThrow().name());
+
+        model.delete(Models.ARCHITECT, NOW);
+        assertThrows(ModelingException.class, () -> model.renameView(view.id(), "Другое", NOW));
     }
 }

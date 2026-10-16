@@ -222,7 +222,7 @@ public final class ArchitectureModel {
     }
 
     /** Отметка, что заголовок модели изменён: время правки и запись строки модели. */
-    public void touch(Instant now) {
+    private void touch(Instant now) {
         updatedAt = now;
         headerChanged = true;
     }
@@ -511,13 +511,17 @@ public final class ArchitectureModel {
         touch(now);
     }
 
-    /** Новое имя в месте представления; вызывается вместе с переименованием самого представления. */
-    public void renameView(ViewId viewId, String newName) {
-        ViewRef view = views.get(viewId);
-        if (view != null) {
-            views.put(viewId, new ViewRef(view.id(), view.folderId(), view.archiId(), view.archiType(), newName,
-                    view.sortOrder()));
-        }
+    /**
+     * Новое имя в месте представления — у активной модели и в пределах длины имени;
+     * вызывается вместе с переименованием самого представления.
+     */
+    public void renameView(ViewId viewId, String newName, Instant now) {
+        requireActive();
+        ViewRef view = view(viewId)
+                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW, viewId)));
+        views.put(viewId, new ViewRef(view.id(), view.folderId(), view.archiId(), view.archiType(),
+                Names.limited(newName, Names.VIEW), view.sortOrder()));
+        touch(now);
     }
 
     // ── Проверки и выборки ──────────────────────────────────────────
