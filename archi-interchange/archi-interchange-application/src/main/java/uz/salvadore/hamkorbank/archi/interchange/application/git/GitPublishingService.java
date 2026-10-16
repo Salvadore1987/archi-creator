@@ -45,8 +45,8 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.FileSlug;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitAuthor;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBinding;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBindingSnapshotCommittedEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
-import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSnapshotCommittedEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
@@ -390,8 +390,8 @@ public final class GitPublishingService {
             }
             return null;
         });
-        events.publish(List.of(new GitSnapshotCommittedEvent(version.workspace(), entry.model(), entry.versionNo(), sha,
-                binding.branch(), changedFiles, at)));
+        events.publish(List.of(new GitBindingSnapshotCommittedEvent(version.workspace(), entry.model(),
+                entry.versionNo(), sha, binding.branch(), changedFiles, at)));
         return Outcome.DONE;
     }
 

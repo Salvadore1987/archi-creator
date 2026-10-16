@@ -29,7 +29,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedEntities;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedMap;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.XmlText;
-import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelDeletedEvent;
+import uz.salvadore.hamkorbank.archi.modeling.domain.event.ArchitectureModelDeletedEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ConceptDefinition;
@@ -199,7 +199,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     /** Перевод активной модели в удалённые; событие об удалении публикуется после коммита. */
     public void delete(EditorIdentity by, Instant now) {
         transition(ModelStatus.ACTIVE, ModelStatus.DELETED, Message.of(ModelingMessages.COMMAND_DELETE_MODEL), now);
-        events.add(new ModelDeletedEvent(id(), workspaceId, by.subject(), now));
+        events.add(new ArchitectureModelDeletedEvent(id(), workspaceId, by.subject(), now));
     }
 
     /** Возврат удалённой модели в активные. */

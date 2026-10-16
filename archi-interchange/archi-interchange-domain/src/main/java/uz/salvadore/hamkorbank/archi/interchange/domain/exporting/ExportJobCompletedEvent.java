@@ -13,12 +13,12 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
  *
  * @param viewId представление — у выгрузки картинки; {@code null} — у выгрузки модели
  */
-public record ExportCompletedEvent(ExportJobId exportJobId, WorkspaceId workspaceId, ModelId modelId,
+public record ExportJobCompletedEvent(ExportJobId exportJobId, WorkspaceId workspaceId, ModelId modelId,
                               ViewId viewId, ExportFormat format, long sourceVersionNo,
                               ContentHash artifactHash, long artifactSize, int lossEntryCount, Instant occurredAt)
         implements ExportJobEvent {
 
-    public ExportCompletedEvent {
+    public ExportJobCompletedEvent {
         Objects.requireNonNull(exportJobId, "exportJobId");
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(format, "format");

@@ -143,7 +143,7 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
         finish(ImportStatus.APPLIED, now);
         this.appliedModelId = modelId;
         this.appliedVersionNo = versionNo;
-        events.add(new ImportAppliedEvent(id(), workspaceId, modelId, versionNo, sourceName,
+        events.add(new ImportSessionAppliedEvent(id(), workspaceId, modelId, versionNo, sourceName,
                 sourceHash, strictMode, findingCounts(), opaqueObjectCount, now));
     }
 

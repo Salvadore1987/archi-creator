@@ -44,8 +44,8 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.SecretRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
-import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportAppliedEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
+import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSessionAppliedEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
@@ -140,7 +140,7 @@ class GitImportTest {
         assertEquals(model, session.targetModelId());
         assertEquals("main@" + sha.value(), session.sourceName());
         assertEquals(1, events.size());
-        assertTrue(events.getFirst() instanceof ImportAppliedEvent applied && applied.versionNo() == 4);
+        assertTrue(events.getFirst() instanceof ImportSessionAppliedEvent applied && applied.versionNo() == 4);
     }
 
     @Test

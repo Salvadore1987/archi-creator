@@ -34,7 +34,7 @@ class ImportSessionStateMachineTest {
         received.apply(MODEL, 1, 0, NOW);
 
         assertEquals(ImportStatus.APPLIED, received.status());
-        ImportAppliedEvent applied = (ImportAppliedEvent) received.pullEvents().getFirst();
+        ImportSessionAppliedEvent applied = (ImportSessionAppliedEvent) received.pullEvents().getFirst();
         assertEquals(MODEL, applied.modelId());
         assertEquals(List.of(), received.pullEvents());
         assertEquals(NOW, received.finishedAt());

@@ -14,7 +14,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSnapshotCommittedEvent;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBindingSnapshotCommittedEvent;
 
 /**
  * Событие о переходе состояния рождается в бизнес-методе агрегата, вместе с самим
@@ -30,7 +30,7 @@ class DomainEventOriginTest {
 
     /** Событие, которое создаёт сервис, — и почему не агрегат. */
     private static final Map<String, String> EXTERNAL_FACTS = Map.of(
-            GitSnapshotCommittedEvent.class.getName(),
+            GitBindingSnapshotCommittedEvent.class.getName(),
             "коммит в Git состоялся — факт внешней системы; публикуется и без записи привязки");
 
     private static JavaClasses classes;

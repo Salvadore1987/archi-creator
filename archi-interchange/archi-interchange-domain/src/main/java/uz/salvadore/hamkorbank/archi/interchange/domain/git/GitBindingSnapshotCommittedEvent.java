@@ -12,10 +12,10 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
  * @param changedFileCount сколько файлов каталога модели изменил коммит; ноль —
  *                         содержимое уже было в ветке, коммит не понадобился
  */
-public record GitSnapshotCommittedEvent(WorkspaceId workspaceId, ModelId modelId, long versionNo, GitSha gitSha,
+public record GitBindingSnapshotCommittedEvent(WorkspaceId workspaceId, ModelId modelId, long versionNo, GitSha gitSha,
                                    String branch, int changedFileCount, Instant occurredAt) implements GitBindingEvent {
 
-    public GitSnapshotCommittedEvent {
+    public GitBindingSnapshotCommittedEvent {
         Objects.requireNonNull(workspaceId, "workspaceId");
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(gitSha, "gitSha");

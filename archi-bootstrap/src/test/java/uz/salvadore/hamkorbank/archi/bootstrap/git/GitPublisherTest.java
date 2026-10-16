@@ -49,9 +49,9 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentR
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitAuthor;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBinding;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBindingSnapshotCommittedEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBindingStatus;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
-import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSnapshotCommittedEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.SecretRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
@@ -163,7 +163,7 @@ class GitPublisherTest {
         assertThat(new String(tree.get(".gitattributes"), StandardCharsets.UTF_8)).contains("models/** -merge");
         assertThat(tree.keySet())
                 .anyMatch(p -> p.matches("models/neizvestnye-uzly-i-atributy\\.[0-9a-f]{8}/model\\.yaml"));
-        assertThat(events).singleElement().isInstanceOf(GitSnapshotCommittedEvent.class);
+        assertThat(events).singleElement().isInstanceOf(GitBindingSnapshotCommittedEvent.class);
     }
 
     @Test

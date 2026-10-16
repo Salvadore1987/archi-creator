@@ -190,12 +190,19 @@ class CodingRulesTest {
         return new ArchCondition<>("implement the event type of its aggregate") {
             @Override
             public void check(JavaClass event, ConditionEvents events) {
-                boolean viaAggregateType = event.getRawInterfaces().stream()
-                        .anyMatch(type -> !type.getName().equals(marker) && type.isAssignableTo(marker)
-                                && type.getSimpleName().endsWith("Event"));
-                if (!viaAggregateType) {
+                Optional<JavaClass> aggregateType = event.getRawInterfaces().stream()
+                        .filter(type -> !type.getName().equals(marker) && type.isAssignableTo(marker)
+                                && type.getSimpleName().endsWith("Event"))
+                        .findFirst();
+                if (aggregateType.isEmpty()) {
                     events.add(SimpleConditionEvent.violated(event,
                             event.getName() + " implements DomainEvent directly, not through its aggregate's type"));
+                    return;
+                }
+                String aggregate = aggregateType.get().getSimpleName().replaceAll("Event$", "");
+                if (!event.getSimpleName().startsWith(aggregate)) {
+                    events.add(SimpleConditionEvent.violated(event,
+                            event.getName() + " is not named after its aggregate " + aggregate));
                 }
             }
         };

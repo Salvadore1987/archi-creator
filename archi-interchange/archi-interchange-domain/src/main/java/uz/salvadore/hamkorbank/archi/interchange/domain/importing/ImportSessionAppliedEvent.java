@@ -14,12 +14,12 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
  *
  * @param opaqueObjectCount сколько объектов сохранено непрозрачными
  */
-public record ImportAppliedEvent(ImportSessionId importSessionId, WorkspaceId workspaceId, ModelId modelId,
+public record ImportSessionAppliedEvent(ImportSessionId importSessionId, WorkspaceId workspaceId, ModelId modelId,
                             long versionNo, String sourceName, ContentHash sourceHash, boolean strictMode,
                             Map<Severity, Integer> findingCounts, int opaqueObjectCount, Instant occurredAt)
         implements ImportSessionEvent {
 
-    public ImportAppliedEvent {
+    public ImportSessionAppliedEvent {
         Objects.requireNonNull(importSessionId, "importSessionId");
         Objects.requireNonNull(modelId, "modelId");
         findingCounts = Map.copyOf(findingCounts);

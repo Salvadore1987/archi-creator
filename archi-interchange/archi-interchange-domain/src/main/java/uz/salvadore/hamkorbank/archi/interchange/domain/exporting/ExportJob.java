@@ -100,7 +100,7 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
     public void deliver(Instant now) {
         require(ExportStatus.RENDERED, Message.of(InterchangeMessages.COMMAND_DELIVER_EXPORT));
         status = ExportStatus.DELIVERED;
-        events.add(new ExportCompletedEvent(id(), workspaceId, modelId, viewId, format, sourceVersionNo,
+        events.add(new ExportJobCompletedEvent(id(), workspaceId, modelId, viewId, format, sourceVersionNo,
                 artifact.hash(), artifact.size(), lossReport.entries().size(), now));
     }
 

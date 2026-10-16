@@ -46,7 +46,7 @@ class ExportJobTest {
         job.deliver(NOW);
         assertEquals(ExportStatus.DELIVERED, job.status());
         assertNotNull(job.lossReport());
-        ExportCompletedEvent completed = (ExportCompletedEvent) job.pullEvents().getFirst();
+        ExportJobCompletedEvent completed = (ExportJobCompletedEvent) job.pullEvents().getFirst();
         assertEquals(1, completed.lossEntryCount());
         assertEquals(List.of(), job.pullEvents());
     }
