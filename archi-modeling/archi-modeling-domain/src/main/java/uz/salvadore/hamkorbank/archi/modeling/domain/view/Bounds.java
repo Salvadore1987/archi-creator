@@ -13,11 +13,11 @@ public record Bounds(int x, int y, int width, int height) {
 
     /** Размер «по умолчанию» Archi: так записан узел, размер которого не меняли. */
     public static final int DEFAULT_SIZE = -1;
-    /** Размер нового узла элемента, когда клиент его не задал, — как у Archi. */
+    /** Ширина нового узла элемента, когда клиент её не задал, — как у Archi. */
     public static final int ELEMENT_WIDTH = 120;
     /** Высота нового узла элемента, когда клиент её не задал. */
     public static final int ELEMENT_HEIGHT = 55;
-    /** Размер новой группы и заметки — тоже как у Archi. */
+    /** Ширина новой группы, когда клиент её не задал, — как у Archi. */
     public static final int GROUP_WIDTH = 400;
     /** Высота новой группы, когда клиент её не задал. */
     public static final int GROUP_HEIGHT = 140;

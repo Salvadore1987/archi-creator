@@ -7,10 +7,8 @@ import java.util.Objects;
  * Отказ домена modeling. {@code code} — код из {@link ModelingCodes}: он уходит в поле
  * {@code code} ответа {@code problem+json} и в label {@code error_code} метрик.
  * Текст для человека не хранится — только сообщение с ключом, которое адаптер
- * переводит на язык запроса.
- *
- * @param details то, что нужно клиенту для решения: владелец блокировки,
- *                список мешающих связей
+ * переводит на язык запроса. К отказу прикладываются {@code details} — то, что нужно
+ * клиенту для решения: владелец блокировки, список мешающих связей.
  */
 public class ModelingException extends RuntimeException {
 

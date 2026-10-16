@@ -201,8 +201,10 @@ public final class AutoLayout {
                 bandIndex.put(id, b);
             }
         }
-        List<List<UUID>> current = new ArrayList<>(bands.stream().map(band -> (List<UUID>) new ArrayList<>(band))
-                .toList());
+        List<List<UUID>> current = new ArrayList<>();
+        for (List<UUID> band : bands) {
+            current.add(new ArrayList<>(band));
+        }
         for (int sweep = 0; sweep < SWEEPS; sweep++) {
             for (int b = 1; b < current.size(); b++) {
                 reorder(current, b, bandIndex, true);

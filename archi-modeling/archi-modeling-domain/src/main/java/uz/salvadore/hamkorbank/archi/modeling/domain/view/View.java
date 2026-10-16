@@ -123,7 +123,7 @@ public final class View {
                     throw integrity(Message.of(ModelingMessages.NODE_PARENT_ELSEWHERE, node.archiId()));
                 }
             });
-            depth(node);
+            requireAcyclic(node);
         }
         for (ViewEdge edge : edges.values()) {
             if (!seen.add(edge.archiId())) {
@@ -158,7 +158,7 @@ public final class View {
         parentId.ifPresent(this::requireContainer);
         requireFreeArchiId(newArchiId);
         ViewNode node = new ViewNode(newId, parentId, newArchiId, DiagramType.DIAGRAM_OBJECT, Optional.of(elementId),
-                bounds, StyleOverride.NONE, nextOrderIn(parentId.map(p -> (ViewEndpoint) p)), Optional.empty());
+                bounds, StyleOverride.NONE, nextOrderIn(parentId), Optional.empty());
         nodes.put(node.id(), node);
         return new Created<>(node, true);
     }
@@ -179,7 +179,7 @@ public final class View {
         requireFreeArchiId(newArchiId);
         ViewNode node = new ViewNode(newId, parentId, newArchiId, kind.diagramType().orElseThrow(), Optional.empty(),
                 bounds, StyleOverride.NONE, Optional.empty(), Optional.empty(),
-                nextOrderIn(parentId.map(p -> (ViewEndpoint) p)), Optional.empty());
+                nextOrderIn(parentId), Optional.empty());
         requireTextFits(node, label, content);
         node = node.withText(label, content);
         nodes.put(node.id(), node);
@@ -249,7 +249,7 @@ public final class View {
         Bounds bounds = new Bounds(x, y, node.bounds().width(), node.bounds().height());
         ViewNode moved = parentId.equals(node.parentId())
                 ? node.withBounds(bounds)
-                : node.withParent(parentId, bounds, nextOrderIn(parentId.map(p -> (ViewEndpoint) p)));
+                : node.withParent(parentId, bounds, nextOrderIn(parentId));
         nodes.put(nodeId, moved);
         return moved;
     }
@@ -318,7 +318,7 @@ public final class View {
         }
         requireFreeArchiId(newArchiId);
         ViewEdge edge = new ViewEdge(newId, newArchiId, DiagramType.CONNECTION, Optional.of(relationshipId), source,
-                target, bendpoints, StyleOverride.NONE, nextOrderIn(Optional.of(source)), Optional.empty());
+                target, bendpoints, StyleOverride.NONE, nextOrderIn(source), Optional.empty());
         edges.put(edge.id(), edge);
         return new Created<>(edge, true);
     }
@@ -470,34 +470,38 @@ public final class View {
                 || edges.values().stream().anyMatch(e -> e.archiId().equals(candidate));
     }
 
-    /** Глубина вложенности; цикл в родителях — нарушение целостности. */
-    private int depth(ViewNode node) {
-        int depth = 0;
+    /** Цепочка родителей узла не замыкается в цикл; цикл — нарушение целостности. */
+    private void requireAcyclic(ViewNode node) {
         Set<ViewNodeId> visited = new HashSet<>();
         Optional<ViewNodeId> current = node.parentId();
         while (current.isPresent()) {
             if (!visited.add(current.get())) {
                 throw integrity(Message.of(ModelingMessages.NODE_NESTING_CYCLE, node.archiId()));
             }
-            depth++;
             current = nodes.get(current.get()).flatMap(ViewNode::parentId);
         }
-        return depth;
+    }
+
+    /** Конец содержимого для нового узла: верхнего уровня или внутри узла-родителя. */
+    private SortOrder nextOrderIn(Optional<ViewNodeId> parent) {
+        return parent.map(this::nextOrderIn).orElseGet(() -> SortOrder.afterLast(childNodeOrders(Optional.empty())));
     }
 
     /**
      * Конец содержимого родителя: дети-узлы и исходящие рёбра делят одну нумерацию,
      * потому что в файле и те и другие лежат внутри родителя.
      */
-    private SortOrder nextOrderIn(Optional<ViewEndpoint> parent) {
+    private SortOrder nextOrderIn(ViewEndpoint parent) {
         List<SortOrder> taken = new ArrayList<>();
-        if (parent.isEmpty() || parent.get() instanceof ViewNodeId) {
-            Optional<ViewNodeId> parentNode = parent.map(p -> (ViewNodeId) p);
-            nodes.values().stream().filter(n -> n.parentId().equals(parentNode)).forEach(n -> taken.add(n.sortOrder()));
+        if (parent instanceof ViewNodeId node) {
+            taken.addAll(childNodeOrders(Optional.of(node)));
         }
-        parent.ifPresent(p -> edges.values().stream().filter(e -> e.source().equals(p))
-                .forEach(e -> taken.add(e.sortOrder())));
+        edges.values().stream().filter(e -> e.source().equals(parent)).forEach(e -> taken.add(e.sortOrder()));
         return SortOrder.afterLast(taken);
+    }
+
+    private List<SortOrder> childNodeOrders(Optional<ViewNodeId> parent) {
+        return nodes.values().stream().filter(n -> n.parentId().equals(parent)).map(ViewNode::sortOrder).toList();
     }
 
     private static ModelingException integrity(Message reason) {

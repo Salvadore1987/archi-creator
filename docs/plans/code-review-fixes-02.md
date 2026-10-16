@@ -53,8 +53,9 @@
 | A9 | Комментарий без имени файла спеки; проверка голых имён | 02-10 | `check-comment-refs.py` | ✅ |
 | A10 | `ArchiIdGenerator` — от `UuidV7` с часами приложения | 02-11 | ArchUnit: `Generators` в контекстах — только `UuidV7` | ✅ |
 | A11 | Отпечаток идемпотентности различает «нет значения» и `"null"` | 02-12 | юнит-тест | ✅ |
-| A12 | Javadoc по коду; `StyleOverride.textAlignment`; литералы `ViewNodeKind`; приведения → pattern matching | 02-16, 02-18, 02-19, 02-20 | юнит-тест на `textAlignment` | ⬜ |
+| A12 | Javadoc по коду; `StyleOverride.textAlignment`; литералы `ViewNodeKind`; приведения → pattern matching | 02-16, 02-18, 02-19, 02-20 | юнит-тест на `textAlignment` | ✅ |
 | A13 | Enforcer запрещает Jackson в домене и application | 02-21 | enforcer | ⬜ |
+| A14 | Граф авторазметки на типизированных идентификаторах | 02-17 | компилятор | ⬜ |
 
 ### Часть B. Типы домена по стандарту (D-19)
 
