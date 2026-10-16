@@ -79,7 +79,7 @@ public final class ModelingKernel {
         this.clock = Objects.requireNonNull(clock);
         this.lockTtl = Objects.requireNonNull(lockTtl);
         this.uuids = new UuidV7(clock);
-        this.archiIds = new ArchiIdGenerator();
+        this.archiIds = new ArchiIdGenerator(uuids::next);
     }
 
     Instant now() {

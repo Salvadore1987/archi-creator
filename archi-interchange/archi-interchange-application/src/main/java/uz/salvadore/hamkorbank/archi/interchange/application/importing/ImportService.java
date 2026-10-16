@@ -141,7 +141,7 @@ public final class ImportService {
         }
         Instant now = clock.instant();
         ModelId modelId = ModelId.of(uuids.next());
-        ArchiIdGenerator archiIds = new ArchiIdGenerator();
+        ArchiIdGenerator archiIds = new ArchiIdGenerator(uuids::next);
         ModelContent model = new DocumentDecomposer(uuids::next, archiIds::next).decompose(document,
                 new DocumentDecomposer.Identity(modelId, uz.salvadore.hamkorbank.archi.modeling.domain.workspace
                         .WorkspaceId.of(session.workspaceId().value()), actor.subject(), now, now, 0));

@@ -89,7 +89,7 @@ public class ModelingConfiguration {
     @Bean
     ArchimateSnapshots archimateSnapshots(Clock clock) {
         UuidV7 uuids = new UuidV7(clock);
-        ArchiIdGenerator archiIds = new ArchiIdGenerator();
+        ArchiIdGenerator archiIds = new ArchiIdGenerator(uuids::next);
         return new ArchimateSnapshots(new StaxArchiDocumentReader(), new ArchiXmlWriter(), uuids::next,
                 archiIds::next);
     }

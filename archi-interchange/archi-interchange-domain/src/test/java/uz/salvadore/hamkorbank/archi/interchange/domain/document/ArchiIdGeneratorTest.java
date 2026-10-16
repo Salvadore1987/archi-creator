@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
 import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.Iterator;
 import java.util.List;
@@ -14,10 +16,12 @@ import org.junit.jupiter.api.Test;
 
 class ArchiIdGeneratorTest {
 
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
+
     @Test
     @DisplayName("ADR-0002: новый идентификатор — id- и 32 hex, как у UUIDFactory в Archi")
     void generatesArchiFormat() {
-        ArchiId id = new ArchiIdGenerator().next();
+        ArchiId id = new ArchiIdGenerator(IDS::generate).next();
 
         assertTrue(id.value().matches("^id-[0-9a-f]{32}$"), id.value());
     }
@@ -25,7 +29,7 @@ class ArchiIdGeneratorTest {
     @Test
     @DisplayName("подряд выданные идентификаторы различны")
     void consecutiveIdsDiffer() {
-        ArchiIdGenerator generator = new ArchiIdGenerator();
+        ArchiIdGenerator generator = new ArchiIdGenerator(IDS::generate);
 
         assertNotEquals(generator.next(), generator.next());
     }

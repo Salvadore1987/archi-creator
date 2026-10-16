@@ -1,6 +1,5 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.common;
 
-import com.fasterxml.uuid.Generators;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -8,17 +7,14 @@ import java.util.function.Supplier;
 
 /**
  * Идентификаторы новых объектов в том виде, в каком их выдаёт Archi:
- * {@code id-} и 32 hex случайного UUID. Импортированные
+ * {@code id-} и 32 hex UUID версии 7 от генератора приложения. Импортированные
  * идентификаторы этот класс не трогает.
  */
 public final class ArchiIdGenerator {
 
     private final Supplier<UUID> uuids;
 
-    public ArchiIdGenerator() {
-        this(Generators.timeBasedEpochGenerator()::generate);
-    }
-
+    /** Генератор поверх UUID приложения — {@code UuidV7::next} своего контекста. */
     public ArchiIdGenerator(Supplier<UUID> uuids) {
         this.uuids = Objects.requireNonNull(uuids, "uuids");
     }

@@ -120,7 +120,7 @@ class DocumentMappingTest {
         ModelContent content = decompose(read(Files.readAllBytes(
                 ROOT.resolve("archi-bootstrap/src/test/resources/fixtures/styled_objects.archimate"))));
         View view = content.views().getFirst();
-        ArchiIdGenerator archiIds = new ArchiIdGenerator();
+        ArchiIdGenerator archiIds = new ArchiIdGenerator(IDS::generate);
         ViewNode group = view.placeAnnotation(ViewNodeKind.GROUP, Optional.of("Каналы"), Optional.empty(),
                 new Bounds(0, 0, 400, 300), Optional.empty(), ViewNodeId.of(IDS.generate()), archiIds.next());
         ViewNode note = view.placeAnnotation(ViewNodeKind.NOTE, Optional.empty(), Optional.of("строка 1\nстрока 2"),
@@ -137,7 +137,7 @@ class DocumentMappingTest {
     }
 
     static ModelContent decompose(ModelDocument document) {
-        ArchiIdGenerator archiIds = new ArchiIdGenerator();
+        ArchiIdGenerator archiIds = new ArchiIdGenerator(IDS::generate);
         return new DocumentDecomposer(IDS::generate, archiIds::next).decompose(document,
                 new DocumentDecomposer.Identity(ModelId.of(IDS.generate()), WorkspaceId.of(IDS.generate()),
                         "architect", NOW, NOW, 0));
