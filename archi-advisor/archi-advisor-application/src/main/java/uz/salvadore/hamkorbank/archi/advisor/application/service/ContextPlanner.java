@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.application.service;
 
+import java.util.Objects;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
@@ -30,23 +31,23 @@ final class ContextPlanner {
      */
     Optional<ModelContext> plan(AdvisorRequest request, ModelGraph graph) {
         ModelContext scoped = switch (request.function()) {
-            case REVIEW -> request.viewId().map(v -> graph.ofView(request.function(), v)
+            case REVIEW -> Optional.ofNullable(request.viewId()).map(v -> graph.ofView(request.function(), v)
                     .orElseThrow(() -> AdvisorDomainException.notFound(Message.of(AdvisorMessages.VIEW, v))))
                     .orElseGet(() -> graph.whole(request.function()));
             case EXPLAIN -> {
-                String element = request.elementId().orElseThrow();
+                String element = Objects.requireNonNull(request.elementId());
                 ModelContext wide = around(request, graph, element, EXPLAIN_HOPS);
                 yield wide.fit(policy.maxContextTokens()).truncated()
                         ? around(request, graph, element, 1) : wide;
             }
             case PLAN -> graph.catalog(request.function());
             case DOCUMENT -> {
-                if (request.viewId().isPresent()) {
-                    yield graph.ofView(request.function(), request.viewId().get()).orElseThrow(
+                if (request.viewId() != null) {
+                    yield graph.ofView(request.function(), request.viewId()).orElseThrow(
                             () -> AdvisorDomainException.notFound(
-                                    Message.of(AdvisorMessages.VIEW, request.viewId().get())));
+                                    Message.of(AdvisorMessages.VIEW, request.viewId())));
                 }
-                yield request.elementId().map(e -> around(request, graph, e, IMPACT_HOPS))
+                yield Optional.ofNullable(request.elementId()).map(e -> around(request, graph, e, IMPACT_HOPS))
                         .orElseGet(() -> graph.whole(request.function()));
             }
         };

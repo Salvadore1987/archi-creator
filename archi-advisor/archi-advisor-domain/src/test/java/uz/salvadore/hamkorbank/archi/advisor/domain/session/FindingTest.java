@@ -1,9 +1,9 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
@@ -17,7 +17,7 @@ class FindingTest {
     void everyFindingHasResolvableTarget() {
         InvalidValueException missing = assertThrows(InvalidValueException.class,
                 () -> new Finding(FindingId.next(Sessions.UUIDS), Severity.ERROR, "RELATION_NOT_PERMITTED", "text",
-                        TargetKind.RELATIONSHIP, null, Optional.empty()));
+                        TargetKind.RELATIONSHIP, null, null));
         assertEquals(AdvisorMessages.FINDING_WITHOUT_TARGET, missing.reason().key());
 
         assertThrows(InvalidValueException.class, () -> ElementRef.of("", "name"));
@@ -30,9 +30,9 @@ class FindingTest {
     void textIsBounded() {
         assertThrows(InvalidValueException.class,
                 () -> new Finding(FindingId.next(Sessions.UUIDS), Severity.INFO, "X", "a".repeat(2001),
-                        TargetKind.ELEMENT, ElementRef.of("id-1", "n"), Optional.empty()));
+                        TargetKind.ELEMENT, ElementRef.of("id-1", "n"), null));
         Finding blank = new Finding(FindingId.next(Sessions.UUIDS), Severity.INFO, "X", "text", TargetKind.ELEMENT,
-                ElementRef.of("id-1", "n"), Optional.of("  "));
-        assertEquals(Optional.empty(), blank.suggestion());
+                ElementRef.of("id-1", "n"), "  ");
+        assertNull(blank.suggestion());
     }
 }

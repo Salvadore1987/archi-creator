@@ -25,46 +25,47 @@ final class ResultCodec {
     private ResultCodec() {
     }
 
-    static String encode(List<Finding> findings, Optional<ModelPlan> plan, Optional<AdvisorAnswer> answer) {
-        if (findings.isEmpty() && plan.isEmpty() && answer.isEmpty()) {
+    static String encode(List<Finding> findings, ModelPlan plan, AdvisorAnswer answer) {
+        if (findings.isEmpty() && plan == null && answer == null) {
             return null;
         }
         return JSON.writeValueAsString(new Stored(
                 findings.stream().map(f -> new StoredFinding(f.id().value(), f.severity().name(), f.code(),
                         f.message(), f.targetKind().name(), f.target().archiId(), f.target().name(),
-                        f.suggestion().orElse(null))).toList(),
-                plan.map(p -> new StoredPlan(
+                        f.suggestion())).toList(),
+                Optional.ofNullable(plan).map(p -> new StoredPlan(
                         p.elements().stream().map(e -> new StoredElement(e.archiType(), e.name(),
-                                e.existingRef().map(StoredRef::of).orElse(null))).toList(),
+                                e.existingRef() == null ? null : StoredRef.of(e.existingRef()))).toList(),
                         p.relationships().stream().map(r -> new StoredRelation(r.archiType(), r.sourceName(),
                                 r.targetName(), r.permitted())).toList(),
-                        p.notes().orElse(null))).orElse(null),
-                answer.map(a -> new StoredAnswer(a.markdown(),
+                        p.notes())).orElse(null),
+                Optional.ofNullable(answer).map(a -> new StoredAnswer(a.markdown(),
                         a.references().stream().map(StoredRef::of).toList())).orElse(null)));
     }
 
     static Decoded decode(String json) {
         if (json == null) {
-            return new Decoded(List.of(), Optional.empty(), Optional.empty());
+            return new Decoded(List.of(), null, null);
         }
         Stored stored = JSON.readValue(json, Stored.class);
         List<Finding> findings = stored.findings() == null ? List.of() : stored.findings().stream()
                 .map(f -> new Finding(FindingId.of(f.id()), Severity.valueOf(f.severity()), f.code(), f.message(),
                         TargetKind.valueOf(f.targetKind()), ElementRef.of(f.targetArchiId(), f.targetName()),
-                        Optional.ofNullable(f.suggestion())))
+                        f.suggestion()))
                 .toList();
-        Optional<ModelPlan> plan = Optional.ofNullable(stored.plan()).map(p -> new ModelPlan(
+        ModelPlan plan = Optional.ofNullable(stored.plan()).map(p -> new ModelPlan(
                 p.elements().stream().map(e -> new PlannedElement(e.archiType(), e.name(),
-                        Optional.ofNullable(e.existingRef()).map(StoredRef::toDomain))).toList(),
+                        e.existingRef() == null ? null : e.existingRef().toDomain())).toList(),
                 p.relationships().stream().map(r -> new PlannedRelation(r.archiType(), r.sourceName(),
                         r.targetName(), r.permitted())).toList(),
-                Optional.ofNullable(p.notes())));
-        Optional<AdvisorAnswer> answer = Optional.ofNullable(stored.answer()).map(a -> new AdvisorAnswer(a.markdown(),
-                a.references().stream().map(StoredRef::toDomain).toList()));
+                p.notes())).orElse(null);
+        AdvisorAnswer answer = Optional.ofNullable(stored.answer()).map(a -> new AdvisorAnswer(a.markdown(),
+                a.references().stream().map(StoredRef::toDomain).toList())).orElse(null);
         return new Decoded(findings, plan, answer);
     }
 
-    record Decoded(List<Finding> findings, Optional<ModelPlan> plan, Optional<AdvisorAnswer> answer) {
+    /** Прочитанный результат; {@code plan} и {@code answer} — {@code null}, если их не было. */
+    record Decoded(List<Finding> findings, ModelPlan plan, AdvisorAnswer answer) {
     }
 
     record Stored(List<StoredFinding> findings, StoredPlan plan, StoredAnswer answer) {

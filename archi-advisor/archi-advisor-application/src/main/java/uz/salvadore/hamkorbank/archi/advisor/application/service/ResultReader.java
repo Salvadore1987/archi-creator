@@ -59,7 +59,7 @@ final class ResultReader {
                     clip(text(input, "message").strip(), Finding.TEXT_MAX),
                     TargetKind.valueOf(text(input, "targetKind")),
                     ElementRef.of(target, context.nameOf(target).orElse(target)),
-                    Optional.of(clip(text(input, "suggestion").strip(), Finding.TEXT_MAX))));
+                    clip(text(input, "suggestion").strip(), Finding.TEXT_MAX)));
         } catch (InvalidValueException | IllegalArgumentException | ClassCastException
                  | NullPointerException unreadable) {
             return Optional.empty();
@@ -80,9 +80,10 @@ final class ResultReader {
             if (!phaseOne.contains(type) || name.isEmpty() || planned.containsKey(key(name))) {
                 continue;
             }
-            Optional<ElementRef> ref = Optional.ofNullable(existing.get(key(name)))
+            ElementRef ref = Optional.ofNullable(existing.get(key(name)))
                     .filter(e -> e.archiType().equals(type))
-                    .map(e -> ElementRef.of(e.archiId(), e.name()));
+                    .map(e -> ElementRef.of(e.archiId(), e.name()))
+                    .orElse(null);
             planned.put(key(name), new PlannedElement(type, name, ref));
         }
         List<PlannedRelation> relations = new ArrayList<>();
@@ -99,8 +100,7 @@ final class ResultReader {
                     && metamodel.permitted(sourceType.get(), targetType.get(), type);
             relations.add(new PlannedRelation(type, source, target, permitted));
         }
-        return new ModelPlan(List.copyOf(planned.values()), relations,
-                Optional.of(textOrEmpty(input, "notes")));
+        return new ModelPlan(List.copyOf(planned.values()), relations, textOrEmpty(input, "notes"));
     }
 
     /** Ответ подсказки и документации: ссылки — только на объекты, которые есть в контексте. */

@@ -27,7 +27,7 @@ class ModelContextTest {
         for (ContextLayer layer : layers) {
             for (int i = 0; i < 10; i++) {
                 elements.add(new ContextElement(layer.name() + "-" + i, "archimate:" + layer.name(), "name " + i,
-                        Optional.of("documentation ".repeat(20)), layer));
+                        "documentation ".repeat(20), layer));
             }
         }
         for (int i = 0; i < 10; i++) {
@@ -77,7 +77,7 @@ class ModelContextTest {
 
         assertTrue(fitted.truncated());
         assertEquals(30, fitted.elements().size());
-        assertTrue(fitted.elements().stream().allMatch(e -> e.documentation().isEmpty()));
+        assertTrue(fitted.elements().stream().allMatch(e -> e.documentation() == null));
     }
 
     @Test
@@ -122,6 +122,6 @@ class ModelContextTest {
 
         assertEquals(30, catalog.elements().size());
         assertTrue(catalog.relationships().isEmpty());
-        assertTrue(catalog.elements().stream().allMatch(e -> e.documentation().isEmpty()));
+        assertTrue(catalog.elements().stream().allMatch(e -> e.documentation() == null));
     }
 }

@@ -138,7 +138,7 @@ public record ModelContext(AdvisorFunction function, List<ContextElement> elemen
         long chars = 0;
         for (ContextElement e : elements) {
             chars += ELEMENT_OVERHEAD + e.archiId().length() + e.archiType().length() + e.name().length()
-                    + e.documentation().map(String::length).orElse(0);
+                    + (e.documentation() == null ? 0 : e.documentation().length());
         }
         for (ContextRelation r : relationships) {
             chars += RELATION_OVERHEAD + r.archiId().length() + r.archiType().length() + r.sourceArchiId().length()

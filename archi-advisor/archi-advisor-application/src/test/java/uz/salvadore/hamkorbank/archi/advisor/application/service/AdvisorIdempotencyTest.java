@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
@@ -26,7 +25,7 @@ class AdvisorIdempotencyTest {
                     "targetKind", "ELEMENT", "targetArchiId", "svc", "suggestion", "s"));
         };
         AdvisorService service = fixture.service();
-        AdvisorRequest review = AdvisorRequest.review(Fixture.MODEL, Optional.empty());
+        AdvisorRequest review = AdvisorRequest.review(Fixture.MODEL, null);
         Fixture.Recorded first = new Fixture.Recorded();
         service.ask(Fixture.ALICE, review, "same-key", RU).run(first);
 
@@ -44,7 +43,7 @@ class AdvisorIdempotencyTest {
     void sameKeyDifferentRequestConflicts() {
         Fixture fixture = new Fixture();
         AdvisorService service = fixture.service();
-        service.ask(Fixture.ALICE, AdvisorRequest.review(Fixture.MODEL, Optional.empty()), "k", RU)
+        service.ask(Fixture.ALICE, AdvisorRequest.review(Fixture.MODEL, null), "k", RU)
                 .run(new Fixture.Recorded());
 
         AdvisorDomainException conflict = assertThrows(AdvisorDomainException.class,
@@ -58,7 +57,7 @@ class AdvisorIdempotencyTest {
     void keysAreScopedByRequester() {
         Fixture fixture = new Fixture();
         AdvisorService service = fixture.service();
-        AdvisorRequest review = AdvisorRequest.review(Fixture.MODEL, Optional.empty());
+        AdvisorRequest review = AdvisorRequest.review(Fixture.MODEL, null);
         service.ask(Fixture.ALICE, review, "k", RU).run(new Fixture.Recorded());
         service.ask(Fixture.VIEWER, review, "k", RU).run(new Fixture.Recorded());
 

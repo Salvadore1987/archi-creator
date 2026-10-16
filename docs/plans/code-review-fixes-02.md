@@ -78,7 +78,7 @@
 |---|---|---|---|
 | C1 | modeling: домен, application, адаптеры и все вызовы | ArchUnit `optionalIsNeitherFieldNorParameter` (по пакетам `OPTIONAL_FREE`) | ✅ |
 | C2 | interchange: домен, application, адаптеры и все вызовы | то же правило, `OPTIONAL_FREE` + interchange | ✅ |
-| C3 | advisor и адаптеры, `archi-bootstrap` | то же правило без исключений | ⬜ |
+| C3 | advisor и основной код `archi-bootstrap` | то же правило, `OPTIONAL_FREE` — весь основной код | ✅ |
 
 ### Завершение
 
@@ -169,6 +169,11 @@
   `List.of` с возможным `null` в сравнении содержимого (`GitMergeService.own`) заменён
   на `Arrays.asList`. Вне охвата правила: закрытые помощники `JGitRepository` и тестовые
   фейки — к C3.
+- **C3.** Около 24 полей и 57 параметров advisor и bootstrap. Где пустая строка раньше
+  отбрасывалась фильтром (`AdvisorRequest`, `Finding.suggestion`, `ModelPlan.notes`), теперь
+  компактный конструктор приводит её к `null` — проверки «поле обязательно» и отпечаток запроса
+  прежние. Правило ArchUnit проверяет весь основной код без исключений; тестовые фейки
+  правилом не охвачены.
 
 ## Отменённые варианты
 

@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.advisor.application.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -9,7 +10,6 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.advisor.domain.budget.BudgetPeriod;
@@ -29,7 +29,7 @@ class AdvisorServiceTest {
     private static final BudgetPeriod OCTOBER = BudgetPeriod.parse("2026-10");
 
     private static AdvisorRequest review() {
-        return AdvisorRequest.review(Fixture.MODEL, Optional.empty());
+        return AdvisorRequest.review(Fixture.MODEL, null);
     }
 
     @Test
@@ -46,7 +46,7 @@ class AdvisorServiceTest {
         assertTrue(fixture.upstreamCalls.isEmpty(), "внешний API не вызывался");
         AdvisorSession session = fixture.onlySession();
         assertEquals(SessionStatus.REJECTED, session.status());
-        assertTrue(session.auditEntry().isPresent());
+        assertNotNull(session.auditEntry());
         assertTrue(fixture.events.stream().anyMatch(AdvisorSessionCompletedEvent.class::isInstance));
     }
 
@@ -54,7 +54,7 @@ class AdvisorServiceTest {
     @DisplayName("INV-ADV-005: исчерпанный бюджет — 429 с датой сброса, без обращения к API")
     void exhaustedBudgetRejectsWithResetDate() {
         Fixture fixture = new Fixture();
-        fixture.limit = Optional.of(100L);
+        fixture.limit = 100L;
         AdvisorService service = fixture.service();
         service.ask(Fixture.ALICE, review(), "k1", RU).run(new Fixture.Recorded());
         assertTrue(fixture.events.stream().anyMatch(TokenBudgetExhaustedEvent.class::isInstance));
@@ -83,7 +83,7 @@ class AdvisorServiceTest {
         assertEquals("RATE_LIMITED", refused.code());
         assertTrue((Long) refused.details().get("retryAfterSeconds") > 0);
         assertEquals(RejectionReason.RATE_LIMITED,
-                fixture.sessions.get("alice/k3").rejectionReason().orElseThrow());
+                fixture.sessions.get("alice/k3").rejectionReason());
     }
 
     @Test
@@ -154,7 +154,7 @@ class AdvisorServiceTest {
 
         assertEquals(SessionStatus.FAILED, recorded.meta.outcome());
         assertEquals(507, fixture.budgets.get(OCTOBER).consumedTokens());
-        assertEquals(SessionStatus.FAILED, fixture.onlySession().auditEntry().orElseThrow().outcome());
+        assertEquals(SessionStatus.FAILED, fixture.onlySession().auditEntry().outcome());
         assertTrue(fixture.opened.getFirst().cancelled);
     }
 
@@ -187,7 +187,7 @@ class AdvisorServiceTest {
 
         assertEquals("ADVISOR_UNAVAILABLE", refused.code());
         assertEquals(SessionStatus.FAILED, fixture.onlySession().status());
-        assertTrue(fixture.onlySession().auditEntry().isPresent());
+        assertNotNull(fixture.onlySession().auditEntry());
     }
 
     @Test

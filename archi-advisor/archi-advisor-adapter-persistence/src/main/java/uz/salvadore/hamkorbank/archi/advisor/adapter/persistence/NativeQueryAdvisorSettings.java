@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.advisor.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.AdvisorSettingsRepository;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
@@ -32,7 +31,7 @@ public class NativeQueryAdvisorSettings implements AdvisorSettingsRepository {
             throw notFound(workspaceId);
         }
         Object[] row = (Object[]) rows.getFirst();
-        return new StoredSettings((Boolean) row[0], Optional.ofNullable((Number) row[1]).map(Number::longValue));
+        return new StoredSettings((Boolean) row[0], row[1] == null ? null : ((Number) row[1]).longValue());
     }
 
     @Override

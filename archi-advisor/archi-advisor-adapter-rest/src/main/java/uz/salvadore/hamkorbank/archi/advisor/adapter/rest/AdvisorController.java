@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.adapter.rest;
 
 import java.util.Locale;
-import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,8 +58,7 @@ public class AdvisorController {
     /** Ревью модели или одного представления — замечания потоком SSE. */
     @PostMapping("/review")
     public ResponseEntity<SseEmitter> review(Requester requester, @RequestBody ReviewRequest body,
-                                                        @RequestHeader(IDEMPOTENCY_KEY) Optional<String> key,
-                                                        Locale locale) {
+            @RequestHeader(value = IDEMPOTENCY_KEY, required = false) String key, Locale locale) {
         return stream(advisor.ask(requester, AdvisorRequest.review(model(body.modelId()), view(body.viewId())),
                 key(key), locale));
     }
@@ -68,8 +66,7 @@ public class AdvisorController {
     /** Подсказка по выбранному элементу и его окрестности — ответ потоком SSE. */
     @PostMapping("/explain")
     public ResponseEntity<SseEmitter> explain(Requester requester, @RequestBody ExplainRequest body,
-                                                         @RequestHeader(IDEMPOTENCY_KEY) Optional<String> key,
-                                                         Locale locale) {
+            @RequestHeader(value = IDEMPOTENCY_KEY, required = false) String key, Locale locale) {
         return stream(advisor.ask(requester, AdvisorRequest.explain(model(body.modelId()), body.elementId()),
                 key(key), locale));
     }
@@ -77,8 +74,7 @@ public class AdvisorController {
     /** План фрагмента архитектуры по описанию — предложение элементов и связей, модель не меняется. */
     @PostMapping("/plan")
     public ResponseEntity<SseEmitter> plan(Requester requester, @RequestBody PlanRequest body,
-                                                      @RequestHeader(IDEMPOTENCY_KEY) Optional<String> key,
-                                                      Locale locale) {
+            @RequestHeader(value = IDEMPOTENCY_KEY, required = false) String key, Locale locale) {
         return stream(advisor.ask(requester, AdvisorRequest.plan(model(body.modelId()), body.prompt()), key(key),
                 locale));
     }
@@ -86,10 +82,9 @@ public class AdvisorController {
     /** Документация по модели, представлению или элементу — текст потоком SSE. */
     @PostMapping("/document")
     public ResponseEntity<SseEmitter> document(Requester requester, @RequestBody DocumentRequest body,
-                                                          @RequestHeader(IDEMPOTENCY_KEY) Optional<String> key,
-                                                          Locale locale) {
+            @RequestHeader(value = IDEMPOTENCY_KEY, required = false) String key, Locale locale) {
         return stream(advisor.ask(requester, AdvisorRequest.document(model(body.modelId()), view(body.viewId()),
-                Optional.ofNullable(body.elementId())), key(key), locale));
+                body.elementId()), key(key), locale));
     }
 
     /** Поток читается в фоне: поток запроса освобождается, кадры уходят по мере прихода. */
@@ -117,12 +112,14 @@ public class AdvisorController {
         return ModelId.of(modelId);
     }
 
-    private static Optional<ViewId> view(UUID viewId) {
-        return Optional.ofNullable(viewId).map(ViewId::of);
+    private static ViewId view(UUID viewId) {
+        return viewId == null ? null : ViewId.of(viewId);
     }
 
-    private static String key(Optional<String> key) {
-        return key.filter(k -> !k.isBlank()).orElseThrow(
-                () -> AdvisorDomainException.invalid(Message.of(AdvisorMessages.FIELD_REQUIRED, IDEMPOTENCY_KEY)));
+    private static String key(String key) {
+        if (key == null || key.isBlank()) {
+            throw AdvisorDomainException.invalid(Message.of(AdvisorMessages.FIELD_REQUIRED, IDEMPOTENCY_KEY));
+        }
+        return key;
     }
 }

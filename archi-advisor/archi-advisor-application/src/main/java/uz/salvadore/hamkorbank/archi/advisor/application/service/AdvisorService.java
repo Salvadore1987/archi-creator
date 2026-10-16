@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import uz.salvadore.hamkorbank.archi.advisor.application.access.AccessPolicy;
@@ -190,16 +191,20 @@ public final class AdvisorService {
     private LlmRequest prompt(AdvisorRequest request, ModelContext context, Locale language) {
         Map<String, Object> header = new LinkedHashMap<>();
         header.put("task", request.function().name());
-        header.put("scope", request.viewId().isPresent() ? "VIEW"
-                : request.elementId().isPresent() ? "ELEMENT" : "MODEL");
+        header.put("scope", request.viewId() != null ? "VIEW"
+                : request.elementId() != null ? "ELEMENT" : "MODEL");
         header.put("truncated", context.truncated());
-        request.elementId().ifPresent(id -> header.put("focus", id));
+        if (request.elementId() != null) {
+            header.put("focus", request.elementId());
+        }
         if (request.function() == AdvisorFunction.EXPLAIN) {
-            String type = context.elements().stream().filter(e -> e.archiId().equals(request.elementId().get()))
+            String type = context.elements().stream().filter(e -> e.archiId().equals(request.elementId()))
                     .findFirst().map(e -> e.archiType()).orElse("");
             header.put("permittedRelations", metamodel.permittedFrom(type));
         }
-        request.prompt().ifPresent(p -> header.put("request", p));
+        if (request.prompt() != null) {
+            header.put("request", request.prompt());
+        }
         header.put("model", new ContextJson.Raw(ContextJson.model(context)));
         return new LlmRequest(prompts.system(request.function(), language), ContextJson.object(header),
                 AdvisorTools.forFunction(request.function(), metamodel, prompts), policy.maxOutputTokens());
@@ -214,7 +219,7 @@ public final class AdvisorService {
         return switch (session.status()) {
             case REQUESTED, STREAMING -> throw new AdvisorDomainException(AdvisorCodes.IDEMPOTENCY, Failure.CONFLICT,
                     Message.of(AdvisorMessages.SESSION_IN_PROGRESS, session.idempotencyKey()));
-            case REJECTED -> throw rejection(session.rejectionReason().orElseThrow(), Map.of());
+            case REJECTED -> throw rejection(Objects.requireNonNull(session.rejectionReason()), Map.of());
             case COMPLETED, FAILED -> new AdvisorStream() {
                 @Override
                 public AdvisorSessionId sessionId() {
@@ -224,8 +229,12 @@ public final class AdvisorService {
                 @Override
                 public void run(StreamSink sink) {
                     session.findings().forEach(sink::finding);
-                    session.plan().ifPresent(sink::plan);
-                    session.answer().ifPresent(sink::answer);
+                    if (session.plan() != null) {
+                        sink.plan(session.plan());
+                    }
+                    if (session.answer() != null) {
+                        sink.answer(session.answer());
+                    }
                     sink.meta(SessionMeta.of(session));
                 }
             };
@@ -234,7 +243,8 @@ public final class AdvisorService {
 
     private BudgetPolicy budgetPolicy(WorkspaceId workspaceId) {
         AdvisorSettingsRepository.StoredSettings stored = unitOfWork.read(() -> settings.find(workspaceId));
-        return new BudgetPolicy(stored.enabled(), stored.monthlyTokenLimit().orElse(policy.defaultMonthlyTokenLimit()));
+        return new BudgetPolicy(stored.enabled(), Objects.requireNonNullElse(stored.monthlyTokenLimit(),
+                policy.defaultMonthlyTokenLimit()));
     }
 
     /** Записать отказ сессией с аудитом и вернуть исключение для ответа. */
@@ -314,7 +324,7 @@ public final class AdvisorService {
                 upstream.consume(new LlmListener() {
                     @Override
                     public void text(String delta) {
-                        if (session.firstTokenAt().isEmpty()) {
+                        if (session.firstTokenAt() == null) {
                             Instant now = clock.instant();
                             session.firstToken(now);
                             metrics.firstToken(session.function(), Duration.between(session.requestedAt(), now));
@@ -341,17 +351,21 @@ public final class AdvisorService {
                         usage.set(cumulative);
                     }
                 });
-                Optional<ModelPlan> proposed = Optional.ofNullable(plan.get());
-                if (session.function() == AdvisorFunction.PLAN && proposed.isEmpty()) {
+                ModelPlan proposed = plan.get();
+                if (session.function() == AdvisorFunction.PLAN && proposed == null) {
                     finish(session, () -> session.fail(usage.get(), AuditEntryId.next(uuids), clock.instant()));
                 } else {
-                    Optional<AdvisorAnswer> answer = session.function() == AdvisorFunction.EXPLAIN
+                    AdvisorAnswer answer = session.function() == AdvisorFunction.EXPLAIN
                             || session.function() == AdvisorFunction.DOCUMENT
-                            ? Optional.of(results.answer(text.toString(), context)) : Optional.empty();
+                            ? results.answer(text.toString(), context) : null;
                     finish(session, () -> session.complete(usage.get(), proposed, answer, AuditEntryId.next(uuids),
                             clock.instant()));
-                    proposed.ifPresent(sink::plan);
-                    answer.ifPresent(sink::answer);
+                    if (proposed != null) {
+                        sink.plan(proposed);
+                    }
+                    if (answer != null) {
+                        sink.answer(answer);
+                    }
                 }
                 sink.meta(SessionMeta.of(session));
             } catch (LlmUnavailableException | RuntimeException broken) {

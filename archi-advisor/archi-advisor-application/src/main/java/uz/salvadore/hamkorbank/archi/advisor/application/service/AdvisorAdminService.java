@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.advisor.application.service;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.advisor.application.access.AccessPolicy;
 import uz.salvadore.hamkorbank.archi.advisor.application.access.AdvisorOperation;
@@ -57,8 +58,11 @@ public final class AdvisorAdminService {
         this.uuids = new UuidV7(clock);
     }
 
-    /** Включён ли помощник и в каком состоянии бюджет месяца — по нему интерфейс показывает панель. */
-    public Status status(Requester requester, Optional<WorkspaceId> requested) {
+    /**
+     * Включён ли помощник и в каком состоянии бюджет месяца — по нему интерфейс показывает панель;
+     * {@code requested} = {@code null} — пространство по умолчанию.
+     */
+    public Status status(Requester requester, WorkspaceId requested) {
         return metrics.observe(AdvisorOperation.ADVISOR_STATUS.useCase(), () -> {
             AccessPolicy.require(requester, AdvisorOperation.ADVISOR_STATUS);
             WorkspaceId workspaceId = workspaces.resolve(requested);
@@ -70,8 +74,8 @@ public final class AdvisorAdminService {
         });
     }
 
-    /** Выключатель и действующий лимит. */
-    public Settings settings(Requester requester, Optional<WorkspaceId> requested) {
+    /** Выключатель и действующий лимит; {@code requested} = {@code null} — пространство по умолчанию. */
+    public Settings settings(Requester requester, WorkspaceId requested) {
         return metrics.observe(AdvisorOperation.TOGGLE_ADVISOR.useCase(), () -> {
             AccessPolicy.require(requester, AdvisorOperation.TOGGLE_ADVISOR);
             WorkspaceId workspaceId = workspaces.resolve(requested);
@@ -82,15 +86,17 @@ public final class AdvisorAdminService {
 
     /**
      * Новый выключатель и лимит. Бюджет месяца пересчитывает состояние от нового лимита;
-     * расход не меняется — поднять лимит можно, списать расход нельзя.
+     * расход не меняется — поднять лимит можно, списать расход нельзя. {@code requested} = {@code null} —
+     * пространство по умолчанию; лимит {@code null} — отказ «поле не задано».
      */
-    public Settings change(Requester requester, Optional<WorkspaceId> requested, boolean enabled,
-                           Optional<Long> monthlyTokenLimit) {
+    public Settings change(Requester requester, WorkspaceId requested, boolean enabled, Long monthlyTokenLimit) {
         return metrics.observe(AdvisorOperation.SET_TOKEN_BUDGET.useCase(), () -> {
             AccessPolicy.require(requester, AdvisorOperation.TOGGLE_ADVISOR);
             AccessPolicy.require(requester, AdvisorOperation.SET_TOKEN_BUDGET);
-            long limit = monthlyTokenLimit.orElseThrow(() -> AdvisorDomainException.invalid(
-                    Message.of(AdvisorMessages.FIELD_REQUIRED, "monthlyTokenLimit")));
+            if (monthlyTokenLimit == null) {
+                throw AdvisorDomainException.invalid(Message.of(AdvisorMessages.FIELD_REQUIRED, "monthlyTokenLimit"));
+            }
+            long limit = monthlyTokenLimit;
             if (limit <= 0) {
                 throw AdvisorDomainException.invalid(Message.of(AdvisorMessages.LIMIT_NOT_POSITIVE));
             }
@@ -108,11 +114,14 @@ public final class AdvisorAdminService {
         });
     }
 
-    /** Расход месяца: лимит, израсходовано, разбиение по пользователям и функциям — из аудита. */
-    public Usage usage(Requester requester, Optional<WorkspaceId> requested, Optional<String> period) {
+    /**
+     * Расход месяца: лимит, израсходовано, разбиение по пользователям и функциям — из аудита.
+     * {@code requested} = {@code null} — пространство по умолчанию, {@code period} = {@code null} — текущий месяц.
+     */
+    public Usage usage(Requester requester, WorkspaceId requested, String period) {
         return metrics.observe(AdvisorOperation.VIEW_TOKEN_USAGE.useCase(), () -> {
             AccessPolicy.require(requester, AdvisorOperation.VIEW_TOKEN_USAGE);
-            BudgetPeriod month = period.map(p -> {
+            BudgetPeriod month = Optional.ofNullable(period).map(p -> {
                 try {
                     return BudgetPeriod.parse(p);
                 } catch (IllegalArgumentException invalid) {
@@ -136,7 +145,8 @@ public final class AdvisorAdminService {
 
     private BudgetPolicy policyOf(WorkspaceId workspaceId) {
         AdvisorSettingsRepository.StoredSettings stored = settings.find(workspaceId);
-        return new BudgetPolicy(stored.enabled(), stored.monthlyTokenLimit().orElse(policy.defaultMonthlyTokenLimit()));
+        return new BudgetPolicy(stored.enabled(), Objects.requireNonNullElse(stored.monthlyTokenLimit(),
+                policy.defaultMonthlyTokenLimit()));
     }
 
     private BudgetPeriod currentPeriod() {

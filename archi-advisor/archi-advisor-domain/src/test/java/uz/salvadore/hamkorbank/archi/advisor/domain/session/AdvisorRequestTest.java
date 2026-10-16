@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
@@ -15,7 +14,7 @@ class AdvisorRequestTest {
     @DisplayName("Подсказке нужен элемент, плану — описание не длиннее предела")
     void functionsRequireTheirParameters() {
         assertThrows(InvalidValueException.class, () -> new AdvisorRequest(AdvisorFunction.EXPLAIN, Sessions.MODEL,
-                Optional.empty(), Optional.empty(), Optional.empty()));
+                null, null, null));
         assertThrows(InvalidValueException.class, () -> AdvisorRequest.plan(Sessions.MODEL, "   "));
         assertThrows(InvalidValueException.class, () -> AdvisorRequest.plan(Sessions.MODEL, "a".repeat(4001)));
     }

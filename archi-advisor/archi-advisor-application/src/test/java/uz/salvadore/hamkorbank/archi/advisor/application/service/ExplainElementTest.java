@@ -71,7 +71,7 @@ class ExplainElementTest {
                 .run(recorded);
 
         assertEquals(List.of(Fixture.APP, Fixture.PROCESS), recorded.plan.elementTypes());
-        assertEquals("crm", recorded.plan.elements().getFirst().existingRef().orElseThrow().archiId(),
+        assertEquals("crm", recorded.plan.elements().getFirst().existingRef().archiId(),
                 "существующий элемент найден по имени и типу");
         assertTrue(recorded.plan.relationships().get(0).permitted());
         assertFalse(recorded.plan.relationships().get(1).permitted());

@@ -319,25 +319,22 @@ public final class JGitRepository implements GitRepositoryPort {
     }
 
     @Override
-    public PushResult push(Remote remote, GitSha parentSha, CommitRequest request) {
-        Optional<GitSha> parent = Optional.ofNullable(parentSha);
+    public PushResult push(Remote remote, GitSha parent, CommitRequest request) {
         synchronized (lock(remote)) {
             try (Repository repo = open(remote); ObjectInserter inserter = repo.newObjectInserter();
                  RevWalk walk = new RevWalk(repo)) {
-                Optional<RevTree> parentTree = parent.isPresent()
-                        ? Optional.of(walk.parseCommit(id(parent.get())).getTree()) : Optional.empty();
+                RevTree parentTree = parent == null ? null : walk.parseCommit(id(parent)).getTree();
                 ObjectId tree = tree(repo, inserter, parentTree, request);
-                Optional<GitSha> second = secondParent(repo, remote, walk, parent,
-                        Optional.ofNullable(request.merged()));
-                if (parentTree.isPresent() && tree.equals(parentTree.get()) && second.isEmpty()) {
-                    return new Unchanged(parent.get());
+                GitSha second = secondParent(repo, remote, walk, parent, request.merged());
+                if (parentTree != null && tree.equals(parentTree) && second == null) {
+                    return new Unchanged(parent);
                 }
                 ObjectId commit = inserter.insert(commit(tree, parent, second, request));
                 inserter.flush();
                 int changed = changedPaths(repo, parentTree, walk.parseTree(tree));
                 String branchRef = Constants.R_HEADS + remote.branch();
                 RemoteRefUpdate update = new RemoteRefUpdate(repo, commit.name(), branchRef, false, null,
-                        parent.map(JGitRepository::id).orElse(ObjectId.zeroId()));
+                        parent == null ? ObjectId.zeroId() : id(parent));
                 try (Transport transport = transport(repo, remote)) {
                     org.eclipse.jgit.transport.PushResult result = transport.push(NullProgressMonitor.INSTANCE,
                             List.of(update));
@@ -363,16 +360,19 @@ public final class JGitRepository implements GitRepositoryPort {
         }
     }
 
-    /** Дерево родителя без каталога модели и заменяемых корневых файлов, плюс новые файлы. */
-    private static ObjectId tree(Repository repo, ObjectInserter inserter, Optional<RevTree> parentTree,
+    /**
+     * Дерево родителя без каталога модели и заменяемых корневых файлов, плюс новые файлы;
+     * {@code parentTree} = {@code null} — родителя нет.
+     */
+    private static ObjectId tree(Repository repo, ObjectInserter inserter, RevTree parentTree,
                                  CommitRequest request) throws IOException {
         DirCache index = DirCache.newInCore();
         DirCacheBuilder builder = index.builder();
         String prefix = request.directory() + "/";
         Set<String> rootPaths = request.rootFiles().keySet();
-        if (parentTree.isPresent()) {
+        if (parentTree != null) {
             try (TreeWalk walk = new TreeWalk(repo)) {
-                walk.addTree(parentTree.get());
+                walk.addTree(parentTree);
                 walk.setRecursive(true);
                 while (walk.next()) {
                     String path = walk.getPathString();
@@ -399,26 +399,31 @@ public final class JGitRepository implements GitRepositoryPort {
         return index.writeTree(inserter);
     }
 
-    /** Слитый коммит — второй родитель, если он есть в кэше и его ещё нет в истории родителя. */
-    private Optional<GitSha> secondParent(Repository repo, Remote remote, RevWalk walk, Optional<GitSha> parent,
-                                          Optional<GitSha> merged) throws IOException, URISyntaxException {
-        if (merged.isEmpty() || !present(repo, remote, merged.get())) {
-            return Optional.empty();
+    /**
+     * Слитый коммит — второй родитель, если он есть в кэше и его ещё нет в истории родителя;
+     * иначе {@code null}. Родитель и слитый коммит могут быть {@code null} — их нет.
+     */
+    private GitSha secondParent(Repository repo, Remote remote, RevWalk walk, GitSha parent, GitSha merged)
+            throws IOException, URISyntaxException {
+        if (merged == null || !present(repo, remote, merged)) {
+            return null;
         }
-        if (parent.isPresent() && walk.isMergedInto(walk.parseCommit(id(merged.get())),
-                walk.parseCommit(id(parent.get())))) {
-            return Optional.empty();
+        if (parent != null && walk.isMergedInto(walk.parseCommit(id(merged)), walk.parseCommit(id(parent)))) {
+            return null;
         }
         return merged;
     }
 
-    private static CommitBuilder commit(ObjectId tree, Optional<GitSha> parent, Optional<GitSha> second,
-                                        CommitRequest request) {
+    private static CommitBuilder commit(ObjectId tree, GitSha parent, GitSha second, CommitRequest request) {
         CommitBuilder commit = new CommitBuilder();
         commit.setTreeId(tree);
         List<ObjectId> parents = new ArrayList<>();
-        parent.ifPresent(p -> parents.add(id(p)));
-        second.ifPresent(p -> parents.add(id(p)));
+        if (parent != null) {
+            parents.add(id(parent));
+        }
+        if (second != null) {
+            parents.add(id(second));
+        }
         commit.setParentIds(parents);
         commit.setAuthor(person(request.author()));
         commit.setCommitter(person(request.committer()));
@@ -430,8 +435,8 @@ public final class JGitRepository implements GitRepositoryPort {
         return new PersonIdent(person.name(), person.email(), person.when(), ZoneOffset.UTC);
     }
 
-    private static int changedPaths(Repository repo, Optional<RevTree> before, RevTree after) throws IOException {
-        if (before.isEmpty()) {
+    private static int changedPaths(Repository repo, RevTree before, RevTree after) throws IOException {
+        if (before == null) {
             int count = 0;
             try (TreeWalk walk = new TreeWalk(repo)) {
                 walk.addTree(after);
@@ -444,7 +449,7 @@ public final class JGitRepository implements GitRepositoryPort {
         }
         int count = 0;
         try (TreeWalk walk = new TreeWalk(repo)) {
-            walk.addTree(before.get());
+            walk.addTree(before);
             walk.addTree(after);
             walk.setRecursive(true);
             walk.setFilter(TreeFilter.ANY_DIFF);

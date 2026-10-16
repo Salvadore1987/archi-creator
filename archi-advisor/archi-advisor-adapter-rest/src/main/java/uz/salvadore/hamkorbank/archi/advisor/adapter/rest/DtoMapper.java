@@ -31,16 +31,16 @@ final class DtoMapper {
 
     static FindingDto finding(Finding f) {
         return new FindingDto(f.id().value(), f.severity().name(), f.code(), f.message(), f.targetKind().name(),
-                ref(f.target()), f.suggestion().orElse(null));
+                ref(f.target()), f.suggestion());
     }
 
     static ModelPlanDto plan(ModelPlan plan) {
         return new ModelPlanDto(
                 plan.elements().stream().map(e -> new PlannedElementDto(e.archiType(), e.name(),
-                        e.existingRef().map(DtoMapper::ref).orElse(null))).toList(),
+                        e.existingRef() == null ? null : ref(e.existingRef()))).toList(),
                 plan.relationships().stream().map(r -> new PlannedRelationDto(r.archiType(), r.sourceName(),
                         r.targetName(), r.permitted())).toList(),
-                plan.notes().orElse(null));
+                plan.notes());
     }
 
     static AnswerDto answer(AdvisorAnswer answer) {
@@ -49,8 +49,8 @@ final class DtoMapper {
 
     static SessionMetaDto meta(SessionMeta meta) {
         return new SessionMetaDto(meta.sessionId().value(), meta.outcome().name(),
-                meta.rejectionReason().map(Enum::name).orElse(null), meta.promptTokens(), meta.completionTokens(),
-                meta.contextTruncated());
+                meta.rejectionReason() == null ? null : meta.rejectionReason().name(), meta.promptTokens(),
+                meta.completionTokens(), meta.contextTruncated());
     }
 
     static StatusDto status(AdvisorAdminService.Status status) {

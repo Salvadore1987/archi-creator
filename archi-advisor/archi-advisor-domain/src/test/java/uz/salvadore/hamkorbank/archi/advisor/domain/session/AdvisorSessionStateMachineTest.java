@@ -3,7 +3,6 @@ package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +30,7 @@ class AdvisorSessionStateMachineTest {
     void terminalSessionIsImmutable() {
         AdvisorSession session = Sessions.review();
         session.startStreaming(100, false);
-        session.complete(new TokenUsage(1, 1), Optional.empty(), Optional.empty(), Sessions.audit(), Sessions.NOW);
+        session.complete(new TokenUsage(1, 1), null, null, Sessions.audit(), Sessions.NOW);
 
         assertThrows(IllegalSessionTransitionException.class, () -> session.addFinding(Sessions.finding("id-1")));
         assertThrows(IllegalSessionTransitionException.class,

@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 
 import java.util.Objects;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.FindingId;
@@ -12,10 +11,11 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.FindingId;
  * ни опровергнуть.
  *
  * @param code       машинное имя замечания, например {@code ORPHAN_ELEMENT}
- * @param suggestion как исправить — текст для архитектора, а не команда
+ * @param suggestion как исправить — текст для архитектора, а не команда; {@code null} — совета нет,
+ *                   пустой приводится к {@code null}
  */
 public record Finding(FindingId id, Severity severity, String code, String message, TargetKind targetKind,
-                      ElementRef target, Optional<String> suggestion) {
+                      ElementRef target, String suggestion) {
 
     /** Наибольшая длина текста замечания и совета, в символах. */
     public static final int TEXT_MAX = 2000;
@@ -35,8 +35,10 @@ public record Finding(FindingId id, Severity severity, String code, String messa
         if (message == null || message.isBlank() || message.length() > TEXT_MAX) {
             throw new InvalidValueException(AdvisorMessages.FINDING_TEXT_INVALID, TEXT_MAX);
         }
-        suggestion = Objects.requireNonNullElse(suggestion, Optional.<String>empty()).filter(s -> !s.isBlank());
-        if (suggestion.map(String::length).orElse(0) > TEXT_MAX) {
+        if (suggestion != null && suggestion.isBlank()) {
+            suggestion = null;
+        }
+        if (suggestion != null && suggestion.length() > TEXT_MAX) {
             throw new InvalidValueException(AdvisorMessages.FINDING_TEXT_INVALID, TEXT_MAX);
         }
     }

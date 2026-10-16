@@ -85,7 +85,7 @@ public final class ModelingContextReader implements ModelContextReader {
 
     private static ContextElement element(Element element) {
         return new ContextElement(element.archiId().value(), element.archiType().value(), element.name(),
-                Optional.ofNullable(element.documentation()), layer(element));
+                element.documentation(), layer(element));
     }
 
     private static ContextLayer layer(Element element) {

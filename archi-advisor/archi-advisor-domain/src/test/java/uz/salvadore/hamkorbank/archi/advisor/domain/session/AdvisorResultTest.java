@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Method;
@@ -63,12 +64,12 @@ class AdvisorResultTest {
     @DisplayName("INV-ADV-004: план называет элементы по имени и типу, без идентификаторов создаваемых объектов")
     void planIsNeverApplied() {
         ModelPlan plan = new ModelPlan(
-                List.of(new PlannedElement("archimate:ApplicationService", "Платежи", Optional.empty())),
+                List.of(new PlannedElement("archimate:ApplicationService", "Платежи", null)),
                 List.of(new PlannedRelation("archimate:ServingRelationship", "Платежи", "Клиент", true)),
-                Optional.empty());
+                null);
 
         assertEquals(List.of("archimate:ApplicationService"), plan.elementTypes());
-        assertTrue(plan.elements().getFirst().existingRef().isEmpty());
+        assertNull(plan.elements().getFirst().existingRef());
     }
 
     private static boolean allowed(Type type) {

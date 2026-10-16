@@ -47,30 +47,29 @@ public class JpaAdvisorSessionRepository implements AdvisorSessionRepository {
             row.workspaceId = session.workspaceId().value();
             row.modelId = session.modelId().value();
             row.function = session.function().name();
-            row.viewId = session.viewId().map(ViewId::value).orElse(null);
-            row.elementArchiId = session.elementId().orElse(null);
+            row.viewId = session.viewId() == null ? null : session.viewId().value();
+            row.elementArchiId = session.elementId();
             row.idempotencyKey = session.idempotencyKey();
             row.fingerprint = session.fingerprint();
             row.requestedBy = session.requestedBy();
             row.requestedAt = session.requestedAt();
         }
         row.status = session.status().name();
-        row.contextTokens = session.contextSize().orElse(null);
+        row.contextTokens = session.contextSize();
         row.contextTruncated = session.contextTruncated();
         row.promptTokens = session.usage().promptTokens();
         row.completionTokens = session.usage().completionTokens();
-        row.rejectionReason = session.rejectionReason().map(Enum::name).orElse(null);
+        row.rejectionReason = session.rejectionReason() == null ? null : session.rejectionReason().name();
         row.result = ResultCodec.encode(session.findings(), session.plan(), session.answer());
-        row.firstTokenAt = session.firstTokenAt().orElse(null);
-        row.finishedAt = session.finishedAt().orElse(null);
+        row.firstTokenAt = session.firstTokenAt();
+        row.finishedAt = session.finishedAt();
         if (fresh) {
             em.persist(row);
         }
-        session.auditEntry().ifPresent(entry -> {
-            if (em.find(AuditLogEntity.class, entry.id().value()) == null) {
-                em.persist(audit(session, entry));
-            }
-        });
+        AuditEntry entry = session.auditEntry();
+        if (entry != null && em.find(AuditLogEntity.class, entry.id().value()) == null) {
+            em.persist(audit(session, entry));
+        }
         em.flush();
     }
 
@@ -83,7 +82,7 @@ public class JpaAdvisorSessionRepository implements AdvisorSessionRepository {
         row.userSubject = entry.actor();
         row.action = entry.function().name();
         row.outcome = entry.outcome().name();
-        row.rejectionReason = entry.rejectionReason().map(Enum::name).orElse(null);
+        row.rejectionReason = entry.rejectionReason() == null ? null : entry.rejectionReason().name();
         row.promptTokens = Math.toIntExact(entry.usage().promptTokens());
         row.completionTokens = Math.toIntExact(entry.usage().completionTokens());
         row.createdAt = entry.createdAt();
@@ -93,18 +92,22 @@ public class JpaAdvisorSessionRepository implements AdvisorSessionRepository {
     private AdvisorSession toDomain(AdvisorSessionEntity row) {
         ResultCodec.Decoded result = ResultCodec.decode(row.result);
         TokenUsage usage = new TokenUsage(row.promptTokens, row.completionTokens);
-        Optional<AuditEntry> audit = em.createQuery("select a from AuditLogEntity a where a.sessionId = :s",
+        AuditEntry audit = em.createQuery("select a from AuditLogEntity a where a.sessionId = :s",
                         AuditLogEntity.class).setParameter("s", row.id).getResultStream().findFirst()
                 .map(a -> new AuditEntry(AuditEntryId.of(a.id), a.userSubject, AdvisorFunction.valueOf(a.action),
                         new TokenUsage(a.promptTokens, a.completionTokens), SessionStatus.valueOf(a.outcome),
-                        Optional.ofNullable(a.rejectionReason).map(RejectionReason::valueOf), a.createdAt));
+                        reason(a.rejectionReason), a.createdAt))
+                .orElse(null);
         return AdvisorSession.restore(AdvisorSessionId.of(row.id), WorkspaceId.of(row.workspaceId),
                 ModelId.of(row.modelId), AdvisorFunction.valueOf(row.function),
-                Optional.ofNullable(row.viewId).map(ViewId::of), Optional.ofNullable(row.elementArchiId),
+                row.viewId == null ? null : ViewId.of(row.viewId), row.elementArchiId,
                 row.idempotencyKey, row.fingerprint, row.requestedBy, row.requestedAt,
-                SessionStatus.valueOf(row.status), Optional.ofNullable(row.contextTokens), row.contextTruncated,
+                SessionStatus.valueOf(row.status), row.contextTokens, row.contextTruncated,
                 usage, result.findings(), result.plan(), result.answer(),
-                Optional.ofNullable(row.rejectionReason).map(RejectionReason::valueOf),
-                Optional.ofNullable(row.firstTokenAt), Optional.ofNullable(row.finishedAt), audit);
+                reason(row.rejectionReason), row.firstTokenAt, row.finishedAt, audit);
+    }
+
+    private static RejectionReason reason(String stored) {
+        return stored == null ? null : RejectionReason.valueOf(stored);
     }
 }

@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.DomainEvent;
@@ -37,33 +36,33 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
     private final WorkspaceId workspaceId;
     private final ModelId modelId;
     private final AdvisorFunction function;
-    private final Optional<ViewId> viewId;
-    private final Optional<String> elementId;
+    private final ViewId viewId;
+    private final String elementId;
     private final String idempotencyKey;
     private final String fingerprint;
     private final String requestedBy;
     private final Instant requestedAt;
 
     private SessionStatus status;
-    private Optional<Integer> contextSize;
+    private Integer contextSize;
     private boolean contextTruncated;
     private TokenUsage usage;
     private final List<Finding> findings;
-    private Optional<ModelPlan> plan;
-    private Optional<AdvisorAnswer> answer;
-    private Optional<RejectionReason> rejectionReason;
-    private Optional<Instant> firstTokenAt;
-    private Optional<Instant> finishedAt;
-    private Optional<AuditEntry> auditEntry;
+    private ModelPlan plan;
+    private AdvisorAnswer answer;
+    private RejectionReason rejectionReason;
+    private Instant firstTokenAt;
+    private Instant finishedAt;
+    private AuditEntry auditEntry;
     private final List<DomainEvent> events = new ArrayList<>();
 
     private AdvisorSession(AdvisorSessionId id, WorkspaceId workspaceId, ModelId modelId, AdvisorFunction function,
-                           Optional<ViewId> viewId, Optional<String> elementId, String idempotencyKey,
+                           ViewId viewId, String elementId, String idempotencyKey,
                            String fingerprint, String requestedBy, Instant requestedAt, SessionStatus status,
-                           Optional<Integer> contextSize, boolean contextTruncated, TokenUsage usage,
-                           List<Finding> findings, Optional<ModelPlan> plan, Optional<AdvisorAnswer> answer,
-                           Optional<RejectionReason> rejectionReason, Optional<Instant> firstTokenAt,
-                           Optional<Instant> finishedAt, Optional<AuditEntry> auditEntry) {
+                           Integer contextSize, boolean contextTruncated, TokenUsage usage,
+                           List<Finding> findings, ModelPlan plan, AdvisorAnswer answer,
+                           RejectionReason rejectionReason, Instant firstTokenAt,
+                           Instant finishedAt, AuditEntry auditEntry) {
         super(id);
         this.workspaceId = Objects.requireNonNull(workspaceId, "workspaceId");
         this.modelId = Objects.requireNonNull(modelId, "modelId");
@@ -95,20 +94,19 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
                                          String idempotencyKey, String requestedBy, Instant now) {
         return new AdvisorSession(id, workspaceId, request.modelId(), request.function(), request.viewId(),
                 request.elementId(), idempotencyKey, request.fingerprint(), requestedBy, now,
-                SessionStatus.REQUESTED, Optional.empty(), false, TokenUsage.NONE, List.of(), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+                SessionStatus.REQUESTED, null, false, TokenUsage.NONE, List.of(), null, null, null, null, null, null);
     }
 
     /** Сессия из хранения — как есть, без проверок переходов и без событий. */
     public static AdvisorSession restore(AdvisorSessionId id, WorkspaceId workspaceId, ModelId modelId,
-                                         AdvisorFunction function, Optional<ViewId> viewId,
-                                         Optional<String> elementId, String idempotencyKey, String fingerprint,
+                                         AdvisorFunction function, ViewId viewId,
+                                         String elementId, String idempotencyKey, String fingerprint,
                                          String requestedBy, Instant requestedAt, SessionStatus status,
-                                         Optional<Integer> contextSize, boolean contextTruncated, TokenUsage usage,
-                                         List<Finding> findings, Optional<ModelPlan> plan,
-                                         Optional<AdvisorAnswer> answer, Optional<RejectionReason> rejectionReason,
-                                         Optional<Instant> firstTokenAt, Optional<Instant> finishedAt,
-                                         Optional<AuditEntry> auditEntry) {
+                                         Integer contextSize, boolean contextTruncated, TokenUsage usage,
+                                         List<Finding> findings, ModelPlan plan,
+                                         AdvisorAnswer answer, RejectionReason rejectionReason,
+                                         Instant firstTokenAt, Instant finishedAt,
+                                         AuditEntry auditEntry) {
         return new AdvisorSession(id, workspaceId, modelId, function, viewId, elementId, idempotencyKey, fingerprint,
                 requestedBy, requestedAt, status, contextSize, contextTruncated, usage, findings, plan, answer,
                 rejectionReason, firstTokenAt, finishedAt, auditEntry);
@@ -117,7 +115,7 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
     /** Отказ до обращения к внешнему API: токены не расходуются, аудит пишется. */
     public void reject(RejectionReason reason, AuditEntryId auditId, Instant now) {
         require(SessionStatus.REQUESTED, "reject");
-        this.rejectionReason = Optional.of(Objects.requireNonNull(reason, "reason"));
+        this.rejectionReason = Objects.requireNonNull(reason, "reason");
         finish(SessionStatus.REJECTED, auditId, now);
     }
 
@@ -127,7 +125,7 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
         if (contextTokens < 0) {
             throw new InvalidValueException(AdvisorMessages.USAGE_NEGATIVE);
         }
-        this.contextSize = Optional.of(contextTokens);
+        this.contextSize = contextTokens;
         this.contextTruncated = truncated;
         this.status = SessionStatus.STREAMING;
     }
@@ -135,8 +133,8 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
     /** Первые токены ответа — для контроля времени до первого токена; повторно не перезаписывается. */
     public void firstToken(Instant now) {
         require(SessionStatus.STREAMING, "firstToken");
-        if (firstTokenAt.isEmpty()) {
-            firstTokenAt = Optional.of(now);
+        if (firstTokenAt == null) {
+            firstTokenAt = now;
         }
     }
 
@@ -150,16 +148,16 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
     }
 
     /** Ответ получен целиком. План обязателен у функции плана, ответ — у подсказки и документации. */
-    public void complete(TokenUsage usage, Optional<ModelPlan> plan, Optional<AdvisorAnswer> answer,
+    public void complete(TokenUsage usage, ModelPlan plan, AdvisorAnswer answer,
                          AuditEntryId auditId, Instant now) {
         require(SessionStatus.STREAMING, "complete");
-        if (function == AdvisorFunction.PLAN && plan.isEmpty()) {
+        if (function == AdvisorFunction.PLAN && plan == null) {
             throw new InvalidValueException(AdvisorMessages.PLAN_REQUIRED);
         }
         this.usage = Objects.requireNonNull(usage, "usage");
-        this.plan = function == AdvisorFunction.PLAN ? plan : Optional.empty();
+        this.plan = function == AdvisorFunction.PLAN ? plan : null;
         this.answer = function == AdvisorFunction.EXPLAIN || function == AdvisorFunction.DOCUMENT
-                ? answer : Optional.empty();
+                ? answer : null;
         finish(SessionStatus.COMPLETED, auditId, now);
     }
 
@@ -174,9 +172,8 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
 
     private void finish(SessionStatus outcome, AuditEntryId auditId, Instant now) {
         this.status = outcome;
-        this.finishedAt = Optional.of(now);
-        this.auditEntry = Optional.of(new AuditEntry(auditId, requestedBy, function, usage, outcome,
-                rejectionReason, now));
+        this.finishedAt = now;
+        this.auditEntry = new AuditEntry(auditId, requestedBy, function, usage, outcome, rejectionReason, now);
         events.add(new AdvisorSessionCompletedEvent(id(), workspaceId, modelId, function, outcome, rejectionReason,
                 usage.promptTokens(), usage.completionTokens(), contextTruncated, findings.size(),
                 Duration.between(requestedAt, now).toMillis(), requestedBy, now));
@@ -216,13 +213,13 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
         return function;
     }
 
-    /** Представление, если область — одно представление. */
-    public Optional<ViewId> viewId() {
+    /** Представление, если область — одно представление; {@code null} — область не представление. */
+    public ViewId viewId() {
         return viewId;
     }
 
-    /** Элемент, {@code archiId}, если область — элемент. */
-    public Optional<String> elementId() {
+    /** Элемент, {@code archiId}, если область — элемент; {@code null} — область не элемент. */
+    public String elementId() {
         return elementId;
     }
 
@@ -251,8 +248,8 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
         return status;
     }
 
-    /** Размер контекста в токенах; пусто, пока поток не начался. */
-    public Optional<Integer> contextSize() {
+    /** Размер контекста в токенах; {@code null}, пока поток не начался. */
+    public Integer contextSize() {
         return contextSize;
     }
 
@@ -271,33 +268,33 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
         return List.copyOf(findings);
     }
 
-    /** План — у завершённой функции плана. */
-    public Optional<ModelPlan> plan() {
+    /** План — у завершённой функции плана; у прочих {@code null}. */
+    public ModelPlan plan() {
         return plan;
     }
 
-    /** Ответ — у завершённых подсказки и документации. */
-    public Optional<AdvisorAnswer> answer() {
+    /** Ответ — у завершённых подсказки и документации; у прочих {@code null}. */
+    public AdvisorAnswer answer() {
         return answer;
     }
 
-    /** Причина отказа — у отклонённой сессии. */
-    public Optional<RejectionReason> rejectionReason() {
+    /** Причина отказа — у отклонённой сессии; у прочих {@code null}. */
+    public RejectionReason rejectionReason() {
         return rejectionReason;
     }
 
-    /** Когда пришёл первый токен ответа. */
-    public Optional<Instant> firstTokenAt() {
+    /** Когда пришёл первый токен ответа; {@code null} — ещё не пришёл. */
+    public Instant firstTokenAt() {
         return firstTokenAt;
     }
 
-    /** Когда сессия стала терминальной. */
-    public Optional<Instant> finishedAt() {
+    /** Когда сессия стала терминальной; {@code null} — ещё не стала. */
+    public Instant finishedAt() {
         return finishedAt;
     }
 
-    /** Запись аудита — есть ровно тогда, когда сессия терминальна. */
-    public Optional<AuditEntry> auditEntry() {
+    /** Запись аудита — есть ровно тогда, когда сессия терминальна; иначе {@code null}. */
+    public AuditEntry auditEntry() {
         return auditEntry;
     }
 }

@@ -1,6 +1,5 @@
 package uz.salvadore.hamkorbank.archi.advisor.adapter.rest;
 
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -31,35 +30,35 @@ public class AdvisorSettingsController {
 
     /** Включён ли помощник и в каком состоянии бюджет текущего месяца. */
     @GetMapping("/status")
-    public StatusDto status(Requester requester, @RequestParam Optional<UUID> workspaceId) {
+    public StatusDto status(Requester requester, @RequestParam(required = false) UUID workspaceId) {
         return DtoMapper.status(admin.status(requester, workspace(workspaceId)));
     }
 
     /** Выключатель и месячный лимит токенов пространства. */
     @GetMapping("/settings")
-    public SettingsDto settings(Requester requester, @RequestParam Optional<UUID> workspaceId) {
+    public SettingsDto settings(Requester requester, @RequestParam(required = false) UUID workspaceId) {
         return DtoMapper.settings(admin.settings(requester, workspace(workspaceId)));
     }
 
     /** Изменить выключатель и лимит; без поля {@code enabled} запрос не разбирается. */
     @PutMapping("/settings")
-    public SettingsDto change(Requester requester, @RequestParam Optional<UUID> workspaceId,
+    public SettingsDto change(Requester requester, @RequestParam(required = false) UUID workspaceId,
                               @RequestBody SettingsDto body) {
         if (body.enabled() == null) {
             throw AdvisorDomainException.invalid(Message.of(AdvisorMessages.FIELD_REQUIRED, "enabled"));
         }
         return DtoMapper.settings(admin.change(requester, workspace(workspaceId), body.enabled(),
-                Optional.ofNullable(body.monthlyTokenLimit())));
+                body.monthlyTokenLimit()));
     }
 
     /** Расход токенов за период — по авторам и по функциям. */
     @GetMapping("/usage")
-    public UsageDto usage(Requester requester, @RequestParam Optional<UUID> workspaceId,
-                          @RequestParam Optional<String> period) {
+    public UsageDto usage(Requester requester, @RequestParam(required = false) UUID workspaceId,
+                          @RequestParam(required = false) String period) {
         return DtoMapper.usage(admin.usage(requester, workspace(workspaceId), period));
     }
 
-    private static Optional<WorkspaceId> workspace(Optional<UUID> workspaceId) {
-        return workspaceId.map(WorkspaceId::of);
+    private static WorkspaceId workspace(UUID workspaceId) {
+        return workspaceId == null ? null : WorkspaceId.of(workspaceId);
     }
 }

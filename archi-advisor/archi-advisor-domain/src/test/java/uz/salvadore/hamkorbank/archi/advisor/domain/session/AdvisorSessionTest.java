@@ -1,11 +1,11 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,15 +21,15 @@ class AdvisorSessionTest {
                 SessionStatus.FAILED, s -> s.fail(TokenUsage.NONE, Sessions.audit(), Sessions.NOW),
                 SessionStatus.COMPLETED, s -> {
                     s.startStreaming(100, false);
-                    s.complete(new TokenUsage(100, 20), Optional.empty(), Optional.empty(), Sessions.audit(),
+                    s.complete(new TokenUsage(100, 20), null, null, Sessions.audit(),
                             Sessions.NOW);
                 });
         outcomes.forEach((outcome, finish) -> {
             AdvisorSession session = Sessions.review();
-            assertTrue(session.auditEntry().isEmpty(), "до терминального состояния записи нет");
+            assertNull(session.auditEntry(), "до терминального состояния записи нет");
             finish.accept(session);
 
-            AuditEntry entry = session.auditEntry().orElseThrow();
+            AuditEntry entry = session.auditEntry();
             assertEquals(outcome, entry.outcome());
             assertEquals("alice", entry.actor());
             assertEquals(AdvisorFunction.REVIEW, entry.function());
@@ -47,8 +47,8 @@ class AdvisorSessionTest {
         AdvisorSession session = Sessions.review();
         session.reject(RejectionReason.ADVISOR_DISABLED, Sessions.audit(), Sessions.NOW);
 
-        AuditEntry entry = session.auditEntry().orElseThrow();
-        assertEquals(Optional.of(RejectionReason.ADVISOR_DISABLED), entry.rejectionReason());
+        AuditEntry entry = session.auditEntry();
+        assertEquals(RejectionReason.ADVISOR_DISABLED, entry.rejectionReason());
         assertEquals(0, entry.usage().total());
     }
 
@@ -57,7 +57,7 @@ class AdvisorSessionTest {
     void fingerprintDistinguishesReplayFromConflict() {
         AdvisorSession session = Sessions.review();
 
-        assertTrue(session.sameRequest(AdvisorRequest.review(Sessions.MODEL, Optional.empty())));
+        assertTrue(session.sameRequest(AdvisorRequest.review(Sessions.MODEL, null)));
         assertTrue(!session.sameRequest(AdvisorRequest.explain(Sessions.MODEL, "id-1")));
     }
 
@@ -69,6 +69,6 @@ class AdvisorSessionTest {
         session.firstToken(Sessions.NOW);
         session.firstToken(Sessions.NOW.plusSeconds(5));
 
-        assertEquals(Optional.of(Sessions.NOW), session.firstTokenAt());
+        assertEquals(Sessions.NOW, session.firstTokenAt());
     }
 }
