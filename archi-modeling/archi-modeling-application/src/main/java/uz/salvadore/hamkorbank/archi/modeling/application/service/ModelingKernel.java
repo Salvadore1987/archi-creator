@@ -82,12 +82,38 @@ public final class ModelingKernel {
         this.archiIds = new ArchiIdGenerator(uuids::next);
     }
 
-    Instant now() {
+    /** Текущий момент по часам приложения. */
+    public Instant now() {
         return clock.instant();
     }
 
+    /** Транзакции сценария. */
+    public UnitOfWork unitOfWork() {
+        return unitOfWork;
+    }
+
+    /** Хранилище блокировок. */
+    public ModelLockRepository locks() {
+        return locks;
+    }
+
+    /** Публикация доменных событий после коммита. */
+    public DomainEventPublisher events() {
+        return events;
+    }
+
+    /** Метрики сценариев. */
+    public UseCaseMetrics metrics() {
+        return metrics;
+    }
+
+    /** Срок блокировки модели. */
+    public Duration lockTtl() {
+        return lockTtl;
+    }
+
     /** Операция под метрикой use case'а и с проверкой роли. */
-    <T> T run(Operation operation, EditorIdentity actor, Supplier<T> work) {
+    public <T> T run(Operation operation, EditorIdentity actor, Supplier<T> work) {
         return metrics.observe(operation.useCase(), () -> {
             AccessPolicy.require(actor, operation);
             return work.get();
@@ -95,7 +121,7 @@ public final class ModelingKernel {
     }
 
     /** Заголовок модели, видимой автору с данным уровнем доступа. */
-    ModelHeader visibleHeader(ModelId modelId, EditorIdentity actor, AclAccess access) {
+    public ModelHeader visibleHeader(ModelId modelId, EditorIdentity actor, AclAccess access) {
         ModelHeader header = models.findHeader(modelId)
                 .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.MODEL, modelId)));
         accessLists.find(modelId).require(actor, access);

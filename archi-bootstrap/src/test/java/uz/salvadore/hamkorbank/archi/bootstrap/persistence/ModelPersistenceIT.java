@@ -15,8 +15,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.LockService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
@@ -38,7 +39,7 @@ class ModelPersistenceIT extends IntegrationTest {
     @Autowired
     ModelLifecycleService lifecycle;
     @Autowired
-    LockService locks;
+    LockApplicationService locks;
     @Autowired
     ElementService elements;
     @Autowired
@@ -52,7 +53,7 @@ class ModelPersistenceIT extends IntegrationTest {
     @DisplayName("INV-MDL-001: дубль archi_id в модели отклоняет база — UNIQUE (model_id, archi_id)")
     void duplicateArchiIdViolatesUniqueConstraint() {
         ModelId model = lifecycle.create(ARCHITECT, workspace(), "Уникальность", null).id();
-        locks.acquire(ARCHITECT, model);
+        locks.acquireLock(ARCHITECT, new AcquireLockCommand(model.value()));
         Element element = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "АБС",
                 null, null);
         UUID folder = jdbc.queryForObject("select folder_id from element where id = ?", UUID.class,
@@ -68,7 +69,7 @@ class ModelPersistenceIT extends IntegrationTest {
     @DisplayName("§4.3: дерево и представление переживают запись и чтение — поля, порядок, геометрия")
     void modelAndViewSurviveStorage() {
         ModelId model = lifecycle.create(ARCHITECT, workspace(), "Хранение", "persist-1").id();
-        locks.acquire(ARCHITECT, model);
+        locks.acquireLock(ARCHITECT, new AcquireLockCommand(model.value()));
         Element component = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "АБС",
                 null, null);
         Element actor = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("BusinessActor"), "Клиент",

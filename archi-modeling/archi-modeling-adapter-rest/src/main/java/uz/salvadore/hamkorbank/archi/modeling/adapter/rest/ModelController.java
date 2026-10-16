@@ -23,11 +23,14 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelPatch;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelSummary;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelTree;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.WorkspaceDto;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReleaseLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetLockQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ResolveWorkspaceQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.AccessListService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.LockService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
@@ -51,12 +54,12 @@ public class ModelController {
 
     private final ModelQueryService queries;
     private final ModelLifecycleService lifecycle;
-    private final LockService locks;
+    private final LockApplicationService locks;
     private final AccessListService accessLists;
     private final WorkspaceApplicationService workspaces;
     private final TextCatalog text;
 
-    public ModelController(ModelQueryService queries, ModelLifecycleService lifecycle, LockService locks,
+    public ModelController(ModelQueryService queries, ModelLifecycleService lifecycle, LockApplicationService locks,
                            AccessListService accessLists, WorkspaceApplicationService workspaces, TextCatalog text) {
         this.text = text;
         this.queries = queries;
@@ -126,20 +129,20 @@ public class ModelController {
     /** Текущая блокировка модели; нет блокировки — {@code 204}. */
     @GetMapping("/models/{id}/lock")
     public ResponseEntity<LockInfo> lock(EditorIdentity actor, @PathVariable UUID id) {
-        return queries.lock(actor, ModelId.of(id)).map(l -> ResponseEntity.ok(DtoMapper.lock(l)))
+        return locks.getLock(actor, new GetLockQuery(id)).map(l -> ResponseEntity.ok(DtoMapper.lock(l)))
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     /** Захватывает или продлевает блокировку модели на запись. */
     @PostMapping("/models/{id}/lock")
     public LockInfo acquire(EditorIdentity actor, @PathVariable UUID id) {
-        return DtoMapper.lock(locks.acquire(actor, ModelId.of(id)));
+        return DtoMapper.lock(locks.acquireLock(actor, new AcquireLockCommand(id)));
     }
 
     /** Снимает блокировку модели. */
     @DeleteMapping("/models/{id}/lock")
     public ResponseEntity<Void> release(EditorIdentity actor, @PathVariable UUID id) {
-        locks.release(actor, ModelId.of(id));
+        locks.releaseLock(actor, new ReleaseLockCommand(id));
         return ResponseEntity.noContent().build();
     }
 

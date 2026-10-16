@@ -9,9 +9,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
 import uz.salvadore.hamkorbank.archi.interchange.application.mapping.ArchimateSnapshots;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotArchive;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.LockService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
@@ -27,7 +28,7 @@ class SnapshotRetentionIT extends IntegrationTest {
     @Autowired
     ModelLifecycleService lifecycle;
     @Autowired
-    LockService locks;
+    LockApplicationService locks;
     @Autowired
     ElementService elements;
     @Autowired
@@ -41,7 +42,7 @@ class SnapshotRetentionIT extends IntegrationTest {
     @DisplayName("INV-MDL-010: без привязки к Git очистка снимков не трогает ни одного")
     void purgeIsDisabledWithoutGitBinding() {
         ModelId model = lifecycle.create(ARCHITECT, workspace(), "Ретеншен", null).id();
-        locks.acquire(ARCHITECT, model);
+        locks.acquireLock(ARCHITECT, new AcquireLockCommand(model.value()));
         for (int i = 0; i < 3; i++) {
             elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "Система " + i,
                     null, null);

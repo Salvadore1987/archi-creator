@@ -44,7 +44,7 @@ class VersionTransactionsTest {
     @DisplayName("откат к очищенной версии обращается к Git вне транзакции записи")
     void rollbackFetchesOutsideTransaction() {
         ModelId model = purgedModel();
-        ports.lockService.acquire(ALICE, model);
+        ports.lock(ALICE, model);
 
         versions.rollback(ALICE, model, 1, null);
 

@@ -61,7 +61,7 @@ class ModelingScenariosTest {
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> ports.lifecycle.create(READER, ports.workspace.id(), "x", null)).failure());
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
-                () -> ports.lockService.acquire(READER, model)).failure());
+                () -> ports.lock(READER, model)).failure());
         assertEquals("Ландшафт", ports.queries.open(READER, model).name());
     }
 
@@ -69,7 +69,7 @@ class ModelingScenariosTest {
     @DisplayName("FR-28: роль проверяется раньше разбора ввода — читатель получает 403, а не 422")
     void roleIsCheckedBeforeInput() {
         ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null).id();
-        ports.lockService.acquire(ALICE, model);
+        ports.lock(ALICE, model);
         View view = ports.viewService.create(ALICE, model, "Контекст", null, null);
         ViewService.NewNode noElement = new ViewService.NewNode(ViewNodeKind.DIAGRAM_OBJECT, null, null, null,
                 0, 0, null, null, null, RequestedIds.NONE);
@@ -100,25 +100,25 @@ class ModelingScenariosTest {
                 COMPONENT, "АБС", null, null));
         assertEquals("INV-MDL-006", noLock.code());
 
-        ports.lockService.acquire(ALICE, model);
+        ports.lock(ALICE, model);
         Element element = ports.elements.create(ALICE, model, COMPONENT, "АБС", null, null);
         assertEquals("АБС", element.name());
 
         ModelingDomainException taken = assertThrows(ModelingDomainException.class,
-                () -> ports.lockService.acquire(BOB, model));
+                () -> ports.lock(BOB, model));
         assertEquals("alice", taken.details().get("lockOwner"));
         assertThrows(ModelingDomainException.class, () -> ports.elements.create(BOB, model, COMPONENT, "CRM",
                 null, null));
 
         ports.clock.advance(Duration.ofMinutes(31));
-        assertEquals("bob", ports.lockService.acquire(BOB, model).owner(), "просроченная блокировка не держит");
+        assertEquals("bob", ports.lock(BOB, model).owner(), "просроченная блокировка не держит");
     }
 
     @Test
     @DisplayName("UC-MDL-004: изменений нет — версия не создаётся; есть — номер растёт")
     void saveCreatesVersionOnlyOnChanges() {
         ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null).id();
-        ports.lockService.acquire(ALICE, model);
+        ports.lock(ALICE, model);
 
         VersionService.SaveResult unchanged = ports.versionService.save(ALICE, model, "пусто",
                 null);
@@ -159,14 +159,14 @@ class ModelingScenariosTest {
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> ports.accessLists.replace(auditor, model, List.of())).failure(), "список меняют автор и ADMIN");
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
-                () -> ports.lockService.acquire(auditor, model)).failure(), "READ не даёт правки");
+                () -> ports.lock(auditor, model)).failure(), "READ не даёт правки");
     }
 
     @Test
     @DisplayName("FR-31: дерево модели с размещениями — запись на каждое представление, пустое тоже")
     void treeWithPlacementsCoversEveryView() {
         ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null).id();
-        ports.lockService.acquire(ALICE, model);
+        ports.lock(ALICE, model);
         Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", null, null);
         View placed = ports.viewService.create(ALICE, model, "Контекст", null, null);
         View empty = ports.viewService.create(ALICE, model, "Пустое", null, null);
@@ -183,7 +183,7 @@ class ModelingScenariosTest {
     @DisplayName("INV-MDL-004: удаление элемента со связью — 409; групповое вместе со связью проходит")
     void deleteWithRelationshipsTogether() {
         ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null).id();
-        ports.lockService.acquire(ALICE, model);
+        ports.lock(ALICE, model);
         Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", null, null);
         Element actor = ports.elements.create(ALICE, model, ArchiType.ofSimpleName("BusinessActor"), "Клиент",
                 null, null);

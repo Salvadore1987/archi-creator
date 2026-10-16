@@ -4,7 +4,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
@@ -14,8 +13,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
-import uz.salvadore.hamkorbank.archi.modeling.domain.lock.LockStatus;
-import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
@@ -101,11 +98,4 @@ public final class ModelQueryService {
         }));
     }
 
-    /** Действующая блокировка — чтобы остальные видели модель read-only с владельцем. */
-    public Optional<ModelLock> lock(EditorIdentity actor, ModelId modelId) {
-        return kernel.run(Operation.OPEN_MODEL, actor, () -> kernel.unitOfWork.read(() -> {
-            kernel.visibleHeader(modelId, actor, AclAccess.READ);
-            return kernel.locks.find(modelId).filter(l -> l.status(kernel.now()) == LockStatus.HELD);
-        }));
-    }
 }

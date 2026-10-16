@@ -20,6 +20,11 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.LockResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockAcquireCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockReleaseCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.DomainEventPublisher;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.GitBinding;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.IdempotencyRepository;
@@ -35,9 +40,11 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.ModelAccessList;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.DomainEvent;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotencyRecord;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
@@ -337,12 +344,18 @@ final class InMemoryPorts {
     }, noGit, SnapshotArchive.NONE, ZoneOffset.UTC, false);
     final ModelLifecycleService lifecycle = new ModelLifecycleService(kernel, workspaceRepository, versionService);
     final ModelQueryService queries = new ModelQueryService(kernel);
-    final LockService lockService = new LockService(kernel);
+    final LockApplicationService lockService = new LockApplicationServiceImpl(new LockAcquireCommandHandler(kernel),
+            new LockReleaseCommandHandler(kernel), new LockGetQueryHandler(kernel));
     final ElementService elements = new ElementService(kernel);
     final RelationshipService relationships = new RelationshipService(kernel, elements);
     final ViewService viewService = new ViewService(kernel);
     final TreeService tree = new TreeService(kernel, elements, relationships);
     final AccessListService accessLists = new AccessListService(kernel);
+
+    /** Блокировка модели автором — короткий путь для сценариев, которым нужна запись. */
+    LockResponse lock(EditorIdentity actor, ModelId model) {
+        return lockService.acquireLock(actor, new AcquireLockCommand(model.value()));
+    }
 
     private static ArchitectureModel copy(ArchitectureModel model) {
         return ArchitectureModel.restore(model.header(), model.folders().values(), model.elements().values(),

@@ -23,11 +23,11 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewEdgeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewNodeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewPayload;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewSummary;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.LockResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
-import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelFolder;
@@ -141,8 +141,8 @@ public final class DtoMapper {
     }
 
     /** Блокировка модели: владелец и срок. */
-    public static LockInfo lock(ModelLock l) {
-        return new LockInfo(l.modelId().value(), l.owner(), l.acquiredAt(), l.expiresAt());
+    public static LockInfo lock(LockResponse l) {
+        return new LockInfo(l.modelId(), l.owner(), l.acquiredAt(), l.expiresAt());
     }
 
     /** Находка с текстом на языке запроса: сообщение и подсказка хранятся ключами. */

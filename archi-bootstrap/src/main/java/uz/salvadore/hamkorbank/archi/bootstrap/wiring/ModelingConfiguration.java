@@ -23,6 +23,9 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EnsureDefaultWorkspaceCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockAcquireCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockReleaseCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceEnsureDefaultCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceListQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceResolveQueryHandler;
@@ -37,10 +40,11 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.AccessListService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.LockService;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.LockApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
@@ -128,8 +132,9 @@ public class ModelingConfiguration {
     }
 
     @Bean
-    LockService lockService(ModelingKernel kernel) {
-        return new LockService(kernel);
+    LockApplicationService lockApplicationService(ModelingKernel kernel) {
+        return new LockApplicationServiceImpl(new LockAcquireCommandHandler(kernel),
+                new LockReleaseCommandHandler(kernel), new LockGetQueryHandler(kernel));
     }
 
     @Bean

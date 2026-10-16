@@ -11,11 +11,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.LockService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewService;
@@ -33,7 +34,7 @@ class PlacementsIT extends IntegrationTest {
     @Autowired
     ModelLifecycleService lifecycle;
     @Autowired
-    LockService locks;
+    LockApplicationService locks;
     @Autowired
     ElementService elements;
     @Autowired
@@ -49,7 +50,7 @@ class PlacementsIT extends IntegrationTest {
     @DisplayName("FR-31: размещения — элементы с узлом и связи с ребром по представлениям, без повторов")
     void placementsPerView() {
         ModelId model = lifecycle.create(ARCHITECT, workspace(), "Размещения", null).id();
-        locks.acquire(ARCHITECT, model);
+        locks.acquireLock(ARCHITECT, new AcquireLockCommand(model.value()));
         Element component = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "АБС",
                 null, null);
         Element actor = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("BusinessActor"), "Клиент",
