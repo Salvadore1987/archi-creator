@@ -553,10 +553,9 @@ public final class EntityMerge {
                     keys.add(field.equals(ModelChanges.RAW_XML) ? new RawKey(i) : new ValueKey(field, i));
                 }
             });
-            List<Key> forced = view ? sequence(m.side(diagramSide).content()) : null;
             List<Key> order = order(sequence(base.find(m.id()).map(Obj::content).orElse(List.of())),
                     sequence(m.ours() == null ? List.of() : m.ours().content()),
-                    sequence(m.theirs() == null ? List.of() : m.theirs().content()), forced, keys);
+                    sequence(m.theirs() == null ? List.of() : m.theirs().content()), view ? diagramSide : null, keys);
             List<DocumentContent> content = new ArrayList<>();
             for (Key key : order) {
                 DocumentContent item = switch (key) {
@@ -662,16 +661,16 @@ public final class EntityMerge {
 
     /**
      * Слитый порядок ключей: основа — ветвь, менявшая относительный порядок общих с базой
-     * ключей (или заданная, {@code forced}; не задана — {@code null}), остальное встаёт после всех соседей,
-     * стоявших перед ним в своей ветви.
+     * ключей, или заданная ({@code forced} — сторона, чья диаграмма взята целиком; не задана —
+     * {@code null}); остальное встаёт после всех соседей, стоявших перед ним в своей ветви.
      */
-    private static List<Key> order(List<Key> base, List<Key> ours, List<Key> theirs, List<Key> forced,
+    private static List<Key> order(List<Key> base, List<Key> ours, List<Key> theirs, Side forced,
                                    Set<Key> keep) {
         List<Key> primary;
         List<Key> other;
         if (forced != null) {
-            primary = forced;
-            other = primary == ours ? theirs : ours;
+            primary = forced == Side.OURS ? ours : theirs;
+            other = forced == Side.OURS ? theirs : ours;
         } else if (!reordered(base, ours) && reordered(base, theirs)) {
             primary = theirs;
             other = ours;
