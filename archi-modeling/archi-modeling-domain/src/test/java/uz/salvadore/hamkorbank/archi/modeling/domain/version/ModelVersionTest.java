@@ -74,4 +74,14 @@ class ModelVersionTest {
                 Optional.of("правка"), Models.NOW, new byte[] {1, 2, 3}, HASH, new ModelVersion.ModelSize(0, 0))
                 .version();
     }
+
+    @Test
+    @DisplayName("Снимок версии наружу — копией: правка массива не меняет зафиксированную версию")
+    void snapshotDoesNotLeak() {
+        ModelVersion version = version(Optional.empty());
+
+        version.snapshot().orElseThrow()[0] = 42;
+
+        assertArrayEquals(new byte[] {1, 2, 3}, version.requireSnapshot());
+    }
 }

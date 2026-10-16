@@ -182,7 +182,7 @@ public final class VersionService {
      * неоткуда — {@code 410}, как и раньше.
      */
     private byte[] content(ModelHeader header, ModelVersion version) {
-        if (version.snapshot().isPresent()) {
+        if (version.hasSnapshot()) {
             return Snapshots.gunzip(version.requireSnapshot());
         }
         Optional<byte[]> restored = version.gitSha().isPresent() ? archive.restore(header, version) : Optional.empty();
@@ -195,7 +195,7 @@ public final class VersionService {
      */
     public Optional<CommittedVersion> committed(ModelId modelId, long versionNo) {
         return kernel.unitOfWork.read(() -> kernel.models.findHeader(modelId).flatMap(header ->
-                kernel.versions.find(modelId, versionNo).filter(v -> v.snapshot().isPresent())
+                kernel.versions.find(modelId, versionNo).filter(ModelVersion::hasSnapshot)
                         .map(v -> new CommittedVersion(header, v, Snapshots.gunzip(v.requireSnapshot())))));
     }
 

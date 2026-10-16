@@ -137,7 +137,7 @@ public final class DtoMapper {
     /** Версия модели без снимка; есть ли снимок — отдельным флагом. */
     public static VersionInfo version(ModelVersion v) {
         return new VersionInfo(v.versionNo(), v.author(), v.comment().orElse(null), v.label().orElse(null),
-                v.createdAt(), v.snapshot().isPresent(), v.gitSha().orElse(null));
+                v.createdAt(), v.hasSnapshot(), v.gitSha().orElse(null));
     }
 
     /** Блокировка модели: владелец и срок. */

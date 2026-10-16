@@ -121,6 +121,17 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
                 Optional.of(sha));
     }
 
+    /** Сжатый снимок — копией: массив версии не меняется снаружи; пусто — очищен по ретеншену. */
+    @Override
+    public Optional<byte[]> snapshot() {
+        return snapshot.map(bytes -> Arrays.copyOf(bytes, bytes.length));
+    }
+
+    /** Лежит ли снимок в базе — без копирования массива. */
+    public boolean hasSnapshot() {
+        return snapshot.isPresent();
+    }
+
     /** Снимок на месте; пусто — очищен, и восстановить его без Git неоткуда ({@code 410}). */
     public byte[] requireSnapshot() {
         return snapshot.map(bytes -> Arrays.copyOf(bytes, bytes.length))

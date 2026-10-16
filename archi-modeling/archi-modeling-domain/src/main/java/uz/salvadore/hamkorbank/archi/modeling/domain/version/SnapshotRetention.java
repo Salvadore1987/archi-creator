@@ -39,7 +39,7 @@ public final class SnapshotRetention {
         }
         Instant horizon = now.minus(RECENT);
         return versions.stream()
-                .filter(v -> v.snapshot().isPresent())
+                .filter(ModelVersion::hasSnapshot)
                 .filter(v -> v.gitSha().isPresent())
                 .filter(v -> v.label().isEmpty())
                 .filter(v -> v.createdAt().isBefore(horizon))

@@ -73,10 +73,13 @@ public class JpaModelVersionRepository implements ModelVersionRepository {
             entity.contentHash = version.contentHash();
             entity.snapshot = version.snapshot().orElse(null);
             em.persist(entity);
-        } else if (version.snapshot().isEmpty()) {
+        } else if (!version.hasSnapshot()) {
             entity.snapshot = null;
-        } else if (version.snapshot().get().length > 0) {
-            entity.snapshot = version.snapshot().get();
+        } else {
+            byte[] snapshot = version.requireSnapshot();
+            if (snapshot.length > 0) {
+                entity.snapshot = snapshot;
+            }
         }
         entity.label = version.label().orElse(null);
         entity.gitSha = version.gitSha().orElse(null);
