@@ -65,7 +65,7 @@
 | B2 | Идентификаторы → `BaseId<UUID>`: modeling | ArchUnit: `*Id` домена наследуют `BaseId` | ✅ |
 | B3 | То же: interchange, advisor | то же правило без исключений | ✅ |
 | B4a | Корни агрегатов modeling → `AggregateRoot`; record-агрегаты (`Workspace`, `ModelLock`, `ModelVersion`, `ModelAccessList`, `IdempotencyRecord`) — классы с закрытым конструктором и `restore` | `CodingRulesTest`: корни из раздела `aggregates:` спецификации наследуют `AggregateRoot`, публичных конструкторов нет | ✅ |
-| B4b | То же: interchange (`ImportSession`, `ExportJob`, `GitBinding`) | правило расширено | ⬜ |
+| B4b | То же: interchange (`ImportSession`, `ExportJob`, `GitBinding`) | правило расширено | ✅ |
 | B4c | То же: advisor (`AdvisorSession`, `TokenBudget`) | правило расширено | ⬜ |
 | B5 | События → `{Aggregate}{Action}Event`, базовый `{Aggregate}Event` | ArchUnit: реализации `DomainEvent` оканчиваются на `Event` | ✅ |
 | B6a | Исключения домена modeling → `DomainException` / `ModelingDomainException`; `InvalidValueException`, `RelationNotPermittedException` в общей иерархии | ArchUnit: исключения домена наследуют корень контекста | ✅ |

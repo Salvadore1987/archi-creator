@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
@@ -15,13 +16,8 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
  * Привязка рабочего пространства к репозиторию — агрегат. Один репозиторий на
  * пространство, каталог на модель. От состояния зависит правило за пределами
  * контекста: снимки версий чистятся только при доступном репозитории.
- *
- * @param lastCommitSha последний коммит, сделанный сервером в ветке: от него
- *                      отсчитывается, что в ветке появилось не от нас
  */
-public record GitBinding(WorkspaceId workspaceId, String repoUrl, String branch, SecretRef tokenRef,
-                         GitBindingStatus status, Optional<GitSha> lastCommitSha, Optional<Instant> lastCheckedAt,
-                         List<GitAuthor> authors) {
+public final class GitBinding extends AggregateRoot<WorkspaceId> {
 
     /** Наибольшая длина адреса репозитория. */
     public static final int URL_MAX = 1000;
@@ -33,7 +29,17 @@ public record GitBinding(WorkspaceId workspaceId, String repoUrl, String branch,
     private static final Pattern BRANCH = Pattern.compile("^(?!/)(?!.*//)(?!.*\\.\\.)(?!.*@\\{)(?!.*\\.lock$)"
             + "(?!.*/$)(?!.*\\.$)[^\\s~^:?*\\[\\\\\\x00-\\x1f\\x7f]+$");
 
-    public GitBinding {
+    private final String repoUrl;
+    private final String branch;
+    private final SecretRef tokenRef;
+    private final GitBindingStatus status;
+    private final Optional<GitSha> lastCommitSha;
+    private final Optional<Instant> lastCheckedAt;
+    private final List<GitAuthor> authors;
+
+    private GitBinding(WorkspaceId workspaceId, String repoUrl, String branch, SecretRef tokenRef,
+                       GitBindingStatus status, Optional<GitSha> lastCommitSha, Optional<Instant> lastCheckedAt,
+                       List<GitAuthor> authors) {
         Objects.requireNonNull(workspaceId, "workspaceId");
         Objects.requireNonNull(tokenRef, "tokenRef");
         Objects.requireNonNull(status, "status");
@@ -52,6 +58,21 @@ public record GitBinding(WorkspaceId workspaceId, String repoUrl, String branch,
                 throw new InvalidValueException(InterchangeMessages.GIT_AUTHOR_REPEATED, author.subject());
             }
         }
+        super(workspaceId);
+        this.repoUrl = repoUrl;
+        this.branch = branch;
+        this.tokenRef = tokenRef;
+        this.status = status;
+        this.lastCommitSha = lastCommitSha;
+        this.lastCheckedAt = lastCheckedAt;
+        this.authors = authors;
+    }
+
+    /** Сборка из сохранённых значений — для хранилища; значения проверяются, как при создании. */
+    public static GitBinding restore(WorkspaceId workspaceId, String repoUrl, String branch, SecretRef tokenRef,
+                                     GitBindingStatus status, Optional<GitSha> lastCommitSha,
+                                     Optional<Instant> lastCheckedAt, List<GitAuthor> authors) {
+        return new GitBinding(workspaceId, repoUrl, branch, tokenRef, status, lastCommitSha, lastCheckedAt, authors);
     }
 
     /** Новая привязка: {@code CONFIGURED}, коммитов сервера ещё нет. Ветка не задана — {@code main}. */
@@ -74,14 +95,14 @@ public record GitBinding(WorkspaceId workspaceId, String repoUrl, String branch,
     /** Репозиторий ответил. */
     public GitBinding checked(Instant at) {
         requireWritable();
-        return new GitBinding(workspaceId, repoUrl, branch, tokenRef, GitBindingStatus.CONFIGURED, lastCommitSha,
+        return new GitBinding(workspaceId(), repoUrl, branch, tokenRef, GitBindingStatus.CONFIGURED, lastCommitSha,
                 Optional.of(at), authors);
     }
 
     /** Репозиторий не ответил или отказал в доступе. */
     public GitBinding unreachable(Instant at) {
         requireWritable();
-        return new GitBinding(workspaceId, repoUrl, branch, tokenRef, GitBindingStatus.UNREACHABLE, lastCommitSha,
+        return new GitBinding(workspaceId(), repoUrl, branch, tokenRef, GitBindingStatus.UNREACHABLE, lastCommitSha,
                 Optional.of(at), authors);
     }
 
@@ -93,7 +114,7 @@ public record GitBinding(WorkspaceId workspaceId, String repoUrl, String branch,
     /** Снять привязку. Коммиты в репозитории не трогаются. */
     public GitBinding disabled() {
         requireWritable();
-        return new GitBinding(workspaceId, repoUrl, branch, tokenRef, GitBindingStatus.DISABLED, lastCommitSha,
+        return new GitBinding(workspaceId(), repoUrl, branch, tokenRef, GitBindingStatus.DISABLED, lastCommitSha,
                 lastCheckedAt, authors);
     }
 
@@ -103,13 +124,53 @@ public record GitBinding(WorkspaceId workspaceId, String repoUrl, String branch,
     }
 
     private GitBinding withHead(GitSha sha) {
-        return new GitBinding(workspaceId, repoUrl, branch, tokenRef, status, Optional.of(sha), lastCheckedAt,
+        return new GitBinding(workspaceId(), repoUrl, branch, tokenRef, status, Optional.of(sha), lastCheckedAt,
                 authors);
     }
 
     private void requireWritable() {
         if (!writable()) {
-            throw new InvalidValueException(InterchangeMessages.GIT_BINDING_DISABLED, workspaceId.value());
+            throw new InvalidValueException(InterchangeMessages.GIT_BINDING_DISABLED, workspaceId().value());
         }
+    }
+
+    /** Пространство, которое привязано к репозиторию. */
+    public WorkspaceId workspaceId() {
+        return id();
+    }
+
+    /** Адрес репозитория. */
+    public String repoUrl() {
+        return repoUrl;
+    }
+
+    /** Ветка, в которую публикуются версии. */
+    public String branch() {
+        return branch;
+    }
+
+    /** Ссылка на секрет с токеном доступа — сам токен здесь не хранится. */
+    public SecretRef tokenRef() {
+        return tokenRef;
+    }
+
+    /** Состояние привязки: доступен ли репозиторий. */
+    public GitBindingStatus status() {
+        return status;
+    }
+
+    /** Последний коммит, сделанный сервером в ветке: от него отсчитывается, что в ветке появилось не от нас. */
+    public Optional<GitSha> lastCommitSha() {
+        return lastCommitSha;
+    }
+
+    /** Момент последней проверки репозитория. */
+    public Optional<Instant> lastCheckedAt() {
+        return lastCheckedAt;
+    }
+
+    /** Авторы коммитов, сопоставленные с пользователями приложения. */
+    public List<GitAuthor> authors() {
+        return authors;
     }
 }

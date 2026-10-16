@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
@@ -23,12 +24,11 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
  *       артефакт другой версии не принимается.</li>
  * </ul>
  */
-public final class ExportJob {
+public final class ExportJob extends AggregateRoot<ExportJobId> {
 
     /** Имя команды сбоя — в сообщении о недопустимом переходе. */
     private static final String FAIL = "fail";
 
-    private final ExportJobId id;
     private final WorkspaceId workspaceId;
     private final ModelId modelId;
     private final Optional<ViewId> viewId;
@@ -46,7 +46,7 @@ public final class ExportJob {
     private ExportJob(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, Optional<ViewId> viewId,
                       ExportFormat format, ExportOptions options, long sourceVersionNo, String requestedBy,
                       Instant requestedAt) {
-        this.id = Objects.requireNonNull(id, "id");
+        super(id);
         this.workspaceId = Objects.requireNonNull(workspaceId, "workspaceId");
         this.modelId = Objects.requireNonNull(modelId, "modelId");
         this.viewId = Objects.requireNonNull(viewId, "viewId");
@@ -117,10 +117,6 @@ public final class ExportJob {
         }
     }
 
-    /** Идентификатор выгрузки. */
-    public ExportJobId id() {
-        return id;
-    }
 
     /** Пространство, в котором лежит модель. */
     public WorkspaceId workspaceId() {

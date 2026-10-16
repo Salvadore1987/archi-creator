@@ -26,7 +26,7 @@ public class JpaGitBindingRepository implements GitBindingRepository {
         return em.createQuery("select b from GitBindingEntity b left join fetch b.authors where b.workspaceId = :w",
                         GitBindingEntity.class)
                 .setParameter("w", workspaceId.value())
-                .getResultStream().findFirst().map(e -> new GitBinding(
+                .getResultStream().findFirst().map(e -> GitBinding.restore(
                 new WorkspaceId(e.workspaceId), e.repoUrl, e.branch, SecretRef.of(e.tokenRef),
                 GitBindingStatus.valueOf(e.status), Optional.ofNullable(e.lastCommitSha).map(GitSha::of),
                 Optional.ofNullable(e.lastCheckedAt),

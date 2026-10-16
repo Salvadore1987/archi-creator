@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.CorruptDocumentException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
@@ -29,9 +30,8 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
  * данным. Повреждённый файл отклоняется на разборе в любом режиме; находка
  * {@code ERROR} на проверке отклоняет только в строгом.
  */
-public final class ImportSession {
+public final class ImportSession extends AggregateRoot<ImportSessionId> {
 
-    private final ImportSessionId id;
     private final WorkspaceId workspaceId;
     private final Optional<ModelId> targetModelId;
     private final String sourceName;
@@ -51,7 +51,7 @@ public final class ImportSession {
     private final List<ImportAppliedEvent> events = new ArrayList<>();
 
     private ImportSession(ImportSessionId id, ImportRequest request, Instant startedAt) {
-        this.id = Objects.requireNonNull(id, "id");
+        super(id);
         this.workspaceId = request.workspaceId();
         this.targetModelId = request.targetModelId();
         this.sourceName = request.sourceName();
@@ -135,8 +135,8 @@ public final class ImportSession {
         finish(ImportStatus.APPLIED, now);
         this.appliedModelId = Objects.requireNonNull(modelId, "modelId");
         this.appliedVersionNo = versionNo;
-        ImportAppliedEvent applied = new ImportAppliedEvent(id, workspaceId, modelId, versionNo, sourceName, sourceHash,
-                strictMode, findingCounts(), opaqueObjectCount, now);
+        ImportAppliedEvent applied = new ImportAppliedEvent(id(), workspaceId, modelId, versionNo, sourceName,
+                sourceHash, strictMode, findingCounts(), opaqueObjectCount, now);
         events.add(applied);
         return applied;
     }
@@ -169,10 +169,6 @@ public final class ImportSession {
         finishedAt = Objects.requireNonNull(now, "now");
     }
 
-    /** Идентификатор сессии. */
-    public ImportSessionId id() {
-        return id;
-    }
 
     /** Пространство, в которое идёт импорт. */
     public WorkspaceId workspaceId() {
