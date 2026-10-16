@@ -64,7 +64,7 @@ public class JpaImportSessionRepository implements ImportSessionRepository {
             entity.id = session.id().value();
         }
         entity.workspaceId = session.workspaceId().value();
-        entity.targetModelId = session.targetModelId().map(ModelId::value).orElse(null);
+        entity.targetModelId = session.targetModelId() == null ? null : session.targetModelId().value();
         entity.sourceName = session.sourceName();
         entity.sourceHash = session.sourceHash().value();
         entity.sourceSize = session.sourceSize();
@@ -92,8 +92,8 @@ public class JpaImportSessionRepository implements ImportSessionRepository {
                 row.severity = finding.severity().name();
                 row.code = finding.code();
                 row.message = texts.text(finding.message());
-                row.archiId = finding.archiId().map(ArchiId::value).orElse(null);
-                row.xmlLine = finding.xmlLine().orElse(null);
+                row.archiId = finding.archiId() == null ? null : finding.archiId().value();
+                row.xmlLine = finding.xmlLine();
                 em.persist(row);
             }
             em.flush();
@@ -110,14 +110,14 @@ public class JpaImportSessionRepository implements ImportSessionRepository {
                 .setParameter("s", e.id).getResultList().stream()
                 .map(f -> new ImportFinding(new FindingId(f.id), Severity.valueOf(f.severity), f.code,
                         ImportFinding.storedText(f.message),
-                        Optional.ofNullable(f.archiId).filter(ArchiId::isValid).map(ArchiId::of),
-                        Optional.ofNullable(f.xmlLine)))
+                        f.archiId != null && ArchiId.isValid(f.archiId) ? ArchiId.of(f.archiId) : null,
+                        f.xmlLine))
                 .toList();
         ImportRequest request = new ImportRequest(new WorkspaceId(e.workspaceId),
-                Optional.ofNullable(e.targetModelId).map(ModelId::new), e.sourceName, new ContentHash(e.sourceHash),
-                e.sourceSize, e.idempotencyKey, e.strictMode, e.startedBy);
+                e.targetModelId == null ? null : new ModelId(e.targetModelId), e.sourceName,
+                new ContentHash(e.sourceHash), e.sourceSize, e.idempotencyKey, e.strictMode, e.startedBy);
         return ImportSession.restore(new ImportSessionId(e.id), request, e.startedAt, ImportStatus.valueOf(e.status),
-                findings, Optional.ofNullable(e.finishedAt), Optional.ofNullable(e.modelId).map(ModelId::new),
+                findings, e.finishedAt, e.modelId == null ? null : new ModelId(e.modelId),
                 e.versionNo == null ? 0 : e.versionNo);
     }
 }

@@ -62,7 +62,7 @@ abstract class GitApiTest extends ApiTest {
         remote = temp.resolve("landscape.git");
         Git.init().setBare(true).setDirectory(remote.toFile()).setInitialBranch("main").call().close();
         bindings.configure(ADMIN, workspace().value(), new GitBindingSettings(remote.toUri().toString(),
-                Optional.empty(), "env:ARCHI_GIT_TOKEN_IT",
+                null, "env:ARCHI_GIT_TOKEN_IT",
                 List.of(new GitBindingSettings.Author("architect-api", "Архитектор", "architect@bank.uz"))));
     }
 

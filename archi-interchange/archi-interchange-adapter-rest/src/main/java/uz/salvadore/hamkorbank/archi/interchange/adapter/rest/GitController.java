@@ -1,6 +1,5 @@
 package uz.salvadore.hamkorbank.archi.interchange.adapter.rest;
 
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -57,7 +56,7 @@ public class GitController {
     @PostMapping("/models/{id}/git/pull/preview")
     public GitPullPreviewDto previewPull(EditorIdentity actor, @PathVariable UUID id,
                                          @RequestBody GitPullPreviewRequestDto body) {
-        return GitDtoMapper.preview(imports.preview(actor, new ModelId(id), Optional.ofNullable(body.ref())), text);
+        return GitDtoMapper.preview(imports.preview(actor, new ModelId(id), body.ref()), text);
     }
 
     /** Применить коммит из отчёта новой версией модели. */
@@ -70,7 +69,7 @@ public class GitController {
     @PostMapping("/models/{id}/git/merge/preview")
     public GitMergePreviewDto previewMerge(EditorIdentity actor, @PathVariable UUID id,
                                            @RequestBody GitMergePreviewRequestDto body) {
-        return GitDtoMapper.mergePreview(merging.preview(actor, new ModelId(id), Optional.ofNullable(body.ref()),
+        return GitDtoMapper.mergePreview(merging.preview(actor, new ModelId(id), body.ref(),
                 GitDtoMapper.resolutions(body.resolutions())), text);
     }
 

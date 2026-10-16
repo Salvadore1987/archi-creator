@@ -1,6 +1,5 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.git;
 
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ModelStates;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
@@ -20,7 +19,7 @@ public final class ModelingModelStates implements ModelStates {
     public Current current(EditorIdentity actor, ModelId model) {
         ModelImportService.CurrentContent current = models.current(actor, modeling(model));
         return new Current(new WorkspaceId(current.header().workspaceId().value()), current.header().name(),
-                Optional.ofNullable(current.versionNo()), current.xml());
+                current.versionNo(), current.xml());
     }
 
     @Override

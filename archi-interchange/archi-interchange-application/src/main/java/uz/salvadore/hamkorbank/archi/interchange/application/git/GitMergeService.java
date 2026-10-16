@@ -3,9 +3,11 @@ package uz.salvadore.hamkorbank.archi.interchange.application.git;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
@@ -72,10 +74,12 @@ public final class GitMergeService {
     private static final String BOUNDS = "bounds";
     private static final String ELEMENT_REF = "archimateElement";
 
-    /** Что подтверждает архитектор: ссылка, оба коммита и отпечаток из отчёта, выборы, комментарий. */
-    public record MergeRequest(Optional<String> ref, Optional<String> commitSha, Optional<String> mergeBaseSha,
-                               Optional<String> baseHash, Map<String, String> resolutions,
-                               Optional<String> comment) {
+    /**
+     * Что подтверждает архитектор: ссылка, оба коммита и отпечаток из отчёта, выборы, комментарий.
+     * Не переданное поле — {@code null}; без комментария версия получает комментарий по умолчанию.
+     */
+    public record MergeRequest(String ref, String commitSha, String mergeBaseSha, String baseHash,
+                               Map<String, String> resolutions, String comment) {
 
         public MergeRequest {
             resolutions = Map.copyOf(resolutions);
@@ -86,8 +90,13 @@ public final class GitMergeService {
     public record Mark(ArchiId archiId, ModelChanges.Type mark) {
     }
 
-    /** Узел, которого в текущем содержимом нет, — с абсолютной геометрией. */
-    public record AddedNode(ArchiId archiId, Optional<ArchiId> element, Optional<String> type, String name,
+    /**
+     * Узел, которого в текущем содержимом нет, — с абсолютной геометрией.
+     *
+     * @param element элемент модели узла; {@code null} — узел без элемента
+     * @param type    тип без префикса {@code archimate:}; {@code null} — неизвестен
+     */
+    public record AddedNode(ArchiId archiId, ArchiId element, String type, String name,
                             int x, int y, int width, int height) {
     }
 
@@ -102,11 +111,12 @@ public final class GitMergeService {
     /**
      * Отчёт до применения.
      *
+     * @param baseVersionNo последняя версия модели; у модели без версий {@code null}
      * @param baseHash   отпечаток текущего содержимого — его применение и подтверждает
      * @param targetHash отпечаток результата с выборами отчёта
      * @param applicable конфликты разрешены, разбор и строгий режим пройдут
      */
-    public record Preview(ModelId model, ResolvedRef ref, GitSha mergeBase, Optional<Long> baseVersionNo,
+    public record Preview(ModelId model, ResolvedRef ref, GitSha mergeBase, Long baseVersionNo,
                           String baseHash, String targetHash, List<EntityMerge.Conflict> conflicts,
                           List<EntityMerge.Cascade> cascade, ModelChanges changes, List<Mark> marks,
                           List<ViewAdditions> views, List<ImportFinding> findings, boolean applicable) {
@@ -134,13 +144,13 @@ public final class GitMergeService {
         }
     }
 
-    /** Прочитанные состояния: ссылка, предок, деревья «их» и базы. */
+    /** Прочитанные состояния: ссылка, предок, деревья «их» и базы, голова ветки ({@code null} — не читалась). */
     private record Sides(ResolvedRef ref, GitSha mergeBase, GitAttempts.Tree theirs, GitAttempts.Tree base,
-                         Optional<GitSha> head, boolean absorbsHead) {
+                         GitSha head, boolean absorbsHead) {
 
         Optional<GitAttempts.Tree> corrupt() {
-            return theirs.defect().isPresent() ? Optional.of(theirs)
-                    : base.defect().isPresent() ? Optional.of(base) : Optional.empty();
+            return theirs.defect() != null ? Optional.of(theirs)
+                    : base.defect() != null ? Optional.of(base) : Optional.empty();
         }
     }
 
@@ -182,8 +192,11 @@ public final class GitMergeService {
         this.clock = clock;
     }
 
-    /** Отчёт слияния по ссылке с выборами по конфликтам. В базе ничего не меняется. */
-    public Preview preview(EditorIdentity actor, ModelId model, Optional<String> ref,
+    /**
+     * Отчёт слияния по ссылке ({@code null} — не задана, отказ) с выборами по конфликтам.
+     * В базе ничего не меняется.
+     */
+    public Preview preview(EditorIdentity actor, ModelId model, String ref,
                            Map<String, String> resolutions) {
         InterchangeOperation operation = InterchangeOperation.MERGE_MODEL_BRANCH;
         return metrics.observe(operation.useCase(), () -> {
@@ -205,7 +218,7 @@ public final class GitMergeService {
             if (corrupt.isPresent()) {
                 ImportSession session = attempts.receive(current.workspace(), model, sides.ref(),
                         GitAttempts.concatenated(corrupt.get().files()), actor);
-                attempts.corrupt(session, corrupt.get().defect().orElseThrow());
+                attempts.corrupt(session, Objects.requireNonNull(corrupt.get().defect()));
                 return new Preview(model, sides.ref(), sides.mergeBase(), current.versionNo(), current.hash(),
                         session.sourceHash().value(), List.of(), List.of(), new ModelChanges(List.of()), List.of(),
                         List.of(), session.findings(), false);
@@ -255,7 +268,7 @@ public final class GitMergeService {
             if (corrupt.isPresent()) {
                 ImportSession session = attempts.receive(current.workspace(), model, sides.ref(),
                         GitAttempts.concatenated(corrupt.get().files()), actor);
-                attempts.corrupt(session, corrupt.get().defect().orElseThrow());
+                attempts.corrupt(session, Objects.requireNonNull(corrupt.get().defect()));
                 attempts.saveRejected(session, true);
                 throw rejected(session, Message.of(InterchangeMessages.GIT_MERGE_REJECTED_CORRUPT,
                         sides.ref().sha().value()), InterchangeCodes.CORRUPT_DOCUMENT);
@@ -274,9 +287,9 @@ public final class GitMergeService {
                 throw rejected(session, Message.of(InterchangeMessages.GIT_PULL_REJECTED_STRICT),
                         InterchangeCodes.STRICT_IMPORT_REJECTED);
             }
-            String comment = request.comment().filter(c -> !c.isBlank()).orElseGet(() -> texts.text(
-                    Message.of(InterchangeMessages.GIT_MERGE_COMMENT, ref.value(),
-                            sha.value().substring(0, SHORT_SHA))));
+            String comment = request.comment() != null && !request.comment().isBlank() ? request.comment()
+                    : texts.text(Message.of(InterchangeMessages.GIT_MERGE_COMMENT, ref.value(),
+                            sha.value().substring(0, SHORT_SHA)));
             Applied applied;
             try {
                 applied = unitOfWork.write(() -> {
@@ -293,7 +306,7 @@ public final class GitMergeService {
                     if (sides.absorbsHead() && outbox.head(model)
                             .filter(h -> h.status() == GitOutbox.Status.DIVERGED).isPresent()) {
                         outbox.supersede(model, replaced.versionNo() - 1, at);
-                        GitSha head = sides.head().orElseThrow();
+                        GitSha head = Objects.requireNonNull(sides.head());
                         bindings.save(bindings.find(binding.workspaceId()).orElse(binding).committed(head, at));
                     }
                     return new Applied(replaced, event);
@@ -320,19 +333,19 @@ public final class GitMergeService {
      * ещё и голова ветки привязки: слияние, которое её содержит, снимает расхождение.
      */
     private Sides read(Remote remote, ResolvedRef ref, GitSha mergeBase, ModelId model, boolean withHead) {
-        Optional<GitSha> head = withHead ? repository.fetch(remote) : Optional.empty();
+        GitSha head = withHead ? repository.fetch(remote).orElse(null) : null;
         GitAttempts.Tree theirs = attempts.tree(remote, ref.sha(), model);
         GitAttempts.Tree base = attempts.directory(remote, mergeBase, model)
                 .orElseThrow(() -> noMergeBase(ref.sha(), model));
-        boolean absorbsHead = head.filter(h -> repository.contains(remote, h, ref.sha())).isPresent();
+        boolean absorbsHead = head != null && repository.contains(remote, head, ref.sha());
         return new Sides(ref, mergeBase, theirs, base, head, absorbsHead);
     }
 
     /** Слияние с выборами — в сессию импорта: снимок, разбор, методология. */
     private Attempt attempt(WorkspaceId workspace, ModelId model, Sides sides, ModelDocument ours,
                             Map<String, Side> choices, EditorIdentity actor) {
-        EntityMerge.Result result = EntityMerge.merge(sides.base().document().orElseThrow(), ours,
-                sides.theirs().document().orElseThrow(), choices);
+        EntityMerge.Result result = EntityMerge.merge(Objects.requireNonNull(sides.base().document()), ours,
+                Objects.requireNonNull(sides.theirs().document()), choices);
         List<String> unknown = result.unknown(choices.keySet());
         if (!unknown.isEmpty()) {
             throw GitAttempts.invalid(Message.of(InterchangeMessages.GIT_MERGE_RESOLUTION_UNKNOWN,
@@ -422,8 +435,9 @@ public final class GitMergeService {
             if (!old.containsKey(node.archiId())) {
                 Optional<ArchiId> element = node.attribute(ELEMENT_REF).map(ArchiId::of);
                 Optional<DocumentNode> concept = element.flatMap(merged::find);
-                into.add(new AddedNode(node.archiId(), element,
-                        concept.flatMap(DocumentNode::archiType).or(node::archiType).map(GitMergeService::bareType),
+                into.add(new AddedNode(node.archiId(), element.orElse(null),
+                        concept.flatMap(DocumentNode::archiType).or(node::archiType).map(GitMergeService::bareType)
+                                .orElse(null),
                         node.attribute("name").or(() -> concept.flatMap(c -> c.attribute("name"))).orElse(""),
                         x, y, number(bounds.get(), "width"), number(bounds.get(), "height")));
             }
@@ -448,7 +462,7 @@ public final class GitMergeService {
         List<Object> own = new ArrayList<>(node.attributes().list());
         node.content().stream().filter(item -> !(item instanceof DocumentNode))
                 .forEach(item -> own.add(item instanceof DocumentValue value
-                        ? List.of(value.tag(), value.attributes().list(), value.text()) : item));
+                        ? Arrays.asList(value.tag(), value.attributes().list(), value.text()) : item));
         return own;
     }
 

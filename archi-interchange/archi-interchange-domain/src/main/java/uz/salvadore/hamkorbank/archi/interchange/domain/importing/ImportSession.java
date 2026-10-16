@@ -33,7 +33,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 public final class ImportSession extends AggregateRoot<ImportSessionId> {
 
     private final WorkspaceId workspaceId;
-    private final Optional<ModelId> targetModelId;
+    private final ModelId targetModelId;
     private final String sourceName;
     private final ContentHash sourceHash;
     private final long sourceSize;
@@ -66,17 +66,18 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
     /**
      * Сессия из хранилища. Документ не хранится: он нужен лишь в пределах одного
      * импорта, а отчёт и результат — навсегда. Повтор по ключу отдаёт этот результат,
-     * а не применяет документ снова.
+     * а не применяет документ снова. {@code null} в {@code finishedAt} и {@code appliedModelId} —
+     * сессия не завершена и ничего не применила.
      */
     public static ImportSession restore(ImportSessionId id, ImportRequest request, Instant startedAt,
                                         ImportStatus status, List<ImportFinding> findings,
-                                        Optional<Instant> finishedAt, Optional<ModelId> appliedModelId,
+                                        Instant finishedAt, ModelId appliedModelId,
                                         long appliedVersionNo) {
         ImportSession session = new ImportSession(id, request, startedAt);
         session.status = Objects.requireNonNull(status, "status");
         session.findings.addAll(findings);
-        session.finishedAt = finishedAt.orElse(null);
-        session.appliedModelId = appliedModelId.orElse(null);
+        session.finishedAt = finishedAt;
+        session.appliedModelId = appliedModelId;
         session.appliedVersionNo = appliedVersionNo;
         return session;
     }
@@ -175,8 +176,8 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
         return workspaceId;
     }
 
-    /** Модель, содержимое которой заменяет импорт; у импорта новой модели пусто. */
-    public Optional<ModelId> targetModelId() {
+    /** Модель, содержимое которой заменяет импорт; у импорта новой модели {@code null}. */
+    public ModelId targetModelId() {
         return targetModelId;
     }
 

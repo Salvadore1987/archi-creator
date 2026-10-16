@@ -35,13 +35,13 @@ final class ViewScene {
         OTHER
     }
 
-    /** Собственный стиль объекта из файла; пустое поле — токен слоя. */
-    record Style(Optional<String> fillColor, Optional<String> font, Optional<String> fontColor,
-                 Optional<String> lineColor, Optional<Integer> textAlignment) {
+    /** Собственный стиль объекта из файла; поле {@code null} — токен слоя. */
+    record Style(String fillColor, String font, String fontColor, String lineColor, Integer textAlignment) {
 
         static Style of(DocumentNode node) {
-            return new Style(nonBlank(node, "fillColor"), nonBlank(node, "font"), nonBlank(node, "fontColor"),
-                    nonBlank(node, "lineColor"), nonBlank(node, "textAlignment").flatMap(ViewScene::integer));
+            return new Style(nonBlank(node, "fillColor").orElse(null), nonBlank(node, "font").orElse(null),
+                    nonBlank(node, "fontColor").orElse(null), nonBlank(node, "lineColor").orElse(null),
+                    nonBlank(node, "textAlignment").flatMap(ViewScene::integer).orElse(null));
         }
     }
 
@@ -54,8 +54,12 @@ final class ViewScene {
                 int depth, int position, int index, Style style, boolean image) {
     }
 
-    record Edge(String archiId, String archiType, Optional<AccessType> accessType, boolean directed,
-                Optional<String> label, String sourceId, String targetId, List<Bendpoint> bendpoints, Style style,
+    /**
+     * @param accessType вид доступа связи; {@code null} — атрибута нет
+     * @param label      имя связи; {@code null} — пустое или нет
+     */
+    record Edge(String archiId, String archiType, AccessType accessType, boolean directed,
+                String label, String sourceId, String targetId, List<Bendpoint> bendpoints, Style style,
                 int position, int index) {
     }
 
@@ -112,7 +116,7 @@ final class ViewScene {
                 .flatMap(REGISTRY::findByXsiType)
                 .filter(c -> c.kind() == ConceptKind.ELEMENT || c.kind() == ConceptKind.JUNCTION)
                 .filter(c -> c.supported()).isEmpty();
-        Optional<String> text = child.values("content").stream().findFirst().flatMap(DocumentValue::text);
+        Optional<String> text = child.values("content").stream().findFirst().map(DocumentValue::text);
         String label = kind == Kind.NOTE ? text.orElse("")
                 : element.map(e -> e.attribute("name").orElse(""))
                         .orElseGet(() -> child.attribute("name").or(() -> text).orElse(""));
@@ -148,9 +152,9 @@ final class ViewScene {
         }
         String id = connection.archiId().value();
         edges.put(id, new Edge(id, archiType,
-                relationship.flatMap(r -> r.attribute("accessType")).flatMap(AccessType::fromFileValue),
+                relationship.flatMap(r -> r.attribute("accessType")).flatMap(AccessType::fromFileValue).orElse(null),
                 relationship.flatMap(r -> r.attribute("directed")).filter("true"::equals).isPresent(),
-                relationship.flatMap(r -> r.attribute("name")).filter(n -> !n.isEmpty()),
+                relationship.flatMap(r -> r.attribute("name")).filter(n -> !n.isEmpty()).orElse(null),
                 connection.attribute("source").orElse(""), connection.attribute("target").orElse(""),
                 bendpoints, Style.of(connection), position, index++));
         List<DocumentContent> content = connection.content();

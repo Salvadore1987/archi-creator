@@ -56,6 +56,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
@@ -94,7 +95,7 @@ public final class GitYamlWriter {
      */
     public SortedMap<String, byte[]> write(ModelDocument document, GitPositions previous) {
         Run run = new Run(document, previous);
-        run.container(document.archiId().value(), Optional.empty(), document.content());
+        run.container(document.archiId().value(), null, document.content());
         SortedMap<String, byte[]> files = new TreeMap<>();
         files.put(MODEL_FILE, YamlEmitter.document(List.of(), run.model()));
         Map<String, Object> folders = new LinkedHashMap<>();
@@ -134,10 +135,10 @@ public final class GitYamlWriter {
         /**
          * Содержимое корня или папки: у каждой записи — позиция среди соседей.
          *
-         * @param folder запись папки в {@code folders.yaml}; пусто — корень модели
+         * @param folder запись папки в {@code folders.yaml}; {@code null} — корень модели
          */
-        void container(String containerId, Optional<Map<String, Object>> folder, List<DocumentContent> content) {
-            Optional<String> folderId = folder.map(f -> (String) f.get(K_ID));
+        void container(String containerId, Map<String, Object> folder, List<DocumentContent> content) {
+            String folderId = folder == null ? null : (String) folder.get(K_ID);
             List<String> keys = new ArrayList<>(content.size());
             Map<Kind, Integer> ordinals = new EnumMap<>(Kind.class);
             for (DocumentContent item : content) {
@@ -151,7 +152,7 @@ public final class GitYamlWriter {
                 });
             }
             long[] positions = PositionPlan.plan(keys, previous.of(containerId));
-            List<Object> items = folderId.isEmpty() ? rootItems : new ArrayList<>();
+            List<Object> items = folderId == null ? rootItems : new ArrayList<>();
             List<DocumentNode> subfolders = new ArrayList<>();
             List<Map<String, Object>> subfolderEntries = new ArrayList<>();
             for (int i = 0; i < content.size(); i++) {
@@ -165,17 +166,18 @@ public final class GitYamlWriter {
                     default -> items.add(item(content.get(i), position));
                 }
             }
-            if (folder.isPresent() && !items.isEmpty()) {
-                folder.get().put(K_ITEMS, items);
+            if (folder != null && !items.isEmpty()) {
+                folder.put(K_ITEMS, items);
             }
             for (int i = 0; i < subfolders.size(); i++) {
                 folders.add(subfolderEntries.get(i));
-                container(subfolders.get(i).archiId().value(), Optional.of(subfolderEntries.get(i)),
+                container(subfolders.get(i).archiId().value(), subfolderEntries.get(i),
                         subfolders.get(i).content());
             }
         }
 
-        private Map<String, Object> folderEntry(DocumentNode folder, Optional<String> parent, String position) {
+        /** Запись папки; {@code parent} — {@code null} у папки в корне модели. */
+        private Map<String, Object> folderEntry(DocumentNode folder, String parent, String position) {
             Map<String, Object> entry = new LinkedHashMap<>();
             Map<String, Object> attributes = new LinkedHashMap<>();
             attributes(attributes, folder.attributes(), false);
@@ -183,7 +185,9 @@ public final class GitYamlWriter {
             if (attributes.containsKey(K_NAME)) {
                 entry.put(K_NAME, attributes.remove(K_NAME));
             }
-            parent.ifPresent(p -> entry.put(K_PARENT, p));
+            if (parent != null) {
+                entry.put(K_PARENT, parent);
+            }
             entry.put(K_POSITION, position);
             entry.putAll(attributes);
             return entry;
@@ -197,7 +201,7 @@ public final class GitYamlWriter {
                 case RawXmlFragment raw -> raw.xml();
                 case DocumentValue value when kind == Kind.PROPERTY -> property(value);
                 case DocumentValue value when kind == Kind.VALUE -> genericValue(value);
-                case DocumentValue value -> value.text().orElseThrow();
+                case DocumentValue value -> Objects.requireNonNull(value.text());
                 case DocumentNode node -> throw new IllegalStateException(node.tag());
             });
             return item;
@@ -215,9 +219,12 @@ public final class GitYamlWriter {
             };
         }
 
-        private void object(DocumentNode node, Optional<String> folderId, String position) {
+        /** Файл объекта; {@code folderId} — {@code null} у объекта в корне модели. */
+        private void object(DocumentNode node, String folderId, String position) {
             Map<String, Object> placement = new LinkedHashMap<>();
-            folderId.ifPresent(f -> placement.put(K_FOLDER, f));
+            if (folderId != null) {
+                placement.put(K_FOLDER, folderId);
+            }
             placement.put(K_POSITION, position);
             Map<String, Object> body = node(node, placement, TAG_ELEMENT);
             List<String> comments = relationshipEnds(node).map(List::of).orElse(List.of());
@@ -370,7 +377,7 @@ public final class GitYamlWriter {
             case DocumentNode node when kind == Kind.CONNECTION -> node(node, Map.of(), TAG_CONNECTION);
             case DocumentNode node -> node(node, Map.of(), "");
             case DocumentValue value -> switch (kind) {
-                case DOCUMENTATION, PURPOSE, TEXT -> value.text().orElseThrow();
+                case DOCUMENTATION, PURPOSE, TEXT -> Objects.requireNonNull(value.text());
                 case PROPERTY -> property(value);
                 case BOUNDS, BENDPOINT -> points(value);
                 default -> genericValue(value);
@@ -379,18 +386,18 @@ public final class GitYamlWriter {
     }
 
     private static boolean regularText(DocumentValue value, String tag) {
-        return value.tag().equals(tag) && value.attributes().list().isEmpty() && value.text().isPresent();
+        return value.tag().equals(tag) && value.attributes().list().isEmpty() && value.text() != null;
     }
 
     /** {@code <property key value/>} — атрибуты из этих двух и в этом порядке, без текста. */
     private static boolean regularProperty(DocumentValue value) {
         List<String> names = names(value.attributes().list());
-        return value.tag().equals(TAG_PROPERTY) && value.text().isEmpty() && !names.isEmpty()
+        return value.tag().equals(TAG_PROPERTY) && value.text() == null && !names.isEmpty()
                 && List.of(K_KEY, K_VALUE).containsAll(names) && (names.size() == 1 || names.getFirst().equals(K_KEY));
     }
 
     private static boolean regularPoints(DocumentValue value, String tag) {
-        return value.tag().equals(tag) && value.text().isEmpty() && !value.attributes().list().isEmpty();
+        return value.tag().equals(tag) && value.text() == null && !value.attributes().list().isEmpty();
     }
 
     private static Map<String, Object> property(DocumentValue value) {
@@ -417,7 +424,9 @@ public final class GitYamlWriter {
             value.attributes().forEach(a -> attributes.put(a.name(), a.value()));
             generic.put(K_ATTRIBUTES, attributes);
         }
-        value.text().ifPresent(t -> generic.put(K_TEXT, t));
+        if (value.text() != null) {
+            generic.put(K_TEXT, value.text());
+        }
         return generic;
     }
 

@@ -64,18 +64,17 @@ public record ModelChanges(List<Change> changes) {
     public enum Type { ADDED, REMOVED, CHANGED }
 
     /**
-     * @param archiType тип без префикса {@code archimate:}; у папок и модели пусто
+     * @param archiType тип без префикса {@code archimate:}; у папок и модели {@code null}
      * @param name      имя после изменения, у удалённого — до
      * @param fields    изменённые поля; у добавленного и удалённого пусто
      */
-    public record Change(Kind kind, Type type, ArchiId archiId, Optional<String> archiType, String name,
+    public record Change(Kind kind, Type type, ArchiId archiId, String archiType, String name,
                          List<String> fields) {
 
         public Change {
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(type, "type");
             Objects.requireNonNull(archiId, "archiId");
-            Objects.requireNonNull(archiType, "archiType");
             Objects.requireNonNull(name, "name");
             fields = List.copyOf(fields);
         }
@@ -130,11 +129,11 @@ public record ModelChanges(List<Change> changes) {
         return (int) changes.stream().filter(c -> c.kind() == kind && c.type() == type).count();
     }
 
-    /** Объект отчёта: узел, его вид и родитель — папка или корень модели. */
-    private record Entry(ArchiId id, Kind kind, DocumentNode node, Optional<ArchiId> parent) {
+    /** Объект отчёта: узел, его вид и родитель — папка или корень модели ({@code null}). */
+    private record Entry(ArchiId id, Kind kind, DocumentNode node, ArchiId parent) {
 
         Change change(Type type, List<String> fields) {
-            return new Change(kind, type, id, node.archiType().map(ModelChanges::bareType),
+            return new Change(kind, type, id, node.archiType().map(ModelChanges::bareType).orElse(null),
                     node.attribute("name").orElse(""), fields);
         }
     }
@@ -143,18 +142,18 @@ public record ModelChanges(List<Change> changes) {
     private static Map<ArchiId, Entry> index(ModelDocument document) {
         Map<ArchiId, Entry> entries = new LinkedHashMap<>();
         only(document.content(), DocumentNode.class)
-                .forEach(node -> collect(node, Optional.empty(), entries));
+                .forEach(node -> collect(node, null, entries));
         return entries;
     }
 
-    private static void collect(DocumentNode node, Optional<ArchiId> parent, Map<ArchiId, Entry> into) {
+    private static void collect(DocumentNode node, ArchiId parent, Map<ArchiId, Entry> into) {
         Optional<Kind> kind = kind(node);
         if (kind.isEmpty()) {
             return;
         }
         into.putIfAbsent(node.archiId(), new Entry(node.archiId(), kind.get(), node, parent));
         if (kind.get() == Kind.FOLDER) {
-            node.children().forEach(child -> collect(child, Optional.of(node.archiId()), into));
+            node.children().forEach(child -> collect(child, node.archiId(), into));
         }
     }
 
@@ -185,7 +184,7 @@ public record ModelChanges(List<Change> changes) {
         if (fields.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(new Change(Kind.MODEL, Type.CHANGED, after.archiId(), Optional.empty(), after.name(),
+        return Optional.of(new Change(Kind.MODEL, Type.CHANGED, after.archiId(), null, after.name(),
                 List.copyOf(fields)));
     }
 
@@ -194,7 +193,7 @@ public record ModelChanges(List<Change> changes) {
         attributeFields(before.node().attributes(), after.node().attributes(), fields);
         valueFields(before.node().content(), after.node().content(), fields);
         rawFields(before.node().content(), after.node().content(), fields);
-        if (!before.parent().equals(after.parent())) {
+        if (!Objects.equals(before.parent(), after.parent())) {
             fields.add(FOLDER);
         }
         if (after.kind() == Kind.VIEW
@@ -243,7 +242,7 @@ public record ModelChanges(List<Change> changes) {
         }
     }
 
-    private record ValueKey(List<Attribute> attributes, Optional<String> text) {
+    private record ValueKey(List<Attribute> attributes, String text) {
     }
 
     private static Map<String, List<ValueKey>> values(List<DocumentContent> content) {

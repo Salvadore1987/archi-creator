@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -20,8 +19,8 @@ class NodeResidueTest {
                 List.of(new ResidueItem.Slot(1000, "documentation", List.of()),
                         new ResidueItem.Slot(2000, "bounds", List.of(ResidueAttribute.placeholder("x"),
                                 ResidueAttribute.literal("extra", "1"))),
-                        new ResidueItem.Value(3000, "content", List.of(), Optional.of("  Платить по QR\n  ")),
-                        new ResidueItem.Value(3500, "purpose", List.of(), Optional.of("")),
+                        new ResidueItem.Value(3000, "content", List.of(), "  Платить по QR\n  "),
+                        new ResidueItem.Value(3500, "purpose", List.of(), ""),
                         new ResidueItem.Fragment(4000,
                                 "<vendor:step order=\"1\">очистка &amp; дедупликация</vendor:step>")));
 

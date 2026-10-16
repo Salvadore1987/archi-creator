@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.importing;
 
 import java.util.Objects;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.DocumentDefect;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
@@ -15,17 +14,17 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
  * @param code    например {@code RELATION_NOT_PERMITTED} или {@code IXC_DANGLING_REFERENCE}
  * @param message сообщение с ключом; прочитанное из хранения — сохранённый текст
  *                под ключом {@link InterchangeMessages#STORED_TEXT}
+ * @param archiId объект, к которому относится находка; {@code null} — к файлу в целом
+ * @param xmlLine строка XML; {@code null} — неизвестна
  */
 public record ImportFinding(FindingId id, Severity severity, String code, Message message,
-                            Optional<ArchiId> archiId, Optional<Integer> xmlLine) {
+                            ArchiId archiId, Integer xmlLine) {
 
     public ImportFinding {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(severity, "severity");
         Objects.requireNonNull(code, "code");
         Objects.requireNonNull(message, "message");
-        Objects.requireNonNull(archiId, "archiId");
-        Objects.requireNonNull(xmlLine, "xmlLine");
         if (code.isBlank()) {
             throw new InvalidValueException(InterchangeMessages.FINDING_WITHOUT_CODE);
         }
@@ -42,7 +41,8 @@ public record ImportFinding(FindingId id, Severity severity, String code, Messag
 
     /** Находка уровня {@code ERROR} по дефекту разбора документа. */
     public static ImportFinding of(FindingId id, DocumentDefect defect) {
-        Optional<ArchiId> archiId = defect.archiId().filter(ArchiId::isValid).map(ArchiId::of);
+        ArchiId archiId = defect.archiId() != null && ArchiId.isValid(defect.archiId())
+                ? ArchiId.of(defect.archiId()) : null;
         return new ImportFinding(id, Severity.ERROR, defect.code(), defect.message(), archiId, defect.line());
     }
 }

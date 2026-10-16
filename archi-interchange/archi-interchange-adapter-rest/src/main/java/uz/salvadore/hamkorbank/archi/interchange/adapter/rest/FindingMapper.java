@@ -13,8 +13,7 @@ final class FindingMapper {
 
     static FindingDto finding(ImportFinding f, TextCatalog text) {
         return new FindingDto(f.severity().name(), f.code(), text.text(f.message()),
-                f.archiId().map(a -> a.value()).orElse(null),
-                f.xmlLine().orElse(null));
+                f.archiId() == null ? null : f.archiId().value(), f.xmlLine());
     }
 
     static List<FindingDto> findings(List<ImportFinding> findings, TextCatalog text) {

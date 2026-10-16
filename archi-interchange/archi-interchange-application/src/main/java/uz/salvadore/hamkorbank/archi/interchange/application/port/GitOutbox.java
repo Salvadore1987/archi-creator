@@ -46,8 +46,12 @@ public interface GitOutbox {
     /** Состояние открытой записи: ждёт публикации или встала на расхождении. */
     enum Status { PENDING, DIVERGED }
 
-    /** Открытая запись очереди: версия модели, число попыток и время следующей. */
+    /**
+     * Открытая запись очереди: версия модели, число попыток и время следующей.
+     *
+     * @param nextAttemptAt время следующей попытки; {@code null} — не назначено
+     */
     record Entry(UUID id, WorkspaceId workspace, ModelId model, long versionNo, Status status, int attempts,
-                 Optional<Instant> nextAttemptAt) {
+                 Instant nextAttemptAt) {
     }
 }

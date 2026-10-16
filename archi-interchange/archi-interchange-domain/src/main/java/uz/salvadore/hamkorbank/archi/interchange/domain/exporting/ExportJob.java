@@ -31,7 +31,7 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
 
     private final WorkspaceId workspaceId;
     private final ModelId modelId;
-    private final Optional<ViewId> viewId;
+    private final ViewId viewId;
     private final ExportFormat format;
     private final ExportOptions options;
     private final long sourceVersionNo;
@@ -43,13 +43,13 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
     private LossReport lossReport;
     private String failureReason;
 
-    private ExportJob(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, Optional<ViewId> viewId,
+    private ExportJob(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, ViewId viewId,
                       ExportFormat format, ExportOptions options, long sourceVersionNo, String requestedBy,
                       Instant requestedAt) {
         super(id);
         this.workspaceId = Objects.requireNonNull(workspaceId, "workspaceId");
         this.modelId = Objects.requireNonNull(modelId, "modelId");
-        this.viewId = Objects.requireNonNull(viewId, "viewId");
+        this.viewId = viewId;
         this.format = Objects.requireNonNull(format, "format");
         this.options = Objects.requireNonNull(options, "options");
         this.requestedBy = Objects.requireNonNull(requestedBy, "requestedBy");
@@ -60,8 +60,8 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
         this.sourceVersionNo = sourceVersionNo;
     }
 
-    /** Версия фиксируется здесь, при запросе, а не при рендере. */
-    public static ExportJob request(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, Optional<ViewId> viewId,
+    /** Версия фиксируется здесь, при запросе, а не при рендере; {@code viewId} — {@code null} у выгрузки модели. */
+    public static ExportJob request(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, ViewId viewId,
                                     ExportFormat format, ExportOptions options, long sourceVersionNo,
                                     String requestedBy, Instant requestedAt) {
         return new ExportJob(id, workspaceId, modelId, viewId, format, options, sourceVersionNo, requestedBy,
@@ -128,8 +128,8 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
         return modelId;
     }
 
-    /** Представление — у выгрузки картинки; у выгрузки модели пусто. */
-    public Optional<ViewId> viewId() {
+    /** Представление — у выгрузки картинки; у выгрузки модели {@code null}. */
+    public ViewId viewId() {
         return viewId;
     }
 

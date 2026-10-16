@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
@@ -55,12 +54,12 @@ class ModelChangesTest {
         ModelChanges changes = ModelChanges.between(before, after);
 
         assertEquals(List.of(
-                new Change(Kind.ELEMENT, Type.ADDED, id("id-node-1"), Optional.of("Node"), "Сервер", List.of()),
-                new Change(Kind.ELEMENT, Type.REMOVED, id("id-crm"), Optional.of("ApplicationComponent"), "CRM",
+                new Change(Kind.ELEMENT, Type.ADDED, id("id-node-1"), "Node", "Сервер", List.of()),
+                new Change(Kind.ELEMENT, Type.REMOVED, id("id-crm"), "ApplicationComponent", "CRM",
                         List.of()),
-                new Change(Kind.ELEMENT, Type.CHANGED, id("id-app"), Optional.of("ApplicationComponent"),
+                new Change(Kind.ELEMENT, Type.CHANGED, id("id-app"), "ApplicationComponent",
                         "АБС «Ядро»", List.of("name")),
-                new Change(Kind.RELATIONSHIP, Type.REMOVED, id("id-rel"), Optional.of("ServingRelationship"), "",
+                new Change(Kind.RELATIONSHIP, Type.REMOVED, id("id-rel"), "ServingRelationship", "",
                         List.of())), changes.changes());
         assertTrue(changes.summary().containsAll(List.of(new Count(Kind.ELEMENT, 1, 1, 1),
                 new Count(Kind.RELATIONSHIP, 0, 1, 0))));
@@ -96,7 +95,7 @@ class ModelChangesTest {
 
         Change change = ModelChanges.between(before, after).changes().getFirst();
 
-        assertEquals(Optional.of("ApplicationCollaboration"), change.archiType());
+        assertEquals("ApplicationCollaboration", change.archiType());
         assertEquals(List.of(ModelChanges.TYPE, ModelChanges.PROPERTIES, ModelChanges.DOCUMENTATION),
                 change.fields());
     }
@@ -108,7 +107,7 @@ class ModelChangesTest {
         ModelDocument after = model(APP, "", VIEW.formatted(240));
 
         assertEquals(List.of(new Change(Kind.VIEW, Type.CHANGED, id("id-view"),
-                        Optional.of("ArchimateDiagramModel"), "Контекст", List.of(ModelChanges.DIAGRAM))),
+                        "ArchimateDiagramModel", "Контекст", List.of(ModelChanges.DIAGRAM))),
                 ModelChanges.between(before, after).changes());
     }
 

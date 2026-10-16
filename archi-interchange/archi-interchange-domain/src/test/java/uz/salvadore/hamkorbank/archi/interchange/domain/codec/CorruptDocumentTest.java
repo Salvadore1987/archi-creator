@@ -1,11 +1,10 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.codec;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -27,8 +26,8 @@ class CorruptDocumentTest {
                 """);
 
         assertEquals(DocumentDefect.MALFORMED_XML, defect.code());
-        assertEquals(Optional.of(4), defect.line());
-        assertTrue(defect.column().isPresent());
+        assertEquals(4, defect.line());
+        assertNotNull(defect.column());
     }
 
     @Test
@@ -45,8 +44,8 @@ class CorruptDocumentTest {
 
         // Две ссылки на один и тот же отсутствующий id — две находки, но обе об id-e1.
         assertEquals(DocumentDefect.DANGLING_REFERENCE, defect.code());
-        assertEquals(Optional.of("id-r1"), defect.archiId());
-        assertEquals(Optional.of(4), defect.line());
+        assertEquals("id-r1", defect.archiId());
+        assertEquals(4, defect.line());
     }
 
     @Test
@@ -61,8 +60,8 @@ class CorruptDocumentTest {
                 """));
 
         assertEquals(List.of(DocumentDefect.DUPLICATE_ID, DocumentDefect.DUPLICATE_ID), codes(e));
-        assertEquals(Optional.of("id-e1"), e.defects().getFirst().archiId());
-        assertEquals(Optional.of("id-f2"), e.defects().get(1).archiId());
+        assertEquals("id-e1", e.defects().getFirst().archiId());
+        assertEquals("id-f2", e.defects().get(1).archiId());
     }
 
     @Test
@@ -78,7 +77,7 @@ class CorruptDocumentTest {
                 """));
 
         assertEquals(DocumentDefect.MISSING_END, defect.code());
-        assertEquals(Optional.of("id-r1"), defect.archiId());
+        assertEquals("id-r1", defect.archiId());
     }
 
     @Test
@@ -113,7 +112,7 @@ class CorruptDocumentTest {
                 """));
 
         assertEquals(DocumentDefect.TARGET_CONNECTIONS_MISMATCH, defect.code());
-        assertEquals(Optional.of("id-n1"), defect.archiId());
+        assertEquals("id-n1", defect.archiId());
     }
 
     @Test

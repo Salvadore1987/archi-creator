@@ -30,7 +30,7 @@ public record ModelDocument(Attributes attributes, List<DocumentContent> content
                 .orElseThrow(() -> new InvalidValueException(InterchangeMessages.MODEL_WITHOUT_ID)));
         ContentOrder.requireDense(content);
         for (DocumentContent item : content) {
-            if (item instanceof RawXmlFragment raw && raw.parentArchiId().isPresent()) {
+            if (item instanceof RawXmlFragment raw && raw.parentArchiId() != null) {
                 throw new InvalidValueException(InterchangeMessages.FRAGMENT_ROOT_MISADDRESSED, raw.parentArchiId());
             }
         }
@@ -56,7 +56,7 @@ public record ModelDocument(Attributes attributes, List<DocumentContent> content
         return ContentOrder.only(content, DocumentValue.class).stream()
                 .filter(v -> v.tag().equals("purpose"))
                 .findFirst()
-                .flatMap(DocumentValue::text);
+                .map(DocumentValue::text);
     }
 
     /** Папки верхнего уровня; вложенные — внутри них. */

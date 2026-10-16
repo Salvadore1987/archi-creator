@@ -6,6 +6,7 @@ import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
@@ -159,10 +160,14 @@ public final class SvgWriter {
                     .append("\" ").append(Svg.paint("fill", paint.fill())).append(' ')
                     .append(Svg.paint("stroke", node.opaque() ? notation.value("opaque_border") : paint.stroke()))
                     .append(" stroke-width=\"1\"");
-            entry.dash().ifPresent(dash -> body.append(" stroke-dasharray=\"").append(dash).append('"'));
+            if (entry.dash() != null) {
+                body.append(" stroke-dasharray=\"").append(entry.dash()).append('"');
+            }
             body.append("/>");
-            entry.icon().ifPresent(icon -> icon(icon, size, paint));
-            entry.labelBox().map(box -> Outlines.resolve(box, size))
+            if (entry.icon() != null) {
+                icon(entry.icon(), size, paint);
+            }
+            Optional.ofNullable(entry.labelBox()).map(box -> Outlines.resolve(box, size))
                     .filter(box -> box.width() > 0 && box.height() > 0)
                     .ifPresent(box -> label(node, entry, box, paint));
             body.append("</g>");
@@ -193,7 +198,7 @@ public final class SvgWriter {
         private void label(Node node, ShapeEntry entry, Box box, Paint paint) {
             boolean tab = entry.outline().equals("tab");
             boolean note = entry.outline().equals("dog-ear");
-            Optional<ArchiFont> own = node.style().font().flatMap(ArchiFont::parse);
+            Optional<ArchiFont> own = Optional.ofNullable(node.style().font()).flatMap(ArchiFont::parse);
             Face face;
             double lineHeight;
             String color;
@@ -230,7 +235,8 @@ public final class SvgWriter {
             double content = lines.lines().size() * lineHeight + subtitle.map(s -> SUBTITLE_GAP + subtitleHeight)
                     .orElse(0.0);
             double top = tab || note ? box.y() : box.y() + (box.height() - content) / 2;
-            String align = node.style().textAlignment().map(a -> a == 1 ? "left" : a == 4 ? "right" : "center")
+            String align = Optional.ofNullable(node.style().textAlignment())
+                    .map(a -> a == 1 ? "left" : a == 4 ? "right" : "center")
                     .orElse(tab ? "left" : "center");
             boolean overflowsBox = top < box.y() - 0.01 || top + content > box.y() + box.height() + 0.01;
             boolean overflowsSide = false;
@@ -287,7 +293,7 @@ public final class SvgWriter {
         }
 
         private Paint paint(ShapeEntry entry, Node node) {
-            String layer = entry.layer().orElseGet(() -> layerToken(node.layer()));
+            String layer = entry.layer() != null ? entry.layer() : layerToken(node.layer());
             String fill;
             String stroke;
             switch (layer) {
@@ -309,8 +315,9 @@ public final class SvgWriter {
                 }
             }
             Style style = node.style();
-            return new Paint(style.fillColor().orElse(fill), style.lineColor().orElse(stroke),
-                    style.fontColor().orElse(notation.value("paper_text")));
+            return new Paint(Objects.requireNonNullElse(style.fillColor(), fill),
+                    Objects.requireNonNullElse(style.lineColor(), stroke),
+                    Objects.requireNonNullElse(style.fontColor(), notation.value("paper_text")));
         }
 
         // ── Рёбра ──────────────────────────────────────────────────
@@ -325,18 +332,25 @@ public final class SvgWriter {
             }
             List<Point> points = Routing.route(source.get(), target.get(), edge.bendpoints());
             EdgeNotation notationOfEdge = EdgeNotation.of(edge.archiType(), edge.accessType(), edge.directed());
-            String stroke = edge.style().lineColor().orElse(notation.value("edge_color"));
+            String stroke = Objects.requireNonNullElse(edge.style().lineColor(), notation.value("edge_color"));
             points.forEach(p -> include(p.x(), p.y()));
 
             body.append("<g><path d=\"").append(Routing.roundedPath(points, notation.pixels("edge_corner_radius")))
                     .append("\" fill=\"none\" ").append(Svg.paint("stroke", stroke)).append(" stroke-width=\"")
                     .append(Svg.num(notation.pixels("edge_width"))).append('"');
-            notationOfEdge.dash().ifPresent(dash -> body.append(" stroke-dasharray=\"").append(dash).append('"'));
+            if (notationOfEdge.dash() != null) {
+                body.append(" stroke-dasharray=\"").append(notationOfEdge.dash()).append('"');
+            }
             body.append("/>");
-            notationOfEdge.start().ifPresent(marker -> marker(marker, points.get(0), points.get(1), true));
-            notationOfEdge.end().ifPresent(marker -> marker(marker, points.getLast(),
-                    points.get(points.size() - 2), false));
-            edge.label().ifPresent(label -> edgeLabel(label, Routing.midpoint(points), edge.style()));
+            if (notationOfEdge.start() != null) {
+                marker(notationOfEdge.start(), points.get(0), points.get(1), true);
+            }
+            if (notationOfEdge.end() != null) {
+                marker(notationOfEdge.end(), points.getLast(), points.get(points.size() - 2), false);
+            }
+            if (edge.label() != null) {
+                edgeLabel(edge.label(), Routing.midpoint(points), edge.style());
+            }
             body.append("</g>");
         }
 
@@ -384,7 +398,8 @@ public final class SvgWriter {
                         " " + Svg.paint("stroke", paper) + " stroke-width=\"" + Svg.num(HALO_WIDTH)
                                 + "\" stroke-linejoin=\"round\"");
             }
-            text(line, face, x, baseline, style.fontColor().orElse(notation.value("edge_label_color")), false);
+            text(line, face, x, baseline,
+                    Objects.requireNonNullElse(style.fontColor(), notation.value("edge_label_color")), false);
         }
 
         private Optional<Node> nodeOf(String endpoint, int guard) {

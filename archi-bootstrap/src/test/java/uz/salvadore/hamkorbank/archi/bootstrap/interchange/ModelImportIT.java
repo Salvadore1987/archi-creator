@@ -6,7 +6,6 @@ import static uz.salvadore.hamkorbank.archi.bootstrap.roundtrip.XmlEquivalence.a
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,14 +38,14 @@ class ModelImportIT extends IntegrationTest {
         byte[] original = Fixtures.reference();
 
         ImportReport report = imports.importFile(ARCHITECT, workspace().value(), "Hamkorbank.archimate", original,
-                Optional.empty());
+                null);
 
         assertEquals(ImportStatus.APPLIED, report.status(), () -> report.findings().toString());
-        UUID model = report.modelId().orElseThrow();
+        UUID model = report.modelId();
         assertEquals(1, report.versionNo());
         assertEquals(402, count("element where model_id = ?", model));
         assertEquals(12, count("view where model_id = ?", model));
-        assertXmlEquivalent(original, exports.archimate(VIEWER, model, Optional.empty()).artifact().bytes());
+        assertXmlEquivalent(original, exports.archimate(VIEWER, model, null).artifact().bytes());
     }
 
     @ParameterizedTest(name = "{0}")
@@ -56,21 +55,21 @@ class ModelImportIT extends IntegrationTest {
         byte[] original = Fixtures.fixture(fixture);
 
         ImportReport report = imports.importFile(ARCHITECT, workspace().value(), fixture + ".archimate", original,
-                Optional.empty());
+                null);
 
         assertEquals(ImportStatus.APPLIED, report.status(), () -> report.findings().toString());
         assertXmlEquivalent(original,
-                exports.archimate(VIEWER, report.modelId().orElseThrow(), Optional.of(1L)).artifact().bytes());
+                exports.archimate(VIEWER, report.modelId(), 1L).artifact().bytes());
     }
 
     @Test
     @DisplayName("NFR-02: импорт эталонной модели укладывается в 3 секунды")
     void referenceImportsWithinThreeSeconds() {
         byte[] original = Fixtures.reference();
-        imports.importFile(ARCHITECT, workspace().value(), "warm-up.archimate", original, Optional.empty());
+        imports.importFile(ARCHITECT, workspace().value(), "warm-up.archimate", original, null);
 
         Instant start = Instant.now();
-        imports.importFile(ARCHITECT, workspace().value(), "timed.archimate", original, Optional.empty());
+        imports.importFile(ARCHITECT, workspace().value(), "timed.archimate", original, null);
         Duration took = Duration.between(start, Instant.now());
 
         assertTrue(took.compareTo(Duration.ofSeconds(3)) <= 0, "импорт занял " + took);

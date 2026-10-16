@@ -79,9 +79,11 @@ final class GitAttempts {
         this.uuids = new UuidV7(clock);
     }
 
-    /** Каталог модели в коммите: файлы и документ, если собрался, иначе дефект сборки. */
-    record Tree(SortedMap<String, byte[]> files, Optional<ModelDocument> document,
-                Optional<InvalidValueException> defect) {
+    /**
+     * Каталог модели в коммите: файлы и документ, если собрался, иначе дефект сборки.
+     * Из документа и дефекта задано ровно одно, другое — {@code null}.
+     */
+    record Tree(SortedMap<String, byte[]> files, ModelDocument document, InvalidValueException defect) {
     }
 
     /** Рабочая привязка пространства; нет — {@code 409}. */
@@ -113,9 +115,9 @@ final class GitAttempts {
         return GitRemotes.modelDirectory(repository, remote, commit, model).map(directory -> {
             SortedMap<String, byte[]> files = repository.read(remote, commit, directory);
             try {
-                return new Tree(files, Optional.of(reader.read(files)), Optional.empty());
+                return new Tree(files, reader.read(files), null);
             } catch (InvalidValueException unreadable) {
-                return new Tree(files, Optional.empty(), Optional.of(unreadable));
+                return new Tree(files, null, unreadable);
             }
         });
     }
@@ -125,14 +127,14 @@ final class GitAttempts {
                           EditorIdentity actor) {
         String name = ref.ref().value() + "@" + ref.sha().value();
         return ImportSession.receive(new ImportSessionId(uuids.next()), ImportRequest.of(workspace,
-                Optional.of(model), name, source, uuids.next().toString(), policy.strictImport(workspace),
+                model, name, source, uuids.next().toString(), policy.strictImport(workspace),
                 actor.subject()), clock.instant());
     }
 
     /** Нечитаемое дерево — сразу {@code REJECTED} с находкой. */
     void corrupt(ImportSession session, InvalidValueException defect) {
         session.reject(List.of(new ImportFinding(findingId(), Severity.ERROR, InterchangeCodes.CORRUPT_DOCUMENT,
-                defect.reason(), Optional.empty(), Optional.empty())), clock.instant());
+                defect.reason(), null, null)), clock.instant());
     }
 
     /** Разбор снимка и проверка методологии: сессия — {@code VALIDATED} или {@code REJECTED}. */
@@ -168,7 +170,7 @@ final class GitAttempts {
                 attempt.strictMode(), attempt.startedBy());
         ImportSession rejected = ImportSession.receive(new ImportSessionId(uuids.next()), request, attempt.startedAt());
         rejected.reject(List.of(new ImportFinding(findingId(), Severity.ERROR, code,
-                Message.of(InterchangeMessages.GIT_PULL_FAILED, code), Optional.empty(), Optional.empty())),
+                Message.of(InterchangeMessages.GIT_PULL_FAILED, code), null, null)),
                 clock.instant());
         unitOfWork.write(() -> {
             sessions.save(rejected);
@@ -200,9 +202,12 @@ final class GitAttempts {
                 Message.of(InterchangeMessages.GIT_REF_NOT_FOUND, ref.value()), Map.of());
     }
 
-    static String required(Optional<String> value, String field) {
-        return value.filter(v -> !v.isBlank())
-                .orElseThrow(() -> invalid(Message.of(InterchangeMessages.GIT_PULL_FIELD_MISSING, field)));
+    /** Обязательное поле запроса: {@code null} или пустое — отказ. */
+    static String required(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw invalid(Message.of(InterchangeMessages.GIT_PULL_FIELD_MISSING, field));
+        }
+        return value;
     }
 
     static <T> T parse(Supplier<T> value) {

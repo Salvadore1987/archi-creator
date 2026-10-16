@@ -50,14 +50,14 @@ public final class MethodologyCheck {
             }
             matrix.check(source.get(), target.get(), type.get()).ifPresent(v -> findings.add(new ImportFinding(
                     ids.get(), Severity.ERROR, RelationViolation.CODE, message(v),
-                    Optional.of(relationship.archiId()), Optional.empty())));
+                    relationship.archiId(), null)));
         }
         for (DocumentNode element : document.elements()) {
             String xsiType = element.archiType().orElse("");
             if (registry.findByXsiType(xsiType).isEmpty()) {
                 findings.add(new ImportFinding(ids.get(), Severity.INFO, UNKNOWN_TYPE,
                         Message.of(InterchangeMessages.UNKNOWN_TYPE_STORED, xsiType),
-                        Optional.of(element.archiId()), Optional.empty()));
+                        element.archiId(), null));
             }
         }
         return findings;

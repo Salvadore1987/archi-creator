@@ -28,8 +28,8 @@ public class JpaGitBindingRepository implements GitBindingRepository {
                 .setParameter("w", workspaceId.value())
                 .getResultStream().findFirst().map(e -> GitBinding.restore(
                 new WorkspaceId(e.workspaceId), e.repoUrl, e.branch, SecretRef.of(e.tokenRef),
-                GitBindingStatus.valueOf(e.status), Optional.ofNullable(e.lastCommitSha).map(GitSha::of),
-                Optional.ofNullable(e.lastCheckedAt),
+                GitBindingStatus.valueOf(e.status), e.lastCommitSha == null ? null : GitSha.of(e.lastCommitSha),
+                e.lastCheckedAt,
                 e.authors.stream().map(a -> new GitAuthor(a.subject, a.name, a.email)).toList()));
     }
 
@@ -45,8 +45,8 @@ public class JpaGitBindingRepository implements GitBindingRepository {
         entity.branch = binding.branch();
         entity.tokenRef = binding.tokenRef().value();
         entity.status = binding.status().name();
-        entity.lastCommitSha = binding.lastCommitSha().map(GitSha::value).orElse(null);
-        entity.lastCheckedAt = binding.lastCheckedAt().orElse(null);
+        entity.lastCommitSha = binding.lastCommitSha() == null ? null : binding.lastCommitSha().value();
+        entity.lastCheckedAt = binding.lastCheckedAt();
         entity.authors.clear();
         for (GitAuthor author : binding.authors()) {
             GitBindingEntity.Author row = new GitBindingEntity.Author();

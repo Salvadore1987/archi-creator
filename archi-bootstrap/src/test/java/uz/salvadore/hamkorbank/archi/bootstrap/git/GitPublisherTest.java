@@ -117,7 +117,7 @@ class GitPublisherTest {
                 events::addAll, InterchangeMetrics.NONE, message -> message.key() + message.args(), clock,
                 new GitPublishingService.Settings("Archi Creator", "archi@test", "users.test", Duration.ofSeconds(5),
                         Duration.ofMinutes(10)));
-        bindings.save(GitBinding.configure(workspace, remote.toUri().toString(), Optional.empty(),
+        bindings.save(GitBinding.configure(workspace, remote.toUri().toString(), null,
                 SecretRef.of("env:ARCHI_GIT_TOKEN"),
                 List.of(new GitAuthor("architect-git", "Архитектор Тестов", "architect@bank.uz"))));
     }
@@ -136,8 +136,8 @@ class GitPublisherTest {
         assertThat(versions.sha(2)).contains(history.get(0).name());
 
         GitRepositoryPort.Remote target = new GitRepositoryPort.Remote(workspace, remote.toUri().toString(), "main",
-                Optional.empty());
-        GitRepositoryPort.PushResult stale = repository.push(target, Optional.of(GitSha.of(history.get(1).name())),
+                null);
+        GitRepositoryPort.PushResult stale = repository.push(target, GitSha.of(history.get(1).name()),
                 new GitRepositoryPort.CommitRequest("models/x", new TreeMap<>(Map.of("a.yaml", bytes("a: 1\n"))),
                         new TreeMap<>(), "stale", person(), person()));
 
@@ -199,7 +199,7 @@ class GitPublisherTest {
         assertThat(versions.sha(2)).isEmpty();
         ModelGitStatus status = publishing.status(model);
         assertThat(status.state()).isEqualTo(ModelGitStatus.State.DIVERGED);
-        assertThat(status.divergedVersionNo()).contains(2L);
+        assertThat(status.divergedVersionNo()).isEqualTo(2L);
         assertThat(status.pending()).isEqualTo(2);
     }
 
@@ -269,7 +269,7 @@ class GitPublisherTest {
                 new StaxArchiDocumentReader().read(new java.io.ByteArrayInputStream(second)), GitPositions.none()));
 
         versions.add(new PublishedVersions.Version(workspace, "Неизвестные узлы и атрибуты", 2, "architect-git",
-                Optional.of("Вторая"), clock.instant(), canonicalHash(second), second));
+                "Вторая", clock.instant(), canonicalHash(second), second));
         outbox.enqueue(workspace, model, 2, clock.instant());
         publishing.publishPending();
 
@@ -331,7 +331,7 @@ class GitPublisherTest {
             + "после восстановления — публикуется")
     void unreachableRepositoryDefersPublication() throws Exception {
         Path missing = temp.resolve("later.git");
-        bindings.save(GitBinding.configure(workspace, missing.toUri().toString(), Optional.empty(),
+        bindings.save(GitBinding.configure(workspace, missing.toUri().toString(), null,
                 SecretRef.of("env:ARCHI_GIT_TOKEN"), List.of()));
         commitVersion(1, Fixtures.fixture("unknown_extension"), "Первая");
 
@@ -350,7 +350,7 @@ class GitPublisherTest {
 
     private void commitVersion(long versionNo, byte[] xml, String comment) {
         versions.add(new PublishedVersions.Version(workspace, "Неизвестные узлы и атрибуты", versionNo,
-                "architect-git", Optional.of(comment), clock.instant(), "0".repeat(64), xml));
+                "architect-git", comment, clock.instant(), "0".repeat(64), xml));
         outbox.enqueue(workspace, model, versionNo, clock.instant());
     }
 
@@ -564,7 +564,7 @@ class GitPublisherTest {
 
         private static Entry entry(Row r) {
             return new Entry(r.id, r.workspace, r.model, r.versionNo, Status.valueOf(r.status), r.attempts,
-                    Optional.ofNullable(r.next));
+                    r.next);
         }
     }
 

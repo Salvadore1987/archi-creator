@@ -72,11 +72,11 @@ public final class ArchiXmlWriter implements ArchiDocumentWriter {
 
     private static void value(StringBuilder xml, int depth, DocumentValue value) {
         startTag(indent(xml, depth), value.tag(), value.attributes());
-        if (value.text().isEmpty()) {
+        if (value.text() == null) {
             xml.append("/>\n");
             return;
         }
-        xml.append('>').append(XmlEscaping.text(value.text().get())).append("</").append(value.tag()).append(">\n");
+        xml.append('>').append(XmlEscaping.text(value.text())).append("</").append(value.tag()).append(">\n");
     }
 
     private static void startTag(StringBuilder xml, String tag, Attributes attributes) {

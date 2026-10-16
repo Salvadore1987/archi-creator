@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.residue;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
@@ -28,13 +27,16 @@ public sealed interface ResidueItem permits ResidueItem.Slot, ResidueItem.Value,
         }
     }
 
-    /** Значение, которого столбцы не знают, — целиком: тег, атрибуты, текст. */
-    record Value(long order, String tag, List<ResidueAttribute> attributes, Optional<String> text)
+    /**
+     * Значение, которого столбцы не знают, — целиком: тег, атрибуты, текст.
+     *
+     * @param text текст элемента; {@code null} — элемент без текста
+     */
+    record Value(long order, String tag, List<ResidueAttribute> attributes, String text)
             implements ResidueItem {
 
         public Value {
             Objects.requireNonNull(tag, "tag");
-            Objects.requireNonNull(text, "text");
             attributes = List.copyOf(attributes);
             if (attributes.stream().anyMatch(ResidueAttribute::typed)) {
                 throw new InvalidValueException(InterchangeMessages.UNTYPED_VALUE_LITERAL);

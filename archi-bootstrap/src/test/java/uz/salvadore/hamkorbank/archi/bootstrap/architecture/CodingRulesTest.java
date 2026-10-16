@@ -52,7 +52,7 @@ class CodingRulesTest {
     private static final List<String> AGGREGATE_ROOT_CONTEXTS = List.of("modeling", "interchange", "advisor");
     private static final Path SPEC = Path.of("../spec");
     /** Пакеты, где Optional уже не бывает ни полем, ни параметром. */
-    private static final List<String> OPTIONAL_FREE = List.of(ROOT + ".modeling..");
+    private static final List<String> OPTIONAL_FREE = List.of(ROOT + ".modeling..", ROOT + ".interchange..");
     private static final String TRACKED_MAP = ROOT + ".modeling.domain.common.TrackedMap";
     /** Агрегаты, которые держат свои сущности в {@code TrackedMap}, и сам класс. */
     private static final Set<String> TRACKED_OWNERS = Set.of(TRACKED_MAP,

@@ -93,11 +93,9 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         }).map(String::strip);
         Message message = parserText.map(text -> Message.of(InterchangeMessages.XML_UNREADABLE, text))
                 .orElseGet(() -> Message.of(InterchangeMessages.XML_UNREADABLE_NO_DETAIL));
-        Optional<Integer> line = location == null || location.getLineNumber() < 0
-                ? Optional.empty() : Optional.of(location.getLineNumber());
-        Optional<Integer> column = location == null || location.getColumnNumber() < 0
-                ? Optional.empty() : Optional.of(location.getColumnNumber());
-        return new DocumentDefect(DocumentDefect.MALFORMED_XML, message, Optional.empty(), line, column);
+        Integer line = location == null || location.getLineNumber() < 0 ? null : location.getLineNumber();
+        Integer column = location == null || location.getColumnNumber() < 0 ? null : location.getColumnNumber();
+        return new DocumentDefect(DocumentDefect.MALFORMED_XML, message, null, line, column);
     }
 
     /** Состояние одного прохода по файлу. */
@@ -137,7 +135,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             } else {
                 register(id.get(), line);
             }
-            List<DocumentContent> content = content(Optional.empty());
+            List<DocumentContent> content = content(null);
             while (xml.hasNext()) {
                 xml.next();
             }
@@ -150,7 +148,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         }
 
         /** Содержимое текущего элемента до его закрывающего тега. */
-        private List<DocumentContent> content(Optional<ArchiId> parent) throws XMLStreamException {
+        private List<DocumentContent> content(ArchiId parent) throws XMLStreamException {
             List<DocumentContent> content = new ArrayList<>();
             while (true) {
                 switch (xml.next()) {
@@ -168,7 +166,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
                         if (!xml.getText().isBlank()) {
                             defect(DocumentDefect.UNEXPECTED_TEXT,
                                     Message.of(InterchangeMessages.TEXT_OUTSIDE_VALUE, xml.getText().strip()),
-                                    parent.map(ArchiId::value).orElse(null), line());
+                                    parent == null ? null : parent.value(), line());
                         }
                     }
                     default -> {
@@ -178,7 +176,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             }
         }
 
-        private DocumentContent item(Optional<ArchiId> parent, DocumentOrder order) throws XMLStreamException {
+        private DocumentContent item(ArchiId parent, DocumentOrder order) throws XMLStreamException {
             String prefix = xml.getPrefix();
             boolean unprefixed = prefix == null || prefix.isEmpty();
             String tag = xml.getLocalName();
@@ -208,7 +206,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             }
             register(id.get(), line);
             inspect(tag, id.get(), attributes, line);
-            return new DocumentNode(tag, order, attributes, content(Optional.of(ArchiId.of(id.get()))));
+            return new DocumentNode(tag, order, attributes, content(ArchiId.of(id.get())));
         }
 
         /** Обязательные атрибуты и ссылки узла — по тегу. */
@@ -261,7 +259,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             attributes.get(attribute).ifPresent(target -> references.add(new Reference(id, attribute, target, line)));
         }
 
-        private DocumentContent value(String tag, Optional<ArchiId> parent, DocumentOrder order)
+        private DocumentContent value(String tag, ArchiId parent, DocumentOrder order)
                 throws XMLStreamException {
             Attributes attributes = attributes();
             StringBuilder text = null;
@@ -284,8 +282,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
                         return new RawXmlFragment(out.toString(), parent, order);
                     }
                     case END_ELEMENT -> {
-                        return new DocumentValue(tag, order, attributes,
-                                Optional.ofNullable(text).map(StringBuilder::toString));
+                        return new DocumentValue(tag, order, attributes, text == null ? null : text.toString());
                     }
                     default -> {
                         // комментарий внутри значения

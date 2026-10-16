@@ -24,7 +24,7 @@ class DocumentNodeTest {
     @DisplayName("позиции содержимого обязаны совпадать с местом в списке")
     void contentOrderMustBeDense() {
         DocumentValue misplaced = new DocumentValue("documentation", DocumentOrder.of(1), Attributes.of(),
-                Optional.of("x"));
+                "x");
 
         assertThrows(InvalidValueException.class,
                 () -> new DocumentNode("element", DocumentOrder.of(0), Attributes.of("id", ID.value()),
@@ -35,7 +35,7 @@ class DocumentNodeTest {
     @DisplayName("фрагмент обязан быть адресован тому узлу, в котором лежит")
     void rawFragmentAddressMustMatchParent() {
         RawXmlFragment elsewhere = new RawXmlFragment("<feature/>",
-                Optional.of(ArchiId.of("id-other")), DocumentOrder.of(0));
+                ArchiId.of("id-other"), DocumentOrder.of(0));
 
         assertThrows(InvalidValueException.class,
                 () -> new DocumentNode("child", DocumentOrder.of(0), Attributes.of("id", ID.value()),
@@ -46,8 +46,8 @@ class DocumentNodeTest {
     @DisplayName("содержимое разбирается по видам без потери порядка")
     void contentIsSlicedByKind() {
         DocumentValue doc = new DocumentValue("documentation", DocumentOrder.of(0), Attributes.of(),
-                Optional.of("описание"));
-        RawXmlFragment raw = new RawXmlFragment("<feature name=\"a\"/>", Optional.of(ID), DocumentOrder.of(1));
+                "описание");
+        RawXmlFragment raw = new RawXmlFragment("<feature name=\"a\"/>", ID, DocumentOrder.of(1));
         DocumentNode child = new DocumentNode("child", DocumentOrder.of(2),
                 Attributes.of("xsi:type", "archimate:Note", "id", "id-child"), List.of());
         DocumentNode node = new DocumentNode("element", DocumentOrder.of(0),

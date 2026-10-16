@@ -62,18 +62,22 @@ public interface GitRepositoryPort {
      * корневые файлы — ставятся, если их ещё нет или они другие. Слитый коммит запроса,
      * которого ещё нет в истории {@code parent}, — второй родитель. Дерево не изменилось
      * и второго родителя нет — {@link Unchanged}, коммита нет. Ветка ушла вперёд, пока
-     * строился коммит, — {@link Rejected}; принуждения нет.
+     * строился коммит, — {@link Rejected}; принуждения нет. {@code parent} — {@code null}, когда
+     * ветки ещё нет.
      */
-    PushResult push(Remote remote, Optional<GitSha> parent, CommitRequest request);
+    PushResult push(Remote remote, GitSha parent, CommitRequest request);
 
-    /** Адрес, ветка и учётные данные — токен живёт только на время вызова. */
-    record Remote(WorkspaceId workspace, String url, String branch, Optional<String> token) {
+    /**
+     * Адрес, ветка и учётные данные — токен живёт только на время вызова.
+     *
+     * @param token токен доступа; {@code null} — без учётных данных
+     */
+    record Remote(WorkspaceId workspace, String url, String branch, String token) {
 
         public Remote {
             Objects.requireNonNull(workspace, "workspace");
             Objects.requireNonNull(url, "url");
             Objects.requireNonNull(branch, "branch");
-            Objects.requireNonNull(token, "token");
         }
 
         @Override
@@ -94,19 +98,21 @@ public interface GitRepositoryPort {
         }
     }
 
-    /** @param merged коммит, слитый в модель по сущностям, — кандидат во второго родителя */
+    /**
+     * @param merged коммит, слитый в модель по сущностям, — кандидат во второго родителя;
+     *               {@code null} — слияния не было
+     */
     record CommitRequest(String directory, SortedMap<String, byte[]> files, SortedMap<String, byte[]> rootFiles,
-                         String message, Person author, Person committer, Optional<GitSha> merged) {
+                         String message, Person author, Person committer, GitSha merged) {
 
         public CommitRequest {
             files = copy(files);
             rootFiles = copy(rootFiles);
-            Objects.requireNonNull(merged, "merged");
         }
 
         public CommitRequest(String directory, SortedMap<String, byte[]> files, SortedMap<String, byte[]> rootFiles,
                              String message, Person author, Person committer) {
-            this(directory, files, rootFiles, message, author, committer, Optional.empty());
+            this(directory, files, rootFiles, message, author, committer, null);
         }
 
         private static SortedMap<String, byte[]> copy(SortedMap<String, byte[]> files) {

@@ -24,11 +24,8 @@ import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingSetti
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitImportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitMergeService;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService;
-import uz.salvadore.hamkorbank.archi.interchange.application.port.PublishedVersions;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
-import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBinding;
-import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
 
 /** Git: тело запроса — в запрос сценария, результат — в DTO. */
@@ -40,36 +37,34 @@ final class GitDtoMapper {
     static GitBindingSettings settings(GitBindingSettingsDto dto) {
         List<GitBindingSettings.Author> authors = Optional.ofNullable(dto.authors()).orElse(List.of()).stream()
                 .map(a -> new GitBindingSettings.Author(a.subject(), a.name(), a.email())).toList();
-        return new GitBindingSettings(dto.repoUrl(), Optional.ofNullable(dto.branch()), dto.tokenRef(), authors);
+        return new GitBindingSettings(dto.repoUrl(), dto.branch(), dto.tokenRef(), authors);
     }
 
     static GitBindingDto binding(GitBinding binding) {
         return new GitBindingDto(binding.repoUrl(), binding.branch(), binding.tokenRef().value(),
-                binding.status().name(), binding.lastCommitSha().map(GitSha::value).orElse(null),
-                binding.lastCheckedAt().orElse(null),
+                binding.status().name(), binding.lastCommitSha() == null ? null : binding.lastCommitSha().value(),
+                binding.lastCheckedAt(),
                 binding.authors().stream().map(a -> new GitAuthorDto(a.subject(), a.name(), a.email())).toList());
     }
 
     static GitImportService.PullRequest pullRequest(GitPullRequestDto dto) {
-        return new GitImportService.PullRequest(Optional.ofNullable(dto.ref()), Optional.ofNullable(dto.commitSha()),
-                Optional.ofNullable(dto.baseHash()), Optional.ofNullable(dto.comment()));
+        return new GitImportService.PullRequest(dto.ref(), dto.commitSha(), dto.baseHash(), dto.comment());
     }
 
     static GitPullPreviewDto preview(GitImportService.Preview preview, TextCatalog text) {
         return new GitPullPreviewDto(preview.model().value(), preview.ref().ref().value(),
-                preview.ref().kind().name(), preview.ref().sha().value(), preview.baseVersionNo().orElse(null),
+                preview.ref().kind().name(), preview.ref().sha().value(), preview.baseVersionNo(),
                 preview.baseHash(), preview.targetHash(), preview.unchanged(), preview.applicable(),
                 preview.changes().summary().stream().map(c -> new GitChangeCountDto(c.kind().name(), c.added(),
                         c.removed(), c.changed())).toList(),
                 preview.changes().changes().stream().map(c -> new GitChangeDto(c.kind().name(), c.type().name(),
-                        c.archiId().value(), c.archiType().orElse(null), c.name(), c.fields())).toList(),
+                        c.archiId().value(), c.archiType(), c.name(), c.fields())).toList(),
                 FindingMapper.findings(preview.findings(), text));
     }
 
     static GitMergeService.MergeRequest mergeRequest(GitMergeRequestDto dto) {
-        return new GitMergeService.MergeRequest(Optional.ofNullable(dto.ref()), Optional.ofNullable(dto.commitSha()),
-                Optional.ofNullable(dto.mergeBaseSha()), Optional.ofNullable(dto.baseHash()),
-                resolutions(dto.resolutions()), Optional.ofNullable(dto.comment()));
+        return new GitMergeService.MergeRequest(dto.ref(), dto.commitSha(), dto.mergeBaseSha(), dto.baseHash(),
+                resolutions(dto.resolutions()), dto.comment());
     }
 
     static Map<String, String> resolutions(Map<String, String> resolutions) {
@@ -79,22 +74,22 @@ final class GitDtoMapper {
     static GitMergePreviewDto mergePreview(GitMergeService.Preview preview, TextCatalog text) {
         return new GitMergePreviewDto(preview.model().value(), preview.ref().ref().value(),
                 preview.ref().kind().name(), preview.ref().sha().value(), preview.mergeBase().value(),
-                preview.baseVersionNo().orElse(null), preview.baseHash(), preview.targetHash(), preview.unchanged(),
+                preview.baseVersionNo(), preview.baseHash(), preview.targetHash(), preview.unchanged(),
                 preview.applicable(),
                 preview.conflicts().stream().map(c -> new GitMergeConflictDto(c.id(), c.kind().name(),
-                        c.archiId().value(), c.archiType().orElse(null), c.name(), c.field(), c.base().orElse(null),
-                        c.ours().orElse(null), c.theirs().orElse(null), c.resolution().map(Enum::name).orElse(null)))
+                        c.archiId().value(), c.archiType(), c.name(), c.field(), c.base(), c.ours(), c.theirs(),
+                        c.resolution() == null ? null : c.resolution().name()))
                         .toList(),
                 preview.cascade().stream().map(c -> new GitMergeCascadeDto(c.kind().name(), c.archiId().value(),
-                        c.name(), c.reason().name(), c.view().map(ArchiId::value).orElse(null))).toList(),
+                        c.name(), c.reason().name(), c.view() == null ? null : c.view().value())).toList(),
                 preview.changes().summary().stream().map(c -> new GitChangeCountDto(c.kind().name(), c.added(),
                         c.removed(), c.changed())).toList(),
                 preview.changes().changes().stream().map(c -> new GitChangeDto(c.kind().name(), c.type().name(),
-                        c.archiId().value(), c.archiType().orElse(null), c.name(), c.fields())).toList(),
+                        c.archiId().value(), c.archiType(), c.name(), c.fields())).toList(),
                 preview.marks().stream().map(m -> new GitMergeMarkDto(m.archiId().value(), m.mark().name())).toList(),
                 preview.views().stream().map(v -> new GitMergeViewDto(v.view().value(), v.nodes().stream()
                         .map(n -> new GitMergeAddedNodeDto(n.archiId().value(),
-                                n.element().map(ArchiId::value).orElse(null), n.type().orElse(null), n.name(),
+                                n.element() == null ? null : n.element().value(), n.type(), n.name(),
                                 n.x(), n.y(), n.width(), n.height())).toList())).toList(),
                 FindingMapper.findings(preview.findings(), text));
     }
@@ -113,7 +108,7 @@ final class GitDtoMapper {
 
     static ModelGitStatusDto status(GitPublishingService.ModelGitStatus status) {
         return new ModelGitStatusDto(status.model().value(), status.state().name(), status.pending(),
-                status.last().map(PublishedVersions.Published::versionNo).orElse(null),
-                status.last().map(p -> p.sha().value()).orElse(null), status.divergedVersionNo().orElse(null));
+                status.last() == null ? null : status.last().versionNo(),
+                status.last() == null ? null : status.last().sha().value(), status.divergedVersionNo());
     }
 }

@@ -1,32 +1,24 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 
 import java.math.BigDecimal;
-import java.util.Objects;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 /**
  * Параметры выгрузки. Каждый относится к своим форматам: масштаб, контур и фон —
- * к SVG/PNG, разделитель и фильтр папок — к CSV.
+ * к SVG/PNG, разделитель и фильтр папок — к CSV. {@code null} — параметр не задан.
  */
-public record ExportOptions(Optional<BigDecimal> scale, Optional<Boolean> outline, Optional<String> background,
-                            Optional<String> separator, Optional<String> folderFilter) {
+public record ExportOptions(BigDecimal scale, Boolean outline, String background, String separator,
+                            String folderFilter) {
 
     public ExportOptions {
-        Objects.requireNonNull(scale, "scale");
-        Objects.requireNonNull(outline, "outline");
-        Objects.requireNonNull(background, "background");
-        Objects.requireNonNull(separator, "separator");
-        Objects.requireNonNull(folderFilter, "folderFilter");
-        if (scale.filter(s -> s.signum() <= 0).isPresent()) {
+        if (scale != null && scale.signum() <= 0) {
             throw new InvalidValueException(InterchangeMessages.EXPORT_SCALE_POSITIVE);
         }
     }
 
     /** Параметры по умолчанию: ни один не задан. */
     public static ExportOptions none() {
-        return new ExportOptions(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.empty());
+        return new ExportOptions(null, null, null, null, null);
     }
 }

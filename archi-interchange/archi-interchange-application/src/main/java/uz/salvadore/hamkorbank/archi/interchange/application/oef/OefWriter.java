@@ -653,7 +653,7 @@ public final class OefWriter {
                     case "archimate:Group" -> source.attribute("name").filter(n -> !n.isEmpty())
                             .ifPresent(n -> langString(body, depth + 1, "label", n));
                     case "archimate:Note" -> source.values("content").stream().findFirst()
-                            .flatMap(DocumentValue::text).filter(t -> !t.isEmpty())
+                            .map(DocumentValue::text).filter(t -> !t.isEmpty())
                             .ifPresent(t -> langString(body, depth + 1, "label", t));
                     case "archimate:DiagramModelReference" -> {
                         Optional<String> target = source.attribute("model");

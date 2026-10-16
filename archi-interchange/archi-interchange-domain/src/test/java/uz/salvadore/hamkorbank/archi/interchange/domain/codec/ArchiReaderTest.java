@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.codec;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -70,7 +71,7 @@ class ArchiReaderTest {
 
         DocumentNode element = document.folders().getFirst().children().getFirst();
         RawXmlFragment feature = assertInstanceOf(RawXmlFragment.class, element.content().get(1));
-        assertEquals(Optional.of(ArchiId.of("id-e00000000000000000000009")), feature.parentArchiId());
+        assertEquals(ArchiId.of("id-e00000000000000000000009"), feature.parentArchiId());
         assertEquals(1, feature.order().value());
         // Внутренние пробелы — как в файле: фрагмент стоит на глубине 4, его ребёнок — на 6.
         assertEquals("""
@@ -79,7 +80,7 @@ class ArchiReaderTest {
                     </feature>""", feature.xml());
 
         RawXmlFragment profile = document.orphanFragments().getFirst();
-        assertEquals(Optional.empty(), profile.parentArchiId());
+        assertNull(profile.parentArchiId());
         assertEquals(1, profile.order().value());
         assertTrue(profile.xml().startsWith("<profile name=\"Банк\" id=\"id-p00000000000000000000001\""));
     }

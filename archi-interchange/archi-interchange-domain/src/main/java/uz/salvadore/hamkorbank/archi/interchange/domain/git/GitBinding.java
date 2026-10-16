@@ -33,18 +33,16 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
     private final String branch;
     private final SecretRef tokenRef;
     private final GitBindingStatus status;
-    private final Optional<GitSha> lastCommitSha;
-    private final Optional<Instant> lastCheckedAt;
+    private final GitSha lastCommitSha;
+    private final Instant lastCheckedAt;
     private final List<GitAuthor> authors;
 
     private GitBinding(WorkspaceId workspaceId, String repoUrl, String branch, SecretRef tokenRef,
-                       GitBindingStatus status, Optional<GitSha> lastCommitSha, Optional<Instant> lastCheckedAt,
+                       GitBindingStatus status, GitSha lastCommitSha, Instant lastCheckedAt,
                        List<GitAuthor> authors) {
         Objects.requireNonNull(workspaceId, "workspaceId");
         Objects.requireNonNull(tokenRef, "tokenRef");
         Objects.requireNonNull(status, "status");
-        Objects.requireNonNull(lastCommitSha, "lastCommitSha");
-        Objects.requireNonNull(lastCheckedAt, "lastCheckedAt");
         if (repoUrl == null || repoUrl.length() > URL_MAX || !URL.matcher(repoUrl).matches()) {
             throw new InvalidValueException(InterchangeMessages.GIT_URL_INVALID, String.valueOf(repoUrl));
         }
@@ -68,18 +66,24 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
         this.authors = authors;
     }
 
-    /** Сборка из сохранённых значений — для хранилища; значения проверяются, как при создании. */
+    /**
+     * Сборка из сохранённых значений — для хранилища; значения проверяются, как при создании.
+     * {@code null} в последнем коммите и моменте проверки — их ещё не было.
+     */
     public static GitBinding restore(WorkspaceId workspaceId, String repoUrl, String branch, SecretRef tokenRef,
-                                     GitBindingStatus status, Optional<GitSha> lastCommitSha,
-                                     Optional<Instant> lastCheckedAt, List<GitAuthor> authors) {
+                                     GitBindingStatus status, GitSha lastCommitSha,
+                                     Instant lastCheckedAt, List<GitAuthor> authors) {
         return new GitBinding(workspaceId, repoUrl, branch, tokenRef, status, lastCommitSha, lastCheckedAt, authors);
     }
 
-    /** Новая привязка: {@code CONFIGURED}, коммитов сервера ещё нет. Ветка не задана — {@code main}. */
-    public static GitBinding configure(WorkspaceId workspaceId, String repoUrl, Optional<String> branch,
+    /**
+     * Новая привязка: {@code CONFIGURED}, коммитов сервера ещё нет. Ветка не задана ({@code null}
+     * или пустая) — {@code main}.
+     */
+    public static GitBinding configure(WorkspaceId workspaceId, String repoUrl, String branch,
                                        SecretRef tokenRef, List<GitAuthor> authors) {
-        return new GitBinding(workspaceId, repoUrl, branch.filter(b -> !b.isBlank()).orElse(DEFAULT_BRANCH),
-                tokenRef, GitBindingStatus.CONFIGURED, Optional.empty(), Optional.empty(), authors);
+        return new GitBinding(workspaceId, repoUrl, branch == null || branch.isBlank() ? DEFAULT_BRANCH : branch,
+                tokenRef, GitBindingStatus.CONFIGURED, null, null, authors);
     }
 
     /** Можно ли публиковать: снятая привязка — нет. */
@@ -96,14 +100,14 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
     public GitBinding checked(Instant at) {
         requireWritable();
         return new GitBinding(workspaceId(), repoUrl, branch, tokenRef, GitBindingStatus.CONFIGURED, lastCommitSha,
-                Optional.of(at), authors);
+                Objects.requireNonNull(at, "at"), authors);
     }
 
     /** Репозиторий не ответил или отказал в доступе. */
     public GitBinding unreachable(Instant at) {
         requireWritable();
         return new GitBinding(workspaceId(), repoUrl, branch, tokenRef, GitBindingStatus.UNREACHABLE, lastCommitSha,
-                Optional.of(at), authors);
+                Objects.requireNonNull(at, "at"), authors);
     }
 
     /** Сервер довёл ветку до этого коммита — своего или принятого поверх чужого. */
@@ -124,8 +128,8 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
     }
 
     private GitBinding withHead(GitSha sha) {
-        return new GitBinding(workspaceId(), repoUrl, branch, tokenRef, status, Optional.of(sha), lastCheckedAt,
-                authors);
+        return new GitBinding(workspaceId(), repoUrl, branch, tokenRef, status, Objects.requireNonNull(sha, "sha"),
+                lastCheckedAt, authors);
     }
 
     private void requireWritable() {
@@ -159,13 +163,16 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
         return status;
     }
 
-    /** Последний коммит, сделанный сервером в ветке: от него отсчитывается, что в ветке появилось не от нас. */
-    public Optional<GitSha> lastCommitSha() {
+    /**
+     * Последний коммит, сделанный сервером в ветке: от него отсчитывается, что в ветке появилось не от нас.
+     * {@code null} — сервер ещё не коммитил.
+     */
+    public GitSha lastCommitSha() {
         return lastCommitSha;
     }
 
-    /** Момент последней проверки репозитория. */
-    public Optional<Instant> lastCheckedAt() {
+    /** Момент последней проверки репозитория; {@code null} — ещё не проверялся. */
+    public Instant lastCheckedAt() {
         return lastCheckedAt;
     }
 

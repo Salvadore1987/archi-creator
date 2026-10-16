@@ -5,7 +5,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeOperation;
@@ -82,15 +81,15 @@ public final class ImportService {
 
     /**
      * Импортирует файл {@code .archimate} новой моделью пространства; повтор с тем же ключом
-     * идемпотентности возвращает прежний итог.
+     * идемпотентности возвращает прежний итог. Ключ не задан ({@code null} или пустой) — свой на каждую попытку.
      */
     public ImportReport importFile(EditorIdentity actor, UUID workspaceId, String fileName, byte[] content,
-                                   Optional<String> idempotencyKey) {
+                                   String idempotencyKey) {
         InterchangeOperation operation = InterchangeOperation.IMPORT_ARCHIMATE_FILE;
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
             WorkspaceId workspace = new WorkspaceId(workspaceId);
-            String key = idempotencyKey.filter(k -> !k.isBlank()).orElseGet(() -> uuids.next().toString());
+            String key = idempotencyKey == null || idempotencyKey.isBlank() ? uuids.next().toString() : idempotencyKey;
             ImportRequest request = request(workspace, fileName, content, key, actor);
             return gate.through(workspace, () -> unitOfWork.write(() -> {
                 ImportIntake.Intake intake = intake(request);
@@ -161,7 +160,7 @@ public final class ImportService {
     private ImportRequest request(WorkspaceId workspace, String fileName, byte[] content, String key,
                                   EditorIdentity actor) {
         try {
-            return ImportRequest.of(workspace, Optional.empty(), fileName, content, key,
+            return ImportRequest.of(workspace, null, fileName, content, key,
                     policy.strictImport(workspace), actor.subject());
         } catch (InvalidValueException invalid) {
             throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE, invalid.reason(),
@@ -184,8 +183,8 @@ public final class ImportService {
         boolean corrupt = session.status() == ImportStatus.REJECTED && session.document().isEmpty()
                 && session.findings().stream().noneMatch(f -> f.code().equals(RelationViolation.CODE));
         return new ImportReport(session.id(), session.status(),
-                session.appliedModelId().map(m -> m.value()), session.appliedVersionNo(), session.findings(),
-                replayed, corrupt);
+                session.appliedModelId().map(m -> m.value()).orElse(null), session.appliedVersionNo(),
+                session.findings(), replayed, corrupt);
     }
 
     private FindingId findingId() {

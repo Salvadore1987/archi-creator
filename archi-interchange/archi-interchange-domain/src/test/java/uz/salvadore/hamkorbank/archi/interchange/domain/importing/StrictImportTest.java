@@ -7,7 +7,6 @@ import static uz.salvadore.hamkorbank.archi.interchange.domain.importing.Session
 import static uz.salvadore.hamkorbank.archi.interchange.domain.importing.Sessions.VALID;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -42,7 +41,7 @@ class StrictImportTest {
         ImportFinding error = Sessions.matrixViolation();
         strict.validate(List.of(new ImportFinding(error.id(), Severity.WARNING, "IXC_SOMETHING",
                 ImportFinding.storedText("мелочь"),
-                Optional.empty(), Optional.empty())), NOW);
+                null, null)), NOW);
 
         assertEquals(ImportStatus.VALIDATED, strict.status());
     }
@@ -60,7 +59,7 @@ class StrictImportTest {
         ImportFinding finding = session.findings().getFirst();
         assertEquals(DocumentDefect.DANGLING_REFERENCE, finding.code());
         assertEquals(Severity.ERROR, finding.severity());
-        assertEquals(Optional.of(ArchiId.of("id-r1")), finding.archiId());
-        assertEquals(Optional.of(8), finding.xmlLine());
+        assertEquals(ArchiId.of("id-r1"), finding.archiId());
+        assertEquals(8, finding.xmlLine());
     }
 }

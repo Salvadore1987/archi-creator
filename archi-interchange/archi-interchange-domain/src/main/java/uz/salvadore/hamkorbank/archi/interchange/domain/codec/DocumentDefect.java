@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.codec;
 
 import java.util.Objects;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 
 /**
@@ -9,10 +8,11 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
  * Отказ без места превращает импорт в чёрный ящик.
  *
  * @param archiId идентификатор объекта как он записан в файле — строкой, потому что
- *                дефект бывает именно в нём
+ *                дефект бывает именно в нём; {@code null} — дефект не у объекта
+ * @param line    строка файла; {@code null} — неизвестна
+ * @param column  столбец строки; {@code null} — неизвестен
  */
-public record DocumentDefect(String code, Message message, Optional<String> archiId,
-                             Optional<Integer> line, Optional<Integer> column) {
+public record DocumentDefect(String code, Message message, String archiId, Integer line, Integer column) {
 
     /** Файл не разбирается как XML. */
     public static final String MALFORMED_XML = "IXC_MALFORMED_XML";
@@ -36,16 +36,13 @@ public record DocumentDefect(String code, Message message, Optional<String> arch
     public DocumentDefect {
         Objects.requireNonNull(code, "code");
         Objects.requireNonNull(message, "message");
-        Objects.requireNonNull(archiId, "archiId");
-        Objects.requireNonNull(line, "line");
-        Objects.requireNonNull(column, "column");
     }
 
     static DocumentDefect at(String code, Message message, String archiId, int line) {
-        return new DocumentDefect(code, message, Optional.ofNullable(archiId), lineOf(line), Optional.empty());
+        return new DocumentDefect(code, message, archiId, lineOf(line), null);
     }
 
-    private static Optional<Integer> lineOf(int line) {
-        return line > 0 ? Optional.of(line) : Optional.empty();
+    private static Integer lineOf(int line) {
+        return line > 0 ? line : null;
     }
 }

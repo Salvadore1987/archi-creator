@@ -84,17 +84,14 @@ public record Notation(Size defaultSize, Map<String, Size> defaultSizeByType, Ma
     /**
      * Запись силуэта: имя примитива контура, угловая иконка, область подписи,
      * токен радиуса, ключ слоя ({@code null} — слой элемента) и пунктир обводки.
+     * Иконки, области подписи и пунктира нет — {@code null}.
      */
-    public record ShapeEntry(String outline, Optional<CornerIcon> icon, Optional<Box> labelBox, String radiusToken,
-                             Optional<String> layer, Optional<String> dash) {
+    public record ShapeEntry(String outline, CornerIcon icon, Box labelBox, String radiusToken, String layer,
+                             String dash) {
 
         public ShapeEntry {
             Objects.requireNonNull(outline, "outline");
-            Objects.requireNonNull(icon, "icon");
-            Objects.requireNonNull(labelBox, "labelBox");
             Objects.requireNonNull(radiusToken, "radiusToken");
-            Objects.requireNonNull(layer, "layer");
-            Objects.requireNonNull(dash, "dash");
         }
     }
 }

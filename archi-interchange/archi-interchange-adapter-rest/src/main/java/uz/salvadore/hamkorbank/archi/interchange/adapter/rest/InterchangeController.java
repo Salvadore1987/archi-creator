@@ -6,7 +6,6 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -76,11 +75,11 @@ public class InterchangeController {
      */
     @PostMapping(value = "/models/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> importFile(EditorIdentity actor, @RequestPart("file") MultipartFile file,
-                                        @RequestParam Optional<UUID> workspaceId,
-                                        @RequestHeader("Idempotency-Key") Optional<String> key,
+                                        @RequestParam(required = false) UUID workspaceId,
+                                        @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                         HttpServletRequest request) {
         ImportReport report = imports.importFile(actor, workspace(workspaceId),
-                ImportRequest.sourceNameOrDefault(Optional.ofNullable(file.getOriginalFilename())),
+                ImportRequest.sourceNameOrDefault(file.getOriginalFilename()),
                 bytes(file), key);
         ImportResult body = result(report, text);
         if (report.status() == ImportStatus.APPLIED) {
@@ -106,9 +105,9 @@ public class InterchangeController {
     @GetMapping("/models/{id}/export")
     public ResponseEntity<byte[]> export(EditorIdentity actor, @PathVariable UUID id,
                                          @RequestParam(defaultValue = ExportService.FORMAT_ARCHIMATE) String fmt,
-                                         @RequestParam Optional<Long> version,
-                                         @RequestParam Optional<String> folder,
-                                         @RequestParam Optional<String> sep) {
+                                         @RequestParam(required = false) Long version,
+                                         @RequestParam(required = false) String folder,
+                                         @RequestParam(required = false) String sep) {
         ExportService.Export export = exports.export(actor, id, new ExportRequest(fmt, version, sep, folder));
         return artifact(export.artifact(), export.versionNo())
                 .header(LOSS_COUNT, String.valueOf(export.lossCount()))
@@ -123,22 +122,22 @@ public class InterchangeController {
      */
     @GetMapping("/views/{id}/export")
     public ResponseEntity<byte[]> exportView(EditorIdentity actor, @PathVariable UUID id,
-                                             @RequestParam Optional<String> fmt,
-                                             @RequestParam Optional<Integer> scale,
-                                             @RequestParam Optional<Boolean> outline,
-                                             @RequestParam Optional<String> background,
-                                             @RequestParam Optional<Long> version) {
+                                             @RequestParam(required = false) String fmt,
+                                             @RequestParam(required = false) Integer scale,
+                                             @RequestParam(required = false) Boolean outline,
+                                             @RequestParam(required = false) String background,
+                                             @RequestParam(required = false) Long version) {
         return image(images.viewImage(actor, id, new ImageRequest(fmt, scale, outline, background, version)));
     }
 
     /** Все представления модели одним архивом из одной версии. */
     @GetMapping("/models/{id}/views/export")
     public ResponseEntity<byte[]> exportAllViews(EditorIdentity actor, @PathVariable UUID id,
-                                                 @RequestParam Optional<String> fmt,
-                                                 @RequestParam Optional<Integer> scale,
-                                                 @RequestParam Optional<Boolean> outline,
-                                                 @RequestParam Optional<String> background,
-                                                 @RequestParam Optional<Long> version) {
+                                                 @RequestParam(required = false) String fmt,
+                                                 @RequestParam(required = false) Integer scale,
+                                                 @RequestParam(required = false) Boolean outline,
+                                                 @RequestParam(required = false) String background,
+                                                 @RequestParam(required = false) Long version) {
         return image(images.allViewImages(actor, id, new ImageRequest(fmt, scale, outline, background, version)));
     }
 
@@ -171,8 +170,8 @@ public class InterchangeController {
                 .lastModified(Instant.EPOCH);
     }
 
-    private UUID workspace(Optional<UUID> requested) {
-        return workspaces.resolve(requested.map(WorkspaceId::of).orElse(null)).value();
+    private UUID workspace(UUID requested) {
+        return workspaces.resolve(requested == null ? null : WorkspaceId.of(requested)).value();
     }
 
     private static byte[] bytes(MultipartFile file) {
@@ -184,7 +183,7 @@ public class InterchangeController {
     }
 
     private static ImportResult result(ImportReport report, TextCatalog text) {
-        return new ImportResult(report.sessionId().value(), report.status().name(), report.modelId().orElse(null),
+        return new ImportResult(report.sessionId().value(), report.status().name(), report.modelId(),
                 report.versionNo() > 0 ? report.versionNo() : null, report.replayed(),
                 FindingMapper.findings(report.findings(), text));
     }

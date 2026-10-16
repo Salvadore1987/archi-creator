@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 
 import java.time.Instant;
 import java.util.Objects;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
@@ -13,9 +12,11 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
 /**
  * Выгрузка завершена. Публикуется и при пустом отчёте о потерях — отсутствие потерь тоже факт.
+ *
+ * @param viewId представление — у выгрузки картинки; {@code null} — у выгрузки модели
  */
 public record ExportCompletedEvent(ExportJobId exportJobId, WorkspaceId workspaceId, ModelId modelId,
-                              Optional<ViewId> viewId, ExportFormat format, long sourceVersionNo,
+                              ViewId viewId, ExportFormat format, long sourceVersionNo,
                               ContentHash artifactHash, long artifactSize, int lossEntryCount, Instant occurredAt)
         implements ExportJobEvent {
 

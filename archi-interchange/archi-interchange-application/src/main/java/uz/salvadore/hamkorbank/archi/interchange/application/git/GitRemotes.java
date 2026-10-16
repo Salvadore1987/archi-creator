@@ -37,7 +37,7 @@ final class GitRemotes {
             throw new Unreachable(texts.text(Message.of(InterchangeMessages.GIT_SECRET_MISSING,
                     binding.tokenRef().value())), null);
         }
-        return new Remote(binding.workspaceId(), binding.repoUrl(), binding.branch(), token);
+        return new Remote(binding.workspaceId(), binding.repoUrl(), binding.branch(), token.orElse(null));
     }
 
     /** Путь каталога модели от корня; в коммите его нет — пусто. */

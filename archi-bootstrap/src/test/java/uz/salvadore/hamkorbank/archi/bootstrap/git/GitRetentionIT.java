@@ -8,7 +8,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -50,7 +49,7 @@ class GitRetentionIT extends GitApiTest {
     void purgeStopsWhenRepositoryIsUnreachable() throws Exception {
         UUID model = modelWithVersions();
         bindings.configure(ADMIN, workspace().value(), new GitBindingSettings(
-                temp.resolve("gone.git").toUri().toString(), Optional.empty(), "env:ARCHI_GIT_TOKEN_IT", List.of()));
+                temp.resolve("gone.git").toUri().toString(), null, "env:ARCHI_GIT_TOKEN_IT", List.of()));
 
         assertThat(retention().purgeSnapshots()).isZero();
 

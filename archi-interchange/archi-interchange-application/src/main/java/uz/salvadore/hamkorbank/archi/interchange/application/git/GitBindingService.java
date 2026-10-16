@@ -71,7 +71,7 @@ public final class GitBindingService {
                 GitBinding binding = bindings.find(workspace)
                         .filter(old -> old.repoUrl().equals(configured.repoUrl())
                                 && old.branch().equals(configured.branch()))
-                        .flatMap(GitBinding::lastCommitSha)
+                        .map(GitBinding::lastCommitSha)
                         .map(sha -> configured.committed(sha, clock.instant()))
                         .orElse(configured);
                 bindings.save(binding);

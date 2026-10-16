@@ -38,7 +38,7 @@ public final class CorruptDocumentException extends InterchangeDomainException {
 
     private static Message summary(List<DocumentDefect> defects) {
         DocumentDefect first = defects.getFirst();
-        Object place = first.line().<Object>map(l -> Message.of(InterchangeMessages.CORRUPT_AT_LINE, l)).orElse("");
+        Object place = first.line() != null ? Message.of(InterchangeMessages.CORRUPT_AT_LINE, first.line()) : "";
         Object more = defects.size() > 1 ? Message.of(InterchangeMessages.CORRUPT_MORE, defects.size() - 1) : "";
         return Message.of(InterchangeMessages.CORRUPT_SUMMARY, first.code(), first.message(), place, more);
     }

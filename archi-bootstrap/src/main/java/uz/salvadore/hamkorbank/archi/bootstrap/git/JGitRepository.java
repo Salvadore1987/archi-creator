@@ -319,14 +319,16 @@ public final class JGitRepository implements GitRepositoryPort {
     }
 
     @Override
-    public PushResult push(Remote remote, Optional<GitSha> parent, CommitRequest request) {
+    public PushResult push(Remote remote, GitSha parentSha, CommitRequest request) {
+        Optional<GitSha> parent = Optional.ofNullable(parentSha);
         synchronized (lock(remote)) {
             try (Repository repo = open(remote); ObjectInserter inserter = repo.newObjectInserter();
                  RevWalk walk = new RevWalk(repo)) {
                 Optional<RevTree> parentTree = parent.isPresent()
                         ? Optional.of(walk.parseCommit(id(parent.get())).getTree()) : Optional.empty();
                 ObjectId tree = tree(repo, inserter, parentTree, request);
-                Optional<GitSha> second = secondParent(repo, remote, walk, parent, request.merged());
+                Optional<GitSha> second = secondParent(repo, remote, walk, parent,
+                        Optional.ofNullable(request.merged()));
                 if (parentTree.isPresent() && tree.equals(parentTree.get()) && second.isEmpty()) {
                     return new Unchanged(parent.get());
                 }
@@ -474,8 +476,9 @@ public final class JGitRepository implements GitRepositoryPort {
     private Transport transport(Repository repo, Remote remote) throws IOException, URISyntaxException {
         Transport transport = Transport.open(repo, new URIish(remote.url()));
         transport.setTimeout((int) timeout.toSeconds());
-        remote.token().ifPresent(token ->
-                transport.setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, token)));
+        if (remote.token() != null) {
+            transport.setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, remote.token()));
+        }
         return transport;
     }
 

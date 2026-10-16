@@ -122,13 +122,13 @@ public final class ExportService {
         };
     }
 
-    /** Файл {@code .archimate} зафиксированной версии модели; без номера — последней. */
-    public Export archimate(EditorIdentity actor, UUID modelId, Optional<Long> versionNo) {
+    /** Файл {@code .archimate} зафиксированной версии модели; без номера ({@code null}) — последней. */
+    public Export archimate(EditorIdentity actor, UUID modelId, Long versionNo) {
         InterchangeOperation operation = InterchangeOperation.EXPORT_ARCHIMATE;
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
             VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo.orElse(null));
+                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
             return deliver(actor, snapshot, ExportFormat.ARCHIMATE, ExportOptions.none(),
                     Artifact.of(snapshot.xml(), ARCHIMATE_MEDIA_TYPE, fileName(snapshot, "archimate")));
         });
@@ -137,17 +137,17 @@ public final class ExportService {
     /**
      * Каталог в CSV — из той же зафиксированной версии, что и файл модели:
      * таблица и {@code .archimate} одной версии не расходятся. Доступно
-     * {@code VIEWER}: читатель забирает ландшафт, не получая прав на правку.
+     * {@code VIEWER}: читатель забирает ландшафт, не получая прав на правку. Без номера ({@code null}) — последняя.
      */
-    public Export catalogCsv(EditorIdentity actor, UUID modelId, Optional<Long> versionNo, CatalogCsvOptions options) {
+    public Export catalogCsv(EditorIdentity actor, UUID modelId, Long versionNo, CatalogCsvOptions options) {
         InterchangeOperation operation = InterchangeOperation.EXPORT_CATALOG_CSV;
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
             VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo.orElse(null));
+                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
             byte[] zip = new CatalogCsvWriter(texts).write(snapshot.xml(), options);
-            ExportOptions exportOptions = new ExportOptions(Optional.empty(), Optional.empty(), Optional.empty(),
-                    Optional.of(String.valueOf(options.separator())), options.folderArchiId());
+            ExportOptions exportOptions = new ExportOptions(null, null, null, String.valueOf(options.separator()),
+                    options.folderArchiId());
             return deliver(actor, snapshot, ExportFormat.CSV_CATALOG, exportOptions,
                     Artifact.of(zip, "application/zip", fileName(snapshot, "csv.zip")));
         });
@@ -159,13 +159,14 @@ public final class ExportService {
      * (системный {@code unzip} macOS, старый Проводник), не создают файл с кириллицей.
      * Результат проверяется по официальной схеме до отдачи; не прошёл — файл не отдаётся,
      * выгрузка — сбой, а клиент получает {@code IXC_OEF_SCHEMA_VIOLATION} как ошибку сервера.
+     * Без номера версии ({@code null}) — последняя.
      */
-    public Export openExchange(EditorIdentity actor, UUID modelId, Optional<Long> versionNo) {
+    public Export openExchange(EditorIdentity actor, UUID modelId, Long versionNo) {
         InterchangeOperation operation = InterchangeOperation.EXPORT_OPEN_EXCHANGE;
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
             VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo.orElse(null));
+                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
             OefWriter.Written written = new OefWriter(notation)
                     .write(new StaxArchiDocumentReader().read(new ByteArrayInputStream(snapshot.xml())));
             ExportJob job = job(actor, snapshot, ExportFormat.OPEN_EXCHANGE, ExportOptions.none());
@@ -199,7 +200,7 @@ public final class ExportService {
 
     private ExportJob job(EditorIdentity actor, VersionSnapshot snapshot, ExportFormat format, ExportOptions options) {
         return ExportJob.request(ExportJobId.next(uuids), new WorkspaceId(snapshot.model().workspaceId().value()),
-                new ModelId(snapshot.model().id().value()), Optional.empty(), format, options, snapshot.versionNo(),
+                new ModelId(snapshot.model().id().value()), null, format, options, snapshot.versionNo(),
                 actor.subject(), clock.instant());
     }
 

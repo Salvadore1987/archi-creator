@@ -23,8 +23,11 @@ public interface PublishedVersions {
     /** Пространство модели, если актор её видит; иначе — «не найдено». */
     WorkspaceId visibleWorkspace(EditorIdentity actor, ModelId model);
 
-    /** @param author субъект Keycloak, сохранивший версию */
-    record Version(WorkspaceId workspace, String modelName, long versionNo, String author, Optional<String> comment,
+    /**
+     * @param author  субъект Keycloak, сохранивший версию
+     * @param comment комментарий к версии; {@code null} — не задан
+     */
+    record Version(WorkspaceId workspace, String modelName, long versionNo, String author, String comment,
                    Instant createdAt, String contentHash, byte[] xml) {
 
         public Version {

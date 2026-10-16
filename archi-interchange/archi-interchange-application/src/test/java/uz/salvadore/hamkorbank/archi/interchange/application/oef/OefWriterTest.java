@@ -34,8 +34,7 @@ class OefWriterTest {
     /** Размеры по умолчанию — как в {@code shapes.json}; силуэты писателю не нужны. */
     private static final Notation NOTATION = new Notation(new Size(120, 55),
             Map.of("archimate:Group", new Size(400, 140), "archimate:Note", new Size(185, 80)), Map.of(),
-            new ShapeEntry("stub", Optional.empty(), Optional.empty(), "node_radius", Optional.empty(),
-                    Optional.empty()), Map.of(), Map.of(), Map.of(), "Inter");
+            new ShapeEntry("stub", null, null, "node_radius", null, null), Map.of(), Map.of(), Map.of(), "Inter");
 
     private static final OefWriter WRITER = new OefWriter(NOTATION);
 

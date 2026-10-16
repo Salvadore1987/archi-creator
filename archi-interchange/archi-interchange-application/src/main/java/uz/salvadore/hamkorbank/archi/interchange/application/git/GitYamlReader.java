@@ -55,6 +55,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.IntFunction;
@@ -131,7 +132,7 @@ public final class GitYamlReader {
             rootId = rootAttributes.get(A_ID)
                     .orElseThrow(() -> new InvalidValueException(InterchangeMessages.GIT_FIELD_MISSING,
                             MODEL_FILE, K_ID));
-            items(root, rootId, Optional.empty());
+            items(root, rootId, null);
             root.done();
 
             Map<String, Object> folderFile = load(files, FOLDERS_FILE).orElse(Map.of());
@@ -178,7 +179,7 @@ public final class GitYamlReader {
             Optional<String> parent = fields.optional(K_PARENT);
             long position = fields.position();
             Attributes attributes = fields.attributes(false);
-            items(fields, id, Optional.of(id));
+            items(fields, id, id);
             fields.done();
             if (!folderIds.add(id)) {
                 throw new InvalidValueException(InterchangeMessages.GIT_ID_REPEATED, FOLDERS_FILE, id);
@@ -191,8 +192,11 @@ public final class GitYamlReader {
                     order -> new DocumentNode(TAG_FOLDER, DocumentOrder.of(order), attributes, build(id))));
         }
 
-        /** Записи корня или папки без идентификатора: позиция и одно из четырёх значений. */
-        private void items(Fields owner, String container, Optional<String> parentId) {
+        /**
+         * Записи корня или папки без идентификатора: позиция и одно из четырёх значений.
+         * {@code parentId} — папка, {@code null} — корень модели.
+         */
+        private void items(Fields owner, String container, String parentId) {
             Map<Kind, Integer> ordinals = new EnumMap<>(Kind.class);
             for (Map<String, Object> raw : owner.maps(K_ITEMS)) {
                 Fields item = new Fields(owner.file, raw);
@@ -217,12 +221,13 @@ public final class GitYamlReader {
                             Fields property = item.map(candidate.token());
                             Attributes attributes = propertyAttributes(property);
                             yield order -> new DocumentValue(TAG_PROPERTY, DocumentOrder.of(order), attributes,
-                                    Optional.empty());
+                                    null);
                         }
                         case VALUE -> genericValue(item.map(candidate.token()));
                         default -> {
                             String xml = item.required(candidate.token());
-                            yield order -> new RawXmlFragment(xml, parentId.map(ArchiId::of), DocumentOrder.of(order));
+                            ArchiId parent = parentId == null ? null : ArchiId.of(parentId);
+                            yield order -> new RawXmlFragment(xml, parent, DocumentOrder.of(order));
                         }
                     };
                 }
@@ -291,7 +296,7 @@ public final class GitYamlReader {
             queue.add(single(fields, kind));
         } else if (kind == Kind.RAW) {
             for (String xml : fields.strings(kind.key)) {
-                queue.add(order -> new RawXmlFragment(xml, Optional.of(ArchiId.of(id)), DocumentOrder.of(order)));
+                queue.add(order -> new RawXmlFragment(xml, ArchiId.of(id), DocumentOrder.of(order)));
             }
         } else {
             for (Map<String, Object> raw : fields.maps(kind.key)) {
@@ -322,7 +327,7 @@ public final class GitYamlReader {
         return switch (kind) {
             case PROPERTY -> {
                 Attributes property = propertyAttributes(item);
-                yield order -> new DocumentValue(TAG_PROPERTY, DocumentOrder.of(order), property, Optional.empty());
+                yield order -> new DocumentValue(TAG_PROPERTY, DocumentOrder.of(order), property, null);
             }
             case BENDPOINT -> points(TAG_BENDPOINT, item);
             case CHILD -> node(item, TAG_CHILD);
@@ -358,7 +363,7 @@ public final class GitYamlReader {
     }
 
     private static DocumentValue textValue(String tag, int order, String text) {
-        return new DocumentValue(tag, DocumentOrder.of(order), new Attributes(List.of()), Optional.of(text));
+        return new DocumentValue(tag, DocumentOrder.of(order), new Attributes(List.of()), Objects.requireNonNull(text));
     }
 
     private static Attributes propertyAttributes(Fields property) {
@@ -375,14 +380,14 @@ public final class GitYamlReader {
     private static IntFunction<DocumentContent> points(String tag, Fields fields) {
         Attributes attributes = new Attributes(fields.rest().entrySet().stream()
                 .map(e -> new Attribute(e.getKey(), fields.string(e.getKey(), e.getValue()))).toList());
-        return order -> new DocumentValue(tag, DocumentOrder.of(order), attributes, Optional.empty());
+        return order -> new DocumentValue(tag, DocumentOrder.of(order), attributes, null);
     }
 
     private static IntFunction<DocumentContent> genericValue(Fields fields) {
         String tag = fields.required(K_TAG);
         Attributes attributes = new Attributes(fields.optionalMap(K_ATTRIBUTES).map(a -> a.rest().entrySet().stream()
                 .map(e -> new Attribute(e.getKey(), a.string(e.getKey(), e.getValue()))).toList()).orElse(List.of()));
-        Optional<String> text = fields.optional(K_TEXT);
+        String text = fields.optional(K_TEXT).orElse(null);
         fields.done();
         return order -> new DocumentValue(tag, DocumentOrder.of(order), attributes, text);
     }

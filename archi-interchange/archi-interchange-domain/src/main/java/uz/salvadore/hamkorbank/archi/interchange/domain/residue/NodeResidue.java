@@ -76,9 +76,9 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
                         xml.writeAttribute("o", Long.toString(value.order()));
                         xml.writeAttribute("t", value.tag());
                         writeAttributes(xml, value.attributes());
-                        if (value.text().isPresent()) {
+                        if (value.text() != null) {
                             xml.writeStartElement("x");
-                            writeText(xml, value.text().get());
+                            writeText(xml, value.text());
                             xml.writeEndElement();
                         }
                         xml.writeEndElement();
@@ -149,10 +149,10 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
         long order = order(xml);
         String tag = xml.getAttributeValue(null, "t");
         List<ResidueAttribute> attributes = new ArrayList<>();
-        Optional<String> text = Optional.empty();
+        String text = null;
         while (xml.nextTag() == XMLStreamConstants.START_ELEMENT) {
             if (xml.getLocalName().equals("x")) {
-                text = Optional.of(xml.getElementText());
+                text = xml.getElementText();
             } else {
                 attributes.add(readAttribute(xml));
             }
@@ -165,8 +165,8 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
         for (ResidueAttribute attribute : attributes) {
             xml.writeStartElement("a");
             xml.writeAttribute("n", attribute.name());
-            if (attribute.value().isPresent()) {
-                writeText(xml, attribute.value().get());
+            if (attribute.value() != null) {
+                writeText(xml, attribute.value());
             } else {
                 xml.writeAttribute("typed", "1");
             }

@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -121,9 +122,8 @@ public final class ViewImageService {
         }
 
         ExportOptions options() {
-            return new ExportOptions(Optional.of(BigDecimal.valueOf(scale)), Optional.of(outline),
-                    Optional.of(transparent ? BACKGROUND_TRANSPARENT : BACKGROUND_PAPER), Optional.empty(),
-                    Optional.empty());
+            return new ExportOptions(BigDecimal.valueOf(scale), outline,
+                    transparent ? BACKGROUND_TRANSPARENT : BACKGROUND_PAPER, null, null);
         }
     }
 
@@ -140,7 +140,7 @@ public final class ViewImageService {
             operation.require(actor);
             Settings settings = settings(request);
             View view = queries.openView(actor, uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId.of(viewId));
-            VersionSnapshot snapshot = versions.snapshot(actor, view.modelId(), request.versionNo().orElse(null));
+            VersionSnapshot snapshot = versions.snapshot(actor, view.modelId(), request.versionNo());
             ModelDocument document = read(snapshot);
             DocumentNode node = document.find(ArchiId.of(view.archiId().value()))
                     .filter(n -> n.tag().equals("element"))
@@ -153,7 +153,7 @@ public final class ViewImageService {
             Artifact artifact = Artifact.of(picture.bytes(), mediaType(settings),
                     ExportService.safeFileName(name, "view") + "." + settings.extension());
             LossReport report = new LossReport(entries(picture.losses()), true);
-            deliver(actor, snapshot, Optional.of(new ViewId(viewId)), settings, artifact, report);
+            deliver(actor, snapshot, new ViewId(viewId), settings, artifact, report);
             return new ImageExport(artifact, snapshot.versionNo(), report.entries().size());
         });
     }
@@ -169,7 +169,7 @@ public final class ViewImageService {
             Settings settings = settings(request);
             VersionSnapshot snapshot = versions.snapshot(actor,
                     uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId),
-                    request.versionNo().orElse(null));
+                    request.versionNo());
             ModelDocument document = read(snapshot);
             List<LossEntry> all = new ArrayList<>();
             StringBuilder report = new StringBuilder("{\"format\":\"").append(settings.format().name())
@@ -202,7 +202,7 @@ public final class ViewImageService {
                     ExportService.safeFileName(snapshot.model().name(), "model") + "-v" + snapshot.versionNo()
                             + "-" + settings.extension() + ".zip");
             LossReport lossReport = new LossReport(all, true);
-            deliver(actor, snapshot, Optional.empty(), settings, artifact, lossReport);
+            deliver(actor, snapshot, null, settings, artifact, lossReport);
             return new ImageExport(artifact, snapshot.versionNo(), all.size());
         });
     }
@@ -212,19 +212,20 @@ public final class ViewImageService {
      * {@code IXC_INVALID_EXPORT_OPTION}.
      */
     private static Settings settings(ImageRequest request) {
-        String formatName = request.format().orElse(FORMAT_SVG);
+        String formatName = Objects.requireNonNullElse(request.format(), FORMAT_SVG);
         ExportFormat format = Optional.ofNullable(FORMATS.get(formatName))
                 .orElseThrow(() -> new InterchangeException(InterchangeCodes.UNKNOWN_FORMAT, Failure.UNPROCESSABLE,
                         Message.of(InterchangeMessages.UNKNOWN_FORMAT, formatName), Map.of("format", formatName)));
-        int scale = request.scale().orElse(1);
+        int scale = Objects.requireNonNullElse(request.scale(), 1);
         if (!SCALES.contains(scale)) {
             throw invalidOption("scale", String.valueOf(scale));
         }
-        String background = request.background().orElse(BACKGROUND_PAPER);
+        String background = Objects.requireNonNullElse(request.background(), BACKGROUND_PAPER);
         if (!background.equals(BACKGROUND_PAPER) && !background.equals(BACKGROUND_TRANSPARENT)) {
             throw invalidOption("background", background);
         }
-        return new Settings(format, scale, request.outline().orElse(false), background.equals(BACKGROUND_TRANSPARENT));
+        return new Settings(format, scale, Objects.requireNonNullElse(request.outline(), false),
+                background.equals(BACKGROUND_TRANSPARENT));
     }
 
     private static InterchangeException invalidOption(String parameter, String value) {
@@ -260,7 +261,8 @@ public final class ViewImageService {
                 l.objectKind(), l.aspect(), texts.text(l.reason()))).toList();
     }
 
-    private void deliver(EditorIdentity actor, VersionSnapshot snapshot, Optional<ViewId> viewId, Settings settings,
+    /** Задание выгрузки доставлено; {@code viewId} — {@code null} у пакета всех представлений. */
+    private void deliver(EditorIdentity actor, VersionSnapshot snapshot, ViewId viewId, Settings settings,
                          Artifact artifact, LossReport report) {
         ExportJob job = ExportJob.request(ExportJobId.next(uuids),
                 new WorkspaceId(snapshot.model().workspaceId().value()), new ModelId(snapshot.model().id().value()),

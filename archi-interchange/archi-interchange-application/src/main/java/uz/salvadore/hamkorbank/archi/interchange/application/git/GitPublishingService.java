@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -84,9 +85,14 @@ public final class GitPublishingService {
                            Duration retryBase, Duration retryMax) {
     }
 
-    /** Состояние модели в Git. */
-    public record ModelGitStatus(ModelId model, State state, int pending, Optional<PublishedVersions.Published> last,
-                                 Optional<Long> divergedVersionNo) {
+    /**
+     * Состояние модели в Git.
+     *
+     * @param last              последняя опубликованная версия; {@code null} — публикаций не было
+     * @param divergedVersionNo версия, вставшая на расхождении; {@code null} — расхождения нет
+     */
+    public record ModelGitStatus(ModelId model, State state, int pending, PublishedVersions.Published last,
+                                 Long divergedVersionNo) {
 
         /** Всё опубликовано, версии ждут очереди или публикация встала на расхождении с веткой. */
         public enum State { SYNCED, PENDING, DIVERGED }
@@ -142,7 +148,7 @@ public final class GitPublishingService {
         int closed = 0;
         for (GitOutbox.Entry head : unitOfWork.read(outbox::heads)) {
             if (head.status() == GitOutbox.Status.DIVERGED
-                    || head.nextAttemptAt().filter(at -> at.isAfter(clock.instant())).isPresent()) {
+                    || head.nextAttemptAt() != null && head.nextAttemptAt().isAfter(clock.instant())) {
                 continue;
             }
             closed += drain(head.model(), false);
@@ -178,13 +184,13 @@ public final class GitPublishingService {
         return unitOfWork.read(() -> {
             Optional<GitOutbox.Entry> head = outbox.head(model);
             int open = outbox.open(model);
-            Optional<PublishedVersions.Published> last = versions.lastPublished(model);
+            PublishedVersions.Published last = versions.lastPublished(model).orElse(null);
             if (head.isEmpty()) {
-                return new ModelGitStatus(model, ModelGitStatus.State.SYNCED, 0, last, Optional.empty());
+                return new ModelGitStatus(model, ModelGitStatus.State.SYNCED, 0, last, null);
             }
             boolean diverged = head.get().status() == GitOutbox.Status.DIVERGED;
             return new ModelGitStatus(model, diverged ? ModelGitStatus.State.DIVERGED : ModelGitStatus.State.PENDING,
-                    open, last, diverged ? Optional.of(head.get().versionNo()) : Optional.empty());
+                    open, last, diverged ? head.get().versionNo() : null);
         });
     }
 
@@ -298,31 +304,30 @@ public final class GitPublishingService {
 
     private Outcome attempt(GitOutbox.Entry entry, GitBinding binding, PublishedVersions.Version version) {
         Remote remote = remote(binding);
-        Optional<GitSha> head = repository.fetch(remote);
+        GitSha head = repository.fetch(remote).orElse(null);
         Map<String, String> trailers = Map.of(TRAILER_MODEL, entry.model().value().toString(),
                 TRAILER_VERSION, Long.toString(entry.versionNo()));
-        if (binding.lastCommitSha().isPresent()
-                && (head.isEmpty() || !repository.contains(remote, binding.lastCommitSha().get(), head.get()))) {
+        if (binding.lastCommitSha() != null
+                && (head == null || !repository.contains(remote, binding.lastCommitSha(), head))) {
             return diverged(entry, binding, head);
         }
-        Optional<GitSha> already = head.flatMap(h -> repository.findByTrailers(remote, h, trailers));
+        Optional<GitSha> already = head == null ? Optional.empty() : repository.findByTrailers(remote, head, trailers);
         if (already.isPresent()) {
-            return recorded(entry, binding, version, already.get(), head.orElseThrow(), 0);
+            return recorded(entry, binding, version, already.get(), Objects.requireNonNull(head), 0);
         }
         String directory = directory(remote, head, entry.model(), version.modelName());
-        Optional<GitSha> merged = unitOfWork.read(() -> merges.last(entry.model()));
-        if (head.isPresent()) {
-            Optional<GitRepositoryPort.Commit> last = repository.lastChange(remote, head.get(), directory);
+        GitSha merged = unitOfWork.read(() -> merges.last(entry.model())).orElse(null);
+        if (head != null) {
+            Optional<GitRepositoryPort.Commit> last = repository.lastChange(remote, head, directory);
             if (last.isPresent() && !entry.model().value().toString().equals(last.get().trailers().get(TRAILER_MODEL))
                     && !accepted(remote, entry.model(), last.get().sha(), merged)) {
-                if (carries(remote, head.get(), directory, version)) {
-                    return recorded(entry, binding, version, head.get(), head.get(), 0);
+                if (carries(remote, head, directory, version)) {
+                    return recorded(entry, binding, version, head, head, 0);
                 }
                 return diverged(entry, binding, head);
             }
         }
-        SortedMap<String, byte[]> previous = head.map(h -> repository.read(remote, h, directory))
-                .orElseGet(TreeMap::new);
+        SortedMap<String, byte[]> previous = head == null ? new TreeMap<>() : repository.read(remote, head, directory);
         GitPositions positions;
         try {
             positions = previous.isEmpty() ? GitPositions.none() : reader.positions(previous);
@@ -332,7 +337,8 @@ public final class GitPublishingService {
         ModelDocument document = new StaxArchiDocumentReader().read(new ByteArrayInputStream(version.xml()));
         SortedMap<String, byte[]> files = writer.write(document, positions);
         SortedMap<String, byte[]> rootFiles = new TreeMap<>();
-        rootFiles.put(GITATTRIBUTES, gitattributes(head.flatMap(h -> repository.file(remote, h, GITATTRIBUTES))));
+        rootFiles.put(GITATTRIBUTES, gitattributes(head == null ? null
+                : repository.file(remote, head, GITATTRIBUTES).orElse(null)));
         CommitRequest request = new CommitRequest(directory, files, rootFiles, message(version, trailers),
                 author(binding, version), new Person(settings.committerName(), settings.committerEmail(),
                 clock.instant()), merged);
@@ -353,10 +359,10 @@ public final class GitPublishingService {
     /**
      * Чужая правка каталога уже принята: она входит в коммит, который записан последней
      * опубликованной версией модели, — так бывает после импорта головы ветки, — или в коммит,
-     * слитый в модель по сущностям. Переписывать поверх неё нечего.
+     * слитый в модель по сущностям ({@code merged}; {@code null} — слияний не было). Переписывать поверх неё нечего.
      */
-    private boolean accepted(Remote remote, ModelId model, GitSha change, Optional<GitSha> merged) {
-        return merged.filter(m -> repository.contains(remote, change, m)).isPresent()
+    private boolean accepted(Remote remote, ModelId model, GitSha change, GitSha merged) {
+        return merged != null && repository.contains(remote, change, merged)
                 || unitOfWork.read(() -> versions.lastPublished(model))
                 .filter(published -> repository.contains(remote, change, published.sha())).isPresent();
     }
@@ -389,10 +395,11 @@ public final class GitPublishingService {
         return Outcome.DONE;
     }
 
-    private Outcome diverged(GitOutbox.Entry entry, GitBinding binding, Optional<GitSha> head) {
+    /** Запись встала на расхождении; {@code head} — голова ветки, {@code null} — ветки нет. */
+    private Outcome diverged(GitOutbox.Entry entry, GitBinding binding, GitSha head) {
         Instant at = clock.instant();
         unitOfWork.write(() -> {
-            outbox.diverged(entry.id(), head.map(GitSha::value).orElse(""), at);
+            outbox.diverged(entry.id(), head == null ? "" : head.value(), at);
             bindings.find(entry.workspace()).filter(GitBinding::writable).ifPresent(b -> bindings.save(b.checked(at)));
             return null;
         });
@@ -403,15 +410,18 @@ public final class GitPublishingService {
         return remotes.remote(binding);
     }
 
-    /** Каталог модели: найденный в ветке по короткому идентификатору — прежний, иначе по имени. */
-    private String directory(Remote remote, Optional<GitSha> head, ModelId model, String modelName) {
-        return head.flatMap(h -> GitRemotes.modelDirectory(repository, remote, h, model))
+    /**
+     * Каталог модели: найденный в ветке по короткому идентификатору — прежний, иначе по имени.
+     * {@code head} — {@code null}, когда ветки ещё нет.
+     */
+    private String directory(Remote remote, GitSha head, ModelId model, String modelName) {
+        return Optional.ofNullable(head).flatMap(h -> GitRemotes.modelDirectory(repository, remote, h, model))
                 .orElseGet(() -> MODELS_DIR + "/" + FileSlug.slug(modelName) + "." + GitRemotes.shortId(model));
     }
 
     private String message(PublishedVersions.Version version, Map<String, String> trailers) {
-        String subject = version.comment().filter(c -> !c.isBlank()).orElseGet(() ->
-                texts.text(Message.of(InterchangeMessages.GIT_COMMIT_MESSAGE, version.versionNo())));
+        String subject = version.comment() != null && !version.comment().isBlank() ? version.comment()
+                : texts.text(Message.of(InterchangeMessages.GIT_COMMIT_MESSAGE, version.versionNo()));
         return subject.strip() + "\n\n" + TRAILER_MODEL + ": " + trailers.get(TRAILER_MODEL) + "\n"
                 + TRAILER_VERSION + ": " + trailers.get(TRAILER_VERSION) + "\n";
     }
@@ -424,16 +434,16 @@ public final class GitPublishingService {
                         version.author() + "@" + settings.authorEmailDomain(), version.createdAt()));
     }
 
-    /** Правило слияния ставится, не затирая чужих строк файла. */
-    private byte[] gitattributes(Optional<byte[]> existing) {
-        if (existing.isEmpty()) {
+    /** Правило слияния ставится, не затирая чужих строк файла; файла нет — {@code existing} {@code null}. */
+    private byte[] gitattributes(byte[] existing) {
+        if (existing == null) {
             return gitattributes;
         }
-        String text = new String(existing.get(), StandardCharsets.UTF_8);
+        String text = new String(existing, StandardCharsets.UTF_8);
         String rule = new String(gitattributes, StandardCharsets.UTF_8).lines()
                 .filter(l -> !l.isBlank() && !l.startsWith("#")).findFirst().orElseThrow();
         if (text.lines().anyMatch(l -> l.strip().equals(rule))) {
-            return existing.get();
+            return existing;
         }
         return (text + (text.isEmpty() || text.endsWith("\n") ? "" : "\n") + rule + "\n")
                 .getBytes(StandardCharsets.UTF_8);

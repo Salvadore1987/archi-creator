@@ -95,7 +95,7 @@ class ExportJobTest {
 
     private static ExportJob job(ExportFormat format, long version) {
         return ExportJob.request(ExportJobId.next(UUIDS), new WorkspaceId(IDS.generate()),
-                new ModelId(IDS.generate()), Optional.empty(), format, ExportOptions.none(), version,
+                new ModelId(IDS.generate()), null, format, ExportOptions.none(), version,
                 "architect", NOW);
     }
 

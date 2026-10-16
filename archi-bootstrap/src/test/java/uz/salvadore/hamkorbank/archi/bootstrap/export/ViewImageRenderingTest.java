@@ -41,8 +41,8 @@ class ViewImageRenderingTest {
         assertThat(NOTATION.layer("application").fill()).isEqualTo("#E3F2FD");
         assertThat(NOTATION.value("paper")).isEqualTo("#FAF9F5");
         assertThat(NOTATION.icons()).containsKey("i-component");
-        NOTATION.shapes().values().forEach(entry -> entry.icon()
-                .ifPresent(icon -> assertThat(NOTATION.icons()).containsKey(icon.spriteId())));
+        NOTATION.shapes().values().stream().filter(entry -> entry.icon() != null)
+                .forEach(entry -> assertThat(NOTATION.icons()).containsKey(entry.icon().spriteId()));
     }
 
     @Test

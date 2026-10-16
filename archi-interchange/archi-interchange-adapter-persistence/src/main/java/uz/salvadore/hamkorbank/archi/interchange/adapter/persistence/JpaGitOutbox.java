@@ -117,7 +117,7 @@ public class JpaGitOutbox implements GitOutbox {
         Object[] r = (Object[]) row;
         return new Entry((UUID) r[0], new WorkspaceId(uuid(r[1])), new ModelId(uuid(r[2])),
                 ((Number) r[3]).longValue(), Status.valueOf((String) r[4]), ((Number) r[5]).intValue(),
-                Optional.ofNullable(r[6]).map(JpaGitOutbox::instant));
+                r[6] == null ? null : instant(r[6]));
     }
 
     private static UUID uuid(Object value) {

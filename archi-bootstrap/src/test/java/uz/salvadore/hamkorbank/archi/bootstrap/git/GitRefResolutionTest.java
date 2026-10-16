@@ -61,7 +61,7 @@ class GitRefResolutionTest {
         }
         repository = new JGitRepository(temp.resolve("cache"), "oauth2", Duration.ofSeconds(10));
         remote = new Remote(new WorkspaceId(Generators.timeBasedEpochGenerator().generate()), bare.toUri().toString(),
-                "main", Optional.empty());
+                "main", null);
     }
 
     @Test
@@ -109,7 +109,7 @@ class GitRefResolutionTest {
     @DisplayName("FR-38: недоступный репозиторий — Unreachable, а не «не найдено»")
     void unreachableRepositoryIsReported() {
         Remote missing = new Remote(remote.workspace(), temp.resolve("missing.git").toUri().toString(), "main",
-                Optional.empty());
+                null);
 
         assertThatThrownBy(() -> repository.resolve(missing, GitRef.of("main")))
                 .isInstanceOf(GitRepositoryPort.Unreachable.class);

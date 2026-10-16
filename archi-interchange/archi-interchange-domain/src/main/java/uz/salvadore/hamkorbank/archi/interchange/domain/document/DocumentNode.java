@@ -37,7 +37,7 @@ public record DocumentNode(String tag, DocumentOrder order, Attributes attribute
                 .orElseThrow(() -> new InvalidValueException(InterchangeMessages.NODE_ID_MISSING, tag)));
         ContentOrder.requireDense(content);
         for (DocumentContent item : content) {
-            if (item instanceof RawXmlFragment raw && !raw.parentArchiId().equals(Optional.of(id))) {
+            if (item instanceof RawXmlFragment raw && !id.equals(raw.parentArchiId())) {
                 throw new InvalidValueException(InterchangeMessages.FRAGMENT_MISADDRESSED, id, raw.parentArchiId());
             }
         }
@@ -75,6 +75,6 @@ public record DocumentNode(String tag, DocumentOrder order, Attributes attribute
 
     /** Текст первого {@code <documentation>} узла. */
     public Optional<String> documentation() {
-        return values("documentation").stream().findFirst().flatMap(DocumentValue::text);
+        return values("documentation").stream().findFirst().map(DocumentValue::text);
     }
 }

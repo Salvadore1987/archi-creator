@@ -3,7 +3,6 @@ package uz.salvadore.hamkorbank.archi.interchange.application.rendering;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.Box;
@@ -58,16 +57,13 @@ final class RenderingFixtures {
     static final Notation NOTATION = new Notation(new Size(120, 55),
             Map.of("archimate:Group", new Size(400, 140), "archimate:Note", new Size(185, 80)),
             Map.of("archimate:ApplicationComponent", new ShapeEntry("rect",
-                            Optional.of(new CornerIcon("i-component", -21, 6, 14)), Optional.of(NAME), "node_radius",
-                            Optional.of("application"), Optional.empty()),
-                    "archimate:Node", new ShapeEntry("rect", Optional.empty(), Optional.of(NAME), "node_radius",
-                            Optional.of("technology"), Optional.empty()),
-                    "archimate:Group", new ShapeEntry("tab", Optional.empty(), Optional.of(new Box(10, 3, -20, 18)),
-                            "node_radius", Optional.of("group"), Optional.empty()),
-                    "archimate:Note", new ShapeEntry("dog-ear", Optional.empty(), Optional.of(new Box(9, 7, -18, -14)),
-                            "node_radius", Optional.of("note"), Optional.empty())),
-            new ShapeEntry("stub", Optional.empty(), Optional.of(NAME), "node_radius", Optional.empty(),
-                    Optional.of("5 3")),
+                            new CornerIcon("i-component", -21, 6, 14), NAME, "node_radius", "application", null),
+                    "archimate:Node", new ShapeEntry("rect", null, NAME, "node_radius", "technology", null),
+                    "archimate:Group", new ShapeEntry("tab", null, new Box(10, 3, -20, 18), "node_radius", "group",
+                            null),
+                    "archimate:Note", new ShapeEntry("dog-ear", null, new Box(9, 7, -18, -14), "node_radius",
+                            "note", null)),
+            new ShapeEntry("stub", null, NAME, "node_radius", null, "5 3"),
             Map.of("application", new LayerPaint("#E3F2FD", "#4A90C2"),
                     "technology", new LayerPaint("#E6F7EC", "#3E9B62"),
                     "motivation", new LayerPaint("#EDE7F6", "#7E57C2"),

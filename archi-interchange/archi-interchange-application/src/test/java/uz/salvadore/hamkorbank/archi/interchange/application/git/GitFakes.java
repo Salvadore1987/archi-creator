@@ -137,7 +137,7 @@ final class GitFakes {
 
         @Override
         public Current current(EditorIdentity actor, ModelId m) {
-            return new Current(workspace, "Ландшафт", Optional.of(state.lastVersionNo()), state.xml());
+            return new Current(workspace, "Ландшафт", state.lastVersionNo(), state.xml());
         }
 
         @Override
@@ -235,7 +235,7 @@ final class GitFakes {
                     .filter(r -> statuses.get(r.id()).equals("PENDING") || statuses.get(r.id()).equals("DIVERGED"))
                     .min(java.util.Comparator.comparingLong(Row::versionNo))
                     .map(r -> new Entry(r.id(), r.workspace(), r.model(), r.versionNo(),
-                            Status.valueOf(statuses.get(r.id())), 0, Optional.empty()));
+                            Status.valueOf(statuses.get(r.id())), 0, null));
         }
 
         /** Голова очереди модели встала на расхождении. */
@@ -472,7 +472,7 @@ final class GitFakes {
         }
 
         @Override
-        public PushResult push(Remote remote, Optional<GitSha> parent, CommitRequest request) {
+        public PushResult push(Remote remote, GitSha parent, CommitRequest request) {
             throw new UnsupportedOperationException();
         }
     }

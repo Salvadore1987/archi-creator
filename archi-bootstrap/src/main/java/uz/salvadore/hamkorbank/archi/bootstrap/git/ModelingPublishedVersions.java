@@ -21,7 +21,7 @@ public final class ModelingPublishedVersions implements PublishedVersions {
     public Optional<Version> version(ModelId model, long versionNo) {
         return versions.committed(modeling(model), versionNo).map(c -> new Version(
                 new WorkspaceId(c.model().workspaceId().value()), c.model().name(), c.version().versionNo(),
-                c.version().author(), Optional.ofNullable(c.version().comment()), c.version().createdAt(),
+                c.version().author(), c.version().comment(), c.version().createdAt(),
                 c.version().contentHash(),
                 c.xml()));
     }
