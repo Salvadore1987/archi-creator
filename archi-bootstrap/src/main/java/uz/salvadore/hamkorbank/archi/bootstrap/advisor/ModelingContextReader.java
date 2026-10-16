@@ -23,7 +23,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
@@ -54,7 +54,7 @@ public final class ModelingContextReader implements ModelContextReader {
         try {
             opened = models.openWithPlacements(editor(requester),
                     uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId.value()));
-        } catch (ModelingException hidden) {
+        } catch (ModelingDomainException hidden) {
             // Нет модели или она скрыта списком доступа — для помощника одно и то же.
             throw AdvisorException.notFound(Message.of(AdvisorMessages.MODEL, modelId));
         }

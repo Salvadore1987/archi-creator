@@ -11,7 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Models;
@@ -36,9 +36,9 @@ class ModelAccessListTest {
         assertFalse(acl.permits(auditor, AclAccess.WRITE));
         assertTrue(acl.permits(admin, AclAccess.WRITE), "ADMIN — независимо от списка");
 
-        assertEquals(Failure.NOT_FOUND, assertThrows(ModelingException.class,
+        assertEquals(Failure.NOT_FOUND, assertThrows(ModelingDomainException.class,
                 () -> acl.require(stranger, AclAccess.READ)).failure(), "существование модели не раскрывается");
-        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingException.class,
+        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> acl.require(auditor, AclAccess.WRITE)).failure());
         assertTrue(ModelAccessList.open(MODEL).permits(stranger, AclAccess.WRITE), "пустой список — одни роли");
     }
@@ -48,7 +48,7 @@ class ModelAccessListTest {
     void onlyAdminOrAuthorManagesList() {
         ModelAccessList.requireManager(EditorIdentity.of("author", Role.ARCHITECT), "author");
         ModelAccessList.requireManager(EditorIdentity.of("root", Role.ADMIN), "author");
-        assertThrows(ModelingException.class,
+        assertThrows(ModelingDomainException.class,
                 () -> ModelAccessList.requireManager(EditorIdentity.of("ivan", Role.ARCHITECT), "author"));
     }
 }

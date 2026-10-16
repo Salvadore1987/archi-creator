@@ -9,7 +9,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommitted;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
@@ -96,11 +96,11 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
      */
     public ModelVersion snapshotPurged(boolean gitBound) {
         if (!gitBound || gitSha.isEmpty()) {
-            throw new ModelingException(INVARIANT, Failure.CONFLICT,
+            throw new ModelingDomainException(INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.SNAPSHOT_ONLY_COPY, versionNo));
         }
         if (label.isPresent()) {
-            throw new ModelingException(INVARIANT, Failure.CONFLICT,
+            throw new ModelingDomainException(INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.SNAPSHOT_LABELLED, versionNo));
         }
         return new ModelVersion(id, modelId, versionNo, author, comment, label, createdAt, Optional.empty(),
@@ -114,7 +114,7 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
      */
     public ModelVersion publishedAs(String sha) {
         if (gitSha.isPresent() && !gitSha.get().equals(sha)) {
-            throw new ModelingException(INVARIANT, Failure.CONFLICT,
+            throw new ModelingDomainException(INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.VERSION_ALREADY_PUBLISHED, versionNo, gitSha.get()));
         }
         return new ModelVersion(id, modelId, versionNo, author, comment, label, createdAt, snapshot, contentHash,
@@ -135,13 +135,13 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
     /** Снимок на месте; пусто — очищен, и восстановить его без Git неоткуда ({@code 410}). */
     public byte[] requireSnapshot() {
         return snapshot.map(bytes -> Arrays.copyOf(bytes, bytes.length))
-                .orElseThrow(() -> new ModelingException(ModelingCodes.SNAPSHOT_PURGED, Failure.GONE,
+                .orElseThrow(() -> new ModelingDomainException(ModelingCodes.SNAPSHOT_PURGED, Failure.GONE,
                         Message.of(ModelingMessages.SNAPSHOT_PURGED, versionNo)));
     }
 
     private static void requireLength(String value, int max, String fieldKey) {
         if (value.length() > max) {
-            throw ModelingException.invalid(Message.of(ModelingMessages.TOO_LONG, Message.of(fieldKey), max));
+            throw ModelingDomainException.invalid(Message.of(ModelingMessages.TOO_LONG, Message.of(fieldKey), max));
         }
     }
 

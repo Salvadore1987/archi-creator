@@ -1,27 +1,18 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.common;
 
-import java.util.Objects;
-
 /**
  * Значение не проходит правило типа: пустое имя, отрицательный размер, неверный
- * формат идентификатора. Остаётся {@link IllegalArgumentException}, чтобы место
- * перехвата не менялось, но вместо текста несёт сообщение с ключом.
+ * формат идентификатора. Отказ неверного ввода — тот же код, что у неразборчивого запроса.
  */
-public final class InvalidValueException extends IllegalArgumentException {
+public final class InvalidValueException extends ModelingDomainException {
 
-    private final Message reason;
-
+    /** Отказ с причиной-сообщением. */
     public InvalidValueException(Message reason) {
-        super(Objects.requireNonNull(reason, "reason").toString());
-        this.reason = reason;
+        super(ModelingCodes.INVALID_INPUT, Failure.UNPROCESSABLE, reason);
     }
 
+    /** Отказ с причиной по ключу и аргументам. */
     public InvalidValueException(String key, Object... args) {
         this(Message.of(key, args));
-    }
-
-    /** Почему значение отклонено — сообщение с ключом для перевода на границе. */
-    public Message reason() {
-        return reason;
     }
 }

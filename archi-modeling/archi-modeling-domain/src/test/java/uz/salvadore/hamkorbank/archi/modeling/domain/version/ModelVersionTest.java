@@ -8,7 +8,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommitted;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Models;
@@ -61,10 +61,10 @@ class ModelVersionTest {
         ModelVersion first = version(Optional.empty());
         assertArrayEquals(new byte[] {1, 2, 3}, first.requireSnapshot());
 
-        assertThrows(ModelingException.class, () -> first.snapshotPurged(false), "без Git снимок не чистится");
+        assertThrows(ModelingDomainException.class, () -> first.snapshotPurged(false), "без Git снимок не чистится");
         ModelVersion bound = new ModelVersion(first.id(), MODEL, 1, "a", Optional.empty(), Optional.empty(),
                 first.createdAt(), first.snapshot(), HASH, Optional.of("b".repeat(40)));
-        ModelingException gone = assertThrows(ModelingException.class,
+        ModelingDomainException gone = assertThrows(ModelingDomainException.class,
                 () -> bound.snapshotPurged(true).requireSnapshot());
         assertEquals(Failure.GONE, gone.failure());
     }

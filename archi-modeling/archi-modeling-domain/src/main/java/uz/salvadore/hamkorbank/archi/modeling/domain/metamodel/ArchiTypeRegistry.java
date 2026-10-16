@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
@@ -55,7 +56,7 @@ public final class ArchiTypeRegistry {
     public Optional<ConceptDefinition> findByXsiType(String xsiType) {
         try {
             return find(ArchiType.of(xsiType));
-        } catch (IllegalArgumentException notArchiNotation) {
+        } catch (InvalidValueException notArchiNotation) {
             return Optional.empty();
         }
     }

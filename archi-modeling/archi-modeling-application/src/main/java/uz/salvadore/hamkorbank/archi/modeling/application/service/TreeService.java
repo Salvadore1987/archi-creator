@@ -7,7 +7,7 @@ import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
@@ -79,7 +79,7 @@ public final class TreeService {
                 model.renameView(view.id(), name, kernel.now());
                 kernel.views.save(view);
             } else {
-                throw ModelingException.notFound(Message.of(ModelingMessages.OBJECT_IN_MODEL, itemId));
+                throw ModelingDomainException.notFound(Message.of(ModelingMessages.OBJECT_IN_MODEL, itemId));
             }
             kernel.save(model);
             return null;
@@ -121,7 +121,7 @@ public final class TreeService {
                 } else if (model.folders().contains(FolderId.of(id))) {
                     folders.add(id);
                 } else {
-                    throw ModelingException.notFound(Message.of(ModelingMessages.OBJECT_IN_MODEL, id));
+                    throw ModelingDomainException.notFound(Message.of(ModelingMessages.OBJECT_IN_MODEL, id));
                 }
             }
             elementIds.forEach(id -> elements.deleteIn(model, ElementId.of(id)));

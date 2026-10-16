@@ -10,7 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelDeleted;
 
@@ -21,7 +21,7 @@ class ArchitectureModelStateMachineTest {
     void onlyAllowedTransitionsArePermitted() {
         ArchitectureModel model = Models.empty();
 
-        ModelingException directPurge = assertThrows(ModelingException.class, () -> model.purge(NOW));
+        ModelingDomainException directPurge = assertThrows(ModelingDomainException.class, () -> model.purge(NOW));
         assertEquals("INV-MDL-002", directPurge.code());
         assertEquals(ModelStatus.ACTIVE, model.status());
 
@@ -35,7 +35,7 @@ class ArchitectureModelStateMachineTest {
         model.delete(ARCHITECT, NOW);
         model.purge(NOW);
         assertEquals(ModelStatus.PURGED, model.status());
-        assertThrows(ModelingException.class, () -> model.restoreDeleted(NOW), "PURGED терминален");
+        assertThrows(ModelingDomainException.class, () -> model.restoreDeleted(NOW), "PURGED терминален");
     }
 
     @Test
@@ -44,7 +44,7 @@ class ArchitectureModelStateMachineTest {
         ArchitectureModel model = Models.empty();
         model.delete(ARCHITECT, NOW);
 
-        ModelingException rejected = assertThrows(ModelingException.class,
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
                 () -> Models.element(model, "BusinessActor", FolderType.BUSINESS, "Клиент"));
 
         assertEquals("INV-MDL-002", rejected.code());
@@ -56,7 +56,7 @@ class ArchitectureModelStateMachineTest {
     void transitionRefusalIsTranslatable() {
         ArchitectureModel model = Models.empty();
 
-        ModelingException refused = assertThrows(ModelingException.class, () -> model.purge(Models.NOW));
+        ModelingDomainException refused = assertThrows(ModelingDomainException.class, () -> model.purge(Models.NOW));
 
         assertEquals(List.of(Message.of(ModelingMessages.COMMAND_PURGE_MODEL),
                         Message.of(ModelingMessages.STATUS_ACTIVE), Message.of(ModelingMessages.STATUS_PURGED)),

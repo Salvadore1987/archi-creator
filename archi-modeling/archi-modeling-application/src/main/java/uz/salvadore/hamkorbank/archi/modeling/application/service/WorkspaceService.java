@@ -7,7 +7,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.Workspace;
@@ -42,7 +42,7 @@ public final class WorkspaceService {
      */
     public WorkspaceId resolve(Optional<WorkspaceId> requested) {
         return requested.orElseGet(() -> unitOfWork.read(workspaces::first)
-                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.ANY_WORKSPACE))).id());
+                .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.ANY_WORKSPACE))).id());
     }
 
     /**

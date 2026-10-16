@@ -37,7 +37,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
@@ -143,7 +143,7 @@ final class GitFakes {
         @Override
         public Replaced replace(EditorIdentity actor, ModelId m, byte[] xml, String comment) {
             if (!state.locked()) {
-                throw new ModelingException(ModelingCodes.LOCK_REQUIRED, Failure.CONFLICT,
+                throw new ModelingDomainException(ModelingCodes.LOCK_REQUIRED, Failure.CONFLICT,
                         Message.of(ModelingMessages.LOCK_NOT_HELD, m.value()));
             }
             if (Arrays.equals(state.xml(), xml)) {

@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.AccessType;
@@ -106,25 +106,30 @@ class ClientIdsScenariosTest {
         ViewNode node = ports.viewService.place(ALICE, view.id(), component.id(), new Bounds(10, 10, 120, 55),
                 Optional.empty());
 
-        ModelingException sameId = assertThrows(ModelingException.class, () -> ports.elements.create(ALICE, model,
+        ModelingDomainException sameId = assertThrows(ModelingDomainException.class,
+                () -> ports.elements.create(ALICE, model,
                 COMPONENT, "CRM", Optional.empty(), RequestedIds.of(component.id().value(), null), Optional.empty()));
         assertEquals("MDL_ID_TAKEN", sameId.code());
         assertEquals(Failure.CONFLICT, sameId.failure());
 
-        ModelingException idOfNode = assertThrows(ModelingException.class, () -> ports.viewService.create(ALICE,
+        ModelingDomainException idOfNode = assertThrows(ModelingDomainException.class,
+                () -> ports.viewService.create(ALICE,
                 model, "Другое", Optional.empty(), RequestedIds.of(node.id().value(), null), Optional.empty()));
         assertEquals("MDL_ID_TAKEN", idOfNode.code(), "ключ узла тоже занят");
 
-        ModelingException sameArchiId = assertThrows(ModelingException.class, () -> ports.elements.create(ALICE,
+        ModelingDomainException sameArchiId = assertThrows(ModelingDomainException.class,
+                () -> ports.elements.create(ALICE,
                 model, COMPONENT, "CRM", Optional.empty(), RequestedIds.of(null, "id-abs"), Optional.empty()));
         assertEquals("MDL_ID_TAKEN", sameArchiId.code());
 
-        ModelingException archiIdOfNode = assertThrows(ModelingException.class, () -> ports.elements.create(ALICE,
+        ModelingDomainException archiIdOfNode = assertThrows(ModelingDomainException.class,
+                () -> ports.elements.create(ALICE,
                 model, COMPONENT, "CRM", Optional.empty(), RequestedIds.of(null, node.archiId().value()),
                 Optional.empty()));
         assertEquals("MDL_ID_TAKEN", archiIdOfNode.code(), "archiId узла на представлении — тоже занят в файле");
 
-        ModelingException invalid = assertThrows(ModelingException.class, () -> ports.elements.create(ALICE, model,
+        ModelingDomainException invalid = assertThrows(ModelingDomainException.class,
+                () -> ports.elements.create(ALICE, model,
                 COMPONENT, "CRM", Optional.empty(), RequestedIds.of(null, "не id"), Optional.empty()));
         assertEquals(ModelingCodes.INVALID_INPUT, invalid.code());
         assertEquals(Failure.UNPROCESSABLE, invalid.failure());
@@ -141,7 +146,8 @@ class ClientIdsScenariosTest {
                 RequestedIds.of(elementId, "id-abs"), Optional.of("k-1"));
 
         assertEquals(first.id(), replay.id());
-        ModelingException otherBody = assertThrows(ModelingException.class, () -> ports.elements.create(ALICE,
+        ModelingDomainException otherBody = assertThrows(ModelingDomainException.class,
+                () -> ports.elements.create(ALICE,
                 model, COMPONENT, "АБС", Optional.empty(), RequestedIds.of(IDS.generate(), "id-abs"),
                 Optional.of("k-1")));
         assertEquals("INV-MDL-003", otherBody.code(), "другие id — другое тело команды");
@@ -199,12 +205,14 @@ class ClientIdsScenariosTest {
         ViewNode a = ports.viewService.place(ALICE, view.id(), actor.id(), new Bounds(300, 10, 120, 55),
                 Optional.empty());
 
-        ModelingException reversed = assertThrows(ModelingException.class, () -> ports.viewService.placeEdge(ALICE,
+        ModelingDomainException reversed = assertThrows(ModelingDomainException.class,
+                () -> ports.viewService.placeEdge(ALICE,
                 view.id(), serving.id(), a.id().value(), c.id().value(), List.of(), RequestedIds.NONE));
         assertEquals("INV-MDL-008", reversed.code());
         assertEquals(Failure.UNPROCESSABLE, reversed.failure());
 
-        ModelingException foreign = assertThrows(ModelingException.class, () -> ports.viewService.placeEdge(ALICE,
+        ModelingDomainException foreign = assertThrows(ModelingDomainException.class,
+                () -> ports.viewService.placeEdge(ALICE,
                 view.id(), serving.id(), IDS.generate(), a.id().value(), List.of(), RequestedIds.NONE));
         assertEquals("INV-MDL-008", foreign.code(), "конец не на этом представлении");
     }
@@ -234,7 +242,8 @@ class ClientIdsScenariosTest {
         assertEquals(relations.id(), association.folderId());
         assertEquals(Optional.of(true), association.directed());
 
-        ModelingException wrongAttribute = assertThrows(ModelingException.class, () -> ports.relationships.create(
+        ModelingDomainException wrongAttribute = assertThrows(ModelingDomainException.class,
+                () -> ports.relationships.create(
                 ALICE, model, SERVING, component.id().value(), actor.id().value(),
                 new RelationshipService.Details(Optional.empty(), Optional.empty(), Optional.of(AccessType.READ),
                         Optional.empty(), RequestedIds.NONE),
@@ -242,7 +251,8 @@ class ClientIdsScenariosTest {
         assertEquals(Failure.UNPROCESSABLE, wrongAttribute.failure());
 
         ModelFolder application = ports.models.get(model).roots().get(FolderType.APPLICATION);
-        ModelingException wrongFolder = assertThrows(ModelingException.class, () -> ports.relationships.create(
+        ModelingDomainException wrongFolder = assertThrows(ModelingDomainException.class,
+                () -> ports.relationships.create(
                 ALICE, model, SERVING, component.id().value(), actor.id().value(),
                 new RelationshipService.Details(Optional.empty(), Optional.of(application.id()), Optional.empty(),
                         Optional.empty(), RequestedIds.NONE),

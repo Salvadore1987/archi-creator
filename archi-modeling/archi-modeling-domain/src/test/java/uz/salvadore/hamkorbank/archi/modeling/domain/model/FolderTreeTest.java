@@ -12,7 +12,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
@@ -25,7 +25,7 @@ class FolderTreeTest {
 
         assertEquals(List.of(FolderType.values()), List.copyOf(model.roots().keySet()));
         assertEquals("Technology & Physical", model.roots().get(FolderType.TECHNOLOGY).name());
-        ModelingException rootDeletion = assertThrows(ModelingException.class,
+        ModelingDomainException rootDeletion = assertThrows(ModelingDomainException.class,
                 () -> model.removeFolder(Models.root(model, FolderType.OTHER), NOW));
         assertEquals("INV-MDL-009", rootDeletion.code());
     }
@@ -54,7 +54,7 @@ class FolderTreeTest {
                 Models.archiId(), NOW);
         ModelFolder core = model.createFolder(masters.id(), "Ядро", FolderId.next(UUIDS), Models.archiId(), NOW);
 
-        ModelingException cycle = assertThrows(ModelingException.class,
+        ModelingDomainException cycle = assertThrows(ModelingDomainException.class,
                 () -> model.moveToFolder(core.id(), List.of(masters.id().value()), Instant.now()));
 
         assertEquals("INV-MDL-009", cycle.code());
@@ -67,7 +67,7 @@ class FolderTreeTest {
         ArchitectureModel model = Models.empty();
         Element actor = Models.element(model, "BusinessActor", FolderType.BUSINESS, "Клиент");
 
-        ModelingException rejected = assertThrows(ModelingException.class, () -> model.moveToFolder(
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class, () -> model.moveToFolder(
                 Models.root(model, FolderType.APPLICATION), List.of(actor.id().value()), NOW));
 
         assertEquals("INV-MDL-009", rejected.code());
@@ -83,7 +83,7 @@ class FolderTreeTest {
                 List.of(Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС").id().value()),
                 NOW);
 
-        ModelingException notEmpty = assertThrows(ModelingException.class,
+        ModelingDomainException notEmpty = assertThrows(ModelingDomainException.class,
                 () -> model.removeFolder(masters.id(), NOW));
 
         assertEquals(ModelingCodes.FOLDER_NOT_EMPTY, notEmpty.code());
@@ -100,7 +100,7 @@ class FolderTreeTest {
         Element actor = Models.element(model, "BusinessActor", FolderType.BUSINESS, "Клиент");
         model.markPersisted();
 
-        assertThrows(ModelingException.class, () -> model.moveToFolder(target.id(),
+        assertThrows(ModelingDomainException.class, () -> model.moveToFolder(target.id(),
                 List.of(component.id().value(), actor.id().value()), NOW));
 
         assertEquals(application, model.elements().get(component.id()).orElseThrow().folderId());

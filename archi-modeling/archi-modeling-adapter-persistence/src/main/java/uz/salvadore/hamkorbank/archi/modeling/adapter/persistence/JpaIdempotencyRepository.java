@@ -8,7 +8,7 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.Idempot
 import uz.salvadore.hamkorbank.archi.modeling.application.port.IdempotencyRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotencyRecord;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
@@ -46,7 +46,7 @@ public class JpaIdempotencyRepository implements IdempotencyRepository {
             em.persist(entity);
             em.flush();
         } catch (PersistenceException e) {
-            throw new ModelingException(IdempotentCommand.INVARIANT, Failure.CONFLICT,
+            throw new ModelingDomainException(IdempotentCommand.INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.IDEMPOTENT_IN_PROGRESS));
         }
     }

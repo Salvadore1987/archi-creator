@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.MetamodelCatalog;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ConceptDefinition;
@@ -67,7 +68,7 @@ public final class ArchimateMetamodelCatalog implements MetamodelCatalog {
         try {
             ArchiType type = ArchiType.of(value);
             return matrix.knows(type) ? Optional.of(type) : Optional.empty();
-        } catch (IllegalArgumentException invalid) {
+        } catch (InvalidValueException invalid) {
             return Optional.empty();
         }
     }

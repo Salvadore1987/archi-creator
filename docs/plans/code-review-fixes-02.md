@@ -66,7 +66,9 @@
 | B3 | То же: interchange, advisor | то же правило без исключений | ⬜ |
 | B4 | Корни агрегатов → `AggregateRoot`, создание фабрикой (record-агрегаты `ModelLock`, `ModelVersion`, `ModelAccessList` — в классы с `restore`) | ArchUnit: корни наследуют `AggregateRoot`, публичных конструкторов нет | ⬜ |
 | B5 | События → `{Aggregate}{Action}Event`, базовый `{Aggregate}Event` | ArchUnit: реализации `DomainEvent` оканчиваются на `Event` | ⬜ |
-| B6 | Исключения домена → `{Ctx}DomainException`; `RelationNotPermittedException` в общей иерархии | ArchUnit: исключения домена наследуют корень контекста | ⬜ |
+| B6a | Исключения домена modeling → `DomainException` / `ModelingDomainException`; `InvalidValueException`, `RelationNotPermittedException` в общей иерархии | ArchUnit: исключения домена наследуют корень контекста | ✅ |
+| B6b | То же: interchange | правило расширено на interchange | ⬜ |
+| B6c | То же: advisor | правило расширено на advisor | ⬜ |
 
 ### Часть C. `Optional` только в результате поиска и внутри методов (D-18)
 
@@ -109,6 +111,13 @@
   round-trip не страдает. Риск: строка, записанная раньше через API с другим числом,
   при чтении из базы теперь откажет. Из Archi приходят только 1, 2, 4; если такая строка
   найдётся — миграция переносит значение в остаток.
+- **B6a.** `InvalidValueException` перестал быть `IllegalArgumentException`: пять мест ловили
+  IAE ради доменного значения (`ArchiTypeRegistry.findByXsiType` — на этом держится импорт
+  незнакомой нотации, `ArchiId.of`, `ArchiType.of`, `AclEntry`, каталог метамодели помощника) —
+  теперь ловят `InvalidValueException` явно. Обёртки в контроллере ради перевода отказа
+  (`bounds`, `style`, граф разметки из A2) убраны: доменный отказ сам доходит до обработчика
+  как `422 MDL_INVALID_INPUT`. Отдельные ветки `RelationNotPermittedException` в обработчике
+  и `ErrorCodes` не нужны — перечень допустимых связей уходит в `details`.
 
 ## Отменённые варианты
 

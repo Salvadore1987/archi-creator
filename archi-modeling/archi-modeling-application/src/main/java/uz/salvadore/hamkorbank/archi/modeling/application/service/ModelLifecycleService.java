@@ -7,7 +7,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceReposito
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
@@ -40,7 +40,7 @@ public final class ModelLifecycleService {
                         IdempotentCommand.fingerprint(workspaceId, name),
                         () -> {
                             workspaces.find(workspaceId)
-                                    .orElseThrow(() -> ModelingException.notFound(
+                                    .orElseThrow(() -> ModelingDomainException.notFound(
                                             Message.of(ModelingMessages.WORKSPACE, workspaceId)));
                             ArchitectureModel model = ArchitectureModel.create(ModelId.next(kernel.uuids), workspaceId,
                                     kernel.archiIds.next(), name, actor, kernel.now(),

@@ -8,7 +8,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
@@ -150,11 +150,11 @@ public final class ViewService {
         Bounds bounds = bounds(request);
         if (request.kind() == ViewNodeKind.DIAGRAM_OBJECT) {
             ElementId elementId = request.elementId().orElseThrow(() ->
-                    ModelingException.invalid(Message.of(ModelingMessages.FIELD_MISSING, ELEMENT_ID)));
+                    ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_MISSING, ELEMENT_ID)));
             return place(actor, viewId, elementId, bounds, request.parentId(), request.ids());
         }
         if (request.elementId().isPresent()) {
-            throw ModelingException.invalid(Message.of(ModelingMessages.FIELD_NOT_FOR_KIND, ELEMENT_ID,
+            throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_NOT_FOR_KIND, ELEMENT_ID,
                     request.kind()));
         }
         return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
@@ -169,11 +169,7 @@ public final class ViewService {
     }
 
     private static Bounds bounds(NewNode request) {
-        try {
-            return Bounds.ofNew(request.kind(), request.x(), request.y(), request.width(), request.height());
-        } catch (IllegalArgumentException invalid) {
-            throw ModelingException.invalid(invalid);
-        }
+        return Bounds.ofNew(request.kind(), request.x(), request.y(), request.width(), request.height());
     }
 
     /** Вложить узел в контейнер или вынести в корень; координаты — относительно нового родителя. */
@@ -229,7 +225,7 @@ public final class ViewService {
     public LayoutProposal proposeLayout(EditorIdentity actor, ViewId viewId, Optional<String> strategyName,
                                         LayoutGraph graph) {
         LayoutStrategy strategy = strategyName.map(name -> LayoutStrategy.named(name).orElseThrow(() ->
-                ModelingException.invalid(Message.of(ModelingMessages.LAYOUT_STRATEGY_REQUESTED, name))))
+                ModelingDomainException.invalid(Message.of(ModelingMessages.LAYOUT_STRATEGY_REQUESTED, name))))
                 .orElse(LayoutStrategy.LAYERED);
         return kernel.run(Operation.AUTO_LAYOUT_VIEW, actor, () -> kernel.unitOfWork.read(() -> {
             View view = loadView(viewId);
@@ -240,12 +236,12 @@ public final class ViewService {
 
     private View viewOf(ViewNodeId nodeId) {
         return loadView(kernel.views.viewOfNode(nodeId)
-                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW_NODE, nodeId))));
+                .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.VIEW_NODE, nodeId))));
     }
 
     private View viewOf(ViewEdgeId edgeId) {
         return loadView(kernel.views.viewOfEdge(edgeId)
-                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW_EDGE, edgeId))));
+                .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.VIEW_EDGE, edgeId))));
     }
 
     /** Убрать узел с представления; элемент остаётся в модели. */
@@ -273,6 +269,6 @@ public final class ViewService {
 
     private View loadView(ViewId viewId) {
         return kernel.views.load(viewId)
-                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW, viewId)));
+                .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.VIEW, viewId)));
     }
 }

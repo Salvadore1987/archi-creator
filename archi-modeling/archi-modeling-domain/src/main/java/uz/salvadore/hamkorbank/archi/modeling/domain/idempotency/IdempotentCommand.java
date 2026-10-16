@@ -9,7 +9,7 @@ import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
@@ -42,14 +42,14 @@ public final class IdempotentCommand {
     /**
      * Решение по команде: выполнить заново или отдать первый результат.
      *
-     * @throws ModelingException ключ уже использован с другим отпечатком тела
+     * @throws ModelingDomainException ключ уже использован с другим отпечатком тела
      */
     public static Decision decide(Optional<IdempotencyRecord> existing, String fingerprint) {
         if (existing.isEmpty()) {
             return new Execute();
         }
         if (!existing.get().fingerprint().equals(fingerprint)) {
-            throw new ModelingException(INVARIANT, Failure.CONFLICT,
+            throw new ModelingDomainException(INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.IDEMPOTENCY_KEY_REUSED),
                     Map.of("idempotencyKey", existing.get().key()));
         }
@@ -83,7 +83,7 @@ public final class IdempotentCommand {
     /** Проверка ключа идемпотентности: не пустой и не длиннее предела. */
     public static void requireValidKey(String key) {
         if (key == null || key.isBlank() || key.length() > IdempotencyRecord.KEY_MAX) {
-            throw ModelingException.invalid(
+            throw ModelingDomainException.invalid(
                     Message.of(ModelingMessages.IDEMPOTENCY_KEY_INVALID, IdempotencyRecord.KEY_MAX));
         }
     }

@@ -37,7 +37,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.service.RequestedIds;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
@@ -97,7 +97,7 @@ public class ViewController {
     public ResponseEntity<Void> layout(EditorIdentity actor, @PathVariable UUID id, @RequestBody LayoutPatch patch) {
         Map<ViewNodeId, Bounds> nodes = new LinkedHashMap<>();
         Optional.ofNullable(patch.nodes()).orElse(List.of()).forEach(n -> nodes.put(ViewNodeId.of(n.id()),
-                bounds(n.x(), n.y(), n.width(), n.height())));
+                new Bounds(n.x(), n.y(), n.width(), n.height())));
         Map<ViewEdgeId, List<Bendpoint>> edges = new LinkedHashMap<>();
         Optional.ofNullable(patch.edges()).orElse(List.of())
                 .forEach(e -> edges.put(ViewEdgeId.of(e.id()), bendpoints(e.bendpoints())));
@@ -167,7 +167,7 @@ public class ViewController {
     public ResponseEntity<ViewEdgeDto> placeEdge(EditorIdentity actor, @PathVariable UUID id,
                                                  @RequestBody PlaceEdgeRequest request) {
         if (request.relationshipId() == null || request.sourceId() == null || request.targetId() == null) {
-            throw ModelingException.invalid(Message.of(ModelingMessages.FIELDS_MISSING, EDGE_FIELDS));
+            throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELDS_MISSING, EDGE_FIELDS));
         }
         ArchitectureModel.Created<ViewEdge> edge = views.placeEdge(actor, ViewId.of(id),
                 RelationshipId.of(request.relationshipId()),
@@ -191,27 +191,23 @@ public class ViewController {
 
     private static LayoutGraph layoutGraph(AutoLayoutRequest request) {
         if (request.nodes() == null) {
-            throw ModelingException.invalid(Message.of(ModelingMessages.FIELD_MISSING, LAYOUT_NODES));
+            throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_MISSING, LAYOUT_NODES));
         }
         List<LayoutGraph.Node> nodes = request.nodes().stream().map(n -> {
             if (n.id() == null) {
-                throw ModelingException.invalid(Message.of(ModelingMessages.FIELD_MISSING, LAYOUT_NODE_ID));
+                throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_MISSING, LAYOUT_NODE_ID));
             }
             return new LayoutGraph.Node(n.id(), Optional.ofNullable(n.parentId()),
                     Optional.ofNullable(n.conceptType()).map(ContentController::archiType),
-                    bounds(n.x(), n.y(), n.width(), n.height()));
+                    new Bounds(n.x(), n.y(), n.width(), n.height()));
         }).toList();
         List<LayoutGraph.Edge> edges = Optional.ofNullable(request.edges()).orElse(List.of()).stream().map(e -> {
             if (e.id() == null || e.sourceId() == null || e.targetId() == null) {
-                throw ModelingException.invalid(Message.of(ModelingMessages.FIELDS_MISSING, LAYOUT_EDGE_FIELDS));
+                throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELDS_MISSING, LAYOUT_EDGE_FIELDS));
             }
             return new LayoutGraph.Edge(e.id(), e.sourceId(), e.targetId());
         }).toList();
-        try {
-            return new LayoutGraph(nodes, edges);
-        } catch (IllegalArgumentException invalid) {
-            throw ModelingException.invalid(invalid);
-        }
+        return new LayoutGraph(nodes, edges);
     }
 
     /** Вид узла по имени из контракта; нет — узел элемента. */
@@ -222,25 +218,13 @@ public class ViewController {
         try {
             return ViewNodeKind.valueOf(value);
         } catch (IllegalArgumentException unknown) {
-            throw ModelingException.invalid(Message.of(ModelingMessages.NODE_KIND_REQUESTED, value));
+            throw ModelingDomainException.invalid(Message.of(ModelingMessages.NODE_KIND_REQUESTED, value));
         }
     }
 
     private static StyleOverride style(StyleDto dto) {
-        try {
-            return new StyleOverride(Optional.ofNullable(dto.fillColor()), Optional.ofNullable(dto.font()),
-                    Optional.ofNullable(dto.fontColor()), Optional.ofNullable(dto.lineColor()),
-                    Optional.ofNullable(dto.textAlignment()));
-        } catch (IllegalArgumentException invalid) {
-            throw ModelingException.invalid(invalid);
-        }
-    }
-
-    private static Bounds bounds(int x, int y, int width, int height) {
-        try {
-            return new Bounds(x, y, width, height);
-        } catch (IllegalArgumentException invalid) {
-            throw ModelingException.invalid(invalid);
-        }
+        return new StyleOverride(Optional.ofNullable(dto.fillColor()), Optional.ofNullable(dto.font()),
+                Optional.ofNullable(dto.fontColor()), Optional.ofNullable(dto.lineColor()),
+                Optional.ofNullable(dto.textAlignment()));
     }
 }

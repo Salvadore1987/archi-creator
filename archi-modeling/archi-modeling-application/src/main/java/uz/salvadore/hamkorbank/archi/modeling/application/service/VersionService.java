@@ -15,7 +15,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
@@ -166,12 +166,12 @@ public final class VersionService {
         return kernel.unitOfWork.read(() -> {
             ModelHeader header = kernel.visibleHeader(modelId, actor, AclAccess.READ);
             if (header.status() != ModelStatus.ACTIVE) {
-                throw new ModelingException(MODEL_DELETED, Failure.CONFLICT,
+                throw new ModelingDomainException(MODEL_DELETED, Failure.CONFLICT,
                         Message.of(ModelingMessages.MODEL_DELETED));
             }
             ModelVersion version = versionNo.map(no -> requireVersion(modelId, no))
                     .orElseGet(() -> kernel.versions.last(modelId)
-                            .orElseThrow(() -> ModelingException.notFound(
+                            .orElseThrow(() -> ModelingDomainException.notFound(
                                     Message.of(ModelingMessages.MODEL_VERSION, modelId))));
             return new VersionSnapshot(header, version.versionNo(), content(header, version));
         });
@@ -244,7 +244,7 @@ public final class VersionService {
 
     private ModelVersion requireVersion(ModelId modelId, long versionNo) {
         return kernel.versions.find(modelId, versionNo)
-                .orElseThrow(() -> ModelingException.notFound(
+                .orElseThrow(() -> ModelingDomainException.notFound(
                         Message.of(ModelingMessages.VERSION_OF_MODEL, versionNo, modelId)));
     }
 }

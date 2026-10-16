@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderType;
@@ -49,9 +49,9 @@ class ViewEditingTest {
 
         ViewNode back = view.moveToParent(dbms.id(), Optional.empty(), 700, 40);
         assertEquals(Optional.empty(), back.parentId());
-        assertEquals("INV-MDL-008", assertThrows(ModelingException.class,
+        assertEquals("INV-MDL-008", assertThrows(ModelingDomainException.class,
                 () -> view.moveToParent(server.id(), Optional.of(inside.id()), 0, 0)).code(), "контейнер внутри себя");
-        assertEquals("INV-MDL-008", assertThrows(ModelingException.class,
+        assertEquals("INV-MDL-008", assertThrows(ModelingDomainException.class,
                 () -> view.moveToParent(server.id(), Optional.of(server.id()), 0, 0)).code());
 
         ViewNode same = view.moveToParent(inside.id(), Optional.of(server.id()), 30, 30);
@@ -76,12 +76,12 @@ class ViewEditingTest {
         assertEquals(new Bounds(20, 20, 185, 80), note.bounds());
         assertEquals(Optional.of(group.id()), note.parentId());
 
-        assertEquals("MDL_INVALID_INPUT", assertThrows(ModelingException.class, () -> view.placeAnnotation(
+        assertEquals("MDL_INVALID_INPUT", assertThrows(ModelingDomainException.class, () -> view.placeAnnotation(
                 ViewNodeKind.DIAGRAM_OBJECT, Optional.empty(), Optional.empty(), BOX, Optional.empty(),
                 ViewNodeId.next(UUIDS), Models.archiId())).code(), "без элемента — только группа и заметка");
-        assertEquals("MDL_INVALID_INPUT", assertThrows(ModelingException.class, () -> view.editNode(note.id(),
+        assertEquals("MDL_INVALID_INPUT", assertThrows(ModelingDomainException.class, () -> view.editNode(note.id(),
                 Optional.of("Подпись"), Optional.empty(), Optional.empty())).code(), "у заметки нет подписи");
-        assertEquals("INV-MDL-008", assertThrows(ModelingException.class, () -> view.placeAnnotation(
+        assertEquals("INV-MDL-008", assertThrows(ModelingDomainException.class, () -> view.placeAnnotation(
                 ViewNodeKind.NOTE, Optional.empty(), Optional.empty(), BOX, Optional.of(note.id()),
                 ViewNodeId.next(UUIDS), Models.archiId())).code(), "заметка не контейнер");
 
@@ -136,7 +136,7 @@ class ViewEditingTest {
         assertEquals(0, view.edges().size(), "ребро к удалённому ребру уходит вместе с ним");
         assertEquals(3, view.nodes().size());
         assertTrue(model.relationships().contains(serving.id()));
-        assertThrows(ModelingException.class, () -> view.removeEdge(edge.id()));
+        assertThrows(ModelingDomainException.class, () -> view.removeEdge(edge.id()));
     }
 
     @Test
@@ -150,7 +150,7 @@ class ViewEditingTest {
         layout.put(node.id(), new Bounds(400, 40, 120, 55));
         layout.put(ViewNodeId.next(UUIDS), new Bounds(0, 0, 120, 55));
 
-        assertThrows(ModelingException.class, () -> view.applyLayout(layout, Map.of()));
+        assertThrows(ModelingDomainException.class, () -> view.applyLayout(layout, Map.of()));
 
         assertEquals(BOX, view.requireNode(node.id()).bounds());
         assertFalse(view.nodes().changed(), "отклонённая разметка ничего не оставила для записи");

@@ -14,7 +14,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 
 class IdempotentCommandTest {
 
@@ -30,7 +30,8 @@ class IdempotentCommandTest {
         assertEquals(first, replay);
         assertEquals(List.of(1L), versions, "вторая версия не создана");
 
-        ModelingException conflict = assertThrows(ModelingException.class, () -> save("key-1", "другое тело"));
+        ModelingDomainException conflict = assertThrows(ModelingDomainException.class,
+                () -> save("key-1", "другое тело"));
         assertEquals("INV-MDL-003", conflict.code());
         assertEquals(Failure.CONFLICT, conflict.failure());
         assertEquals(List.of(1L), versions);

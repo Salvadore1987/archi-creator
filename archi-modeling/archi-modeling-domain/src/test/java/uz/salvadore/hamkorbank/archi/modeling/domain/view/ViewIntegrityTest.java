@@ -12,7 +12,8 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
@@ -32,14 +33,14 @@ class ViewIntegrityTest {
         Element foreign = Models.element(other, "BusinessActor", FolderType.BUSINESS, "Клиент");
         View view = newView(model);
 
-        ModelingException rejected = assertThrows(ModelingException.class, () -> view.placeElement(model,
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class, () -> view.placeElement(model,
                 foreign.id(), BOX, Optional.empty(), ViewNodeId.next(UUIDS), Models.archiId()));
         assertEquals("INV-MDL-008", rejected.code());
 
-        assertThrows(IllegalArgumentException.class, () -> new ViewNode(ViewNodeId.next(UUIDS), Optional.empty(),
+        assertThrows(InvalidValueException.class, () -> new ViewNode(ViewNodeId.next(UUIDS), Optional.empty(),
                 Models.archiId(), DiagramType.DIAGRAM_OBJECT, Optional.empty(), BOX, StyleOverride.NONE,
                 SortOrder.ofPosition(0), Optional.empty()), "DIAGRAM_OBJECT без элемента");
-        assertThrows(IllegalArgumentException.class, () -> new ViewNode(ViewNodeId.next(UUIDS), Optional.empty(),
+        assertThrows(InvalidValueException.class, () -> new ViewNode(ViewNodeId.next(UUIDS), Optional.empty(),
                 Models.archiId(), DiagramType.GROUP, Optional.of(foreign.id()), BOX, StyleOverride.NONE,
                 SortOrder.ofPosition(0), Optional.empty()), "у группы элемента нет");
     }
@@ -97,7 +98,7 @@ class ViewIntegrityTest {
         ViewNode a = view.placeElement(model, actor.id(), new Bounds(300, 10, 120, 55), Optional.empty(),
                 ViewNodeId.next(UUIDS), Models.archiId()).value();
 
-        assertThrows(ModelingException.class, () -> view.connect(model, serving.id(), a.id(), c.id(),
+        assertThrows(ModelingDomainException.class, () -> view.connect(model, serving.id(), a.id(), c.id(),
                 ViewEdgeId.next(UUIDS), Models.archiId()), "ребро наоборот не изображает связь");
 
         ViewEdge edge = view.connect(model, serving.id(), c.id(), a.id(), ViewEdgeId.next(UUIDS),
@@ -116,7 +117,7 @@ class ViewIntegrityTest {
         ViewNode group = new ViewNode(ViewNodeId.next(UUIDS), Optional.empty(), view.archiId(), DiagramType.GROUP,
                 Optional.empty(), BOX, StyleOverride.NONE, SortOrder.ofPosition(0), Optional.empty());
 
-        ModelingException rejected = assertThrows(ModelingException.class,
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
                 () -> View.imported(view.header(), List.of(group), List.of(), model));
         assertEquals("INV-MDL-001", rejected.code());
     }

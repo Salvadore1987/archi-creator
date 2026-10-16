@@ -20,7 +20,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
@@ -163,7 +163,7 @@ public final class ArchitectureModel {
                 .flatMap(s -> s)
                 .forEach(archi -> {
                     if (!seen.add(archi)) {
-                        throw new ModelingException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.UNPROCESSABLE,
+                        throw new ModelingDomainException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.UNPROCESSABLE,
                                 Message.of(ModelingMessages.ARCHI_ID_REPEATED, archi));
                     }
                 });
@@ -177,7 +177,7 @@ public final class ArchitectureModel {
         }
         rootCount.forEach((type, count) -> {
             if (count > 1) {
-                throw new ModelingException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
+                throw new ModelingDomainException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
                         Message.of(ModelingMessages.ROOT_FOLDER_REPEATED, type.fileValue(), count));
             }
         });
@@ -210,7 +210,7 @@ public final class ArchitectureModel {
 
     private void transition(ModelStatus from, ModelStatus to, Message command, Instant now) {
         if (status != from) {
-            throw new ModelingException(ModelingCodes.LIFECYCLE, Failure.UNPROCESSABLE,
+            throw new ModelingDomainException(ModelingCodes.LIFECYCLE, Failure.UNPROCESSABLE,
                     Message.of(ModelingMessages.TRANSITION_NOT_ALLOWED, command, status.label(), to.label()));
         }
         status = to;
@@ -220,7 +220,7 @@ public final class ArchitectureModel {
     /** В {@code DELETED} любая команда изменения содержимого отклоняется. */
     public void requireActive() {
         if (status != ModelStatus.ACTIVE) {
-            throw new ModelingException(ModelingCodes.LIFECYCLE, Failure.CONFLICT,
+            throw new ModelingDomainException(ModelingCodes.LIFECYCLE, Failure.CONFLICT,
                     Message.of(ModelingMessages.MODEL_NOT_ACTIVE, status.label()));
         }
     }
@@ -276,11 +276,11 @@ public final class ArchitectureModel {
         requireActive();
         ModelFolder folder = requireFolder(folderId);
         if (folder.root()) {
-            throw new ModelingException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
+            throw new ModelingDomainException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
                     Message.of(ModelingMessages.ROOT_FOLDER_UNDELETABLE, folder.name()));
         }
         if (!childOrders(folderId).isEmpty()) {
-            throw new ModelingException(ModelingCodes.FOLDER_NOT_EMPTY, Failure.CONFLICT,
+            throw new ModelingDomainException(ModelingCodes.FOLDER_NOT_EMPTY, Failure.CONFLICT,
                     Message.of(ModelingMessages.FOLDER_NOT_EMPTY, folder.name()));
         }
         folders.remove(folderId);
@@ -333,11 +333,11 @@ public final class ArchitectureModel {
         if (folders.contains(FolderId.of(itemId))) {
             ModelFolder folder = requireFolder(FolderId.of(itemId));
             if (folder.root()) {
-                throw new ModelingException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
+                throw new ModelingDomainException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
                         Message.of(ModelingMessages.ROOT_FOLDER_UNMOVABLE, folder.name()));
             }
             if (isWithin(targetId, folder.id())) {
-                throw new ModelingException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
+                throw new ModelingDomainException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
                         Message.of(ModelingMessages.FOLDER_INTO_ITSELF, folder.name()));
             }
             requireSameRoot(folder.id(), targetRoot, Message.of(ModelingMessages.FOLDER, folder.name()));
@@ -352,14 +352,14 @@ public final class ArchitectureModel {
             ViewRef view = views.get(ViewId.of(itemId));
             requireSameRoot(view.folderId(), targetRoot, Message.of(ModelingMessages.VIEW, view.name()));
         } else {
-            throw ModelingException.notFound(Message.of(ModelingMessages.OBJECT_IN_MODEL, itemId));
+            throw ModelingDomainException.notFound(Message.of(ModelingMessages.OBJECT_IN_MODEL, itemId));
         }
     }
 
     private void requireSameRoot(FolderId current, FolderType targetRoot, Message what) {
         FolderType currentRoot = rootOf(requireFolder(current)).folderType().orElseThrow();
         if (currentRoot != targetRoot) {
-            throw new ModelingException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
+            throw new ModelingDomainException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
                     Message.of(ModelingMessages.WRONG_ROOT, what, currentRoot.fileValue(), targetRoot.fileValue()));
         }
     }
@@ -375,9 +375,10 @@ public final class ArchitectureModel {
         requireActive();
         ConceptDefinition concept = REGISTRY.find(archiType)
                 .filter(c -> c.kind() == ConceptKind.ELEMENT || c.kind() == ConceptKind.JUNCTION)
-                .orElseThrow(() -> ModelingException.invalid(Message.of(ModelingMessages.NOT_ELEMENT_TYPE, archiType)));
+                .orElseThrow(() -> ModelingDomainException.invalid(
+                        Message.of(ModelingMessages.NOT_ELEMENT_TYPE, archiType)));
         if (!concept.supported()) {
-            throw new ModelingException(ModelingCodes.TYPE_NOT_EDITABLE, Failure.UNPROCESSABLE,
+            throw new ModelingDomainException(ModelingCodes.TYPE_NOT_EDITABLE, Failure.UNPROCESSABLE,
                     Message.of(ModelingMessages.TYPE_NOT_EDITABLE, archiType));
         }
         requireSameRoot(folderId, FolderType.forLayer(concept.layer()),
@@ -441,13 +442,13 @@ public final class ArchitectureModel {
                                                  RelationshipId newId, ArchiId newArchiId, Instant now) {
         requireActive();
         RelationshipType type = RelationshipType.fromArchiType(archiType)
-                .orElseThrow(() -> ModelingException.invalid(
+                .orElseThrow(() -> ModelingDomainException.invalid(
                         Message.of(ModelingMessages.NOT_RELATIONSHIP_TYPE, archiType)));
         if (accessType.isPresent() && type != RelationshipType.ACCESS) {
-            throw ModelingException.invalid(Message.of(ModelingMessages.ACCESS_TYPE_MISPLACED, archiType));
+            throw ModelingDomainException.invalid(Message.of(ModelingMessages.ACCESS_TYPE_MISPLACED, archiType));
         }
         if (directed.isPresent() && type != RelationshipType.ASSOCIATION) {
-            throw ModelingException.invalid(Message.of(ModelingMessages.DIRECTED_MISPLACED, archiType));
+            throw ModelingDomainException.invalid(Message.of(ModelingMessages.DIRECTED_MISPLACED, archiType));
         }
         ArchiType sourceType = conceptType(source);
         ArchiType targetType = conceptType(target);
@@ -499,7 +500,7 @@ public final class ArchitectureModel {
     private void requireNoRelationshipsTouching(ConceptRef concept, Message what) {
         List<Relationship> touching = relationships.values().stream().filter(r -> r.touches(concept)).toList();
         if (!touching.isEmpty()) {
-            throw new ModelingException(ModelingCodes.RELATIONSHIP_ENDS, Failure.CONFLICT,
+            throw new ModelingDomainException(ModelingCodes.RELATIONSHIP_ENDS, Failure.CONFLICT,
                     Message.of(ModelingMessages.HAS_RELATIONSHIPS, what, touching.size()),
                     Map.of("relationships", touching.stream().map(r -> r.id().toString()).toList()));
         }
@@ -534,7 +535,7 @@ public final class ArchitectureModel {
     public void renameView(ViewId viewId, String newName, Instant now) {
         requireActive();
         ViewRef view = view(viewId)
-                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW, viewId)));
+                .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.VIEW, viewId)));
         views.put(viewId, new ViewRef(view.id(), view.folderId(), view.archiId(), view.archiType(),
                 Names.limited(newName, Names.VIEW), view.sortOrder()));
         touch(now);
@@ -545,20 +546,20 @@ public final class ArchitectureModel {
     /** Папка этой модели; чужая или несуществующая — отказ. */
     public ModelFolder requireFolder(FolderId folderId) {
         return folders.get(folderId)
-                .orElseThrow(() -> new ModelingException(ModelingCodes.NOT_FOUND, Failure.UNPROCESSABLE,
+                .orElseThrow(() -> new ModelingDomainException(ModelingCodes.NOT_FOUND, Failure.UNPROCESSABLE,
                         Message.of(ModelingMessages.FOLDER_OF_OTHER_MODEL, folderId, id)));
     }
 
     /** Элемент этой модели; нет такого — «не найдено». */
     public Element requireElement(ElementId elementId) {
         return elements.get(elementId)
-                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.ELEMENT, elementId)));
+                .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.ELEMENT, elementId)));
     }
 
     /** Связь этой модели; нет такой — «не найдено». */
     public Relationship requireRelationship(RelationshipId relationshipId) {
         return relationships.get(relationshipId)
-                .orElseThrow(() -> ModelingException.notFound(
+                .orElseThrow(() -> ModelingDomainException.notFound(
                         Message.of(ModelingMessages.RELATIONSHIP, relationshipId)));
     }
 
@@ -577,14 +578,14 @@ public final class ArchitectureModel {
             case RelationshipId r -> relationships.contains(r);
         };
         if (!present) {
-            throw new ModelingException(ModelingCodes.RELATIONSHIP_ENDS, Failure.UNPROCESSABLE,
+            throw new ModelingDomainException(ModelingCodes.RELATIONSHIP_ENDS, Failure.UNPROCESSABLE,
                     Message.of(ModelingMessages.END_OF_OTHER_MODEL, concept.value(), id));
         }
     }
 
     private static void requireEditable(boolean supported, ArchiType archiType) {
         if (!supported) {
-            throw new ModelingException(ModelingCodes.TYPE_NOT_EDITABLE, Failure.UNPROCESSABLE,
+            throw new ModelingDomainException(ModelingCodes.TYPE_NOT_EDITABLE, Failure.UNPROCESSABLE,
                     Message.of(ModelingMessages.OPAQUE_NOT_EDITABLE, archiType));
         }
     }
@@ -592,7 +593,7 @@ public final class ArchitectureModel {
     /** {@code archiId} не повторяется в модели. */
     public void requireFreeArchiId(ArchiId candidate) {
         if (archiIdTaken(candidate)) {
-            throw new ModelingException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.CONFLICT,
+            throw new ModelingDomainException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.CONFLICT,
                     Message.of(ModelingMessages.ARCHI_ID_TAKEN, candidate, id));
         }
     }
@@ -623,7 +624,7 @@ public final class ArchitectureModel {
         Set<FolderId> visited = new HashSet<>();
         while (current.parentId().isPresent()) {
             if (!visited.add(current.id())) {
-                throw new ModelingException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
+                throw new ModelingDomainException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
                         Message.of(ModelingMessages.FOLDER_CYCLE, current.archiId()));
             }
             current = requireFolder(current.parentId().get());

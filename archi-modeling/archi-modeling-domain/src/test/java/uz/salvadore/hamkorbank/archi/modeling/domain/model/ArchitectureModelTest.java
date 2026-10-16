@@ -13,7 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationNotPermittedException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.DiagramType;
@@ -27,7 +27,7 @@ class ArchitectureModelTest {
         ArchitectureModel model = Models.empty();
         Element first = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
 
-        ModelingException taken = assertThrows(ModelingException.class, () -> model.addElement(
+        ModelingDomainException taken = assertThrows(ModelingDomainException.class, () -> model.addElement(
                 ArchiType.ofSimpleName("ApplicationComponent"), "Двойник", Models.root(model, FolderType.APPLICATION),
                 ElementId.next(UUIDS), first.archiId(), NOW));
 
@@ -54,7 +54,7 @@ class ArchitectureModelTest {
     void elementOutsideItsLayerFolderIsRejected() {
         ArchitectureModel model = Models.empty();
 
-        ModelingException wrongFolder = assertThrows(ModelingException.class,
+        ModelingDomainException wrongFolder = assertThrows(ModelingDomainException.class,
                 () -> Models.element(model, "BusinessActor", FolderType.APPLICATION, "Клиент"));
 
         assertEquals("INV-MDL-009", wrongFolder.code());
@@ -65,7 +65,7 @@ class ArchitectureModelTest {
     void phaseThreeTypeIsNotCreatable() {
         ArchitectureModel model = Models.empty();
 
-        ModelingException phase3 = assertThrows(ModelingException.class,
+        ModelingDomainException phase3 = assertThrows(ModelingDomainException.class,
                 () -> Models.element(model, "WorkPackage", FolderType.IMPLEMENTATION_MIGRATION, "Внедрение СМП"));
 
         assertEquals(ModelingCodes.TYPE_NOT_EDITABLE, phase3.code());
@@ -123,7 +123,7 @@ class ArchitectureModelTest {
         Relationship association = Models.relate(model, "AssociationRelationship", component.id(), serving.id());
 
         assertEquals(serving.id(), association.target());
-        ModelingException blocked = assertThrows(ModelingException.class,
+        ModelingDomainException blocked = assertThrows(ModelingDomainException.class,
                 () -> model.removeRelationship(serving.id(), NOW));
         assertEquals("INV-MDL-004", blocked.code());
     }
@@ -135,14 +135,14 @@ class ArchitectureModelTest {
         ViewRef view = model.placeNewView(ViewId.next(UUIDS), DiagramType.DIAGRAM_MODEL, "Контекст",
                 Models.root(model, FolderType.DIAGRAMS), Models.archiId(), NOW);
 
-        assertThrows(ModelingException.class, () -> model.renameView(view.id(), "x".repeat(Names.MAX + 1), NOW));
-        assertThrows(ModelingException.class, () -> new ViewRef(view.id(), view.folderId(), view.archiId(),
+        assertThrows(ModelingDomainException.class, () -> model.renameView(view.id(), "x".repeat(Names.MAX + 1), NOW));
+        assertThrows(ModelingDomainException.class, () -> new ViewRef(view.id(), view.folderId(), view.archiId(),
                 view.archiType(), "x".repeat(Names.MAX + 1), view.sortOrder()));
 
         model.renameView(view.id(), "Ландшафт", NOW);
         assertEquals("Ландшафт", model.view(view.id()).orElseThrow().name());
 
         model.delete(Models.ARCHITECT, NOW);
-        assertThrows(ModelingException.class, () -> model.renameView(view.id(), "Другое", NOW));
+        assertThrows(ModelingDomainException.class, () -> model.renameView(view.id(), "Другое", NOW));
     }
 }

@@ -7,7 +7,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 
 /** Пространство запроса по правилу modeling: заданное или первое по умолчанию. */
 public final class ModelingWorkspaceDirectory implements WorkspaceDirectory {
@@ -23,7 +23,7 @@ public final class ModelingWorkspaceDirectory implements WorkspaceDirectory {
         try {
             return WorkspaceId.of(workspaces.resolve(requested.map(w ->
                     uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId.of(w.value()))).value());
-        } catch (ModelingException missing) {
+        } catch (ModelingDomainException missing) {
             throw AdvisorException.notFound(Message.of(AdvisorMessages.WORKSPACE, requested.map(Object::toString)
                     .orElse("")));
         }

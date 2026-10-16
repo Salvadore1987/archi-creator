@@ -8,7 +8,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelLockReleased;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
@@ -30,7 +30,7 @@ public final class LockService {
         return kernel.run(Operation.ACQUIRE_LOCK, actor, () -> kernel.unitOfWork.write(() -> {
             ModelHeader header = kernel.visibleHeader(modelId, actor, AclAccess.WRITE);
             if (header.status() != ModelStatus.ACTIVE) {
-                throw new ModelingException(ModelingCodes.LIFECYCLE, Failure.CONFLICT,
+                throw new ModelingDomainException(ModelingCodes.LIFECYCLE, Failure.CONFLICT,
                         Message.of(ModelingMessages.DELETED_NOT_EDITABLE));
             }
             Optional<ModelLock> current = kernel.locks.find(modelId);

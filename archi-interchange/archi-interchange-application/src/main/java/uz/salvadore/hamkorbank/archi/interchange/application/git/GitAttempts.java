@@ -44,7 +44,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.importing.Severity;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 
 /**
  * Общее у сценариев, которые приносят состояние модели из Git новой версией, — импорта
@@ -160,7 +160,7 @@ final class GitAttempts {
     void recordFailure(ImportSession attempt, RuntimeException failure) {
         String code = switch (failure) {
             case InterchangeException e -> e.code();
-            case ModelingException e -> e.code();
+            case ModelingDomainException e -> e.code();
             default -> InterchangeCodes.GIT_IMPORT;
         };
         ImportRequest request = new ImportRequest(attempt.workspaceId(), attempt.targetModelId(),

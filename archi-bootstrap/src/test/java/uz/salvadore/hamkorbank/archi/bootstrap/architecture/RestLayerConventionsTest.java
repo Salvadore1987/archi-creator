@@ -24,7 +24,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 
 /**
  * Устройство REST-слоя: контроллер принимает запрос и вызывает сценарий,
@@ -107,7 +107,7 @@ class RestLayerConventionsTest {
                 .should().callConstructorWhere(target(owner(CONTEXT_FAILURE)))
                 .because("какой формат поддержан, что недоступно, какое правило нарушено — решения сценария; "
                         + "контроллер разбирает запрос и вызывает один сценарий. Для неразборчивого ввода "
-                        + "есть ModelingException.invalid(...)");
+                        + "есть ModelingDomainException.invalid(...)");
 
         rule.check(classes);
     }
@@ -116,7 +116,7 @@ class RestLayerConventionsTest {
     @DisplayName("контроллер не ищет объекты сам: «не найдено» отвечает сценарий")
     void controllersDoNotResolveObjects() {
         ArchRule rule = noClasses().that(CONTROLLER)
-                .should().callMethodWhere(target(owner(type(ModelingException.class)))
+                .should().callMethodWhere(target(owner(type(ModelingDomainException.class)))
                         .and(target(name("notFound"))))
                 .because("выбор объекта по умолчанию и отказ «не найдено» — решение сценария, "
                         + "а не HTTP-адаптера");

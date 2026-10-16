@@ -3,7 +3,7 @@ package uz.salvadore.hamkorbank.archi.modeling.application.port;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
@@ -13,7 +13,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
  *
  * @param what что изменено — сообщение с подписью объекта
  */
-public final class ConcurrentModificationException extends ModelingException {
+public final class ConcurrentModificationException extends ModelingDomainException {
 
     public ConcurrentModificationException(Message what) {
         super(ModelingCodes.LOCK_REQUIRED, Failure.CONFLICT,

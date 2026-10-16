@@ -1,7 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /** Пределы имён — одинаковые для модели, папки, элемента, связи и представления. */
@@ -27,7 +27,7 @@ public final class Names {
     /** Имя, которое не может быть пустым: модель, новая папка. */
     public static String required(String name, Message what) {
         if (name == null || name.isBlank()) {
-            throw ModelingException.invalid(Message.of(ModelingMessages.NAME_EMPTY, what));
+            throw ModelingDomainException.invalid(Message.of(ModelingMessages.NAME_EMPTY, what));
         }
         return limited(name, what);
     }
@@ -35,10 +35,10 @@ public final class Names {
     /** Имя, которое бывает пустым: у Junction в файле его нет вовсе. */
     public static String limited(String name, Message what) {
         if (name == null) {
-            throw ModelingException.invalid(Message.of(ModelingMessages.NAME_MISSING, what));
+            throw ModelingDomainException.invalid(Message.of(ModelingMessages.NAME_MISSING, what));
         }
         if (name.length() > MAX) {
-            throw ModelingException.invalid(Message.of(ModelingMessages.NAME_TOO_LONG, what, MAX));
+            throw ModelingDomainException.invalid(Message.of(ModelingMessages.NAME_TOO_LONG, what, MAX));
         }
         return name;
     }

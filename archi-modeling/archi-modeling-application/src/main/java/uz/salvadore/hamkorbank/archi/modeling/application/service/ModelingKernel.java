@@ -25,9 +25,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiIdGenerator;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotencyRecord;
@@ -97,7 +98,7 @@ public final class ModelingKernel {
     /** Заголовок модели, видимой автору с данным уровнем доступа. */
     ModelHeader visibleHeader(ModelId modelId, EditorIdentity actor, AclAccess access) {
         ModelHeader header = models.findHeader(modelId)
-                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.MODEL, modelId)));
+                .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.MODEL, modelId)));
         accessLists.find(modelId).require(actor, access);
         return header;
     }
@@ -105,7 +106,7 @@ public final class ModelingKernel {
     ArchitectureModel visibleModel(ModelId modelId, EditorIdentity actor, AclAccess access) {
         visibleHeader(modelId, actor, access);
         return models.load(modelId)
-                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.MODEL, modelId)));
+                .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.MODEL, modelId)));
     }
 
     /**
@@ -132,7 +133,7 @@ public final class ModelingKernel {
     UUID newId(RequestedIds requested) {
         requested.id().ifPresent(id -> {
             if (models.idTaken(id)) {
-                throw new ModelingException(ModelingCodes.ID_TAKEN, Failure.CONFLICT,
+                throw new ModelingDomainException(ModelingCodes.ID_TAKEN, Failure.CONFLICT,
                         Message.of(ModelingMessages.ID_TAKEN, id));
             }
         });
@@ -158,12 +159,12 @@ public final class ModelingKernel {
         ArchiId candidate;
         try {
             candidate = ArchiId.of(value);
-        } catch (IllegalArgumentException invalid) {
-            throw ModelingException.invalid(Message.of(ModelingMessages.ARCHI_ID_REQUESTED_INVALID, value));
+        } catch (InvalidValueException invalid) {
+            throw ModelingDomainException.invalid(Message.of(ModelingMessages.ARCHI_ID_REQUESTED_INVALID, value));
         }
         if (model.archiIdTaken(candidate) || view.filter(v -> v.archiIdTaken(candidate)).isPresent()
                 || models.diagramArchiIdTaken(model.id(), candidate)) {
-            throw new ModelingException(ModelingCodes.ID_TAKEN, Failure.CONFLICT,
+            throw new ModelingDomainException(ModelingCodes.ID_TAKEN, Failure.CONFLICT,
                     Message.of(ModelingMessages.ARCHI_ID_TAKEN, candidate, model.id()));
         }
         return candidate;

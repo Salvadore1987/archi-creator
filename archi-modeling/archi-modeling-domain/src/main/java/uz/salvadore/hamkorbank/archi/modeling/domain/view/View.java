@@ -14,7 +14,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
@@ -114,7 +114,7 @@ public final class View {
         seen.add(archiId);
         for (ViewNode node : nodes.values()) {
             if (!seen.add(node.archiId())) {
-                throw new ModelingException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.UNPROCESSABLE,
+                throw new ModelingDomainException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.UNPROCESSABLE,
                         Message.of(ModelingMessages.ARCHI_ID_REPEATED_ON_VIEW, node.archiId(), archiId));
             }
             node.elementId().ifPresent(element -> requireElementOf(model, element, node.archiId()));
@@ -127,7 +127,7 @@ public final class View {
         }
         for (ViewEdge edge : edges.values()) {
             if (!seen.add(edge.archiId())) {
-                throw new ModelingException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.UNPROCESSABLE,
+                throw new ModelingDomainException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.UNPROCESSABLE,
                         Message.of(ModelingMessages.ARCHI_ID_REPEATED_ON_VIEW, edge.archiId(), archiId));
             }
             requireEndpoint(edge.source(), edge.archiId());
@@ -172,7 +172,7 @@ public final class View {
                                     ArchiId newArchiId) {
         requireEditable();
         if (kind != ViewNodeKind.GROUP && kind != ViewNodeKind.NOTE) {
-            throw new ModelingException(ModelingCodes.INVALID_INPUT, Failure.UNPROCESSABLE,
+            throw new ModelingDomainException(ModelingCodes.INVALID_INPUT, Failure.UNPROCESSABLE,
                     Message.of(ModelingMessages.NODE_NOT_ANNOTATION, kind));
         }
         parentId.ifPresent(this::requireContainer);
@@ -212,8 +212,8 @@ public final class View {
         }
     }
 
-    private static ModelingException notApplicable(ViewNode node, String field) {
-        return new ModelingException(ModelingCodes.INVALID_INPUT, Failure.UNPROCESSABLE,
+    private static ModelingDomainException notApplicable(ViewNode node, String field) {
+        return new ModelingDomainException(ModelingCodes.INVALID_INPUT, Failure.UNPROCESSABLE,
                 Message.of(ModelingMessages.NODE_TEXT_NOT_APPLICABLE, node.archiId(), node.kind(), field));
     }
 
@@ -404,7 +404,7 @@ public final class View {
 
     private void requireEditable() {
         if (!archiType.equals(DiagramType.DIAGRAM_MODEL)) {
-            throw new ModelingException(ModelingCodes.TYPE_NOT_EDITABLE, Failure.UNPROCESSABLE,
+            throw new ModelingDomainException(ModelingCodes.TYPE_NOT_EDITABLE, Failure.UNPROCESSABLE,
                     Message.of(ModelingMessages.VIEW_NOT_EDITABLE, archiType));
         }
     }
@@ -447,18 +447,18 @@ public final class View {
     /** Узел этого представления; нет такого — «не найдено». */
     public ViewNode requireNode(ViewNodeId nodeId) {
         return nodes.get(nodeId)
-                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW_NODE, nodeId)));
+                .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.VIEW_NODE, nodeId)));
     }
 
     /** Ребро этого представления; нет такого — «не найдено». */
     public ViewEdge requireEdge(ViewEdgeId edgeId) {
         return edges.get(edgeId)
-                .orElseThrow(() -> ModelingException.notFound(Message.of(ModelingMessages.VIEW_EDGE, edgeId)));
+                .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.VIEW_EDGE, edgeId)));
     }
 
     private void requireFreeArchiId(ArchiId candidate) {
         if (archiIdTaken(candidate)) {
-            throw new ModelingException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.CONFLICT,
+            throw new ModelingDomainException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.CONFLICT,
                     Message.of(ModelingMessages.ARCHI_ID_TAKEN_ON_VIEW, candidate, archiId));
         }
     }
@@ -504,8 +504,8 @@ public final class View {
         return nodes.values().stream().filter(n -> n.parentId().equals(parent)).map(ViewNode::sortOrder).toList();
     }
 
-    private static ModelingException integrity(Message reason) {
-        return new ModelingException(ModelingCodes.VIEW_REFERENCE, Failure.UNPROCESSABLE, reason);
+    private static ModelingDomainException integrity(Message reason) {
+        return new ModelingDomainException(ModelingCodes.VIEW_REFERENCE, Failure.UNPROCESSABLE, reason);
     }
 
     // ── Состояние ───────────────────────────────────────────────────

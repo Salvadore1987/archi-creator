@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.architecture;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.codeUnits;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
@@ -21,6 +22,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
@@ -35,6 +37,8 @@ class CodingRulesTest {
 
     private static final String ROOT = "uz.salvadore.hamkorbank.archi";
     private static final String JPA = "jakarta.persistence.";
+    /** Контексты, исключения домена которых уже сведены под общий корень. */
+    private static final List<String> DOMAIN_EXCEPTION_ROOTS = List.of("modeling");
     private static final String TRACKED_MAP = ROOT + ".modeling.domain.common.TrackedMap";
     /** Агрегаты, которые держат свои сущности в {@code TrackedMap}, и сам класс. */
     private static final Set<String> TRACKED_OWNERS = Set.of(TRACKED_MAP,
@@ -132,6 +136,20 @@ class CodingRulesTest {
                 }
             }
         };
+    }
+
+    @Test
+    @DisplayName("Исключения домена наследуют DomainException своего контекста")
+    void domainExceptionsShareContextRoot() {
+        for (String context : DOMAIN_EXCEPTION_ROOTS) {
+            String root = ROOT + "." + context + ".domain.common.DomainException";
+            classes().that().resideInAPackage(ROOT + "." + context + ".domain..")
+                    .and().areAssignableTo(Throwable.class)
+                    .and().doNotHaveFullyQualifiedName(root)
+                    .should().beAssignableTo(root)
+                    .because("отказ домена — одна иерархия: код, вид отказа и сообщение с ключом у всех")
+                    .check(classes);
+        }
     }
 
     @Test

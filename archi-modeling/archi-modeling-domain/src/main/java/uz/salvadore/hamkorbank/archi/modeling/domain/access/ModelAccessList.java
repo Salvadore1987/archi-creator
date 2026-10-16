@@ -7,7 +7,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
@@ -48,15 +48,15 @@ public record ModelAccessList(ModelId modelId, List<AclEntry> entries) {
             return;
         }
         if (permits(editor, AclAccess.READ)) {
-            throw new ModelingException(INVARIANT, Failure.FORBIDDEN, Message.of(ModelingMessages.ACL_READ_ONLY));
+            throw new ModelingDomainException(INVARIANT, Failure.FORBIDDEN, Message.of(ModelingMessages.ACL_READ_ONLY));
         }
-        throw ModelingException.notFound(Message.of(ModelingMessages.MODEL, modelId));
+        throw ModelingDomainException.notFound(Message.of(ModelingMessages.MODEL, modelId));
     }
 
     /** Список меняют {@code ADMIN} и автор модели. */
     public static void requireManager(EditorIdentity editor, String modelCreatedBy) {
         if (!editor.isAdmin() && !editor.subject().equals(modelCreatedBy)) {
-            throw new ModelingException(ModelingCodes.ACCESS_DENIED, Failure.FORBIDDEN,
+            throw new ModelingDomainException(ModelingCodes.ACCESS_DENIED, Failure.FORBIDDEN,
                     Message.of(ModelingMessages.ACL_MANAGERS_ONLY));
         }
     }

@@ -11,7 +11,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
@@ -105,8 +105,9 @@ class ModelValidatorTest {
         ModelHeader header = new ModelHeader(ModelId.next(UUIDS), WorkspaceId.next(UUIDS), modelArchiId, "Файл",
                 Optional.empty(), "5.0.0", ModelStatus.ACTIVE, List.of(), Optional.empty(), "a", NOW, NOW, 0);
 
-        ModelingException rejected = assertThrows(ModelingException.class, () -> ArchitectureModel.imported(header,
-                roots, List.of(), List.of(), List.of(), () -> FolderId.next(UUIDS), Models::archiId));
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> ArchitectureModel.imported(header, roots, List.of(), List.of(), List.of(),
+                        () -> FolderId.next(UUIDS), Models::archiId));
         assertEquals("INV-MDL-001", rejected.code());
     }
 }

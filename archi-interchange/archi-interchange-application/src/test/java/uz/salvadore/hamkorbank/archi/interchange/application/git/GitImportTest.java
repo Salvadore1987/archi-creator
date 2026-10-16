@@ -51,7 +51,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 
 /**
@@ -199,7 +199,7 @@ class GitImportTest {
         GitImportService.Preview preview = imports.preview(ARCHITECT, model, Optional.of("main"));
         modelStates.state = new MemoryStates.State(modelStates.state.xml(), 3, false);
 
-        ModelingException e = assertThrows(ModelingException.class,
+        ModelingDomainException e = assertThrows(ModelingDomainException.class,
                 () -> imports.apply(ARCHITECT, model, confirm(preview, null)));
 
         assertEquals(ModelingCodes.LOCK_REQUIRED, e.code());

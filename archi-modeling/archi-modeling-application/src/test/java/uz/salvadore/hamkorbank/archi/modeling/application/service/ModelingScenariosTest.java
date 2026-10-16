@@ -16,7 +16,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.PrincipalType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommitted;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
@@ -45,7 +45,7 @@ class ModelingScenariosTest {
         assertEquals(1, ports.models.size());
         assertEquals(1, ports.versionService.list(ALICE, first.id()).size());
         assertEquals(9, ports.models.get(first.id()).roots().size());
-        ModelingException other = assertThrows(ModelingException.class,
+        ModelingDomainException other = assertThrows(ModelingDomainException.class,
                 () -> ports.lifecycle.create(ALICE, ports.workspace.id(), "Другая", Optional.of("k-1")));
         assertEquals("INV-MDL-003", other.code());
     }
@@ -55,9 +55,9 @@ class ModelingScenariosTest {
     void viewerReadsButDoesNotWrite() {
         ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", Optional.empty()).id();
 
-        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingException.class,
+        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> ports.lifecycle.create(READER, ports.workspace.id(), "x", Optional.empty())).failure());
-        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingException.class,
+        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> ports.lockService.acquire(READER, model)).failure());
         assertEquals("Ландшафт", ports.queries.open(READER, model).name());
     }
@@ -67,7 +67,8 @@ class ModelingScenariosTest {
     void writesRequireOwnLock() {
         ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", Optional.empty()).id();
 
-        ModelingException noLock = assertThrows(ModelingException.class, () -> ports.elements.create(ALICE, model,
+        ModelingDomainException noLock = assertThrows(ModelingDomainException.class,
+                () -> ports.elements.create(ALICE, model,
                 COMPONENT, "АБС", Optional.empty(), Optional.empty()));
         assertEquals("INV-MDL-006", noLock.code());
 
@@ -75,9 +76,10 @@ class ModelingScenariosTest {
         Element element = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(), Optional.empty());
         assertEquals("АБС", element.name());
 
-        ModelingException taken = assertThrows(ModelingException.class, () -> ports.lockService.acquire(BOB, model));
+        ModelingDomainException taken = assertThrows(ModelingDomainException.class,
+                () -> ports.lockService.acquire(BOB, model));
         assertEquals("alice", taken.details().get("lockOwner"));
-        assertThrows(ModelingException.class, () -> ports.elements.create(BOB, model, COMPONENT, "CRM",
+        assertThrows(ModelingDomainException.class, () -> ports.elements.create(BOB, model, COMPONENT, "CRM",
                 Optional.empty(), Optional.empty()));
 
         ports.clock.advance(Duration.ofMinutes(31));
@@ -115,10 +117,10 @@ class ModelingScenariosTest {
         ports.accessLists.replace(ALICE, model, List.of(new AclEntry(PrincipalType.USER, "alice", AclAccess.WRITE)));
 
         assertEquals(List.of(), ports.queries.list(BOB, ports.workspace.id()));
-        assertEquals(Failure.NOT_FOUND, assertThrows(ModelingException.class,
+        assertEquals(Failure.NOT_FOUND, assertThrows(ModelingDomainException.class,
                 () -> ports.queries.open(BOB, model)).failure());
         assertEquals(1, ports.queries.list(ALICE, ports.workspace.id()).size());
-        assertEquals(Failure.NOT_FOUND, assertThrows(ModelingException.class,
+        assertEquals(Failure.NOT_FOUND, assertThrows(ModelingDomainException.class,
                 () -> ports.accessLists.replace(BOB, model, List.of())).failure(),
                 "скрытая модель отвечает 404 раньше, чем выдала бы себя отказом 403");
 
@@ -126,9 +128,9 @@ class ModelingScenariosTest {
                 new AclEntry(PrincipalType.GROUP, "audit", AclAccess.READ)));
         EditorIdentity auditor = new EditorIdentity("carol", Set.of(Role.ARCHITECT), Set.of("audit"));
         assertEquals("Секретная", ports.queries.open(auditor, model).name());
-        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingException.class,
+        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> ports.accessLists.replace(auditor, model, List.of())).failure(), "список меняют автор и ADMIN");
-        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingException.class,
+        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> ports.lockService.acquire(auditor, model)).failure(), "READ не даёт правки");
     }
 
@@ -163,7 +165,7 @@ class ModelingScenariosTest {
         View view = ports.viewService.create(ALICE, model, "Контекст", Optional.empty(), Optional.empty());
         ports.viewService.place(ALICE, view.id(), component.id(), new Bounds(10, 10, 120, 55), Optional.empty());
 
-        ModelingException blocked = assertThrows(ModelingException.class,
+        ModelingDomainException blocked = assertThrows(ModelingDomainException.class,
                 () -> ports.elements.delete(ALICE, component.id()));
         assertEquals("INV-MDL-004", blocked.code());
 
