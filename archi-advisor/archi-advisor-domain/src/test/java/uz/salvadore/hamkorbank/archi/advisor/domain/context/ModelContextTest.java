@@ -127,8 +127,8 @@ class ModelContextTest {
         assertEquals(15, view.elements().size());
         assertTrue(view.relationships().stream().allMatch(r -> r.archiId().startsWith("r-ba-")));
         assertEquals(1, view.views().size());
-        assertTrue(view.contains("view-1"));
-        assertEquals(Optional.of("Обзор"), view.nameOf("view-1"));
+        assertTrue(view.names().containsKey("view-1"));
+        assertEquals("Обзор", view.names().get("view-1"));
     }
 
     @Test

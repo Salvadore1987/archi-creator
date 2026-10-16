@@ -45,11 +45,15 @@ final class ResultReader {
         this.findingIds = findingIds;
     }
 
-    /** Находка из вызова инструмента. Пусто — вход не разобрался или цель не в контексте. */
-    Optional<Finding> finding(Map<String, Object> input, ModelContext context) {
+    /**
+     * Находка из вызова инструмента. Пусто — вход не разобрался или цель не в контексте.
+     *
+     * @param names объекты контекста с именами — {@link ModelContext#names()}, построенные один раз на сессию
+     */
+    Optional<Finding> finding(Map<String, Object> input, Map<String, String> names) {
         try {
             String target = text(input, "targetArchiId");
-            if (!context.contains(target)) {
+            if (!names.containsKey(target)) {
                 return Optional.empty();
             }
             String code = CODE.matcher(text(input, "code").strip().toUpperCase(Locale.ROOT)).replaceAll("_");
@@ -58,7 +62,7 @@ final class ResultReader {
                     clip(code, Finding.CODE_MAX),
                     clip(text(input, "message").strip(), Finding.TEXT_MAX),
                     TargetKind.valueOf(text(input, "targetKind")),
-                    ElementRef.of(target, context.nameOf(target).orElse(target)),
+                    ElementRef.of(target, names.get(target)),
                     clip(text(input, "suggestion").strip(), Finding.TEXT_MAX)));
         } catch (InvalidValueException | IllegalArgumentException | ClassCastException
                  | NullPointerException unreadable) {
@@ -104,13 +108,13 @@ final class ResultReader {
     }
 
     /** Ответ подсказки и документации: ссылки — только на объекты, которые есть в контексте. */
-    AdvisorAnswer answer(String markdown, ModelContext context) {
+    AdvisorAnswer answer(String markdown, Map<String, String> names) {
         Map<String, ElementRef> references = new LinkedHashMap<>();
         Matcher matcher = REFERENCE.matcher(markdown);
         while (matcher.find()) {
             String id = matcher.group(1);
-            if (context.contains(id)) {
-                references.putIfAbsent(id, ElementRef.of(id, context.nameOf(id).orElse(id)));
+            if (names.containsKey(id)) {
+                references.putIfAbsent(id, ElementRef.of(id, names.get(id)));
             }
         }
         return new AdvisorAnswer(markdown, List.copyOf(references.values()));

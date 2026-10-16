@@ -232,6 +232,10 @@ Javadoc (checkstyle `InvalidJavadocPosition`). Этапу 4 они уже дей
 предела, и его пропускает сценарий при области без элементов (04-02); переполнение расхода
 уменьшает израсходованное (04-03); `elementId` не проверяется и пишется в базу любой длины (04-01).
 
+**Находки исправлены 2026-10-16** — план [`code-review-fixes-04.md`](code-review-fixes-04.md).
+Правило «домен не бросает голые исключения JDK» стало общим для трёх доменов и запрещает ловить
+`NullPointerException`. Для этапа 6: `ResultReader.finding` (application advisor) ловит NPE.
+
 ### Этап 5. Application modeling ⬜
 
 `archi-modeling/archi-modeling-application` — 39 файлов, ~2,2 тыс. строк.

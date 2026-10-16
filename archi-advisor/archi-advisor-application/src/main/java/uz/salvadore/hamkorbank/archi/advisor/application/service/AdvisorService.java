@@ -320,6 +320,7 @@ public final class AdvisorService {
             StringBuilder text = new StringBuilder();
             AtomicReference<ModelPlan> plan = new AtomicReference<>();
             AtomicReference<TokenUsage> usage = new AtomicReference<>(TokenUsage.NONE);
+            Map<String, String> names = context.names();
             try {
                 upstream.consume(new LlmListener() {
                     @Override
@@ -336,7 +337,7 @@ public final class AdvisorService {
                     @Override
                     public void toolCall(String name, Map<String, Object> input) {
                         if (session.function() == AdvisorFunction.REVIEW && AdvisorTools.REPORT_FINDING.equals(name)) {
-                            results.finding(input, context).ifPresent(finding -> {
+                            results.finding(input, names).ifPresent(finding -> {
                                 session.addFinding(finding);
                                 sink.finding(finding);
                             });
@@ -357,7 +358,7 @@ public final class AdvisorService {
                 } else {
                     AdvisorAnswer answer = session.function() == AdvisorFunction.EXPLAIN
                             || session.function() == AdvisorFunction.DOCUMENT
-                            ? results.answer(text.toString(), context) : null;
+                            ? results.answer(text.toString(), names) : null;
                     finish(session, () -> session.complete(usage.get(), proposed, answer, AuditEntryId.next(uuids),
                             clock.instant()));
                     if (proposed != null) {

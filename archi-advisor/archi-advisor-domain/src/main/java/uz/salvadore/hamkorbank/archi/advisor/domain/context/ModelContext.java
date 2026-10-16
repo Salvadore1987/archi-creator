@@ -87,19 +87,17 @@ public record ModelContext(AdvisorFunction function, List<ContextElement> elemen
         return scopeSize == 0 ? 1.0 : (double) elements.size() / scopeSize;
     }
 
-    /** Есть ли в контексте объект с таким {@code archiId} — элемент, связь или представление. */
-    public boolean contains(String archiId) {
-        return elements.stream().anyMatch(e -> e.archiId().equals(archiId))
-                || relationships.stream().anyMatch(r -> r.archiId().equals(archiId))
-                || views.stream().anyMatch(v -> v.archiId().equals(archiId));
-    }
-
-    /** Отображаемое имя объекта контекста; у связи без имени — её тип. */
-    public Optional<String> nameOf(String archiId) {
-        return elements.stream().filter(e -> e.archiId().equals(archiId)).map(ContextElement::name).findFirst()
-                .or(() -> views.stream().filter(v -> v.archiId().equals(archiId)).map(ContextView::name).findFirst())
-                .or(() -> relationships.stream().filter(r -> r.archiId().equals(archiId))
-                        .map(ContextRelation::archiType).findFirst());
+    /**
+     * Объекты контекста по {@code archiId} — элементы, представления и связи — с отображаемым именем;
+     * у связи имени нет, вместо него тип. Карта строится за один проход: тот, кто проверяет много
+     * ссылок, строит её один раз, а не ищет по спискам на каждую.
+     */
+    public Map<String, String> names() {
+        Map<String, String> names = new HashMap<>();
+        elements.forEach(e -> names.putIfAbsent(e.archiId(), e.name()));
+        views.forEach(v -> names.putIfAbsent(v.archiId(), v.name()));
+        relationships.forEach(r -> names.putIfAbsent(r.archiId(), r.archiType()));
+        return Map.copyOf(names);
     }
 
     private List<ContextElement> ranked(List<ContextElement> source) {
