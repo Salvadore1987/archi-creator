@@ -31,7 +31,7 @@ public record ExportCompletedEvent(ExportJobId exportJobId, WorkspaceId workspac
     /** Событие о доставленном задании; до доставки его нет. */
     public static ExportCompletedEvent of(ExportJob job, Instant now) {
         Artifact artifact = job.artifact().orElseThrow(
-                () -> new IllegalStateException(Message.of(InterchangeMessages.EXPORT_WITHOUT_ARTIFACT).toString()));
+                () -> new IllegalExportTransitionException(Message.of(InterchangeMessages.EXPORT_WITHOUT_ARTIFACT)));
         return new ExportCompletedEvent(job.id(), job.workspaceId(), job.modelId(), job.viewId(), job.format(),
                 job.sourceVersionNo(), artifact.hash(), artifact.bytes().length,
                 job.lossReport().map(r -> r.entries().size()).orElse(0), now);

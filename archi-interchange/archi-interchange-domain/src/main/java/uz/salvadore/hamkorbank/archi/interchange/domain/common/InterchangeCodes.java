@@ -53,6 +53,12 @@ public final class InterchangeCodes {
     public static final String OEF_SCHEMA_VIOLATION = "IXC_OEF_SCHEMA_VIOLATION";
     /** У рабочего пространства нет рабочей привязки к Git. */
     public static final String GIT_NOT_BOUND = "IXC_GIT_NOT_BOUND";
+    /** Действие над привязкой к Git, которая снята. */
+    public static final String GIT_BINDING_DISABLED = "IXC_GIT_BINDING_DISABLED";
+    /** Задание выгрузки получило команду, недопустимую из его состояния. */
+    public static final String EXPORT_TRANSITION = "IXC_EXPORT_TRANSITION";
+    /** Остаток XML в хранилище повреждён и не читается. */
+    public static final String RESIDUE_CORRUPTED = "IXC_RESIDUE_CORRUPTED";
     /** Репозиторий не отвечает или отказывает в доступе; версии ждут в очереди. */
     public static final String GIT_UNREACHABLE = "IXC_GIT_UNREACHABLE";
     /** Ветки, тега или коммита с таким именем в репозитории привязки нет. */

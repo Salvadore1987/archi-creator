@@ -83,7 +83,7 @@ class ExportJobTest {
         ExportJob delivered = job(ExportFormat.ARCHIMATE, 1);
         delivered.render(1, FILE, LossReport.lossless());
         delivered.deliver();
-        assertThrows(IllegalStateException.class, () -> delivered.fail("поздно"));
+        assertThrows(IllegalExportTransitionException.class, () -> delivered.fail("поздно"));
     }
 
     @Test

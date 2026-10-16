@@ -53,6 +53,13 @@ class CodingRulesTest {
     private static final Path SPEC = Path.of("../spec");
     /** Пакеты, где Optional уже не бывает ни полем, ни параметром. */
     private static final List<String> OPTIONAL_FREE = List.of(ROOT + "..");
+    /**
+     * Где домен interchange вправе бросить голое исключение JDK: недостижимые ветки и сбой самой
+     * платформы — ошибки программиста, а не отказ по данным.
+     */
+    private static final Set<String> PROGRAMMER_ERRORS = Set.of(
+            "ArchiXmlWriter.write", "Parse.inspect", "ContentHash.of", "CorruptDocumentException.requireDefects",
+            "NodeResidue.encode", "EntityMerge.field", "EntityMerge.cascadeKind");
     private static final String TRACKED_MAP = ROOT + ".modeling.domain.common.TrackedMap";
     /** Агрегаты, которые держат свои сущности в {@code TrackedMap}, и сам класс. */
     private static final Set<String> TRACKED_OWNERS = Set.of(TRACKED_MAP,
@@ -277,6 +284,32 @@ class CodingRulesTest {
                 .orShould().callMethod(javax.xml.stream.XMLOutputFactory.class, "newInstance")
                 .because("другая реализация в classpath меняет байты остатка XML и снимает пределы разбора JDK")
                 .check(classes);
+    }
+
+    @Test
+    @DisplayName("Домен interchange отказывает своими исключениями; голые исключения JDK — только ошибки программиста")
+    void interchangeDomainThrowsOwnExceptions() {
+        codeUnits().that().areDeclaredInClassesThat().resideInAPackage(ROOT + ".interchange.domain..")
+                .should(notConstructJdkFailuresOutside(PROGRAMMER_ERRORS))
+                .because("отказ домена несёт код и сообщение с ключом, голое исключение — ключ латиницей")
+                .check(classes);
+    }
+
+    private static ArchCondition<JavaCodeUnit> notConstructJdkFailuresOutside(Set<String> allowed) {
+        return new ArchCondition<>("not construct IllegalStateException or IllegalArgumentException") {
+            @Override
+            public void check(JavaCodeUnit unit, ConditionEvents events) {
+                String place = unit.getOwner().getSimpleName() + "." + unit.getName();
+                if (allowed.contains(place)) {
+                    return;
+                }
+                unit.getConstructorCallsFromSelf().stream()
+                        .filter(call -> call.getTargetOwner().isEquivalentTo(IllegalStateException.class)
+                                || call.getTargetOwner().isEquivalentTo(IllegalArgumentException.class))
+                        .forEach(call -> events.add(SimpleConditionEvent.violated(unit,
+                                place + " constructs " + call.getTargetOwner().getSimpleName())));
+            }
+        };
     }
 
     @Test

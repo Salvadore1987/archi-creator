@@ -12,6 +12,8 @@ import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeDomainException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
@@ -123,8 +125,11 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
                 }
             }
             return new NodeResidue(attributes, items);
-        } catch (XMLStreamException e) {
-            throw new IllegalArgumentException(Message.of(InterchangeMessages.RESIDUE_CORRUPTED).toString(), e);
+        } catch (XMLStreamException | RuntimeException e) {
+            InterchangeDomainException corrupted = new InterchangeDomainException(InterchangeCodes.RESIDUE_CORRUPTED,
+                    Message.of(InterchangeMessages.RESIDUE_CORRUPTED));
+            corrupted.initCause(e);
+            throw corrupted;
         }
     }
 

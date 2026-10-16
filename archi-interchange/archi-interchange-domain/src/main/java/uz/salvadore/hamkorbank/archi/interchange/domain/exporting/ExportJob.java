@@ -104,7 +104,7 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
     /** Сбой из любого нетерминального состояния. */
     public void fail(String reason) {
         if (status == ExportStatus.DELIVERED || status == ExportStatus.FAILED) {
-            throw new IllegalStateException(Message.of(InterchangeMessages.EXPORT_TRANSITION, FAIL, status).toString());
+            throw new IllegalExportTransitionException(Message.of(InterchangeMessages.EXPORT_TRANSITION, FAIL, status));
         }
         failureReason = Objects.requireNonNull(reason, "reason");
         status = ExportStatus.FAILED;
@@ -112,8 +112,8 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
 
     private void require(ExportStatus expected, String command) {
         if (status != expected) {
-            throw new IllegalStateException(
-                    Message.of(InterchangeMessages.EXPORT_TRANSITION, command, status).toString());
+            throw new IllegalExportTransitionException(
+                    Message.of(InterchangeMessages.EXPORT_TRANSITION, command, status));
         }
     }
 

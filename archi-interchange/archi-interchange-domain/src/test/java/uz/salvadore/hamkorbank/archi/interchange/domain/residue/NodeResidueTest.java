@@ -1,11 +1,14 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.residue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeDomainException;
 
 class NodeResidueTest {
 
@@ -28,5 +31,15 @@ class NodeResidueTest {
 
         assertEquals(residue, decoded);
         assertTrue(NodeResidue.decode(NodeResidue.EMPTY.encode()).empty());
+    }
+
+    @Test
+    @DisplayName("Повреждённый остаток из хранилища — один отказ «остаток повреждён», какой бы ни была порча")
+    void corruptedResidueIsOneDomainFailure() {
+        for (String broken : List.of("<r><s/></r>", "<r><a/></r>", "<r><x/></r>", "<r>")) {
+            InterchangeDomainException e = assertThrows(InterchangeDomainException.class,
+                    () -> NodeResidue.decode(broken), broken);
+            assertEquals(InterchangeCodes.RESIDUE_CORRUPTED, e.code(), broken);
+        }
     }
 }

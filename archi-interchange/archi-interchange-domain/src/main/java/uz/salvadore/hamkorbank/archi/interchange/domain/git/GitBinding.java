@@ -8,8 +8,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.AggregateRoot;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeDomainException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
 /**
@@ -134,7 +137,8 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
 
     private void requireWritable() {
         if (!writable()) {
-            throw new InvalidValueException(InterchangeMessages.GIT_BINDING_DISABLED, workspaceId().value());
+            throw new InterchangeDomainException(InterchangeCodes.GIT_BINDING_DISABLED,
+                    Message.of(InterchangeMessages.GIT_BINDING_DISABLED, workspaceId().value()));
         }
     }
 
