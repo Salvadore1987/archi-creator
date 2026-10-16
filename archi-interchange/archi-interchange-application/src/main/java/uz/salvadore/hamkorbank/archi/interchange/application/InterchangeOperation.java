@@ -50,6 +50,11 @@ public enum InterchangeOperation {
         return useCase;
     }
 
+    /** Роли, которым операция доступна. */
+    public Set<Role> roles() {
+        return Set.copyOf(roles);
+    }
+
     /** Название операции для человека — сообщением, переводится вместе с фразой отказа. */
     public Message label() {
         return Message.of(labelKey);
