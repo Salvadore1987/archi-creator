@@ -149,6 +149,16 @@ class ModelChangesTest {
         assertEquals(List.of("name", ModelChanges.DOCUMENTATION), change.fields());
     }
 
+    @Test
+    @DisplayName("смена вида развилки — поле @type, а не смена типа ArchiMate")
+    void junctionKindIsAttributeField() {
+        String junction = "<element xsi:type=\"archimate:Junction\" name=\"J\" id=\"id-j\" type=\"or\"/>";
+        ModelDocument before = model(junction, "", "");
+        ModelDocument after = model(junction.replace("type=\"or\"", "type=\"and\""), "", "");
+
+        assertEquals(List.of("@type"), single(ModelChanges.between(before, after)).fields());
+    }
+
     private static Change single(ModelChanges changes) {
         assertEquals(1, changes.changes().size(), changes.changes()::toString);
         return changes.changes().getFirst();

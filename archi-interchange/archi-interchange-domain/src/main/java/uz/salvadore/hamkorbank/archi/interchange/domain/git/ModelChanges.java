@@ -50,6 +50,10 @@ public record ModelChanges(List<Change> changes) {
     /** Поле: идентификатор модели. */
     public static final String ID = "id";
 
+    /** Признак атрибута, чьё имя совпало бы с полем отчёта: {@code @type} у развилки и папки. */
+    public static final String ATTRIBUTE_MARK = "@";
+    private static final Set<String> FIELDS = Set.of(TYPE, DOCUMENTATION, PROPERTIES, FOLDER, DIAGRAM, ORDER,
+            RAW_XML, ID);
     private static final String XSI_TYPE = "xsi:type";
     private static final String ARCHIMATE_PREFIX = "archimate:";
     private static final Comparator<Change> ORDERING = Comparator.comparing(Change::kind)
@@ -207,6 +211,17 @@ public record ModelChanges(List<Change> changes) {
         return List.copyOf(fields);
     }
 
+    /**
+     * Поле отчёта для атрибута XML: {@code xsi:type} — тип ArchiMate ({@code type}), атрибут с именем
+     * поля отчёта — с {@code @} ({@code type} развилки — {@code @type}), прочие — своим именем.
+     */
+    static String attributeField(String name) {
+        if (name.equals(XSI_TYPE)) {
+            return TYPE;
+        }
+        return FIELDS.contains(name) ? ATTRIBUTE_MARK + name : name;
+    }
+
     private static void attributeFields(Attributes before, Attributes after, Set<String> into) {
         Set<String> names = new LinkedHashSet<>();
         before.forEach(a -> names.add(a.name()));
@@ -214,7 +229,7 @@ public record ModelChanges(List<Change> changes) {
         names.remove(ID);
         for (String name : names) {
             if (!before.get(name).equals(after.get(name))) {
-                into.add(name.equals(XSI_TYPE) ? TYPE : name);
+                into.add(attributeField(name));
             }
         }
     }

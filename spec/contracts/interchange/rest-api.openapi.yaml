@@ -832,10 +832,14 @@ components:
         name:     { type: string, description: "Имя после изменения, у удалённого — до." }
         fields:
           type: array
-          description: Изменённые поля; у добавленных и удалённых пусто.
+          description: |
+            Изменённые поля; у добавленных и удалённых пусто. `type` — тип ArchiMate (`xsi:type`);
+            атрибут — своим именем, а если оно совпадает с полем отчёта, — с `@`: вид развилки
+            или папки (атрибут `type`) — `@type`.
           items:
             type: string
-            examples: [name, type, documentation, properties, folder, source, target, diagram, order, raw_xml]
+            examples: [name, type, "@type", documentation, properties, folder, source, target, diagram, order,
+                       raw_xml]
 
     GitPullResult:
       type: object
@@ -931,7 +935,11 @@ components:
         archiId:    { type: string }
         type:       { type: string, description: "Тип ArchiMate; у папок и модели нет." }
         name:       { type: string }
-        field:      { type: string, description: "Поле; `*` — удаление в одной ветви против правки в другой." }
+        field:
+          type: string
+          description: |
+            Поле по тем же правилам, что `GitChange.fields` (`type` и `@type` — разные поля);
+            `*` — удаление в одной ветви против правки в другой.
         base:       { type: string, description: "Значение в общем предке; нет — поля нет." }
         ours:       { type: string, description: "«Наше»; удалено — поля нет." }
         theirs:     { type: string, description: "«Их»; удалено — поля нет." }

@@ -299,6 +299,24 @@ class EntityMergeTest {
         assertEquals(renamed, new String(new ArchiXmlWriter().write(result.document()), StandardCharsets.UTF_8));
     }
 
+    @Test
+    @DisplayName("атрибут type развилки и тип ArchiMate — разные поля с разными адресами конфликта")
+    void junctionKindIsNotArchimateType() {
+        String junction = "<element xsi:type=\"archimate:Junction\" name=\"J\" id=\"id-j\" type=\"or\"/>";
+        ModelDocument base = model(junction, "", "");
+        ModelDocument ours = model(junction.replace("archimate:Junction", "archimate:OursJunction")
+                .replace("type=\"or\"", "type=\"and\""), "", "");
+        ModelDocument theirs = model(junction.replace("archimate:Junction", "archimate:TheirsJunction")
+                .replace("type=\"or\"", "type=\"xor\""), "", "");
+
+        Result result = EntityMerge.merge(base, ours, theirs, Map.of("id-j:@type", Side.THEIRS));
+
+        assertEquals(List.of("id-j:@type", "id-j:type"),
+                result.conflicts().stream().map(Conflict::id).sorted().toList());
+        assertEquals(Optional.of("xor"), node(result.document(), "id-j").attribute("type"));
+        assertEquals(Optional.of("archimate:OursJunction"), node(result.document(), "id-j").attribute("xsi:type"));
+    }
+
     private static Conflict single(List<Conflict> conflicts) {
         assertEquals(1, conflicts.size(), conflicts::toString);
         return conflicts.getFirst();

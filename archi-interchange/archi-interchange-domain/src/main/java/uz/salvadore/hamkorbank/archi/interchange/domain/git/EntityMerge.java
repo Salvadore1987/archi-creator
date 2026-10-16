@@ -799,13 +799,12 @@ public final class EntityMerge {
         return id.value() + ":" + field;
     }
 
-    /** Имя поля в отчёте: атрибут — своим именем, {@code xsi:type} — {@code type}. */
+    /** Имя поля в отчёте — по тому же правилу, что в отчёте об изменениях. */
     private static String display(String field) {
         if (!field.startsWith(ATTRIBUTE)) {
             return field;
         }
-        String name = field.substring(ATTRIBUTE.length());
-        return name.equals(XSI_TYPE) ? ModelChanges.TYPE : name;
+        return ModelChanges.attributeField(field.substring(ATTRIBUTE.length()));
     }
 
     private static CascadeKind cascadeKind(Kind kind) {
