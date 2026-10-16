@@ -34,6 +34,8 @@ public class AdvisorDomainException extends DomainException {
 
     /** Значение не разобрано средствами JDK (разбор даты, {@code valueOf}) — тот же отказ, что и неверный ввод. */
     public static AdvisorDomainException invalid(IllegalArgumentException invalid) {
-        return invalid(Message.of(AdvisorMessages.INVALID_VALUE));
+        AdvisorDomainException refused = invalid(Message.of(AdvisorMessages.INVALID_VALUE));
+        refused.initCause(invalid);
+        return refused;
     }
 }

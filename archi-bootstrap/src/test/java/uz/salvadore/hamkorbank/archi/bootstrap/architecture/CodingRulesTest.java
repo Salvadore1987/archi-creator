@@ -59,7 +59,9 @@ class CodingRulesTest {
      */
     private static final Set<String> PROGRAMMER_ERRORS = Set.of(
             "ArchiXmlWriter.write", "Parse.inspect", "ContentHash.of", "CorruptDocumentException.requireDefects",
-            "NodeResidue.encode", "EntityMerge.field", "EntityMerge.cascadeKind");
+            "NodeResidue.encode", "EntityMerge.field", "EntityMerge.cascadeKind", "AdvisorRequest.fingerprint",
+            "Catalog.add", "IdempotentCommand.fingerprint", "RelationMatrix.load", "RelationMatrix.parse",
+            "RelationMatrix.relations");
     private static final String TRACKED_MAP = ROOT + ".modeling.domain.common.TrackedMap";
     /** Агрегаты, которые держат свои сущности в {@code TrackedMap}, и сам класс. */
     private static final Set<String> TRACKED_OWNERS = Set.of(TRACKED_MAP,
@@ -294,9 +296,10 @@ class CodingRulesTest {
     }
 
     @Test
-    @DisplayName("Домен interchange отказывает своими исключениями; голые исключения JDK — только ошибки программиста")
-    void interchangeDomainThrowsOwnExceptions() {
-        codeUnits().that().areDeclaredInClassesThat().resideInAPackage(ROOT + ".interchange.domain..")
+    @DisplayName("Домен отказывает своими исключениями; голые исключения JDK — ошибки программиста, NPE не ловится")
+    void domainThrowsOwnExceptions() {
+        codeUnits().that().areDeclaredInClassesThat().resideInAnyPackage(ROOT + ".interchange.domain..",
+                        ROOT + ".advisor.domain..", ROOT + ".modeling.domain..")
                 .should(notConstructJdkFailuresOutside(PROGRAMMER_ERRORS))
                 .because("отказ домена несёт код и сообщение с ключом, голое исключение — ключ латиницей")
                 .check(classes);
@@ -310,6 +313,11 @@ class CodingRulesTest {
                 if (allowed.contains(place)) {
                     return;
                 }
+                unit.getTryCatchBlocks().stream()
+                        .filter(block -> block.getCaughtThrowables().stream()
+                                .anyMatch(caught -> caught.isEquivalentTo(NullPointerException.class)))
+                        .forEach(block -> events.add(SimpleConditionEvent.violated(unit,
+                                place + " catches NullPointerException")));
                 unit.getConstructorCallsFromSelf().stream()
                         .filter(call -> call.getTargetOwner().isEquivalentTo(IllegalStateException.class)
                                 || call.getTargetOwner().isEquivalentTo(IllegalArgumentException.class))

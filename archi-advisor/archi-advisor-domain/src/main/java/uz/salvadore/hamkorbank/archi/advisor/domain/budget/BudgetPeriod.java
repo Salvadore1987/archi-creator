@@ -27,9 +27,12 @@ public record BudgetPeriod(String value) {
 
     /** Период из строки {@code YYYY-MM}; иной формат — {@link InvalidValueException}. */
     public static BudgetPeriod parse(String value) {
+        if (value == null) {
+            throw new InvalidValueException(AdvisorMessages.PERIOD_INVALID, value);
+        }
         try {
             return of(YearMonth.parse(value));
-        } catch (DateTimeParseException | NullPointerException e) {
+        } catch (DateTimeParseException e) {
             throw new InvalidValueException(AdvisorMessages.PERIOD_INVALID, value);
         }
     }

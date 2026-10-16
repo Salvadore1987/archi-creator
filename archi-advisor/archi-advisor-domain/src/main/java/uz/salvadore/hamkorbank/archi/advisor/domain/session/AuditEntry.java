@@ -2,6 +2,8 @@ package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 
 import java.time.Instant;
 import java.util.Objects;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AuditEntryId;
 
 /**
@@ -21,7 +23,7 @@ public record AuditEntry(AuditEntryId id, String actor, AdvisorFunction function
         Objects.requireNonNull(outcome, "outcome");
         Objects.requireNonNull(createdAt, "createdAt");
         if (!outcome.terminal()) {
-            throw new IllegalArgumentException(outcome.name());
+            throw new InvalidValueException(AdvisorMessages.AUDIT_OUTCOME_NOT_TERMINAL);
         }
     }
 }

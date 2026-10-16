@@ -36,6 +36,8 @@ public final class AdvisorMessages {
     public static final String ARCHI_ID_INVALID = "advisor.archi-id.invalid";
     /** Расход токенов отрицателен. */
     public static final String USAGE_NEGATIVE = "advisor.usage.negative";
+    /** Запись аудита с исходом, который ещё не окончателен. */
+    public static final String AUDIT_OUTCOME_NOT_TERMINAL = "advisor.audit.outcome-not-terminal";
     /** Расход токенов больше, чем можно учесть: сумма переполнила бы счётчик. */
     public static final String USAGE_TOO_LARGE = "advisor.usage.too-large";
     /** Замечание ревью без ссылки на объект модели. */
