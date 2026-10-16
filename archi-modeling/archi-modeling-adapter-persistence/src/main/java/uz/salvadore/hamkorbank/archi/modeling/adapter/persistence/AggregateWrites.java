@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.hibernate.StaleStateException;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentModificationException;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentUpdateException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.BaseId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedEntities;
@@ -55,10 +55,10 @@ final class AggregateWrites {
         try {
             em.flush();
         } catch (OptimisticLockException e) {
-            throw new ConcurrentModificationException(what);
+            throw new ConcurrentUpdateException(what);
         } catch (PersistenceException e) {
             if (e.getCause() instanceof StaleStateException) {
-                throw new ConcurrentModificationException(what);
+                throw new ConcurrentUpdateException(what);
             }
             throw e;
         }

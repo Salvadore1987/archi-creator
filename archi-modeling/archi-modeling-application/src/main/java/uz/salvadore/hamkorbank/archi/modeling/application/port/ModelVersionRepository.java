@@ -14,7 +14,7 @@ public interface ModelVersionRepository {
     /** Последняя версия модели; у модели без версий пусто. */
     Optional<ModelVersion> last(ModelId modelId);
 
-    /** Версии без снимков, от новых к старым; наличие снимка — в {@code snapshot().isPresent()}. */
+    /** Версии без снимков, от новых к старым; наличие снимка — {@link ModelVersion#hasSnapshot()}. */
     List<ModelVersion> list(ModelId modelId);
 
     /** Вставка новой версии или правка метки и очистка снимка у существующей. */

@@ -5,7 +5,7 @@ import jakarta.persistence.PersistenceException;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ModelLockEntity;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentModificationException;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentUpdateException;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelLockRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
@@ -48,7 +48,7 @@ public class JpaModelLockRepository implements ModelLockRepository {
             }
             em.flush();
         } catch (PersistenceException e) {
-            throw new ConcurrentModificationException(Message.of(ModelingMessages.MODEL_LOCK, lock.modelId()));
+            throw new ConcurrentUpdateException(Message.of(ModelingMessages.MODEL_LOCK, lock.modelId()));
         }
     }
 

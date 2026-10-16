@@ -31,7 +31,7 @@ public interface ModelRepository {
      * Запись изменений агрегата. Свежий — вставка целиком; загруженный — заголовок
      * с проверкой версии и тронутые сущности.
      *
-     * @throws ConcurrentModificationException строку модели успел изменить другой писатель
+     * @throws ConcurrentUpdateException строку модели успел изменить другой писатель
      */
     void save(ArchitectureModel model);
 

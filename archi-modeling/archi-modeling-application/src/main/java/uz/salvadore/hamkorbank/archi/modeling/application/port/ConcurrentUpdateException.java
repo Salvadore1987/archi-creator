@@ -13,9 +13,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
  *
  * @param what что изменено — сообщение с подписью объекта
  */
-public final class ConcurrentModificationException extends ModelingDomainException {
+public final class ConcurrentUpdateException extends ModelingDomainException {
 
-    public ConcurrentModificationException(Message what) {
+    public ConcurrentUpdateException(Message what) {
         super(ModelingCodes.LOCK_REQUIRED, Failure.CONFLICT,
                 Message.of(ModelingMessages.CONCURRENT_MODIFICATION, what));
     }

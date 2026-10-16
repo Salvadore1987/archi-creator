@@ -12,7 +12,7 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.FolderE
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ModelEntity;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.RelationshipEntity;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ViewEntity;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentModificationException;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentUpdateException;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
@@ -120,7 +120,7 @@ public class JpaModelRepository implements ModelRepository {
         ModelId id = content.model().id();
         ModelEntity entity = requireModel(id);
         if (entity.version != content.model().version()) {
-            throw new ConcurrentModificationException(Message.of(ModelingMessages.MODEL, id));
+            throw new ConcurrentUpdateException(Message.of(ModelingMessages.MODEL, id));
         }
         em.flush();
         for (String table : List.of("ViewEdgeEntity", "ViewNodeEntity", "ViewEntity", "RelationshipEntity",
@@ -203,7 +203,7 @@ public class JpaModelRepository implements ModelRepository {
     private ModelEntity requireModel(ModelId id) {
         ModelEntity entity = em.find(ModelEntity.class, id.value());
         if (entity == null) {
-            throw new ConcurrentModificationException(Message.of(ModelingMessages.MODEL, id));
+            throw new ConcurrentUpdateException(Message.of(ModelingMessages.MODEL, id));
         }
         return entity;
     }

@@ -15,7 +15,7 @@ import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ViewEdgeEntity;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ViewEntity;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ViewNodeEntity;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentModificationException;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentUpdateException;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
@@ -129,7 +129,7 @@ public class JpaViewRepository implements ViewRepository {
         } else {
             ViewEntity entity = em.find(ViewEntity.class, viewId);
             if (entity == null) {
-                throw new ConcurrentModificationException(Message.of(ModelingMessages.VIEW, view.id()));
+                throw new ConcurrentUpdateException(Message.of(ModelingMessages.VIEW, view.id()));
             }
             if (view.headerChanged()) {
                 EntityMapper.apply(view.header(), entity);
