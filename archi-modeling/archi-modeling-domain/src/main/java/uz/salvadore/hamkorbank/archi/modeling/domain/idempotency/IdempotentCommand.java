@@ -21,6 +21,7 @@ public final class IdempotentCommand {
 
     /** Код отказа, когда ключ идемпотентности повторён с другим телом команды. */
     public static final String INVARIANT = ModelingCodes.IDEMPOTENCY;
+    private static final String ABSENT = "-1";
     private static final String DIGEST = "SHA-256";
 
     private IdempotentCommand() {
@@ -55,12 +56,21 @@ public final class IdempotentCommand {
         return new Replay(existing.get().resultRef());
     }
 
-    /** Отпечаток тела команды: SHA-256 от канонической записи её полей. */
+    /**
+     * Отпечаток тела команды: SHA-256 от канонической записи её полей. Поле — длина,
+     * двоеточие и текст; отсутствующее значение ({@code null}, пустой {@code Optional}) —
+     * длина {@code -1}, которой у текста не бывает, поэтому оно не совпадёт со строкой {@code "null"}.
+     */
     public static String fingerprint(Object... fields) {
         StringBuilder canonical = new StringBuilder();
         for (Object field : fields) {
-            String value = String.valueOf(field instanceof Optional<?> o ? o.orElse(null) : field);
-            canonical.append(value.length()).append(':').append(value).append('|');
+            Object present = field instanceof Optional<?> o ? o.orElse(null) : field;
+            if (present == null) {
+                canonical.append(ABSENT).append('|');
+            } else {
+                String value = String.valueOf(present);
+                canonical.append(value.length()).append(':').append(value).append('|');
+            }
         }
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance(DIGEST)

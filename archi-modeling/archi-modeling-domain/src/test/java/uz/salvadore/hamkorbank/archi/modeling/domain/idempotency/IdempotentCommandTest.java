@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.idempotency;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Instant;
@@ -56,5 +57,16 @@ class IdempotentCommandTest {
                 yield String.valueOf(versionNo);
             }
         };
+    }
+
+    @Test
+    @DisplayName("Отпечаток различает «значения нет» и строку \"null\"")
+    void absentDiffersFromNullText() {
+        String text = IdempotentCommand.fingerprint("a", "null");
+        String absent = IdempotentCommand.fingerprint("a", Optional.empty());
+
+        assertNotEquals(text, absent);
+        assertNotEquals(text, IdempotentCommand.fingerprint("a", (Object) null));
+        assertEquals(absent, IdempotentCommand.fingerprint("a", (Object) null));
     }
 }
