@@ -39,8 +39,8 @@ public record ModelAccessList(ModelId modelId, List<AclEntry> entries) {
     }
 
     /**
-     * Нет права — модель для пользователя не существует: {@code 404}, а не {@code 403},
-     * иначе отказ раскрыл бы то, что список скрывает. Исключение — тот, кто модель
+     * Нет права — модель для пользователя не существует: {@code 404} с тем же кодом и текстом,
+     * что у несуществующей модели, иначе отказ раскрыл бы то, что список скрывает. Исключение — тот, кто модель
      * видит, но правит без {@code WRITE}: ему честное {@code 403}.
      */
     public void require(EditorIdentity editor, AclAccess needed) {
@@ -50,8 +50,7 @@ public record ModelAccessList(ModelId modelId, List<AclEntry> entries) {
         if (permits(editor, AclAccess.READ)) {
             throw new ModelingException(INVARIANT, Failure.FORBIDDEN, Message.of(ModelingMessages.ACL_READ_ONLY));
         }
-        throw new ModelingException(INVARIANT, Failure.NOT_FOUND,
-                Message.of(ModelingMessages.NOT_FOUND, Message.of(ModelingMessages.MODEL, modelId)));
+        throw ModelingException.notFound(Message.of(ModelingMessages.MODEL, modelId));
     }
 
     /** Список меняют {@code ADMIN} и автор модели. */
