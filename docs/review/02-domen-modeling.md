@@ -10,6 +10,11 @@
 Правила этапа 1 (var, импорты, наличие Javadoc, сложность, внедрение) здесь не перепроверялись —
 их держит сборка.
 
+**Исправлено 2026-10-16** — план [`code-review-fixes-02.md`](../plans/code-review-fixes-02.md),
+решения владельца по 02-08, 02-14, 02-15 — [`ADR-0027`](../../spec/adr/0027-domain-types-and-absence.md)
+(приведение к стандарту во всём проекте). Все 21 находка закрыты; колонка «Ловит сборка?» ниже —
+состояние на момент ревью.
+
 ## Находки
 
 Пути — от `archi-modeling/archi-modeling-domain/src/main/java/uz/salvadore/hamkorbank/archi/modeling/domain/`.

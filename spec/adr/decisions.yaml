@@ -366,3 +366,18 @@ decisions:
       sections: ['§2.1.5', '§4.6.2']
     note: |
       Отступление от стандарта Java/Spring (§2.1.5, §4.6.2): число из spec/nfr в переменной окружения было бы вторым источником правды.
+
+  - id: ADR-0027
+    title: Типы домена по стандарту, отсутствие значения — null, а не Optional
+    status: accepted
+    date: 2026-10-16
+    kind: architecture
+    adr_file: 0027-domain-types-and-absence.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    implemented: 2026-10-16
+    deviates_from:
+      standard: java-spring-code-guidelines-v2@97bce16
+      sections: ['§3.3.6.1', '§3.3.6.4']
+    note: |
+      Приводит домен к стандарту (§2.7, §3.3.6), отступая в деталях: базовый тип событий агрегата — sealed interface, DomainEvent без параметра типа, BaseId.equals учитывает тип.
