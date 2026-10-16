@@ -191,24 +191,24 @@ public final class ArchitectureModel {
 
     /** Перевод активной модели в удалённые; событие об удалении публикуется после коммита. */
     public void delete(EditorIdentity by, Instant now) {
-        transition(ModelStatus.ACTIVE, ModelStatus.DELETED, "DeleteModel", now);
+        transition(ModelStatus.ACTIVE, ModelStatus.DELETED, Message.of(ModelingMessages.COMMAND_DELETE_MODEL), now);
         events.add(new ModelDeleted(id, workspaceId, by.subject(), now));
     }
 
     /** Возврат удалённой модели в активные. */
     public void restoreDeleted(Instant now) {
-        transition(ModelStatus.DELETED, ModelStatus.ACTIVE, "RestoreModel", now);
+        transition(ModelStatus.DELETED, ModelStatus.ACTIVE, Message.of(ModelingMessages.COMMAND_RESTORE_MODEL), now);
     }
 
     /** Только из {@code DELETED}: уничтожение активной модели одной командой запрещено. */
     public void purge(Instant now) {
-        transition(ModelStatus.DELETED, ModelStatus.PURGED, "PurgeModel", now);
+        transition(ModelStatus.DELETED, ModelStatus.PURGED, Message.of(ModelingMessages.COMMAND_PURGE_MODEL), now);
     }
 
-    private void transition(ModelStatus from, ModelStatus to, String command, Instant now) {
+    private void transition(ModelStatus from, ModelStatus to, Message command, Instant now) {
         if (status != from) {
             throw new ModelingException(ModelingCodes.LIFECYCLE, Failure.UNPROCESSABLE,
-                    Message.of(ModelingMessages.TRANSITION_NOT_ALLOWED, command, status, to));
+                    Message.of(ModelingMessages.TRANSITION_NOT_ALLOWED, command, status.label(), to.label()));
         }
         status = to;
         touch(now);
@@ -218,7 +218,7 @@ public final class ArchitectureModel {
     public void requireActive() {
         if (status != ModelStatus.ACTIVE) {
             throw new ModelingException(ModelingCodes.LIFECYCLE, Failure.CONFLICT,
-                    Message.of(ModelingMessages.MODEL_NOT_ACTIVE, status));
+                    Message.of(ModelingMessages.MODEL_NOT_ACTIVE, status.label()));
         }
     }
 

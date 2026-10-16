@@ -102,6 +102,18 @@ public final class ModelingMessages {
     public static final String MODEL_NOT_ACTIVE = "modeling.model.not-active";
     /** Переход жизненного цикла модели из текущего состояния не предусмотрен. */
     public static final String TRANSITION_NOT_ALLOWED = "modeling.model.transition-not-allowed";
+    /** Название команды «удалить модель» — аргумент отказа перехода. */
+    public static final String COMMAND_DELETE_MODEL = "modeling.model.command.delete";
+    /** Название команды «восстановить модель» — аргумент отказа перехода. */
+    public static final String COMMAND_RESTORE_MODEL = "modeling.model.command.restore";
+    /** Название команды «уничтожить модель» — аргумент отказа перехода. */
+    public static final String COMMAND_PURGE_MODEL = "modeling.model.command.purge";
+    /** Название состояния «активна» — аргумент сообщений о жизненном цикле модели. */
+    public static final String STATUS_ACTIVE = "modeling.model.status.active";
+    /** Название состояния «удалена» — аргумент сообщений о жизненном цикле модели. */
+    public static final String STATUS_DELETED = "modeling.model.status.deleted";
+    /** Название состояния «уничтожена» — аргумент сообщений о жизненном цикле модели. */
+    public static final String STATUS_PURGED = "modeling.model.status.purged";
     /** Подпись «элемента» — аргумент сообщений об имени. */
     public static final String NAME_OF_ELEMENT = "modeling.name-of.element";
     /** Подпись «папки» — аргумент сообщений об имени. */

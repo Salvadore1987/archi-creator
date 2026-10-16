@@ -5,10 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.ARCHITECT;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelDeleted;
 
 class ArchitectureModelStateMachineTest {
@@ -46,5 +49,17 @@ class ArchitectureModelStateMachineTest {
 
         assertEquals("INV-MDL-002", rejected.code());
         assertEquals(Failure.CONFLICT, rejected.failure());
+    }
+
+    @Test
+    @DisplayName("Отказ перехода называет команду и состояния ключами сообщений — их переводят")
+    void transitionRefusalIsTranslatable() {
+        ArchitectureModel model = Models.empty();
+
+        ModelingException refused = assertThrows(ModelingException.class, () -> model.purge(Models.NOW));
+
+        assertEquals(List.of(Message.of(ModelingMessages.COMMAND_PURGE_MODEL),
+                        Message.of(ModelingMessages.STATUS_ACTIVE), Message.of(ModelingMessages.STATUS_PURGED)),
+                refused.reason().args());
     }
 }
