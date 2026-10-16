@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.advisor.application.service;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
+import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -195,7 +196,7 @@ final class Fixture {
     LlmPort llm() {
         return request -> {
             if (upstreamDown) {
-                throw new LlmUnavailableException(new java.io.IOException());
+                throw new LlmUnavailableException(new IOException());
             }
             upstreamCalls.add(request);
             FakeStream stream = new FakeStream(script);

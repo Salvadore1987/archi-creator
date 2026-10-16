@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.advisor;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
+import java.util.function.Supplier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -77,12 +78,12 @@ public class AdvisorConfiguration {
     UnitOfWork advisorUnitOfWork(TransactionalUnitOfWork transactions) {
         return new UnitOfWork() {
             @Override
-            public <T> T write(java.util.function.Supplier<T> work) {
+            public <T> T write(Supplier<T> work) {
                 return transactions.write(work);
             }
 
             @Override
-            public <T> T read(java.util.function.Supplier<T> work) {
+            public <T> T read(Supplier<T> work) {
                 return transactions.read(work);
             }
         };

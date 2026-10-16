@@ -1,11 +1,13 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.service;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelLockReleasedEvent;
+import uz.salvadore.hamkorbank.archi.modeling.domain.lock.LockStatus;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
@@ -26,9 +28,9 @@ public final class LockService {
             header.requireActive();
             Optional<ModelLock> current = kernel.locks.find(modelId);
             current.filter(l -> !l.heldBy(actor.subject(), kernel.now()) && l.status(kernel.now())
-                            == uz.salvadore.hamkorbank.archi.modeling.domain.lock.LockStatus.HELD)
+                            == LockStatus.HELD)
                     .ifPresent(l -> kernel.metrics.lockWait(modelId,
-                            java.time.Duration.between(kernel.now(), l.expiresAt())));
+                            Duration.between(kernel.now(), l.expiresAt())));
             ModelLock.Acquisition acquisition =
                     ModelLock.acquire(modelId, current.orElse(null), actor, kernel.now(), kernel.lockTtl);
             kernel.locks.save(acquisition.lock());

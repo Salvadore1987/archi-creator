@@ -1,8 +1,11 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.service;
 
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
@@ -68,10 +71,10 @@ public final class ModelQueryService {
         return kernel.run(Operation.OPEN_MODEL, actor, () -> kernel.unitOfWork.read(() -> {
             ArchitectureModel model = kernel.visibleModel(modelId, actor, AclAccess.READ);
             kernel.metrics.modelSize(modelId, model.elements().size());
-            Map<ViewId, ViewPlacements> found = new java.util.HashMap<>();
+            Map<ViewId, ViewPlacements> found = new HashMap<>();
             kernel.views.placements(modelId).forEach(p -> found.put(p.viewId(), p));
             List<ViewPlacements> placements = model.views().stream()
-                    .sorted(java.util.Comparator.comparing(ViewRef::sortOrder))
+                    .sorted(Comparator.comparing(ViewRef::sortOrder))
                     .map(v -> found.getOrDefault(v.id(), ViewPlacements.empty(v.id())))
                     .toList();
             return new OpenedModel(model, placements);
@@ -92,8 +95,8 @@ public final class ModelQueryService {
     public List<ValidationFinding> validate(EditorIdentity actor, ModelId modelId) {
         return kernel.run(Operation.VALIDATE_MODEL, actor, () -> kernel.unitOfWork.read(() -> {
             List<ValidationFinding> findings = validator.validate(kernel.visibleModel(modelId, actor, AclAccess.READ));
-            kernel.metrics.validationFindings(modelId, findings.stream().collect(java.util.stream.Collectors
-                    .groupingBy(f -> f.severity().name(), java.util.stream.Collectors.counting())));
+            kernel.metrics.validationFindings(modelId, findings.stream().collect(Collectors
+                    .groupingBy(f -> f.severity().name(), Collectors.counting())));
             return findings;
         }));
     }

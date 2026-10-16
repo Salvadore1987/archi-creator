@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
 import com.fasterxml.uuid.impl.UUIDUtil;
+import com.jayway.jsonpath.JsonPath;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -61,7 +62,7 @@ class AdvisorStreamingIT extends IntegrationTest {
                 .header("Idempotency-Key", "stream-model-" + IDS.generate())
                 .POST(HttpRequest.BodyPublishers.ofString("{\"name\":\"Поток\"}"))
                 .build(), HttpResponse.BodyHandlers.ofString()).body();
-        UUID model = UUIDUtil.uuid(com.jayway.jsonpath.JsonPath.<String>read(created, "$.id"));
+        UUID model = UUIDUtil.uuid(JsonPath.<String>read(created, "$.id"));
 
         long started = System.nanoTime();
         HttpResponse<InputStream> response = client.send(HttpRequest.newBuilder()

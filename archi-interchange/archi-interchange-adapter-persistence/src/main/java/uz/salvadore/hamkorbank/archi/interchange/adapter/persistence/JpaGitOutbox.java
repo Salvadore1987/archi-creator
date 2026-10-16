@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.interchange.adapter.persistence;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
 import jakarta.persistence.EntityManager;
+import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -128,7 +129,7 @@ public class JpaGitOutbox implements GitOutbox {
         return switch (value) {
             case Instant i -> i;
             case OffsetDateTime o -> o.toInstant();
-            case java.sql.Timestamp t -> t.toInstant();
+            case Timestamp t -> t.toInstant();
             default -> OffsetDateTime.parse(value.toString()).withOffsetSameInstant(ZoneOffset.UTC).toInstant();
         };
     }

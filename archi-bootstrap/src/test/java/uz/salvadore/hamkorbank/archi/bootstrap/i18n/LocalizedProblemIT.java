@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -29,7 +30,7 @@ class LocalizedProblemIT extends ApiTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("MDL_NOT_FOUND"))
                 .andExpect(jsonPath("$.title").value("Not found"))
-                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.startsWith("Not found: model ")));
+                .andExpect(jsonPath("$.detail").value(Matchers.startsWith("Not found: model ")));
     }
 
     @Test
@@ -38,7 +39,7 @@ class LocalizedProblemIT extends ApiTest {
         mvc.perform(get("/api/v1/models/" + IDS.generate()).with(architect()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Не найдено"))
-                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.startsWith("Не найдено: модель ")));
+                .andExpect(jsonPath("$.detail").value(Matchers.startsWith("Не найдено: модель ")));
         mvc.perform(get("/api/v1/models/" + IDS.generate()).with(architect())
                         .header(HttpHeaders.ACCEPT_LANGUAGE, "de"))
                 .andExpect(jsonPath("$.title").value("Не найдено"));

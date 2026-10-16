@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
@@ -162,7 +163,7 @@ public final class DocumentDecomposer {
                 throw new InvalidValueException(InterchangeMessages.ROOT_FOLDER_UNTYPED, node.archiId());
             }
             Residue residue = new Residue(node.attributes().list(),
-                    type.isPresent() ? XmlSchema.FOLDER_TYPED : java.util.Set.of("name", "id"));
+                    type.isPresent() ? XmlSchema.FOLDER_TYPED : Set.of("name", "id"));
             List<DocumentContent> content = node.content();
             for (int i = 0; i < content.size(); i++) {
                 long childOrder = SortOrder.ofPosition(i).value();
@@ -453,9 +454,9 @@ public final class DocumentDecomposer {
 
         private final List<ResidueAttribute> attributes = new ArrayList<>();
         private final List<ResidueItem> items = new ArrayList<>();
-        private final java.util.Set<String> typedNames;
+        private final Set<String> typedNames;
 
-        Residue(List<Attribute> source, java.util.Set<String> typedNames) {
+        Residue(List<Attribute> source, Set<String> typedNames) {
             this.typedNames = typedNames;
             for (Attribute attribute : source) {
                 attributes.add(typed(attribute.name(), attribute.value())

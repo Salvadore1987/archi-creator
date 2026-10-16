@@ -5,12 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -28,6 +30,7 @@ import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.transport.RefSpec;
+import org.eclipse.jgit.treewalk.TreeWalk;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -266,7 +269,7 @@ class GitPublisherTest {
         String directory = modelDirectory();
         byte[] second = renamed("Клиент", "Клиент банка");
         ObjectId foreign = externalTree(directory, new GitYamlWriter().write(
-                new StaxArchiDocumentReader().read(new java.io.ByteArrayInputStream(second)), GitPositions.none()));
+                new StaxArchiDocumentReader().read(new ByteArrayInputStream(second)), GitPositions.none()));
 
         versions.add(new PublishedVersions.Version(workspace, "Неизвестные узлы и атрибуты", 2, "architect-git",
                 "Вторая", clock.instant(), canonicalHash(second), second));
@@ -366,7 +369,7 @@ class GitPublisherTest {
 
     private static String canonicalHash(byte[] xml) {
         return ContentHash.of(new ArchiXmlWriter().write(new StaxArchiDocumentReader()
-                .read(new java.io.ByteArrayInputStream(xml)))).value();
+                .read(new ByteArrayInputStream(xml)))).value();
     }
 
     /** Каталог модели целиком заменяется файлами — чужим коммитом с другими позициями. */
@@ -437,7 +440,7 @@ class GitPublisherTest {
     private SortedMap<String, byte[]> tree(RevCommit commit) throws Exception {
         SortedMap<String, byte[]> files = new TreeMap<>();
         try (Git git = Git.open(remote.toFile()); RevWalk walk = new RevWalk(git.getRepository());
-             org.eclipse.jgit.treewalk.TreeWalk tree = new org.eclipse.jgit.treewalk.TreeWalk(git.getRepository())) {
+             TreeWalk tree = new TreeWalk(git.getRepository())) {
             tree.addTree(walk.parseCommit(commit).getTree());
             tree.setRecursive(true);
             while (tree.next()) {
@@ -473,7 +476,7 @@ class GitPublisherTest {
         }
 
         @Override
-        public Clock withZone(java.time.ZoneId zone) {
+        public Clock withZone(ZoneId zone) {
             return this;
         }
 

@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.IntFunction;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -70,7 +71,7 @@ class LoadProfileIT extends ApiTest {
         assertTrue(p95.get("OpenModel") <= 1000, () -> "OpenModel p95 " + p95);
     }
 
-    private long measure(java.util.function.IntFunction<RequestBuilder> request, ResultMatcher expected)
+    private long measure(IntFunction<RequestBuilder> request, ResultMatcher expected)
             throws Exception {
         for (int i = 0; i < WARM_UP; i++) {
             mvc.perform(request.apply(i)).andExpect(expected);

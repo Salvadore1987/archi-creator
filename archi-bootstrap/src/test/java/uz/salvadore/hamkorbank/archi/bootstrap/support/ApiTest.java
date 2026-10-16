@@ -7,11 +7,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.uuid.impl.UUIDUtil;
 import com.jayway.jsonpath.JsonPath;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -29,8 +31,8 @@ public abstract class ApiTest extends IntegrationTest {
 
     protected static RequestPostProcessor as(String subject, String... roles) {
         return jwt().jwt(j -> j.subject(subject)).authorities(
-                java.util.Arrays.stream(roles).map(r -> new SimpleGrantedAuthority("ROLE_" + r))
-                        .toArray(org.springframework.security.core.GrantedAuthority[]::new));
+                Arrays.stream(roles).map(r -> new SimpleGrantedAuthority("ROLE_" + r))
+                        .toArray(GrantedAuthority[]::new));
     }
 
     protected static RequestPostProcessor architect() {

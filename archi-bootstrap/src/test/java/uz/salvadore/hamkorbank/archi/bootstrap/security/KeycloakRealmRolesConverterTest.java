@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.GrantedAuthority;
@@ -56,7 +57,7 @@ class KeycloakRealmRolesConverterTest {
     }
 
     private static Set<String> names(Collection<GrantedAuthority> authorities) {
-        return authorities.stream().map(GrantedAuthority::getAuthority).collect(java.util.stream.Collectors.toSet());
+        return authorities.stream().map(GrantedAuthority::getAuthority).collect(Collectors.toSet());
     }
 
     private static Jwt jwtWithRealmRoles(List<String> roles) {

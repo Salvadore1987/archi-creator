@@ -21,6 +21,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryP
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Remote;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitRef;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.RefKind;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
@@ -123,8 +124,8 @@ class GitRefResolutionTest {
         return new ResolvedRef(GitRef.of(ref), kind, sha(commit));
     }
 
-    private static uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha sha(RevCommit commit) {
-        return uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha.of(commit.name());
+    private static GitSha sha(RevCommit commit) {
+        return GitSha.of(commit.name());
     }
 
     private static RevCommit commit(Git git, Path work, String text) throws Exception {

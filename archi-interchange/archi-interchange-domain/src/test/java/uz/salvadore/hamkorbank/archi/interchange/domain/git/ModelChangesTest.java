@@ -9,6 +9,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
+import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ModelChanges.Change;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ModelChanges.Count;
@@ -190,7 +191,7 @@ class ModelChangesTest {
         return new StaxArchiDocumentReader().read(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
     }
 
-    private static uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId id(String value) {
-        return uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId.of(value);
+    private static ArchiId id(String value) {
+        return ArchiId.of(value);
     }
 }

@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -164,7 +165,7 @@ public class InterchangeController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(artifact.mediaType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                        .filename(artifact.fileName(), java.nio.charset.StandardCharsets.UTF_8).build().toString())
+                        .filename(artifact.fileName(), StandardCharsets.UTF_8).build().toString())
                 .header("X-Archi-Version-No", String.valueOf(versionNo))
                 .eTag("\"" + artifact.hash().value() + "\"")
                 .lastModified(Instant.EPOCH);

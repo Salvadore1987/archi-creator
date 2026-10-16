@@ -6,6 +6,7 @@ import static uz.salvadore.hamkorbank.archi.bootstrap.roundtrip.XmlEquivalence.a
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
  */
 class ModelImportIT extends IntegrationTest {
 
-    static final java.util.List<String> FIXTURES = Fixtures.SYNTHETIC;
+    static final List<String> FIXTURES = Fixtures.SYNTHETIC;
 
     @Autowired
     ImportService imports;

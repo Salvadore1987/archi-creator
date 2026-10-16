@@ -4,6 +4,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
@@ -206,7 +207,7 @@ public final class RelationshipService {
     public static List<Suggestion> suggestions(ArchiType sourceType, ArchiType targetType) {
         List<RelationshipType> permitted = suggest(sourceType, targetType);
         Optional<RelationshipType> nesting = NestingRules.archimate32().impliedRelationship(sourceType, targetType);
-        return java.util.stream.IntStream.range(0, permitted.size())
+        return IntStream.range(0, permitted.size())
                 .mapToObj(i -> new Suggestion(permitted.get(i), i == 0,
                         nesting.equals(Optional.of(permitted.get(i)))))
                 .toList();

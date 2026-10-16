@@ -4,9 +4,11 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import org.springframework.stereotype.Repository;
@@ -110,7 +112,7 @@ public class JpaViewRepository implements ViewRepository {
                 .setParameter("m", modelId.value()).getResultList()
                 .forEach(row -> relationships.computeIfAbsent((UUID) row[0], k -> new ArrayList<>())
                         .add(RelationshipId.of((UUID) row[1])));
-        java.util.Set<UUID> viewIds = new java.util.LinkedHashSet<>(elements.keySet());
+        Set<UUID> viewIds = new LinkedHashSet<>(elements.keySet());
         viewIds.addAll(relationships.keySet());
         return viewIds.stream().map(v -> new ViewPlacements(ViewId.of(v), elements.getOrDefault(v, List.of()),
                 relationships.getOrDefault(v, List.of()))).toList();

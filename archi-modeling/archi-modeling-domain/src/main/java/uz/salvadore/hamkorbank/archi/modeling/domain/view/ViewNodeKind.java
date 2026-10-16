@@ -1,5 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 
+import java.util.Optional;
+
 /**
  * Вид узла представления, выводится из {@code xsi:type}. Junction на представлении —
  * {@link #DIAGRAM_OBJECT} над элементом-соединителем. {@link #OTHER} — ссылка на
@@ -12,12 +14,12 @@ public enum ViewNodeKind {
     OTHER;
 
     /** Тип узла этого вида в файле; у {@link #OTHER} своего типа нет. */
-    public java.util.Optional<DiagramType> diagramType() {
+    public Optional<DiagramType> diagramType() {
         return switch (this) {
-            case DIAGRAM_OBJECT -> java.util.Optional.of(DiagramType.DIAGRAM_OBJECT);
-            case GROUP -> java.util.Optional.of(DiagramType.GROUP);
-            case NOTE -> java.util.Optional.of(DiagramType.NOTE);
-            case OTHER -> java.util.Optional.empty();
+            case DIAGRAM_OBJECT -> Optional.of(DiagramType.DIAGRAM_OBJECT);
+            case GROUP -> Optional.of(DiagramType.GROUP);
+            case NOTE -> Optional.of(DiagramType.NOTE);
+            case OTHER -> Optional.empty();
         };
     }
 

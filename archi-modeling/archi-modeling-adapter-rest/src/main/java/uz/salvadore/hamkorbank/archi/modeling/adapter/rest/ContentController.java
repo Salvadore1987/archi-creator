@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -178,7 +179,7 @@ public class ContentController {
     @GetMapping("/metamodel/elements")
     public List<ElementTypeDto> elementTypes() {
         ArchiTypeRegistry registry = ArchiTypeRegistry.archimate32();
-        return java.util.stream.Stream.of(ConceptKind.ELEMENT, ConceptKind.JUNCTION)
+        return Stream.of(ConceptKind.ELEMENT, ConceptKind.JUNCTION)
                 .flatMap(kind -> registry.concepts(kind).stream())
                 .map(c -> new ElementTypeDto(c.type().value(), c.kind().name(), c.layer().name(),
                         c.phase() == null ? null : c.phase().name(), c.supported()))

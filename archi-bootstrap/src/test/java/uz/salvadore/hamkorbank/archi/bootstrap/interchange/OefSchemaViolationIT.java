@@ -9,6 +9,7 @@ import java.io.StringReader;
 import javax.xml.XMLConstants;
 import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.SchemaFactory;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -51,7 +52,7 @@ class OefSchemaViolationIT extends ApiTest {
         mvc.perform(get("/api/v1/models/" + model + "/export?fmt=oef").with(viewer()))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value("IXC_OEF_SCHEMA_VIOLATION"))
-                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.not(
-                        org.hamcrest.Matchers.containsString("cvc-"))));
+                .andExpect(jsonPath("$.detail").value(Matchers.not(
+                        Matchers.containsString("cvc-"))));
     }
 }

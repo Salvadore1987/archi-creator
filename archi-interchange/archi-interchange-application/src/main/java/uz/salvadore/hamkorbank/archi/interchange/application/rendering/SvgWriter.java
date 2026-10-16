@@ -5,10 +5,12 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter;
@@ -190,7 +192,7 @@ public final class SvgWriter {
             }
             Box box = Outlines.resolve(new Box(icon.x(), icon.y(), icon.size(), icon.size()), size);
             String painted = CUTOUT.matcher(symbol.replace("currentColor", paint.stroke()))
-                    .replaceAll(java.util.regex.Matcher.quoteReplacement(paint.fill()));
+                    .replaceAll(Matcher.quoteReplacement(paint.fill()));
             body.append("<g transform=\"translate(").append(Svg.num(box.x())).append(' ').append(Svg.num(box.y()))
                     .append(") scale(").append(Svg.num(box.width() / ICON_GRID)).append(")\">")
                     .append(painted).append("</g>");
@@ -210,7 +212,7 @@ public final class SvgWriter {
                 face = new Face(notation.family(), 11, 600, false, 0.04);
                 lineHeight = layoutUnit(11 * 1.2);
                 color = notation.value("node_subtitle_color");
-                text = text.toUpperCase(java.util.Locale.forLanguageTag("ru"));
+                text = text.toUpperCase(Locale.forLanguageTag("ru"));
                 maxLines = 1;
             } else {
                 String family = own.map(ArchiFont::family).orElse(notation.family());

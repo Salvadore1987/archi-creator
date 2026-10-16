@@ -3,13 +3,17 @@ package uz.salvadore.hamkorbank.archi.interchange.application.git;
 import com.fasterxml.uuid.Generators;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -233,7 +237,7 @@ final class GitFakes {
         public Optional<Entry> head(ModelId model) {
             return rows.stream().filter(r -> r.model().equals(model))
                     .filter(r -> statuses.get(r.id()).equals("PENDING") || statuses.get(r.id()).equals("DIVERGED"))
-                    .min(java.util.Comparator.comparingLong(Row::versionNo))
+                    .min(Comparator.comparingLong(Row::versionNo))
                     .map(r -> new Entry(r.id(), r.workspace(), r.model(), r.versionNo(),
                             Status.valueOf(statuses.get(r.id())), 0, null));
         }
@@ -444,14 +448,14 @@ final class GitFakes {
 
         @Override
         public Optional<GitSha> mergeBase(Remote remote, GitSha first, GitSha second) {
-            java.util.Set<GitSha> common = ancestors(second);
+            Set<GitSha> common = ancestors(second);
             return ancestors(first).stream().filter(common::contains).findFirst();
         }
 
         /** Коммит и его предки, ближние первыми. */
-        private java.util.LinkedHashSet<GitSha> ancestors(GitSha commit) {
-            java.util.LinkedHashSet<GitSha> seen = new java.util.LinkedHashSet<>();
-            java.util.ArrayDeque<GitSha> queue = new java.util.ArrayDeque<>(List.of(commit));
+        private LinkedHashSet<GitSha> ancestors(GitSha commit) {
+            LinkedHashSet<GitSha> seen = new LinkedHashSet<>();
+            ArrayDeque<GitSha> queue = new ArrayDeque<>(List.of(commit));
             while (!queue.isEmpty()) {
                 GitSha next = queue.poll();
                 if (seen.add(next)) {

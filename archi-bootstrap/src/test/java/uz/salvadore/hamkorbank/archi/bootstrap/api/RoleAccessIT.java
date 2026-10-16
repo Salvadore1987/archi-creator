@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 
 /** Роль проверяется на границе use case'а, а не матчером URL. */
@@ -35,10 +36,10 @@ class RoleAccessIT extends ApiTest {
     void onlyAdminForcesRelease() throws Exception {
         UUID model = lockedModel(architect(), "Блокировка");
 
-        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+        mvc.perform(MockMvcRequestBuilders
                         .delete("/api/v1/models/" + model + "/lock").with(as("someone-else", "ARCHITECT")))
                 .andExpect(status().isForbidden());
-        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+        mvc.perform(MockMvcRequestBuilders
                         .delete("/api/v1/models/" + model + "/lock").with(admin()))
                 .andExpect(status().isNoContent());
         mvc.perform(get("/api/v1/models/" + model + "/lock").with(viewer())).andExpect(status().isNoContent());

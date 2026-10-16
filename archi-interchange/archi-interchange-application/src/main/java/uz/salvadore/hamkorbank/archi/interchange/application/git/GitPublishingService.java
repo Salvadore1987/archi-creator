@@ -9,6 +9,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -297,7 +298,7 @@ public final class GitPublishingService {
             });
             return Outcome.RETRY;
         } finally {
-            metrics.gitPush(outcome == null ? "error" : outcome.name().toLowerCase(java.util.Locale.ROOT),
+            metrics.gitPush(outcome == null ? "error" : outcome.name().toLowerCase(Locale.ROOT),
                     Duration.ofNanos(System.nanoTime() - started));
         }
     }

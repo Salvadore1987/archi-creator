@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
@@ -11,10 +12,13 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
+import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
+import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
@@ -103,7 +107,7 @@ public final class ElementService {
 
     /** Свойства получают разреженный порядок по месту в списке. */
     static List<PropertyEntry> numbered(List<PropertyValue> values) {
-        java.util.ArrayList<PropertyEntry> entries = new java.util.ArrayList<>();
+        ArrayList<PropertyEntry> entries = new ArrayList<>();
         for (int i = 0; i < values.size(); i++) {
             entries.add(new PropertyEntry(values.get(i).key(), values.get(i).value(), SortOrder.ofPosition(i)));
         }
@@ -111,9 +115,9 @@ public final class ElementService {
     }
 
     private static FolderId defaultFolder(ArchitectureModel model, ArchiType archiType) {
-        uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer layer =
-                uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry.archimate32()
+        Layer layer =
+                ArchiTypeRegistry.archimate32()
                 .layerOf(archiType);
-        return model.roots().get(uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderType.forLayer(layer)).id();
+        return model.roots().get(FolderType.forLayer(layer)).id();
     }
 }

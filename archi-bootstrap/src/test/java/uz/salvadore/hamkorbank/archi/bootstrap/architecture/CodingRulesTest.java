@@ -25,6 +25,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import jakarta.persistence.PersistenceContext;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,9 +33,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLOutputFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 /**
  * Правила кода, которые видны по байткоду основного кода всех модулей: сигнатуры
@@ -93,13 +99,13 @@ class CodingRulesTest {
     @Test
     @DisplayName("Зависимости — только через конструктор: поле не внедряется и в бине неизменяемо")
     void constructorInjectionOnly() {
-        noFields().should().beAnnotatedWith(jakarta.persistence.PersistenceContext.class)
-                .orShould().beAnnotatedWith(org.springframework.beans.factory.annotation.Autowired.class)
-                .orShould().beAnnotatedWith(org.springframework.beans.factory.annotation.Value.class)
+        noFields().should().beAnnotatedWith(PersistenceContext.class)
+                .orShould().beAnnotatedWith(Autowired.class)
+                .orShould().beAnnotatedWith(Value.class)
                 .because("зависимость видна в конструкторе, и бин без контейнера собирается вызовом new")
                 .check(classes);
         fields().that().areNotStatic()
-                .and().areDeclaredInClassesThat().areMetaAnnotatedWith(org.springframework.stereotype.Component.class)
+                .and().areDeclaredInClassesThat().areMetaAnnotatedWith(Component.class)
                 .should().beFinal()
                 .because("поле бина задаётся один раз в конструкторе")
                 .check(classes);
@@ -287,10 +293,10 @@ class CodingRulesTest {
     @Test
     @DisplayName("Фабрики StAX — реализация JDK, а не найденная в classpath")
     void staxFactoriesArePinnedToJdk() {
-        noClasses().should().callMethod(javax.xml.stream.XMLInputFactory.class, "newFactory")
-                .orShould().callMethod(javax.xml.stream.XMLInputFactory.class, "newInstance")
-                .orShould().callMethod(javax.xml.stream.XMLOutputFactory.class, "newFactory")
-                .orShould().callMethod(javax.xml.stream.XMLOutputFactory.class, "newInstance")
+        noClasses().should().callMethod(XMLInputFactory.class, "newFactory")
+                .orShould().callMethod(XMLInputFactory.class, "newInstance")
+                .orShould().callMethod(XMLOutputFactory.class, "newFactory")
+                .orShould().callMethod(XMLOutputFactory.class, "newInstance")
                 .because("другая реализация в classpath меняет байты остатка XML и снимает пределы разбора JDK")
                 .check(classes);
     }

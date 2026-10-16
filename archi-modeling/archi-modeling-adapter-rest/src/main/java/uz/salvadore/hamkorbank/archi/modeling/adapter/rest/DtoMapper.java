@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.adapter.rest;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.BendpointDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EdgeBendpoints;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ElementDto;
@@ -85,7 +86,7 @@ public final class DtoMapper {
     }
 
     /** Связь; {@code edgeId} — ребро, нарисованное вместе с ней, иначе {@code null}. */
-    public static RelationshipDto relationship(Relationship r, java.util.UUID edgeId) {
+    public static RelationshipDto relationship(Relationship r, UUID edgeId) {
         return new RelationshipDto(r.id().value(), r.folderId().value(), r.archiId().value(), r.archiType().value(),
                 r.source().value(), r.target().value(), r.name(), r.documentation(),
                 r.accessType() == null ? null : r.accessType().name(), r.directed(), properties(r.properties()),

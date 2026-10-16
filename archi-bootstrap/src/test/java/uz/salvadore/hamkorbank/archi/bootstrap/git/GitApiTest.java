@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -87,7 +88,7 @@ abstract class GitApiTest extends ApiTest {
 
     protected Optional<String> gitSha(UUID model, long versionNo) {
         return column("select git_sha from model_version where model_id = ? and version_no = ?", String.class,
-                model, versionNo).stream().filter(java.util.Objects::nonNull).findFirst();
+                model, versionNo).stream().filter(Objects::nonNull).findFirst();
     }
 
     protected List<RevCommit> history() throws Exception {

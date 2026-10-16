@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -131,7 +132,7 @@ final class ResultReader {
     }
 
     private static String text(Map<String, Object> input, String field) {
-        return (String) java.util.Objects.requireNonNull(input.get(field), field);
+        return (String) Objects.requireNonNull(input.get(field), field);
     }
 
     private static String textOrEmpty(Map<String, Object> input, String field) {

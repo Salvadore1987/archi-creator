@@ -5,6 +5,7 @@ import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ElementEntity;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.FolderEntity;
@@ -207,7 +208,7 @@ public class JpaModelRepository implements ModelRepository {
         return entity;
     }
 
-    private <E> void persist(E entity, java.util.function.Consumer<E> fill) {
+    private <E> void persist(E entity, Consumer<E> fill) {
         fill.accept(entity);
         em.persist(entity);
     }

@@ -11,6 +11,7 @@ import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
@@ -52,7 +53,7 @@ class AdvisorResultTest {
         for (Class<?> type : RESULT_TYPES) {
             for (Method method : type.getDeclaredMethods()) {
                 if (Modifier.isPublic(method.getModifiers())) {
-                    String name = method.getName().toLowerCase(java.util.Locale.ROOT);
+                    String name = method.getName().toLowerCase(Locale.ROOT);
                     assertTrue(!name.startsWith("apply") && !name.startsWith("execute") && !name.startsWith("create"),
                             type.getSimpleName() + "#" + method.getName());
                 }

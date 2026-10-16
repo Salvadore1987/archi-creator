@@ -6,9 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -143,10 +145,10 @@ class DocumentMappingTest {
     }
 
     static ModelDocument read(byte[] xml) {
-        try (InputStream in = new java.io.ByteArrayInputStream(xml)) {
+        try (InputStream in = new ByteArrayInputStream(xml)) {
             return new StaxArchiDocumentReader().read(in);
         } catch (IOException e) {
-            throw new java.io.UncheckedIOException(e);
+            throw new UncheckedIOException(e);
         }
     }
 

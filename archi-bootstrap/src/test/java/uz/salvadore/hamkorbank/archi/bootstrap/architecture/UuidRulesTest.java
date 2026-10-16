@@ -6,6 +6,7 @@ import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.Wi
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.uuid.Generators;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaConstructorReference;
 import com.tngtech.archunit.core.domain.JavaMethodReference;
@@ -77,7 +78,7 @@ class UuidRulesTest {
     @DisplayName("версию 7 в основном коде создаёт только UuidV7 своего контекста — с часами приложения")
     void onlyUuidV7CallsGenerators() {
         noClasses().that().doNotHaveSimpleName("UuidV7")
-                .should().callMethodWhere(target(owner(type(com.fasterxml.uuid.Generators.class))))
+                .should().callMethodWhere(target(owner(type(Generators.class))))
                 .because("часы приложения доходят до генератора только через UuidV7: время фиксируется в тестах")
                 .check(new ClassFileImporter()
                         .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
