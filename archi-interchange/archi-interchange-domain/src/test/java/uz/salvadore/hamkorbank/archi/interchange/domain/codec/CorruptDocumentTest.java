@@ -131,6 +131,28 @@ class CorruptDocumentTest {
     }
 
     @Test
+    @DisplayName("ожидаемые соединения в тексте дефекта — в порядке файла, а не хеш-таблицы")
+    void expectedConnectionsAreListedInFileOrder() {
+        DocumentDefect defect = single(Xml.model("""
+                <folder name="Views" id="id-f8" type="diagrams">
+                  <element xsi:type="archimate:ArchimateDiagramModel" name="V" id="id-v1">
+                    <child xsi:type="archimate:Note" id="id-n1" targetConnections="id-c9">
+                      <bounds x="0" y="0" width="10" height="10"/>
+                    </child>
+                    <child xsi:type="archimate:Note" id="id-n2">
+                      <bounds x="0" y="0" width="10" height="10"/>
+                      <sourceConnection xsi:type="archimate:Connection" id="id-c1" source="id-n2" target="id-n1"/>
+                      <sourceConnection xsi:type="archimate:Connection" id="id-c2" source="id-n2" target="id-n1"/>
+                    </child>
+                    <child xsi:type="archimate:Note" id="id-c9"/>
+                  </element>
+                </folder>
+                """));
+
+        assertEquals("[id-c1, id-c2]", String.valueOf(defect.message().args().get(1)));
+    }
+
+    @Test
     @DisplayName("все дефекты находятся за один проход, а не по одному")
     void allDefectsAreCollected() {
         CorruptDocumentException e = reject(Xml.model("""

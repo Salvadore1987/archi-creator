@@ -25,7 +25,7 @@
 | 13 | `file://` у репозитория — только флагом | 03-13 | `GitBindingServiceTest` | ✅ |
 | 14 | Поле `type` атрибута отличается от `xsi:type` в отчёте и слиянии | 03-14 | `ModelChangesTest`, `EntityMergeTest` | ✅ |
 | 15 | Javadoc по коду, отказ читателя с собранными дефектами, решение о комментариях XML в спеке | 03-15 | `check-comment-refs.py` ловит «этап N»; checkstyle `InvalidJavadocPosition`; `CorruptDocumentTest` | ✅ |
-| 16 | Детерминированный текст дефекта `targetConnections` | 03-16 | — | ⬜ |
+| 16 | Детерминированный текст дефекта `targetConnections` | 03-16 | `CorruptDocumentTest` | ✅ |
 | 17 | Лишняя работа: хеш артефакта, O(N²) в слиянии | 03-17 | — | ⬜ |
 | 18 | Ресурсы остатка, сторона диаграммы — `Side` | 03-18 | — | ⬜ |
 

@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -452,7 +453,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
          */
         private void checkTargetConnections() {
             listedTargetConnections.forEach((owner, listed) -> {
-                Set<String> expected = new HashSet<>(connectionsByTarget.getOrDefault(owner, List.of()));
+                Set<String> expected = new LinkedHashSet<>(connectionsByTarget.getOrDefault(owner, List.of()));
                 if (!expected.equals(new HashSet<>(listed.tokens()))) {
                     defect(InterchangeCodes.TARGET_CONNECTIONS_MISMATCH,
                             Message.of(InterchangeMessages.TARGET_CONNECTIONS_DIFFER, listed.tokens(), expected),
