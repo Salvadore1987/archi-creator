@@ -12,10 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.TextCatalog;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Failure;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 
 /**
@@ -33,8 +32,8 @@ public class AdvisorProblemHandler {
         this.text = text;
     }
 
-    @ExceptionHandler(AdvisorException.class)
-    ResponseEntity<ProblemDetail> advisor(AdvisorException e, HttpServletRequest request) {
+    @ExceptionHandler(AdvisorDomainException.class)
+    ResponseEntity<ProblemDetail> advisor(AdvisorDomainException e, HttpServletRequest request) {
         HttpStatus status = status(e.failure());
         ProblemDetail problem = problem(status, e.code(), text.text(e.reason()), e.details(), request);
         ResponseEntity.BodyBuilder response = ResponseEntity.status(status)
@@ -43,12 +42,6 @@ public class AdvisorProblemHandler {
             response.header(HttpHeaders.RETRY_AFTER, String.valueOf(seconds.longValue()));
         }
         return response.body(problem);
-    }
-
-    /** Значение не прошло правило типа помощника — тот же отказ, что неверный ввод. */
-    @ExceptionHandler(InvalidValueException.class)
-    ResponseEntity<ProblemDetail> invalid(InvalidValueException e, HttpServletRequest request) {
-        return advisor(AdvisorException.invalid(e), request);
     }
 
     private ProblemDetail problem(HttpStatus status, String code, String detail, Map<String, Object> details,

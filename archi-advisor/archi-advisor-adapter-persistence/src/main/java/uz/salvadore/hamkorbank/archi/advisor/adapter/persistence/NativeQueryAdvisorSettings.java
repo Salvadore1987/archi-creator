@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.AdvisorSettingsRepository;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
@@ -46,7 +46,7 @@ public class NativeQueryAdvisorSettings implements AdvisorSettingsRepository {
         }
     }
 
-    private static AdvisorException notFound(WorkspaceId workspaceId) {
-        return AdvisorException.notFound(Message.of(AdvisorMessages.WORKSPACE, workspaceId));
+    private static AdvisorDomainException notFound(WorkspaceId workspaceId) {
+        return AdvisorDomainException.notFound(Message.of(AdvisorMessages.WORKSPACE, workspaceId));
     }
 }

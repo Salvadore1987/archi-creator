@@ -22,7 +22,7 @@ import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.PlanRequest;
 import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.ReviewRequest;
 import uz.salvadore.hamkorbank.archi.advisor.application.service.AdvisorService;
 import uz.salvadore.hamkorbank.archi.advisor.application.service.AdvisorStream;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Requester;
@@ -112,7 +112,7 @@ public class AdvisorController {
 
     private static ModelId model(UUID modelId) {
         if (modelId == null) {
-            throw AdvisorException.invalid(Message.of(AdvisorMessages.FIELD_REQUIRED, "modelId"));
+            throw AdvisorDomainException.invalid(Message.of(AdvisorMessages.FIELD_REQUIRED, "modelId"));
         }
         return ModelId.of(modelId);
     }
@@ -123,6 +123,6 @@ public class AdvisorController {
 
     private static String key(Optional<String> key) {
         return key.filter(k -> !k.isBlank()).orElseThrow(
-                () -> AdvisorException.invalid(Message.of(AdvisorMessages.FIELD_REQUIRED, IDEMPOTENCY_KEY)));
+                () -> AdvisorDomainException.invalid(Message.of(AdvisorMessages.FIELD_REQUIRED, IDEMPOTENCY_KEY)));
     }
 }

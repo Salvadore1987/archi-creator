@@ -9,7 +9,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.advisor.domain.budget.BudgetStatus;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Requester;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorRequest;
@@ -39,9 +39,9 @@ class AdvisorAdminServiceTest {
     void onlyAdminChangesSettings() {
         Fixture fixture = new Fixture();
 
-        assertThrows(AdvisorException.class,
+        assertThrows(AdvisorDomainException.class,
                 () -> fixture.admin().change(Fixture.ALICE, Optional.empty(), false, Optional.of(10L)));
-        assertThrows(AdvisorException.class,
+        assertThrows(AdvisorDomainException.class,
                 () -> fixture.admin().change(ADMIN, Optional.empty(), false, Optional.of(0L)));
 
         fixture.admin().change(ADMIN, Optional.empty(), false, Optional.of(10L));

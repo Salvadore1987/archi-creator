@@ -17,7 +17,7 @@ import uz.salvadore.hamkorbank.archi.advisor.application.port.WorkspaceDirectory
 import uz.salvadore.hamkorbank.archi.advisor.domain.budget.BudgetPeriod;
 import uz.salvadore.hamkorbank.archi.advisor.domain.budget.BudgetStatus;
 import uz.salvadore.hamkorbank.archi.advisor.domain.budget.TokenBudget;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Requester;
@@ -89,10 +89,10 @@ public final class AdvisorAdminService {
         return metrics.observe(AdvisorOperation.SET_TOKEN_BUDGET.useCase(), () -> {
             AccessPolicy.require(requester, AdvisorOperation.TOGGLE_ADVISOR);
             AccessPolicy.require(requester, AdvisorOperation.SET_TOKEN_BUDGET);
-            long limit = monthlyTokenLimit.orElseThrow(() -> AdvisorException.invalid(
+            long limit = monthlyTokenLimit.orElseThrow(() -> AdvisorDomainException.invalid(
                     Message.of(AdvisorMessages.FIELD_REQUIRED, "monthlyTokenLimit")));
             if (limit <= 0) {
-                throw AdvisorException.invalid(Message.of(AdvisorMessages.LIMIT_NOT_POSITIVE));
+                throw AdvisorDomainException.invalid(Message.of(AdvisorMessages.LIMIT_NOT_POSITIVE));
             }
             WorkspaceId workspaceId = workspaces.resolve(requested);
             return unitOfWork.write(() -> {
@@ -116,7 +116,7 @@ public final class AdvisorAdminService {
                 try {
                     return BudgetPeriod.parse(p);
                 } catch (IllegalArgumentException invalid) {
-                    throw AdvisorException.invalid(invalid);
+                    throw AdvisorDomainException.invalid(invalid);
                 }
             }).orElseGet(this::currentPeriod);
             WorkspaceId workspaceId = workspaces.resolve(requested);

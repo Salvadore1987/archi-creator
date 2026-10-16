@@ -1,7 +1,7 @@
 package uz.salvadore.hamkorbank.archi.advisor.application.service;
 
 import java.util.Optional;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.context.ModelContext;
@@ -31,7 +31,7 @@ final class ContextPlanner {
     Optional<ModelContext> plan(AdvisorRequest request, ModelGraph graph) {
         ModelContext scoped = switch (request.function()) {
             case REVIEW -> request.viewId().map(v -> graph.ofView(request.function(), v)
-                    .orElseThrow(() -> AdvisorException.notFound(Message.of(AdvisorMessages.VIEW, v))))
+                    .orElseThrow(() -> AdvisorDomainException.notFound(Message.of(AdvisorMessages.VIEW, v))))
                     .orElseGet(() -> graph.whole(request.function()));
             case EXPLAIN -> {
                 String element = request.elementId().orElseThrow();
@@ -43,7 +43,8 @@ final class ContextPlanner {
             case DOCUMENT -> {
                 if (request.viewId().isPresent()) {
                     yield graph.ofView(request.function(), request.viewId().get()).orElseThrow(
-                            () -> AdvisorException.notFound(Message.of(AdvisorMessages.VIEW, request.viewId().get())));
+                            () -> AdvisorDomainException.notFound(
+                                    Message.of(AdvisorMessages.VIEW, request.viewId().get())));
                 }
                 yield request.elementId().map(e -> around(request, graph, e, IMPACT_HOPS))
                         .orElseGet(() -> graph.whole(request.function()));
@@ -55,6 +56,6 @@ final class ContextPlanner {
 
     private static ModelContext around(AdvisorRequest request, ModelGraph graph, String element, int hops) {
         return graph.around(request.function(), element, hops)
-                .orElseThrow(() -> AdvisorException.notFound(Message.of(AdvisorMessages.ELEMENT, element)));
+                .orElseThrow(() -> AdvisorDomainException.notFound(Message.of(AdvisorMessages.ELEMENT, element)));
     }
 }

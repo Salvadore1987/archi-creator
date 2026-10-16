@@ -68,7 +68,7 @@
 | B5 | События → `{Aggregate}{Action}Event`, базовый `{Aggregate}Event` | ArchUnit: реализации `DomainEvent` оканчиваются на `Event` | ⬜ |
 | B6a | Исключения домена modeling → `DomainException` / `ModelingDomainException`; `InvalidValueException`, `RelationNotPermittedException` в общей иерархии | ArchUnit: исключения домена наследуют корень контекста | ✅ |
 | B6b | То же: interchange | правило расширено на interchange | ✅ |
-| B6c | То же: advisor | правило расширено на advisor | ⬜ |
+| B6c | То же: advisor | правило расширено на advisor | ✅ |
 
 ### Часть C. `Optional` только в результате поиска и внутри методов (D-18)
 
@@ -129,6 +129,10 @@
   `InvalidValueException`. К этапу 3 ревью: `ExportJob` на недопустимом переходе бросает
   голый `IllegalStateException` вне иерархии; `IllegalImportTransitionException` несёт
   команду латиницей (`"RejectImport"`) и состояние без перевода — тот же дефект, что 02-09.
+- **B6c.** В advisor отдельный обработчик `InvalidValueException` стал не нужен — значение
+  теперь `AdvisorDomainException`. `ResultReader` ловит его явно: нечитаемая находка модели ИИ
+  по-прежнему пропускается. К этапу 4 ревью: `IllegalSessionTransitionException` передаёт
+  в сообщение `from.name()` и имя перехода латиницей — тот же дефект, что 02-09.
 
 ## Отменённые варианты
 

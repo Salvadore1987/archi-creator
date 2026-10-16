@@ -14,7 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.advisor.domain.budget.BudgetPeriod;
 import uz.salvadore.hamkorbank.archi.advisor.domain.budget.TokenBudgetExhausted;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorRequest;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorSession;
@@ -38,7 +38,7 @@ class AdvisorServiceTest {
         Fixture fixture = new Fixture();
         fixture.enabled = false;
 
-        AdvisorException refused = assertThrows(AdvisorException.class,
+        AdvisorDomainException refused = assertThrows(AdvisorDomainException.class,
                 () -> fixture.service().ask(Fixture.ALICE, review(), "k1", RU));
 
         assertEquals("ADVISOR_DISABLED", refused.code());
@@ -59,7 +59,7 @@ class AdvisorServiceTest {
         service.ask(Fixture.ALICE, review(), "k1", RU).run(new Fixture.Recorded());
         assertTrue(fixture.events.stream().anyMatch(TokenBudgetExhausted.class::isInstance));
 
-        AdvisorException refused = assertThrows(AdvisorException.class,
+        AdvisorDomainException refused = assertThrows(AdvisorDomainException.class,
                 () -> service.ask(Fixture.ALICE, review(), "k2", RU));
 
         assertEquals("BUDGET_EXHAUSTED", refused.code());
@@ -77,7 +77,7 @@ class AdvisorServiceTest {
         service.ask(Fixture.ALICE, review(), "k1", RU).run(new Fixture.Recorded());
         service.ask(Fixture.ALICE, review(), "k2", RU).run(new Fixture.Recorded());
 
-        AdvisorException refused = assertThrows(AdvisorException.class,
+        AdvisorDomainException refused = assertThrows(AdvisorDomainException.class,
                 () -> service.ask(Fixture.ALICE, review(), "k3", RU));
 
         assertEquals("RATE_LIMITED", refused.code());
@@ -92,7 +92,7 @@ class AdvisorServiceTest {
         Fixture fixture = new Fixture();
         fixture.policy = new AdvisorPolicy(30, 0.9, 5_000_000, 4096, 5, 20, ZoneId.of("UTC"));
 
-        AdvisorException refused = assertThrows(AdvisorException.class,
+        AdvisorDomainException refused = assertThrows(AdvisorDomainException.class,
                 () -> fixture.service().ask(Fixture.ALICE, review(), "k1", RU));
 
         assertEquals("CONTEXT_TOO_LARGE", refused.code());
@@ -182,7 +182,7 @@ class AdvisorServiceTest {
         Fixture fixture = new Fixture();
         fixture.upstreamDown = true;
 
-        AdvisorException refused = assertThrows(AdvisorException.class,
+        AdvisorDomainException refused = assertThrows(AdvisorDomainException.class,
                 () -> fixture.service().ask(Fixture.ALICE, review(), "k1", RU));
 
         assertEquals("ADVISOR_UNAVAILABLE", refused.code());
@@ -210,7 +210,7 @@ class AdvisorServiceTest {
         Fixture fixture = new Fixture();
         AdvisorService service = fixture.service();
 
-        AdvisorException denied = assertThrows(AdvisorException.class,
+        AdvisorDomainException denied = assertThrows(AdvisorDomainException.class,
                 () -> service.ask(Fixture.VIEWER, AdvisorRequest.plan(Fixture.MODEL, "Платежи"), "k1", RU));
         assertEquals("ADV_ACCESS_DENIED", denied.code());
         assertTrue(fixture.sessions.isEmpty(), "до проверки роли сессия не заводится");
@@ -225,7 +225,7 @@ class AdvisorServiceTest {
         Fixture fixture = new Fixture();
         fixture.deleted = true;
 
-        AdvisorException refused = assertThrows(AdvisorException.class,
+        AdvisorDomainException refused = assertThrows(AdvisorDomainException.class,
                 () -> fixture.service().ask(Fixture.ALICE, review(), "k1", RU));
         assertEquals("MODEL_DELETED", refused.code());
         assertEquals(List.of(), fixture.upstreamCalls);

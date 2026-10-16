@@ -1,6 +1,6 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.wiring;
 
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 
@@ -15,7 +15,7 @@ public final class ErrorCodes {
         return switch (failure) {
             case ModelingDomainException m -> m.code();
             case InterchangeException i -> i.code();
-            case AdvisorException a -> a.code();
+            case AdvisorDomainException a -> a.code();
             default -> failure.getClass().getSimpleName();
         };
     }

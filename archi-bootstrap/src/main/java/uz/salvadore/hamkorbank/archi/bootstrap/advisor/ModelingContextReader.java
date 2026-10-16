@@ -8,7 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.ModelContextReader;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Requester;
@@ -56,7 +56,7 @@ public final class ModelingContextReader implements ModelContextReader {
                     uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId.value()));
         } catch (ModelingDomainException hidden) {
             // Нет модели или она скрыта списком доступа — для помощника одно и то же.
-            throw AdvisorException.notFound(Message.of(AdvisorMessages.MODEL, modelId));
+            throw AdvisorDomainException.notFound(Message.of(AdvisorMessages.MODEL, modelId));
         }
         ArchitectureModel model = opened.model();
         Map<UUID, String> archiIds = new HashMap<>();

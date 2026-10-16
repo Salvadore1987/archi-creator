@@ -2,7 +2,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.advisor;
 
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.WorkspaceDirectory;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
@@ -24,7 +24,7 @@ public final class ModelingWorkspaceDirectory implements WorkspaceDirectory {
             return WorkspaceId.of(workspaces.resolve(requested.map(w ->
                     uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId.of(w.value()))).value());
         } catch (ModelingDomainException missing) {
-            throw AdvisorException.notFound(Message.of(AdvisorMessages.WORKSPACE, requested.map(Object::toString)
+            throw AdvisorDomainException.notFound(Message.of(AdvisorMessages.WORKSPACE, requested.map(Object::toString)
                     .orElse("")));
         }
     }

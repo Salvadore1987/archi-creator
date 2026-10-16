@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.MetamodelCatalog;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.context.ContextElement;
 import uz.salvadore.hamkorbank.archi.advisor.domain.context.ModelContext;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.FindingId;
@@ -59,7 +60,8 @@ final class ResultReader {
                     TargetKind.valueOf(text(input, "targetKind")),
                     ElementRef.of(target, context.nameOf(target).orElse(target)),
                     Optional.of(clip(text(input, "suggestion").strip(), Finding.TEXT_MAX))));
-        } catch (IllegalArgumentException | ClassCastException | NullPointerException unreadable) {
+        } catch (InvalidValueException | IllegalArgumentException | ClassCastException
+                 | NullPointerException unreadable) {
             return Optional.empty();
         }
     }

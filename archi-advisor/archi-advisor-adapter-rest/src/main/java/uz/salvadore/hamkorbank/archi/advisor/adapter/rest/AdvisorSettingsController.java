@@ -12,7 +12,7 @@ import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.SettingsDto;
 import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.StatusDto;
 import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.UsageDto;
 import uz.salvadore.hamkorbank.archi.advisor.application.service.AdvisorAdminService;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Requester;
@@ -46,7 +46,7 @@ public class AdvisorSettingsController {
     public SettingsDto change(Requester requester, @RequestParam Optional<UUID> workspaceId,
                               @RequestBody SettingsDto body) {
         if (body.enabled() == null) {
-            throw AdvisorException.invalid(Message.of(AdvisorMessages.FIELD_REQUIRED, "enabled"));
+            throw AdvisorDomainException.invalid(Message.of(AdvisorMessages.FIELD_REQUIRED, "enabled"));
         }
         return DtoMapper.settings(admin.change(requester, workspace(workspaceId), body.enabled(),
                 Optional.ofNullable(body.monthlyTokenLimit())));

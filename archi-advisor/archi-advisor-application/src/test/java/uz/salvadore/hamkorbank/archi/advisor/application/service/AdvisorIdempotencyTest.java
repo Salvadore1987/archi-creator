@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorRequest;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
 
@@ -47,7 +47,7 @@ class AdvisorIdempotencyTest {
         service.ask(Fixture.ALICE, AdvisorRequest.review(Fixture.MODEL, Optional.empty()), "k", RU)
                 .run(new Fixture.Recorded());
 
-        AdvisorException conflict = assertThrows(AdvisorException.class,
+        AdvisorDomainException conflict = assertThrows(AdvisorDomainException.class,
                 () -> service.ask(Fixture.ALICE, AdvisorRequest.explain(Fixture.MODEL, "crm"), "k", RU));
 
         assertEquals("INV-ADV-003", conflict.code());
