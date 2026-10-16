@@ -1,6 +1,6 @@
 ---
-version: 0.1
-last_modified: 2026-09-22
+version: 0.2
+last_modified: 2026-10-16
 bounded_context: advisor
 target_module: archi-advisor-domain
 publication_target: contracts/advisor/events.asyncapi.yaml
@@ -62,6 +62,7 @@ events:
       лимита). Работа продолжается — событие только уведомляет (FR-51).
     triggers:
       - RecordTokenUsage
+      - SetTokenBudget
     payload:
       - { name: workspaceId,     type: WorkspaceId, required: true }
       - { name: period,          type: BudgetPeriod, required: true }
@@ -76,9 +77,12 @@ events:
       partition_key: workspaceId
     schema_compatibility: BACKWARD
     note: |
-      Публикуется один раз за период при пересечении порога, а не на
-      каждое последующее обращение: иначе уведомление превращается в шум
-      и его перестают читать.
+      Публикуется при переходе бюджета вверх (OK → WARNING), а не на каждое
+      последующее обращение в том же состоянии: иначе уведомление превращается
+      в шум и его перестают читать. Переход вниз — повышение лимита
+      администратором — события не даёт; если после него расход снова пересечёт
+      порог, это новое событие того же периода: администратор поднял лимит
+      и должен узнать, что и новый подходит к концу.
 
   TokenBudgetExhausted:
     description: |
@@ -87,6 +91,7 @@ events:
       администратором (FR-52).
     triggers:
       - RecordTokenUsage
+      - SetTokenBudget
     payload:
       - { name: workspaceId,    type: WorkspaceId, required: true }
       - { name: period,         type: BudgetPeriod, required: true }

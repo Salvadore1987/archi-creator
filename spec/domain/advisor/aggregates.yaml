@@ -1,6 +1,6 @@
 ---
-version: 0.1
-last_modified: 2026-10-12
+version: 0.2
+last_modified: 2026-10-16
 bounded_context: advisor
 target_module: archi-advisor-domain
 ---
@@ -92,11 +92,15 @@ aggregates:
         - { from: EXHAUSTED, to: WARNING,   via: SetTokenBudget }
         - { from: EXHAUSTED, to: OK,        via: SetTokenBudget }
         - { from: WARNING,   to: OK,        via: SetTokenBudget }
+        - { from: OK,        to: WARNING,   via: SetTokenBudget }
+        - { from: OK,        to: EXHAUSTED, via: SetTokenBudget }
+        - { from: WARNING,   to: EXHAUSTED, via: SetTokenBudget }
       terminal: []
       note: |
         Терминальных состояний нет: бюджет живёт весь период. Возврат из
         EXHAUSTED возможен только повышением лимита администратором —
-        расход не уменьшается никогда. Смена периода создаёт новый
+        расход не уменьшается никогда. Понижение лимита ниже расхода
+        переводит бюджет вверх так же, как расход, и с тем же событием. Смена периода создаёт новый
         экземпляр, а не сбрасывает этот.
 
     invariants_ref: invariants.md

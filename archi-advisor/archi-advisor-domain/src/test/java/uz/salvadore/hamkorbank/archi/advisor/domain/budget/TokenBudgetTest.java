@@ -88,6 +88,25 @@ class TokenBudgetTest {
     }
 
     @Test
+    @DisplayName("событие — на каждом переходе бюджета вверх, в том числе после смены лимита администратором")
+    void eventsFollowEveryUpwardTransition() {
+        TokenBudget budget = budget(100);
+        budget.record(new TokenUsage(80, 0), NOW);
+        assertInstanceOf(TokenBudgetThresholdReachedEvent.class, budget.pullEvents().getFirst());
+
+        budget.changeLimit(1000, NOW);
+        assertTrue(budget.pullEvents().isEmpty(), "переход вниз события не даёт");
+        budget.record(new TokenUsage(800, 0), NOW);
+        assertInstanceOf(TokenBudgetThresholdReachedEvent.class, budget.pullEvents().getFirst(),
+                "после повышения лимита новое пересечение порога — новое событие");
+
+        budget.changeLimit(500, NOW);
+        assertEquals(BudgetStatus.EXHAUSTED, budget.status());
+        assertInstanceOf(TokenBudgetExhaustedEvent.class, budget.pullEvents().getFirst(),
+                "лимит ниже расхода — бюджет исчерпан командой администратора");
+    }
+
+    @Test
     @DisplayName("INV-ADV-006: неуспешная сессия тоже расходует бюджет")
     void failedSessionStillConsumes() {
         TokenBudget budget = budget(1000);
