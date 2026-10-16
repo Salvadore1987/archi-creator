@@ -55,16 +55,17 @@ public record ModelContext(AdvisorFunction function, List<ContextElement> elemen
      * Контекст в пределах {@code maxTokens}. Сначала уходит документация, затем элементы
      * — по слоям снизу вверх, внутри слоя первыми уходят наименее связанные. Связь
      * остаётся, только если остались оба её конца; представление — со списком только
-     * оставшихся элементов.
+     * оставшихся элементов. Представления не отбрасываются: если без единого элемента
+     * контекст всё равно больше предела — пусто.
      */
-    public ModelContext fit(int maxTokens) {
+    public Optional<ModelContext> fit(int maxTokens) {
         if (tokenEstimate <= maxTokens) {
-            return this;
+            return Optional.of(this);
         }
         List<ContextElement> bare = elements.stream().map(ContextElement::withoutDocumentation).toList();
         if (estimate(bare, relationships, views) <= maxTokens) {
-            return new ModelContext(function, bare, relationships, views, estimate(bare, relationships, views), true,
-                    scopeSize);
+            return Optional.of(new ModelContext(function, bare, relationships, views,
+                    estimate(bare, relationships, views), true, scopeSize));
         }
         List<ContextElement> ranked = ranked(bare);
         int low = 0;
@@ -78,8 +79,7 @@ public record ModelContext(AdvisorFunction function, List<ContextElement> elemen
             }
         }
         ModelContext kept = prefix(ranked, low);
-        return new ModelContext(function, kept.elements, kept.relationships, kept.views, kept.tokenEstimate, true,
-                scopeSize);
+        return kept.tokenEstimate <= maxTokens ? Optional.of(kept) : Optional.empty();
     }
 
     /** Доля элементов области, оставшихся после усечения: 1 — ничего не потеряно. */

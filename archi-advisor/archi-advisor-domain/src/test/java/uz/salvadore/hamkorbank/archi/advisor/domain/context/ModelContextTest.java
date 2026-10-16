@@ -50,7 +50,7 @@ class ModelContextTest {
                 full.elements().stream().map(ContextElement::withoutDocumentation).toList(),
                 full.relationships(), full.views());
 
-        ModelContext fitted = full.fit(structureOnly / 2);
+        ModelContext fitted = full.fit(structureOnly / 2).orElseThrow();
 
         assertTrue(fitted.truncated(), "усечение видно в контексте");
         assertTrue(fitted.tokenEstimate() <= structureOnly / 2);
@@ -73,7 +73,7 @@ class ModelContextTest {
                 full.elements().stream().map(ContextElement::withoutDocumentation).toList(),
                 full.relationships(), full.views());
 
-        ModelContext fitted = full.fit(structureOnly);
+        ModelContext fitted = full.fit(structureOnly).orElseThrow();
 
         assertTrue(fitted.truncated());
         assertEquals(30, fitted.elements().size());
@@ -85,7 +85,23 @@ class ModelContextTest {
     void fittingContextIsUntouched() {
         ModelContext full = layeredGraph().whole(AdvisorFunction.REVIEW);
 
-        assertEquals(full, full.fit(full.tokenEstimate()));
+        assertEquals(Optional.of(full), full.fit(full.tokenEstimate()));
+    }
+
+    @Test
+    @DisplayName("INV-ADV-007: не помещается и без элементов — пусто, а не контекст сверх предела")
+    void contextOverLimitWithoutElementsIsEmpty() {
+        List<ContextView> views = new ArrayList<>();
+        for (int i = 0; i < 2000; i++) {
+            views.add(new ContextView("id-v" + i, "Представление " + i, List.of()));
+        }
+        ModelContext onlyViews = ModelContext.of(AdvisorFunction.REVIEW, List.of(), List.of(), views);
+        ModelContext withElement = ModelContext.of(AdvisorFunction.REVIEW,
+                List.of(new ContextElement("id-e1", "BusinessActor", "A", null, ContextLayer.BUSINESS)),
+                List.of(), views);
+
+        assertEquals(Optional.empty(), onlyViews.fit(1000));
+        assertEquals(Optional.empty(), withElement.fit(1000));
     }
 
     @Test

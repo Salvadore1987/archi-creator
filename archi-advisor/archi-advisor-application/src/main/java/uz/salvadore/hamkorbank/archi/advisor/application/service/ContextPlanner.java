@@ -26,8 +26,8 @@ final class ContextPlanner {
     }
 
     /**
-     * Контекст запроса в пределах размера. Пусто — даже усечённый он покрывает меньше
-     * допустимой доли области: нужно сузить область.
+     * Контекст запроса в пределах размера. Пусто — он не помещается в предел даже без
+     * элементов или, усечённый, покрывает меньше допустимой доли области: нужно сузить область.
      */
     Optional<ModelContext> plan(AdvisorRequest request, ModelGraph graph) {
         ModelContext scoped = switch (request.function()) {
@@ -37,7 +37,7 @@ final class ContextPlanner {
             case EXPLAIN -> {
                 String element = Objects.requireNonNull(request.elementId());
                 ModelContext wide = around(request, graph, element, EXPLAIN_HOPS);
-                yield wide.fit(policy.maxContextTokens()).truncated()
+                yield wide.fit(policy.maxContextTokens()).map(ModelContext::truncated).orElse(true)
                         ? around(request, graph, element, 1) : wide;
             }
             case PLAN -> graph.catalog(request.function());
@@ -51,8 +51,7 @@ final class ContextPlanner {
                         .orElseGet(() -> graph.whole(request.function()));
             }
         };
-        ModelContext fitted = scoped.fit(policy.maxContextTokens());
-        return fitted.coverage() < policy.minCoverage() ? Optional.empty() : Optional.of(fitted);
+        return scoped.fit(policy.maxContextTokens()).filter(fitted -> fitted.coverage() >= policy.minCoverage());
     }
 
     private static ModelContext around(AdvisorRequest request, ModelGraph graph, String element, int hops) {
