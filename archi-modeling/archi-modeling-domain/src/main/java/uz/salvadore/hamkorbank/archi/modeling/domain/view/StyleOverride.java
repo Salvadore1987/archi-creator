@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
@@ -14,6 +15,7 @@ public record StyleOverride(Optional<String> fillColor, Optional<String> font, O
                             Optional<String> lineColor, Optional<Integer> textAlignment) {
 
     private static final Pattern COLOR = Pattern.compile("^#[0-9a-fA-F]{6}$");
+    private static final Set<Integer> TEXT_ALIGNMENTS = Set.of(1, 2, 4);
 
     /** Отсутствие собственного стиля: всё берётся из токенов слоя. */
     public static final StyleOverride NONE =
@@ -28,6 +30,18 @@ public record StyleOverride(Optional<String> fillColor, Optional<String> font, O
         fillColor.ifPresent(c -> requireColor(c, "fillColor"));
         fontColor.ifPresent(c -> requireColor(c, "fontColor"));
         lineColor.ifPresent(c -> requireColor(c, "lineColor"));
+        textAlignment.ifPresent(StyleOverride::requireTextAlignment);
+    }
+
+    /** Подходит ли значение как выравнивание текста Archi: 1 — влево, 2 — по центру, 4 — вправо. */
+    public static boolean validTextAlignment(int value) {
+        return TEXT_ALIGNMENTS.contains(value);
+    }
+
+    private static void requireTextAlignment(int value) {
+        if (!validTextAlignment(value)) {
+            throw new InvalidValueException(ModelingMessages.TEXT_ALIGNMENT_FORMAT, value);
+        }
     }
 
     /** Подходит ли строка как цвет: {@code #} и шесть шестнадцатеричных цифр. */

@@ -495,7 +495,8 @@ public final class DocumentDecomposer {
             font = node.attribute("font");
             fontColor = node.attribute("fontColor").filter(StyleOverride::validColor);
             lineColor = node.attribute("lineColor").filter(StyleOverride::validColor);
-            textAlignment = node.attribute("textAlignment").flatMap(StyleParse::integer);
+            textAlignment = node.attribute("textAlignment").flatMap(StyleParse::integer)
+                    .filter(StyleOverride::validTextAlignment);
         }
 
         boolean typed(String name) {

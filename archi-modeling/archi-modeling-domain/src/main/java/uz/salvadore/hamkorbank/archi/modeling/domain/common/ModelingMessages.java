@@ -188,6 +188,8 @@ public final class ModelingMessages {
     public static final String RESIDUE_EMPTY = "modeling.residue.empty";
     /** Цвет стиля записан не как {@code #rrggbb}. */
     public static final String COLOR_FORMAT = "modeling.style.color-format";
+    /** Выравнивание текста задано значением вне набора Archi. */
+    public static final String TEXT_ALIGNMENT_FORMAT = "modeling.style.text-alignment-format";
     /** Подпись «рабочее пространство» без имени — когда нет ни одного пространства. */
     public static final String ANY_WORKSPACE = "modeling.subject.any-workspace";
     /** Имя рабочего пространства, которое создаётся по умолчанию. */
