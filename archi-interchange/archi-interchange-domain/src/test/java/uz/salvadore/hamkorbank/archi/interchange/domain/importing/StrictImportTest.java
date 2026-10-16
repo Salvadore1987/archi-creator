@@ -1,7 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.importing;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static uz.salvadore.hamkorbank.archi.interchange.domain.importing.Sessions.CORRUPT;
 import static uz.salvadore.hamkorbank.archi.interchange.domain.importing.Sessions.NOW;
 import static uz.salvadore.hamkorbank.archi.interchange.domain.importing.Sessions.VALID;
@@ -55,7 +55,7 @@ class StrictImportTest {
         Sessions.parse(session, CORRUPT);
 
         assertEquals(ImportStatus.REJECTED, session.status());
-        assertTrue(session.document().isEmpty());
+        assertNull(session.document());
         ImportFinding finding = session.findings().getFirst();
         assertEquals(DocumentDefect.DANGLING_REFERENCE, finding.code());
         assertEquals(Severity.ERROR, finding.severity());

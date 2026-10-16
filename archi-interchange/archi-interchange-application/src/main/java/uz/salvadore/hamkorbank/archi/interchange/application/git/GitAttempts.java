@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.function.Function;
@@ -141,7 +142,8 @@ final class GitAttempts {
     void check(ImportSession session, byte[] xml) {
         session.parse(new StaxArchiDocumentReader(), new ByteArrayInputStream(xml), this::findingId, clock.instant());
         if (session.status() != ImportStatus.REJECTED) {
-            session.validate(methodology.check(session.document().orElseThrow(), this::findingId), clock.instant());
+            session.validate(methodology.check(Objects.requireNonNull(session.document()), this::findingId),
+                             clock.instant());
         }
     }
 

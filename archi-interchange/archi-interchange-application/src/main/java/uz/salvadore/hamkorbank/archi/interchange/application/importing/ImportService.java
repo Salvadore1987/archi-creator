@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeOperation;
@@ -130,7 +131,7 @@ public final class ImportService {
             sessions.save(session);
             return finished(session);
         }
-        ModelDocument document = session.document().orElseThrow();
+        ModelDocument document = Objects.requireNonNull(session.document());
         session.validate(methodology.check(document, this::findingId), clock.instant());
         if (session.status() == ImportStatus.REJECTED) {
             sessions.save(session);
@@ -178,10 +179,10 @@ public final class ImportService {
     }
 
     private static ImportReport report(ImportSession session, boolean replayed) {
-        boolean corrupt = session.status() == ImportStatus.REJECTED && session.document().isEmpty()
+        boolean corrupt = session.status() == ImportStatus.REJECTED && session.document() == null
                 && session.findings().stream().noneMatch(f -> f.code().equals(RelationViolation.CODE));
         return new ImportReport(session.id(), session.status(),
-                session.appliedModelId().map(m -> m.value()).orElse(null), session.appliedVersionNo(),
+                session.appliedModelId() == null ? null : session.appliedModelId().value(), session.appliedVersionNo(),
                 session.findings(), replayed, corrupt);
     }
 

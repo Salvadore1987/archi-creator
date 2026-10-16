@@ -1,8 +1,8 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
@@ -11,7 +11,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
@@ -46,7 +45,7 @@ class ExportJobTest {
         job.render(7, FILE, new LossReport(List.of(loss()), true));
         job.deliver(NOW);
         assertEquals(ExportStatus.DELIVERED, job.status());
-        assertTrue(job.lossReport().isPresent());
+        assertNotNull(job.lossReport());
         ExportCompletedEvent completed = (ExportCompletedEvent) job.pullEvents().getFirst();
         assertEquals(1, completed.lossEntryCount());
         assertEquals(List.of(), job.pullEvents());
@@ -81,7 +80,7 @@ class ExportJobTest {
     void failIsAllowedOnlyBeforeDelivery() {
         ExportJob failed = job(ExportFormat.PNG, 1);
         failed.fail("Batik упал");
-        assertEquals(Optional.of("Batik упал"), failed.failureReason());
+        assertEquals("Batik упал", failed.failureReason());
 
         ExportJob delivered = job(ExportFormat.ARCHIMATE, 1);
         delivered.render(1, FILE, LossReport.lossless());

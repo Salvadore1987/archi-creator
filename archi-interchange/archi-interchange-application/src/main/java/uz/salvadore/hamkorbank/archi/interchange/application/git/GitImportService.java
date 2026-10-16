@@ -260,7 +260,7 @@ public final class GitImportService {
         if (session.status() == ImportStatus.REJECTED) {
             return new Candidate(ref, session, null, null);
         }
-        return new Candidate(ref, session, session.document().orElse(null), xml);
+        return new Candidate(ref, session, session.document(), xml);
     }
 
     private static InterchangeException rejected(ImportSession session, boolean corrupt) {

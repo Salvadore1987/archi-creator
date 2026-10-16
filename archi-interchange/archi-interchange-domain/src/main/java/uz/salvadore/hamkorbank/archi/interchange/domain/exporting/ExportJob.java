@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
@@ -165,19 +164,19 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
         return status;
     }
 
-    /** Готовый файл; есть после построения. */
-    public Optional<Artifact> artifact() {
-        return Optional.ofNullable(artifact);
+    /** Готовый файл; {@code null} — ещё не построен. */
+    public Artifact artifact() {
+        return artifact;
     }
 
-    /** Отчёт о потерях; есть после построения. */
-    public Optional<LossReport> lossReport() {
-        return Optional.ofNullable(lossReport);
+    /** Отчёт о потерях; {@code null} — ещё не построен. */
+    public LossReport lossReport() {
+        return lossReport;
     }
 
-    /** Причина сбоя; есть у упавшей выгрузки. */
-    public Optional<String> failureReason() {
-        return Optional.ofNullable(failureReason);
+    /** Причина сбоя; {@code null} — выгрузка не падала. */
+    public String failureReason() {
+        return failureReason;
     }
 
     /** Кто запросил выгрузку. */

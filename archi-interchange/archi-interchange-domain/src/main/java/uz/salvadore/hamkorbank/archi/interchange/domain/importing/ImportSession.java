@@ -7,7 +7,6 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.CorruptDocumentException;
@@ -217,9 +216,9 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
         return status;
     }
 
-    /** Документ есть в {@code PARSED}, {@code VALIDATED} и {@code APPLIED}. */
-    public Optional<ModelDocument> document() {
-        return Optional.ofNullable(document);
+    /** Документ есть в {@code PARSED}, {@code VALIDATED} и {@code APPLIED}; иначе {@code null}. */
+    public ModelDocument document() {
+        return document;
     }
 
     /** Находки проверок в порядке появления. */
@@ -237,9 +236,9 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
         return startedAt;
     }
 
-    /** Модель, созданная применением; есть у {@code APPLIED}. */
-    public Optional<ModelId> appliedModelId() {
-        return Optional.ofNullable(appliedModelId);
+    /** Модель, созданная применением; {@code null} — сессия не применена. */
+    public ModelId appliedModelId() {
+        return appliedModelId;
     }
 
     /** Первая версия созданной модели; 0 — не применялась. */
@@ -247,8 +246,8 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
         return appliedVersionNo;
     }
 
-    /** Есть у терминальных сессий. */
-    public Optional<Instant> finishedAt() {
-        return Optional.ofNullable(finishedAt);
+    /** Момент завершения; {@code null} — сессия ещё идёт. */
+    public Instant finishedAt() {
+        return finishedAt;
     }
 }

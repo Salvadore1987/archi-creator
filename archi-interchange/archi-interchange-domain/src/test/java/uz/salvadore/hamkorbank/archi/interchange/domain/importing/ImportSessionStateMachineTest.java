@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.importing;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uz.salvadore.hamkorbank.archi.interchange.domain.importing.Sessions.NOW;
@@ -8,7 +9,6 @@ import static uz.salvadore.hamkorbank.archi.interchange.domain.importing.Session
 
 import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
@@ -37,7 +37,7 @@ class ImportSessionStateMachineTest {
         ImportAppliedEvent applied = (ImportAppliedEvent) received.pullEvents().getFirst();
         assertEquals(MODEL, applied.modelId());
         assertEquals(List.of(), received.pullEvents());
-        assertEquals(Optional.of(NOW), received.finishedAt());
+        assertEquals(NOW, received.finishedAt());
     }
 
     @Test
@@ -80,7 +80,7 @@ class ImportSessionStateMachineTest {
 
         Sessions.parse(session, VALID);
         assertThrows(IllegalImportTransitionException.class, () -> Sessions.parse(session, VALID));
-        assertTrue(session.document().isPresent());
+        assertNotNull(session.document());
     }
 
     @Test

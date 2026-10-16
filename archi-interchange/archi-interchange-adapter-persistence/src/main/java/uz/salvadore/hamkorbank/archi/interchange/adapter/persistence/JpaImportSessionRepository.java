@@ -73,8 +73,8 @@ public class JpaImportSessionRepository implements ImportSessionRepository {
         entity.status = session.status().name();
         entity.startedBy = session.startedBy();
         entity.startedAt = session.startedAt();
-        entity.finishedAt = session.finishedAt().orElse(null);
-        entity.modelId = session.appliedModelId().map(ModelId::value).orElse(null);
+        entity.finishedAt = session.finishedAt();
+        entity.modelId = session.appliedModelId() == null ? null : session.appliedModelId().value();
         entity.versionNo = session.appliedVersionNo() > 0 ? session.appliedVersionNo() : null;
         try {
             if (fresh) {
