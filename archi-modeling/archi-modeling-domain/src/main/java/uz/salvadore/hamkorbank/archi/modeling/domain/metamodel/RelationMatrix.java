@@ -109,7 +109,7 @@ public final class RelationMatrix {
     }
 
     private static Map<String, Map<String, Set<RelationshipType>>> parse(InputStream in) throws XMLStreamException {
-        XMLInputFactory factory = XMLInputFactory.newFactory();
+        XMLInputFactory factory = XMLInputFactory.newDefaultFactory();
         factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
         XMLStreamReader xml = factory.createXMLStreamReader(in);
         Map<String, Map<String, Set<RelationshipType>>> matrix = new HashMap<>();

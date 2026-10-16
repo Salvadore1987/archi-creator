@@ -269,6 +269,17 @@ class CodingRulesTest {
     }
 
     @Test
+    @DisplayName("Фабрики StAX — реализация JDK, а не найденная в classpath")
+    void staxFactoriesArePinnedToJdk() {
+        noClasses().should().callMethod(javax.xml.stream.XMLInputFactory.class, "newFactory")
+                .orShould().callMethod(javax.xml.stream.XMLInputFactory.class, "newInstance")
+                .orShould().callMethod(javax.xml.stream.XMLOutputFactory.class, "newFactory")
+                .orShould().callMethod(javax.xml.stream.XMLOutputFactory.class, "newInstance")
+                .because("другая реализация в classpath меняет байты остатка XML и снимает пределы разбора JDK")
+                .check(classes);
+    }
+
+    @Test
     @DisplayName("JSON — Jackson 3: ни Jackson 2, ни его исключений в коде")
     void jacksonThreeOnly() {
         noClasses().should().dependOnClassesThat().resideInAnyPackage("com.fasterxml.jackson.databind..",

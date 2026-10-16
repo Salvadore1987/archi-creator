@@ -58,6 +58,13 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
  */
 public final class StaxArchiDocumentReader implements ArchiDocumentReader {
 
+    /**
+     * Предел вложенности узлов модели: в файлах Archi глубина — десятки уровней, а без предела
+     * рекурсивный разбор упирается в стек. Ниже умолчания JDK, чтобы отказ был дефектом файла,
+     * а не сообщением парсера.
+     */
+    static final int MAX_DEPTH = 64;
+
     /** После этой метки парсер StAX пишет суть ошибки, до неё — служебное место. */
     private static final String PARSER_MESSAGE_MARKER = "Message: ";
 
@@ -77,7 +84,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
     }
 
     private static XMLInputFactory factory() {
-        XMLInputFactory factory = XMLInputFactory.newFactory();
+        XMLInputFactory factory = XMLInputFactory.newDefaultFactory();
         factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
         factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
         factory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, true);
@@ -110,6 +117,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         private final Map<String, List<String>> connectionsByTarget = new LinkedHashMap<>();
         /** Узел → его {@code targetConnections} как записано. */
         private final Map<String, Listed> listedTargetConnections = new LinkedHashMap<>();
+        private int depth;
 
         Parse(XMLStreamReader xml) {
             this.xml = xml;
@@ -190,6 +198,19 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         }
 
         private DocumentNode node(String tag, DocumentOrder order) throws XMLStreamException {
+            if (depth == MAX_DEPTH) {
+                throw new CorruptDocumentException(List.of(DocumentDefect.at(DocumentDefect.NESTING_TOO_DEEP,
+                        Message.of(InterchangeMessages.NESTING_TOO_DEEP, MAX_DEPTH), null, line())));
+            }
+            depth++;
+            try {
+                return parsedNode(tag, order);
+            } finally {
+                depth--;
+            }
+        }
+
+        private DocumentNode parsedNode(String tag, DocumentOrder order) throws XMLStreamException {
             int line = line();
             Attributes attributes = attributes();
             Optional<String> id = attributes.get("id");

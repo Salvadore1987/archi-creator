@@ -32,6 +32,8 @@ public record DocumentDefect(String code, Message message, String archiId, Integ
     public static final String TARGET_CONNECTIONS_MISMATCH = "IXC_TARGET_CONNECTIONS_MISMATCH";
     /** Текст там, где ждут только узлы: его некуда положить без потери. */
     public static final String UNEXPECTED_TEXT = "IXC_UNEXPECTED_TEXT";
+    /** Узлы вложены глубже предела разбора. */
+    public static final String NESTING_TOO_DEEP = "IXC_NESTING_TOO_DEEP";
 
     public DocumentDefect {
         Objects.requireNonNull(code, "code");

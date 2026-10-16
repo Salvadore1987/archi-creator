@@ -59,7 +59,7 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
     public String encode() {
         StringWriter out = new StringWriter();
         try {
-            XMLStreamWriter xml = XMLOutputFactory.newFactory().createXMLStreamWriter(out);
+            XMLStreamWriter xml = XMLOutputFactory.newDefaultFactory().createXMLStreamWriter(out);
             xml.writeStartElement("r");
             writeAttributes(xml, attributes);
             for (ResidueItem item : items) {
@@ -103,7 +103,7 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
     public static NodeResidue decode(String encoded) {
         Objects.requireNonNull(encoded, "encoded");
         try {
-            XMLInputFactory factory = XMLInputFactory.newFactory();
+            XMLInputFactory factory = XMLInputFactory.newDefaultFactory();
             factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
             factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
             factory.setProperty(XMLInputFactory.IS_COALESCING, true);

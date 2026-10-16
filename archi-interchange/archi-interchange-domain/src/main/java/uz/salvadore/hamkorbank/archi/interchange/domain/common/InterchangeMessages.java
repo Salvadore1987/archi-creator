@@ -10,6 +10,8 @@ public final class InterchangeMessages {
     public static final String TEXT_NOT_XML = "interchange.document.text-not-xml";
     /** Применённый импорт записывает версию с номером меньше единицы. */
     public static final String IMPORT_VERSION_NO = "interchange.import.version-no";
+    /** Узлы файла вложены глубже предела разбора. */
+    public static final String NESTING_TOO_DEEP = "interchange.document.nesting-too-deep";
 
     /** Операция недоступна роли пользователя; в тексте — операция и допущенные роли. */
     public static final String OPERATION_DENIED = "interchange.access.operation-denied";

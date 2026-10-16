@@ -174,6 +174,23 @@ class ArchiReaderTest {
     }
 
     @Test
+    @DisplayName("Вложенность глубже предела — дефект файла, а не переполнение стека разбора")
+    void nestingDeeperThanLimitIsDefect() {
+        StringBuilder folders = new StringBuilder();
+        for (int i = 0; i < 80; i++) {
+            folders.append("<folder name=\"f\" id=\"id-f").append(i).append("\">");
+        }
+        for (int i = 0; i < 80; i++) {
+            folders.append("</folder>");
+        }
+
+        CorruptDocumentException e = assertThrows(CorruptDocumentException.class,
+                () -> Xml.read(Xml.model(folders.toString())));
+
+        assertEquals(DocumentDefect.NESTING_TOO_DEEP, e.defects().getFirst().code());
+    }
+
+    @Test
     @DisplayName("файл не Archi — отказ с указанием корня")
     void foreignRootIsRejected() {
         CorruptDocumentException e = assertThrows(CorruptDocumentException.class,
