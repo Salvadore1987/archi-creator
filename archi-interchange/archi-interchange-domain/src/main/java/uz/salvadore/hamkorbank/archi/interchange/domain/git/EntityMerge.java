@@ -163,9 +163,6 @@ public final class EntityMerge {
     }
 
     /** Значение без позиций: сдвиг соседей значение не меняет. */
-    private record Shape(String tag, List<Attribute> attributes, String text, List<Shape> content) {
-    }
-
     /** Состояние одной стороны: объекты по идентификатору в порядке файла. */
     private static final class State {
 
@@ -729,7 +726,7 @@ public final class EntityMerge {
         }
         for (DocumentContent item : obj.content()) {
             if (!(item instanceof DocumentNode)) {
-                fields.computeIfAbsent(field(item), f -> shapes(items(obj.content(), f)));
+                fields.computeIfAbsent(field(item), f -> ContentShapes.of(items(obj.content(), f)));
             }
         }
         if (obj.kind() != Kind.MODEL) {
@@ -737,7 +734,7 @@ public final class EntityMerge {
             fields.put(ModelChanges.FOLDER, Optional.ofNullable(obj.parent()));
         }
         if (obj.kind() == Kind.VIEW) {
-            fields.put(ModelChanges.DIAGRAM, shapes(List.copyOf(nodes(obj.content()))));
+            fields.put(ModelChanges.DIAGRAM, ContentShapes.of(nodes(obj.content())));
         }
         return fields;
     }
@@ -769,18 +766,6 @@ public final class EntityMerge {
 
     private static List<DocumentNode> nodes(List<DocumentContent> content) {
         return content.stream().filter(DocumentNode.class::isInstance).map(DocumentNode.class::cast).toList();
-    }
-
-    private static List<Shape> shapes(List<? extends DocumentContent> content) {
-        return content.stream().map(EntityMerge::shape).toList();
-    }
-
-    private static Shape shape(DocumentContent item) {
-        return switch (item) {
-            case DocumentNode node -> new Shape(node.tag(), node.attributes().list(), null, shapes(node.content()));
-            case DocumentValue value -> new Shape(value.tag(), value.attributes().list(), value.text(), List.of());
-            case RawXmlFragment raw -> new Shape("", List.of(), raw.xml(), List.of());
-        };
     }
 
     private static int diagramObjects(List<DocumentNode> nodes) {

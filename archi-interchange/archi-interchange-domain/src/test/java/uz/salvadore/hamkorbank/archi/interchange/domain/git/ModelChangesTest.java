@@ -101,6 +101,16 @@ class ModelChangesTest {
     }
 
     @Test
+    @DisplayName("Описание представления не меняет его диаграмму, хотя сдвигает позиции узлов в файле")
+    void viewDocumentationIsNotDiagramChange() {
+        ModelDocument before = model(APP, "", VIEW.formatted(12));
+        ModelDocument after = model(APP, "", VIEW.formatted(12).replace("id=\"id-view\">",
+                "id=\"id-view\">\n    <documentation>карта</documentation>"));
+
+        assertEquals(List.of(ModelChanges.DOCUMENTATION), single(ModelChanges.between(before, after)).fields());
+    }
+
+    @Test
     @DisplayName("FR-38: правка на представлении — одно поле diagram у представления, а не строки по узлам")
     void diagramEditsRollUpIntoView() {
         ModelDocument before = model(APP, "", VIEW.formatted(12));

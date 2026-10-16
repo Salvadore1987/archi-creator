@@ -197,7 +197,7 @@ public record ModelChanges(List<Change> changes) {
             fields.add(FOLDER);
         }
         if (after.kind() == Kind.VIEW
-                && !before.node().children().equals(after.node().children())) {
+                && !ContentShapes.of(before.node().children()).equals(ContentShapes.of(after.node().children()))) {
             fields.add(DIAGRAM);
         }
         if (after.kind() == Kind.FOLDER
