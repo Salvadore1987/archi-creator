@@ -21,7 +21,7 @@
 | 3 | Создание — бизнес-фабрикой, `restore` — только хранилище | 05-03 | ArchUnit `CodingRulesTest#restoreIsForStorageOnly` | ✅ |
 | 4 | Название операции в отказе роли — ключом, во всём проекте | 05-04 | `MessageBundlesTest`; `ModelingScenariosTest#roleDenialNamesOperationByKey` | ✅ |
 | 5 | Проверка удалённой модели — в одном месте | 05-05 | `ModelStatusTest` | ✅ |
-| 6 | Роль — раньше разбора ввода | 05-06 | юнит-тест порядка отказов | ⬜ |
+| 6 | Роль — раньше разбора ввода | 05-06 | `ModelingScenariosTest#roleIsCheckedBeforeInput` | ✅ |
 | 7 | Отпечаток `CreateRelationship` — из явных полей | 05-07 | юнит-тест | ⬜ |
 | 8 | Таблица ролей сверяется со спецификацией | 05-08 | тест по `spec/nfr/<bc>.yaml` | ⬜ |
 | 9 | Импорты вместо полных имён | 05-09 | скрипт `tools/` | ⬜ |

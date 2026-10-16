@@ -26,6 +26,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeKind;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutGraph;
 
 class ModelingScenariosTest {
 
@@ -61,6 +63,22 @@ class ModelingScenariosTest {
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> ports.lockService.acquire(READER, model)).failure());
         assertEquals("Ландшафт", ports.queries.open(READER, model).name());
+    }
+
+    @Test
+    @DisplayName("FR-28: роль проверяется раньше разбора ввода — читатель получает 403, а не 422")
+    void roleIsCheckedBeforeInput() {
+        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null).id();
+        ports.lockService.acquire(ALICE, model);
+        View view = ports.viewService.create(ALICE, model, "Контекст", null, null);
+        ViewService.NewNode noElement = new ViewService.NewNode(ViewNodeKind.DIAGRAM_OBJECT, null, null, null,
+                0, 0, null, null, null, RequestedIds.NONE);
+
+        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
+                () -> ports.viewService.placeNode(READER, view.id(), noElement)).failure());
+        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
+                () -> ports.viewService.proposeLayout(READER, view.id(), "no-such-strategy",
+                        new LayoutGraph(List.of(), List.of()))).failure());
     }
 
     @Test

@@ -86,14 +86,20 @@ public final class ViewService {
      */
     public Created<ViewNode> place(EditorIdentity actor, ViewId viewId, ElementId elementId, Bounds bounds,
                                    ViewNodeId parentId, RequestedIds ids) {
-        return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
+        return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> placeElement(actor, viewId, elementId, bounds,
+                parentId, ids));
+    }
+
+    private Created<ViewNode> placeElement(EditorIdentity actor, ViewId viewId, ElementId elementId, Bounds bounds,
+                                           ViewNodeId parentId, RequestedIds ids) {
+        return kernel.unitOfWork.write(() -> {
             View view = loadView(viewId);
             ArchitectureModel model = kernel.writableModel(view.modelId(), actor);
             Created<ViewNode> node = view.placeElement(model, elementId, bounds, parentId,
                     () -> ViewNodeId.of(kernel.newId(ids)), () -> kernel.newArchiId(model, view, ids));
             kernel.views.save(view);
             return node;
-        }));
+        });
     }
 
     /**
@@ -141,26 +147,28 @@ public final class ViewService {
      * возвращает существующий узел. Группа и заметка создаются всегда.
      */
     public Created<ViewNode> placeNode(EditorIdentity actor, ViewId viewId, NewNode request) {
-        Bounds bounds = bounds(request);
-        if (request.kind() == ViewNodeKind.DIAGRAM_OBJECT) {
-            if (request.elementId() == null) {
-                throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_MISSING, ELEMENT_ID));
+        return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> {
+            Bounds bounds = bounds(request);
+            if (request.kind() == ViewNodeKind.DIAGRAM_OBJECT) {
+                if (request.elementId() == null) {
+                    throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_MISSING, ELEMENT_ID));
+                }
+                return placeElement(actor, viewId, request.elementId(), bounds, request.parentId(), request.ids());
             }
-            return place(actor, viewId, request.elementId(), bounds, request.parentId(), request.ids());
-        }
-        if (request.elementId() != null) {
-            throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_NOT_FOR_KIND, ELEMENT_ID,
-                    request.kind()));
-        }
-        return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
-            View view = loadView(viewId);
-            ArchitectureModel model = kernel.writableModel(view.modelId(), actor);
-            ViewNode node = view.placeAnnotation(request.kind(), request.label(), request.content(), bounds,
-                    request.parentId(), ViewNodeId.of(kernel.newId(request.ids())),
-                    kernel.newArchiId(model, view, request.ids()));
-            kernel.views.save(view);
-            return new Created<>(node, true);
-        }));
+            if (request.elementId() != null) {
+                throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_NOT_FOR_KIND, ELEMENT_ID,
+                        request.kind()));
+            }
+            return kernel.unitOfWork.write(() -> {
+                View view = loadView(viewId);
+                ArchitectureModel model = kernel.writableModel(view.modelId(), actor);
+                ViewNode node = view.placeAnnotation(request.kind(), request.label(), request.content(), bounds,
+                        request.parentId(), ViewNodeId.of(kernel.newId(request.ids())),
+                        kernel.newArchiId(model, view, request.ids()));
+                kernel.views.save(view);
+                return new Created<>(node, true);
+            });
+        });
     }
 
     private static Bounds bounds(NewNode request) {
@@ -222,14 +230,16 @@ public final class ViewService {
      */
     public LayoutProposal proposeLayout(EditorIdentity actor, ViewId viewId, String strategyName,
                                         LayoutGraph graph) {
-        LayoutStrategy strategy = strategyName == null ? LayoutStrategy.LAYERED
-                : LayoutStrategy.named(strategyName).orElseThrow(() -> ModelingDomainException.invalid(
-                        Message.of(ModelingMessages.LAYOUT_STRATEGY_REQUESTED, strategyName)));
-        return kernel.run(Operation.AUTO_LAYOUT_VIEW, actor, () -> kernel.unitOfWork.read(() -> {
-            View view = loadView(viewId);
-            kernel.visibleHeader(view.modelId(), actor, AclAccess.WRITE);
-            return view.proposeLayout(graph, strategy);
-        }));
+        return kernel.run(Operation.AUTO_LAYOUT_VIEW, actor, () -> {
+            LayoutStrategy strategy = strategyName == null ? LayoutStrategy.LAYERED
+                    : LayoutStrategy.named(strategyName).orElseThrow(() -> ModelingDomainException.invalid(
+                            Message.of(ModelingMessages.LAYOUT_STRATEGY_REQUESTED, strategyName)));
+            return kernel.unitOfWork.read(() -> {
+                View view = loadView(viewId);
+                kernel.visibleHeader(view.modelId(), actor, AclAccess.WRITE);
+                return view.proposeLayout(graph, strategy);
+            });
+        });
     }
 
     private View viewOf(ViewNodeId nodeId) {
