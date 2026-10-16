@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.rest;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,9 +41,9 @@ public class VersionController {
     @PostMapping
     public ResponseEntity<SaveResult> save(EditorIdentity actor, @PathVariable UUID id,
                                            @RequestBody(required = false) CommentRequest request,
-                                           @RequestHeader("Idempotency-Key") Optional<String> key) {
+                                           @RequestHeader(value = "Idempotency-Key", required = false) String key) {
         VersionService.SaveResult result = versions.save(actor, ModelId.of(id),
-                Optional.ofNullable(request).map(CommentRequest::comment), key);
+                request == null ? null : request.comment(), key);
         return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)
                 .body(new SaveResult(DtoMapper.version(result.version()), result.created()));
     }
@@ -54,13 +53,13 @@ public class VersionController {
     public VersionInfo restore(EditorIdentity actor, @PathVariable UUID id, @PathVariable long no,
                                @RequestBody(required = false) CommentRequest request) {
         return DtoMapper.version(versions.rollback(actor, ModelId.of(id), no,
-                Optional.ofNullable(request).map(CommentRequest::comment)));
+                request == null ? null : request.comment()));
     }
 
     /** Ставит или снимает метку версии. */
     @PutMapping("/{no}/label")
     public VersionInfo label(EditorIdentity actor, @PathVariable UUID id, @PathVariable long no,
                              @RequestBody LabelRequest request) {
-        return DtoMapper.version(versions.label(actor, ModelId.of(id), no, Optional.ofNullable(request.label())));
+        return DtoMapper.version(versions.label(actor, ModelId.of(id), no, request.label()));
     }
 }

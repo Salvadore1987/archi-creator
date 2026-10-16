@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -49,25 +48,25 @@ class PlacementsIT extends IntegrationTest {
     @Test
     @DisplayName("FR-31: размещения — элементы с узлом и связи с ребром по представлениям, без повторов")
     void placementsPerView() {
-        ModelId model = lifecycle.create(ARCHITECT, workspace(), "Размещения", Optional.empty()).id();
+        ModelId model = lifecycle.create(ARCHITECT, workspace(), "Размещения", null).id();
         locks.acquire(ARCHITECT, model);
         Element component = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "АБС",
-                Optional.empty(), Optional.empty());
+                null, null);
         Element actor = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("BusinessActor"), "Клиент",
-                Optional.empty(), Optional.empty());
+                null, null);
         Element unplaced = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("Node"), "Сервер",
-                Optional.empty(), Optional.empty());
-        View context = views.create(ARCHITECT, model, "Контекст", Optional.empty(), Optional.empty());
-        View detail = views.create(ARCHITECT, model, "Детали", Optional.empty(), Optional.empty());
-        View empty = views.create(ARCHITECT, model, "Пустое", Optional.empty(), Optional.empty());
-        ViewNode c = views.place(ARCHITECT, context.id(), component.id(), new Bounds(0, 0, 120, 55), Optional.empty());
-        ViewNode a = views.place(ARCHITECT, context.id(), actor.id(), new Bounds(300, 0, 120, 55), Optional.empty());
+                null, null);
+        View context = views.create(ARCHITECT, model, "Контекст", null, null);
+        View detail = views.create(ARCHITECT, model, "Детали", null, null);
+        View empty = views.create(ARCHITECT, model, "Пустое", null, null);
+        ViewNode c = views.place(ARCHITECT, context.id(), component.id(), new Bounds(0, 0, 120, 55), null);
+        ViewNode a = views.place(ARCHITECT, context.id(), actor.id(), new Bounds(300, 0, 120, 55), null);
         RelationshipService.Result serving = relationships.create(ARCHITECT, model,
                 ArchiType.ofSimpleName("ServingRelationship"),
-                component.id().value(), actor.id().value(), Optional.empty(),
-                Optional.of(new RelationshipService.EdgePlacement(context.id(), c.id().value(), a.id().value())),
-                Optional.empty());
-        views.place(ARCHITECT, detail.id(), component.id(), new Bounds(0, 0, 120, 55), Optional.empty());
+                component.id().value(), actor.id().value(), (String) null,
+                new RelationshipService.EdgePlacement(context.id(), c.id().value(), a.id().value()),
+                null);
+        views.place(ARCHITECT, detail.id(), component.id(), new Bounds(0, 0, 120, 55), null);
 
         Map<ViewId, ViewPlacements> placements = unitOfWork.read(() -> viewRepository.placements(model)).stream()
                 .collect(Collectors.toMap(ViewPlacements::viewId, Function.identity()));

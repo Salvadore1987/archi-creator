@@ -27,7 +27,8 @@ public final class GitSnapshotArchive implements SnapshotArchive, GitBinding {
     @Override
     public Optional<byte[]> restore(ModelHeader model, ModelVersion version) {
         return publishing.get().restore(new WorkspaceId(model.workspaceId().value()), new ModelId(model.id().value()),
-                version.versionNo(), GitSha.of(version.gitSha().orElseThrow()), version.contentHash());
+                version.versionNo(), GitSha.of(Optional.ofNullable(version.gitSha()).orElseThrow()),
+                version.contentHash());
     }
 
     @Override

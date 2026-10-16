@@ -43,7 +43,7 @@ public final class ModelImportService {
                             Message.of(ModelingMessages.WORKSPACE, content.model().workspaceId())));
             kernel.save(content.model());
             content.views().forEach(kernel.views::save);
-            return versions.commit(content.model(), actor, Optional.of(comment));
+            return versions.commit(content.model(), actor, comment);
         });
     }
 
@@ -51,9 +51,9 @@ public final class ModelImportService {
      * Содержимое модели, как его соберёт сохранение, и последняя версия. Модель видна
      * актору на запись и активна — читать её для замены иначе незачем.
      *
-     * @param versionNo последняя версия; у модели без версий пусто
+     * @param versionNo последняя версия; у модели без версий {@code null}
      */
-    public record CurrentContent(ModelHeader header, Optional<Long> versionNo, byte[] xml) {
+    public record CurrentContent(ModelHeader header, Long versionNo, byte[] xml) {
 
         public CurrentContent {
             xml = Arrays.copyOf(xml, xml.length);
@@ -82,7 +82,7 @@ public final class ModelImportService {
                 throw new ModelingDomainException(ModelingCodes.MODEL_DELETED, Failure.CONFLICT,
                         Message.of(ModelingMessages.MODEL_DELETED));
             }
-            return new CurrentContent(header, kernel.versions.last(modelId).map(ModelVersion::versionNo),
+            return new CurrentContent(header, kernel.versions.last(modelId).map(ModelVersion::versionNo).orElse(null),
                     versions.currentXml(modelId));
         });
     }

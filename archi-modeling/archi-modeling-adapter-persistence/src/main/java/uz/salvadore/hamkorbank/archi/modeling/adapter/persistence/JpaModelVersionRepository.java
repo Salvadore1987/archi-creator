@@ -53,9 +53,9 @@ public class JpaModelVersionRepository implements ModelVersionRepository {
                         """, Object[].class)
                 .setParameter("m", modelId.value()).getResultList().stream()
                 .map(row -> ModelVersion.restore(VersionId.of((UUID) row[0]), modelId, (Long) row[1], (String) row[2],
-                        Optional.ofNullable((String) row[3]), Optional.ofNullable((String) row[4]), (Instant) row[5],
-                        Boolean.TRUE.equals(row[6]) ? Optional.of(NOT_LOADED) : Optional.empty(), (String) row[7],
-                        Optional.ofNullable((String) row[8])))
+                        (String) row[3], (String) row[4], (Instant) row[5],
+                        Boolean.TRUE.equals(row[6]) ? NOT_LOADED : null, (String) row[7],
+                        (String) row[8]))
                 .toList();
     }
 
@@ -68,10 +68,10 @@ public class JpaModelVersionRepository implements ModelVersionRepository {
             entity.modelId = version.modelId().value();
             entity.versionNo = version.versionNo();
             entity.author = version.author();
-            entity.comment = version.comment().orElse(null);
+            entity.comment = version.comment();
             entity.createdAt = version.createdAt();
             entity.contentHash = version.contentHash();
-            entity.snapshot = version.snapshot().orElse(null);
+            entity.snapshot = version.snapshot();
             em.persist(entity);
         } else if (!version.hasSnapshot()) {
             entity.snapshot = null;
@@ -81,8 +81,8 @@ public class JpaModelVersionRepository implements ModelVersionRepository {
                 entity.snapshot = snapshot;
             }
         }
-        entity.label = version.label().orElse(null);
-        entity.gitSha = version.gitSha().orElse(null);
+        entity.label = version.label();
+        entity.gitSha = version.gitSha();
         em.flush();
     }
 
@@ -94,7 +94,7 @@ public class JpaModelVersionRepository implements ModelVersionRepository {
 
     private static ModelVersion toDomain(ModelVersionEntity e) {
         return ModelVersion.restore(VersionId.of(e.id), ModelId.of(e.modelId), e.versionNo, e.author,
-                Optional.ofNullable(e.comment), Optional.ofNullable(e.label), e.createdAt,
-                Optional.ofNullable(e.snapshot), e.contentHash, Optional.ofNullable(e.gitSha));
+                e.comment, e.label, e.createdAt,
+                e.snapshot, e.contentHash, e.gitSha);
     }
 }

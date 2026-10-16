@@ -4,7 +4,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -116,7 +115,7 @@ public final class ModelingKernel {
     ArchitectureModel writableModel(ModelId modelId, EditorIdentity actor) {
         ArchitectureModel model = visibleModel(modelId, actor, AclAccess.WRITE);
         model.requireActive();
-        ModelLock.requireWriteAccess(modelId, locks.find(modelId), actor.subject(), now());
+        ModelLock.requireWriteAccess(modelId, locks.find(modelId).orElse(null), actor.subject(), now());
         return model;
     }
 
@@ -131,13 +130,15 @@ public final class ModelingKernel {
 
     /** Ключ нового объекта: заданный клиентом — если свободен, иначе следующий UUIDv7. */
     UUID newId(RequestedIds requested) {
-        requested.id().ifPresent(id -> {
-            if (models.idTaken(id)) {
-                throw new ModelingDomainException(ModelingCodes.ID_TAKEN, Failure.CONFLICT,
-                        Message.of(ModelingMessages.ID_TAKEN, id));
-            }
-        });
-        return requested.id().orElseGet(uuids::next);
+        UUID id = requested.id();
+        if (id == null) {
+            return uuids.next();
+        }
+        if (models.idTaken(id)) {
+            throw new ModelingDomainException(ModelingCodes.ID_TAKEN, Failure.CONFLICT,
+                    Message.of(ModelingMessages.ID_TAKEN, id));
+        }
+        return id;
     }
 
     /**
@@ -145,24 +146,25 @@ public final class ModelingKernel {
      * и по всему, что попадёт в тот же файл: концептам, папкам, представлениям, их узлам и рёбрам.
      */
     ArchiId newArchiId(ArchitectureModel model, RequestedIds requested) {
-        return requested.archiId().map(value -> requireFree(model, Optional.empty(), value))
-                .orElseGet(() -> newArchiId(model));
+        return requested.archiId() != null ? requireFree(model, null, requested.archiId()) : newArchiId(model);
     }
 
     /** {@code archiId} нового узла или ребра: свободен и в модели, и на представлении. */
     ArchiId newArchiId(ArchitectureModel model, View view, RequestedIds requested) {
-        return requested.archiId().map(value -> requireFree(model, Optional.of(view), value))
-                .orElseGet(() -> archiIds.nextUnique(id -> model.archiIdTaken(id) || view.archiIdTaken(id)));
+        return requested.archiId() != null
+                ? requireFree(model, view, requested.archiId())
+                : archiIds.nextUnique(id -> model.archiIdTaken(id) || view.archiIdTaken(id));
     }
 
-    private ArchiId requireFree(ArchitectureModel model, Optional<View> view, String value) {
+    /** Заданный клиентом {@code archiId}, свободный в модели и — если {@code view} задано — на представлении. */
+    private ArchiId requireFree(ArchitectureModel model, View view, String value) {
         ArchiId candidate;
         try {
             candidate = ArchiId.of(value);
         } catch (InvalidValueException invalid) {
             throw ModelingDomainException.invalid(Message.of(ModelingMessages.ARCHI_ID_REQUESTED_INVALID, value));
         }
-        if (model.archiIdTaken(candidate) || view.filter(v -> v.archiIdTaken(candidate)).isPresent()
+        if (model.archiIdTaken(candidate) || view != null && view.archiIdTaken(candidate)
                 || models.diagramArchiIdTaken(model.id(), candidate)) {
             throw new ModelingDomainException(ModelingCodes.ID_TAKEN, Failure.CONFLICT,
                     Message.of(ModelingMessages.ARCHI_ID_TAKEN, candidate, model.id()));
@@ -174,22 +176,23 @@ public final class ModelingKernel {
      * Команда с необязательным ключом идемпотентности. Ключ есть — повтор
      * с тем же телом отдаёт первый результат, перечитанный заново; другое тело — {@code 409}.
      *
+     * @param key     ключ идемпотентности; {@code null} — не задан
      * @param execute выполнить и вернуть ссылку на результат
      * @param reload  результат по ссылке
      */
-    <R> R idempotent(String scope, EditorIdentity actor, Optional<String> key, String fingerprint,
+    <R> R idempotent(String scope, EditorIdentity actor, String key, String fingerprint,
                      Supplier<String> execute, Function<String, R> reload) {
-        if (key.isEmpty()) {
+        if (key == null) {
             return reload.apply(execute.get());
         }
-        IdempotentCommand.requireValidKey(key.get());
+        IdempotentCommand.requireValidKey(key);
         IdempotentCommand.Decision decision =
-                IdempotentCommand.decide(idempotency.find(scope, actor.subject(), key.get()), fingerprint);
+                IdempotentCommand.decide(idempotency.find(scope, actor.subject(), key).orElse(null), fingerprint);
         if (decision instanceof IdempotentCommand.Replay replay) {
             return reload.apply(replay.resultRef());
         }
         String resultRef = execute.get();
-        idempotency.save(IdempotencyRecord.restore(scope, actor.subject(), key.get(), fingerprint, resultRef, now()));
+        idempotency.save(IdempotencyRecord.restore(scope, actor.subject(), key, fingerprint, resultRef, now()));
         return reload.apply(resultRef);
     }
 }

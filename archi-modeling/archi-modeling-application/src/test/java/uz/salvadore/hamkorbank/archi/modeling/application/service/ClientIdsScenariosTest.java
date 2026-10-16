@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,7 +47,7 @@ class ClientIdsScenariosTest {
 
     @BeforeEach
     void lockedModel() {
-        model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", Optional.empty()).id();
+        model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null).id();
         ports.lockService.acquire(ALICE, model);
     }
 
@@ -64,23 +63,23 @@ class ClientIdsScenariosTest {
         ModelFolder application = ports.models.get(model).roots().get(FolderType.APPLICATION);
 
         ModelFolder folder = ports.tree.createFolder(ALICE, model, application.id(), "Ядро",
-                RequestedIds.of(folderId, "id-folder-1"), Optional.empty());
-        Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.of(folder.id()),
-                RequestedIds.of(elementId, "id-abs"), Optional.empty());
-        Element actor = ports.elements.create(ALICE, model, ACTOR, "Клиент", Optional.empty(), Optional.empty());
-        View view = ports.viewService.create(ALICE, model, "Контекст", Optional.empty(),
-                RequestedIds.of(viewId, "id-view-1"), Optional.empty());
+                RequestedIds.of(folderId, "id-folder-1"), null);
+        Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", folder.id(),
+                RequestedIds.of(elementId, "id-abs"), null);
+        Element actor = ports.elements.create(ALICE, model, ACTOR, "Клиент", null, null);
+        View view = ports.viewService.create(ALICE, model, "Контекст", null,
+                RequestedIds.of(viewId, "id-view-1"), null);
         ViewNode node = ports.viewService.place(ALICE, view.id(), component.id(), new Bounds(10, 10, 120, 55),
-                Optional.empty(), RequestedIds.of(nodeId, "id-node-1")).value();
+                null, RequestedIds.of(nodeId, "id-node-1")).value();
         ViewNode actorNode = ports.viewService.place(ALICE, view.id(), actor.id(), new Bounds(300, 10, 120, 55),
-                Optional.empty());
+                null);
         RelationshipService.Result serving = ports.relationships.create(ALICE, model, SERVING, elementId,
                 actor.id().value(),
-                new RelationshipService.Details(Optional.empty(), Optional.empty(), Optional.empty(),
-                        Optional.empty(), RequestedIds.of(relationshipId, "id-serving")),
-                Optional.of(new RelationshipService.EdgePlacement(view.id(), nodeId, actorNode.id().value(),
-                        RequestedIds.of(edgeId, "id-edge-1"))),
-                Optional.empty());
+                new RelationshipService.Details(null, null, null,
+                        null, RequestedIds.of(relationshipId, "id-serving")),
+                new RelationshipService.EdgePlacement(view.id(), nodeId, actorNode.id().value(),
+                        RequestedIds.of(edgeId, "id-edge-1")),
+                null);
 
         assertEquals(folderId, folder.id().value());
         assertEquals("id-folder-1", folder.archiId().value());
@@ -92,45 +91,45 @@ class ClientIdsScenariosTest {
         assertEquals("id-node-1", node.archiId().value());
         assertEquals(relationshipId, serving.relationship().id().value());
         assertEquals("id-serving", serving.relationship().archiId().value());
-        assertEquals(edgeId, serving.edge().orElseThrow().value());
-        assertEquals("id-edge-1", ports.views.get(view.id()).requireEdge(serving.edge().orElseThrow())
+        assertEquals(edgeId, serving.edge().value());
+        assertEquals("id-edge-1", ports.views.get(view.id()).requireEdge(serving.edge())
                 .archiId().value());
     }
 
     @Test
     @DisplayName("ADR-0018: занятый id или archiId — 409 MDL_ID_TAKEN, недопустимый archiId — 422")
     void takenIdsAreRejected() {
-        Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(),
-                RequestedIds.of(IDS.generate(), "id-abs"), Optional.empty());
-        View view = ports.viewService.create(ALICE, model, "Контекст", Optional.empty(), Optional.empty());
+        Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", null,
+                RequestedIds.of(IDS.generate(), "id-abs"), null);
+        View view = ports.viewService.create(ALICE, model, "Контекст", null, null);
         ViewNode node = ports.viewService.place(ALICE, view.id(), component.id(), new Bounds(10, 10, 120, 55),
-                Optional.empty());
+                null);
 
         ModelingDomainException sameId = assertThrows(ModelingDomainException.class,
                 () -> ports.elements.create(ALICE, model,
-                COMPONENT, "CRM", Optional.empty(), RequestedIds.of(component.id().value(), null), Optional.empty()));
+                COMPONENT, "CRM", null, RequestedIds.of(component.id().value(), null), null));
         assertEquals("MDL_ID_TAKEN", sameId.code());
         assertEquals(Failure.CONFLICT, sameId.failure());
 
         ModelingDomainException idOfNode = assertThrows(ModelingDomainException.class,
                 () -> ports.viewService.create(ALICE,
-                model, "Другое", Optional.empty(), RequestedIds.of(node.id().value(), null), Optional.empty()));
+                model, "Другое", null, RequestedIds.of(node.id().value(), null), null));
         assertEquals("MDL_ID_TAKEN", idOfNode.code(), "ключ узла тоже занят");
 
         ModelingDomainException sameArchiId = assertThrows(ModelingDomainException.class,
                 () -> ports.elements.create(ALICE,
-                model, COMPONENT, "CRM", Optional.empty(), RequestedIds.of(null, "id-abs"), Optional.empty()));
+                model, COMPONENT, "CRM", null, RequestedIds.of(null, "id-abs"), null));
         assertEquals("MDL_ID_TAKEN", sameArchiId.code());
 
         ModelingDomainException archiIdOfNode = assertThrows(ModelingDomainException.class,
                 () -> ports.elements.create(ALICE,
-                model, COMPONENT, "CRM", Optional.empty(), RequestedIds.of(null, node.archiId().value()),
-                Optional.empty()));
+                model, COMPONENT, "CRM", null, RequestedIds.of(null, node.archiId().value()),
+                null));
         assertEquals("MDL_ID_TAKEN", archiIdOfNode.code(), "archiId узла на представлении — тоже занят в файле");
 
         ModelingDomainException invalid = assertThrows(ModelingDomainException.class,
                 () -> ports.elements.create(ALICE, model,
-                COMPONENT, "CRM", Optional.empty(), RequestedIds.of(null, "не id"), Optional.empty()));
+                COMPONENT, "CRM", null, RequestedIds.of(null, "не id"), null));
         assertEquals(ModelingCodes.INVALID_INPUT, invalid.code());
         assertEquals(Failure.UNPROCESSABLE, invalid.failure());
         assertEquals(1, ports.models.get(model).elements().size(), "отказ ничего не создал");
@@ -140,31 +139,31 @@ class ClientIdsScenariosTest {
     @DisplayName("ADR-0018: повтор с тем же ключом идемпотентности и теми же id — тот же объект, не 409")
     void idempotentReplayWithClientIds() {
         UUID elementId = IDS.generate();
-        Element first = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(),
-                RequestedIds.of(elementId, "id-abs"), Optional.of("k-1"));
-        Element replay = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(),
-                RequestedIds.of(elementId, "id-abs"), Optional.of("k-1"));
+        Element first = ports.elements.create(ALICE, model, COMPONENT, "АБС", null,
+                RequestedIds.of(elementId, "id-abs"), "k-1");
+        Element replay = ports.elements.create(ALICE, model, COMPONENT, "АБС", null,
+                RequestedIds.of(elementId, "id-abs"), "k-1");
 
         assertEquals(first.id(), replay.id());
         ModelingDomainException otherBody = assertThrows(ModelingDomainException.class,
                 () -> ports.elements.create(ALICE,
-                model, COMPONENT, "АБС", Optional.empty(), RequestedIds.of(IDS.generate(), "id-abs"),
-                Optional.of("k-1")));
+                model, COMPONENT, "АБС", null, RequestedIds.of(IDS.generate(), "id-abs"),
+                "k-1"));
         assertEquals("INV-MDL-003", otherBody.code(), "другие id — другое тело команды");
     }
 
     @Test
     @DisplayName("UC-MDL-002: отмена удаления узла возвращает его рёбра — ребро существующей связи по тем же id")
     void edgeOfExistingRelationshipIsPlacedBack() {
-        Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(), Optional.empty());
-        Element actor = ports.elements.create(ALICE, model, ACTOR, "Клиент", Optional.empty(), Optional.empty());
+        Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", null, null);
+        Element actor = ports.elements.create(ALICE, model, ACTOR, "Клиент", null, null);
         Relationship serving = ports.relationships.create(ALICE, model, SERVING, component.id().value(),
-                actor.id().value(), Optional.empty(), Optional.empty(), Optional.empty()).relationship();
-        View view = ports.viewService.create(ALICE, model, "Контекст", Optional.empty(), Optional.empty());
+                actor.id().value(), (String) null, null, null).relationship();
+        View view = ports.viewService.create(ALICE, model, "Контекст", null, null);
         ViewNode c = ports.viewService.place(ALICE, view.id(), component.id(), new Bounds(10, 10, 120, 55),
-                Optional.empty());
+                null);
         ViewNode a = ports.viewService.place(ALICE, view.id(), actor.id(), new Bounds(300, 10, 120, 55),
-                Optional.empty());
+                null);
         List<Bendpoint> bend = List.of(new Bendpoint(10, 40, -150, 40));
         ViewEdge edge = ports.viewService.placeEdge(ALICE, view.id(), serving.id(), c.id().value(), a.id().value(),
                 bend, RequestedIds.NONE).value();
@@ -172,7 +171,7 @@ class ClientIdsScenariosTest {
         ports.viewService.removeNode(ALICE, c.id());
         assertTrue(ports.views.get(view.id()).edges().values().isEmpty(), "ребро ушло вместе с узлом");
 
-        ViewNode restored = ports.viewService.place(ALICE, view.id(), component.id(), c.bounds(), Optional.empty(),
+        ViewNode restored = ports.viewService.place(ALICE, view.id(), component.id(), c.bounds(), null,
                 RequestedIds.of(c.id().value(), c.archiId().value())).value();
         ArchitectureModel.Created<ViewEdge> again = ports.viewService.placeEdge(ALICE, view.id(), serving.id(),
                 restored.id().value(),
@@ -195,15 +194,15 @@ class ClientIdsScenariosTest {
     @Test
     @DisplayName("INV-MDL-008: концы ребра не изображают концы связи — 422")
     void edgeEndsMustDepictRelationshipEnds() {
-        Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(), Optional.empty());
-        Element actor = ports.elements.create(ALICE, model, ACTOR, "Клиент", Optional.empty(), Optional.empty());
+        Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", null, null);
+        Element actor = ports.elements.create(ALICE, model, ACTOR, "Клиент", null, null);
         Relationship serving = ports.relationships.create(ALICE, model, SERVING, component.id().value(),
-                actor.id().value(), Optional.empty(), Optional.empty(), Optional.empty()).relationship();
-        View view = ports.viewService.create(ALICE, model, "Контекст", Optional.empty(), Optional.empty());
+                actor.id().value(), (String) null, null, null).relationship();
+        View view = ports.viewService.create(ALICE, model, "Контекст", null, null);
         ViewNode c = ports.viewService.place(ALICE, view.id(), component.id(), new Bounds(10, 10, 120, 55),
-                Optional.empty());
+                null);
         ViewNode a = ports.viewService.place(ALICE, view.id(), actor.id(), new Bounds(300, 10, 120, 55),
-                Optional.empty());
+                null);
 
         ModelingDomainException reversed = assertThrows(ModelingDomainException.class,
                 () -> ports.viewService.placeEdge(ALICE,
@@ -220,43 +219,43 @@ class ClientIdsScenariosTest {
     @Test
     @DisplayName("UC-MDL-003: связь в подпапке Relations, вид доступа у Access, направленность у Association")
     void relationshipFolderAndTypeAttributes() {
-        Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(), Optional.empty());
+        Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", null, null);
         Element data = ports.elements.create(ALICE, model, ArchiType.ofSimpleName("DataObject"), "Счёт",
-                Optional.empty(), Optional.empty());
-        Element actor = ports.elements.create(ALICE, model, ACTOR, "Клиент", Optional.empty(), Optional.empty());
+                null, null);
+        Element actor = ports.elements.create(ALICE, model, ACTOR, "Клиент", null, null);
         ModelFolder relations = ports.models.get(model).roots().get(FolderType.RELATIONS);
-        ModelFolder sub = ports.tree.createFolder(ALICE, model, relations.id(), "Потоки", Optional.empty());
+        ModelFolder sub = ports.tree.createFolder(ALICE, model, relations.id(), "Потоки", null);
 
         Relationship access = ports.relationships.create(ALICE, model, ArchiType.ofSimpleName("AccessRelationship"),
-                component.id().value(), data.id().value(), new RelationshipService.Details(Optional.empty(),
-                        Optional.of(sub.id()), Optional.of(AccessType.READ), Optional.empty(), RequestedIds.NONE),
-                Optional.empty(), Optional.empty()).relationship();
+                component.id().value(), data.id().value(), new RelationshipService.Details(null,
+                        sub.id(), AccessType.READ, null, RequestedIds.NONE),
+                null, null).relationship();
         Relationship association = ports.relationships.create(ALICE, model,
                 ArchiType.ofSimpleName("AssociationRelationship"), component.id().value(), actor.id().value(),
-                new RelationshipService.Details(Optional.empty(), Optional.empty(), Optional.empty(),
-                        Optional.of(true), RequestedIds.NONE),
-                Optional.empty(), Optional.empty()).relationship();
+                new RelationshipService.Details(null, null, null,
+                        true, RequestedIds.NONE),
+                null, null).relationship();
 
         assertEquals(sub.id(), access.folderId());
-        assertEquals(Optional.of(AccessType.READ), access.accessType());
+        assertEquals(AccessType.READ, access.accessType());
         assertEquals(relations.id(), association.folderId());
-        assertEquals(Optional.of(true), association.directed());
+        assertEquals(true, association.directed());
 
         ModelingDomainException wrongAttribute = assertThrows(ModelingDomainException.class,
                 () -> ports.relationships.create(
                 ALICE, model, SERVING, component.id().value(), actor.id().value(),
-                new RelationshipService.Details(Optional.empty(), Optional.empty(), Optional.of(AccessType.READ),
-                        Optional.empty(), RequestedIds.NONE),
-                Optional.empty(), Optional.empty()));
+                new RelationshipService.Details(null, null, AccessType.READ,
+                        null, RequestedIds.NONE),
+                null, null));
         assertEquals(Failure.UNPROCESSABLE, wrongAttribute.failure());
 
         ModelFolder application = ports.models.get(model).roots().get(FolderType.APPLICATION);
         ModelingDomainException wrongFolder = assertThrows(ModelingDomainException.class,
                 () -> ports.relationships.create(
                 ALICE, model, SERVING, component.id().value(), actor.id().value(),
-                new RelationshipService.Details(Optional.empty(), Optional.of(application.id()), Optional.empty(),
-                        Optional.empty(), RequestedIds.NONE),
-                Optional.empty(), Optional.empty()));
+                new RelationshipService.Details(null, application.id(), null,
+                        null, RequestedIds.NONE),
+                null, null));
         assertEquals("INV-MDL-009", wrongFolder.code());
     }
 }

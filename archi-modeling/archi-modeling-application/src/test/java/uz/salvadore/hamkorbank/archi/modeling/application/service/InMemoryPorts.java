@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -47,8 +48,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdge;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.Workspace;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
@@ -145,13 +148,13 @@ final class InMemoryPorts {
         @Override
         public List<ViewId> viewsReferencing(ElementId elementId) {
             return views.values().stream().filter(v -> v.nodes().values().stream()
-                    .anyMatch(n -> n.elementId().equals(Optional.of(elementId)))).map(View::id).toList();
+                    .anyMatch(n -> elementId.equals(n.elementId()))).map(View::id).toList();
         }
 
         @Override
         public List<ViewId> viewsReferencing(RelationshipId relationshipId) {
             return views.values().stream().filter(v -> v.edges().values().stream()
-                    .anyMatch(e -> e.relationshipId().equals(Optional.of(relationshipId)))).map(View::id).toList();
+                    .anyMatch(e -> relationshipId.equals(e.relationshipId()))).map(View::id).toList();
         }
     };
 
@@ -181,9 +184,10 @@ final class InMemoryPorts {
         public List<ViewPlacements> placements(ModelId modelId) {
             return views.values().stream().filter(v -> v.modelId().equals(modelId))
                     .map(v -> new ViewPlacements(v.id(),
-                            v.nodes().values().stream().flatMap(n -> n.elementId().stream()).distinct().toList(),
-                            v.edges().values().stream().flatMap(e -> e.relationshipId().stream()).distinct()
-                                    .toList()))
+                            v.nodes().values().stream().map(ViewNode::elementId).filter(Objects::nonNull).distinct()
+                                    .toList(),
+                            v.edges().values().stream().map(ViewEdge::relationshipId).filter(Objects::nonNull)
+                                    .distinct().toList()))
                     .filter(p -> !p.elementIds().isEmpty() || !p.relationshipIds().isEmpty())
                     .toList();
         }

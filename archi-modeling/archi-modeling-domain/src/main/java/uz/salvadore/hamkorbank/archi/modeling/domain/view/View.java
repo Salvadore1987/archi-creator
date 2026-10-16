@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.AggregateRoot;
@@ -52,11 +53,11 @@ public final class View extends AggregateRoot<ViewId> {
     private final ArchiId archiId;
     private final DiagramType archiType;
     private String name;
-    private Optional<String> documentation;
-    private Optional<String> viewpoint;
+    private String documentation;
+    private String viewpoint;
     private List<PropertyEntry> properties;
     private SortOrder sortOrder;
-    private final Optional<RawXml> rawXml;
+    private final RawXml rawXml;
     private final long version;
 
     private final TrackedMap<ViewNodeId, ViewNode> nodes = new TrackedMap<>();
@@ -84,7 +85,7 @@ public final class View extends AggregateRoot<ViewId> {
     /** Пустая диаграмма ArchiMate на месте, которое ей отвела модель. */
     public static View create(ModelId modelId, ViewRef place) {
         return new View(new ViewHeader(place.id(), modelId, place.folderId(), place.archiId(), place.archiType(),
-                place.name(), Optional.empty(), Optional.empty(), List.of(), place.sortOrder(), Optional.empty(), 0),
+                place.name(), null, null, List.of(), place.sortOrder(), null, 0),
                 true);
     }
 
@@ -117,12 +118,12 @@ public final class View extends AggregateRoot<ViewId> {
                 throw new ModelingDomainException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.UNPROCESSABLE,
                         Message.of(ModelingMessages.ARCHI_ID_REPEATED_ON_VIEW, node.archiId(), archiId));
             }
-            node.elementId().ifPresent(element -> requireElementOf(model, element, node.archiId()));
-            node.parentId().ifPresent(parent -> {
-                if (!nodes.contains(parent)) {
-                    throw integrity(Message.of(ModelingMessages.NODE_PARENT_ELSEWHERE, node.archiId()));
-                }
-            });
+            if (node.elementId() != null) {
+                requireElementOf(model, node.elementId(), node.archiId());
+            }
+            if (node.parentId() != null && !nodes.contains(node.parentId())) {
+                throw integrity(Message.of(ModelingMessages.NODE_PARENT_ELSEWHERE, node.archiId()));
+            }
             requireAcyclic(node);
         }
         for (ViewEdge edge : edges.values()) {
@@ -132,11 +133,9 @@ public final class View extends AggregateRoot<ViewId> {
             }
             requireEndpoint(edge.source(), edge.archiId());
             requireEndpoint(edge.target(), edge.archiId());
-            edge.relationshipId().ifPresent(r -> {
-                if (!model.relationships().contains(r)) {
-                    throw integrity(Message.of(ModelingMessages.EDGE_RELATIONSHIP_ELSEWHERE, edge.archiId()));
-                }
-            });
+            if (edge.relationshipId() != null && !model.relationships().contains(edge.relationshipId())) {
+                throw integrity(Message.of(ModelingMessages.EDGE_RELATIONSHIP_ELSEWHERE, edge.archiId()));
+            }
         }
     }
 
@@ -144,42 +143,46 @@ public final class View extends AggregateRoot<ViewId> {
 
     /**
      * Узел над элементом модели. Уже размещённый элемент не дублируется — возвращается
-     * существующий узел.
+     * существующий узел. {@code null} в родителе — корень представления.
      */
     public Created<ViewNode> placeElement(ArchitectureModel model, ElementId elementId, Bounds bounds,
-                                          Optional<ViewNodeId> parentId, ViewNodeId newId, ArchiId newArchiId) {
+                                          ViewNodeId parentId, ViewNodeId newId, ArchiId newArchiId) {
         requireEditable();
         requireElementOf(model, elementId, newArchiId);
         Optional<ViewNode> existing = nodes.values().stream()
-                .filter(n -> n.elementId().equals(Optional.of(elementId))).findFirst();
+                .filter(n -> elementId.equals(n.elementId())).findFirst();
         if (existing.isPresent()) {
             return new Created<>(existing.get(), false);
         }
-        parentId.ifPresent(this::requireContainer);
+        if (parentId != null) {
+            requireContainer(parentId);
+        }
         requireFreeArchiId(newArchiId);
-        ViewNode node = new ViewNode(newId, parentId, newArchiId, DiagramType.DIAGRAM_OBJECT, Optional.of(elementId),
-                bounds, StyleOverride.NONE, nextOrderIn(parentId), Optional.empty());
+        ViewNode node = new ViewNode(newId, parentId, newArchiId, DiagramType.DIAGRAM_OBJECT, elementId,
+                bounds, StyleOverride.NONE, nextNodeOrderIn(parentId), null);
         nodes.put(node.id(), node);
         return new Created<>(node, true);
     }
 
     /**
      * Группа или заметка — узел без элемента модели. Подпись бывает у группы, текст —
-     * у заметки.
+     * у заметки. {@code null} — подписи, текста, родителя нет.
      */
-    public ViewNode placeAnnotation(ViewNodeKind kind, Optional<String> label, Optional<String> content,
-                                    Bounds bounds, Optional<ViewNodeId> parentId, ViewNodeId newId,
+    public ViewNode placeAnnotation(ViewNodeKind kind, String label, String content,
+                                    Bounds bounds, ViewNodeId parentId, ViewNodeId newId,
                                     ArchiId newArchiId) {
         requireEditable();
         if (kind != ViewNodeKind.GROUP && kind != ViewNodeKind.NOTE) {
             throw new ModelingDomainException(ModelingCodes.INVALID_INPUT, Failure.UNPROCESSABLE,
                     Message.of(ModelingMessages.NODE_NOT_ANNOTATION, kind));
         }
-        parentId.ifPresent(this::requireContainer);
+        if (parentId != null) {
+            requireContainer(parentId);
+        }
         requireFreeArchiId(newArchiId);
-        ViewNode node = new ViewNode(newId, parentId, newArchiId, kind.diagramType().orElseThrow(), Optional.empty(),
-                bounds, StyleOverride.NONE, Optional.empty(), Optional.empty(),
-                nextOrderIn(parentId), Optional.empty());
+        ViewNode node = new ViewNode(newId, parentId, newArchiId, kind.diagramType().orElseThrow(), null,
+                bounds, StyleOverride.NONE, null, null,
+                nextNodeOrderIn(parentId), null);
         requireTextFits(node, label, content);
         node = node.withText(label, content);
         nodes.put(node.id(), node);
@@ -187,27 +190,28 @@ public final class View extends AggregateRoot<ViewId> {
     }
 
     /**
-     * Подпись группы, текст заметки, собственный стиль узла. Отсутствующее не меняется;
-     * стиль заменяется целиком.
+     * Подпись группы, текст заметки, собственный стиль узла. {@code null} — не меняется;
+     * пустая строка снимает текст; стиль заменяется целиком.
      */
-    public ViewNode editNode(ViewNodeId nodeId, Optional<String> label, Optional<String> content,
-                             Optional<StyleOverride> style) {
+    public ViewNode editNode(ViewNodeId nodeId, String label, String content, StyleOverride style) {
         requireEditable();
         ViewNode node = requireNode(nodeId);
         requireTextFits(node, label, content);
-        node = node.withText(label.isPresent() ? label : node.label(),
-                content.isPresent() ? content : node.content());
-        node = style.map(node::withStyle).orElse(node);
+        node = node.withText(label != null ? label : node.label(),
+                content != null ? content : node.content());
+        if (style != null) {
+            node = node.withStyle(style);
+        }
         nodes.put(nodeId, node);
         return node;
     }
 
     /** Подпись бывает у группы, текст — у заметки; чужое поле — отказ, а не молчаливый пропуск. */
-    private static void requireTextFits(ViewNode node, Optional<String> label, Optional<String> content) {
-        if (label.isPresent() && node.kind() != ViewNodeKind.GROUP) {
+    private static void requireTextFits(ViewNode node, String label, String content) {
+        if (label != null && node.kind() != ViewNodeKind.GROUP) {
             throw notApplicable(node, "label");
         }
-        if (content.isPresent() && node.kind() != ViewNodeKind.NOTE) {
+        if (content != null && node.kind() != ViewNodeKind.NOTE) {
             throw notApplicable(node, "content");
         }
     }
@@ -235,21 +239,21 @@ public final class View extends AggregateRoot<ViewId> {
     /**
      * Вложить узел в контейнер или вынести в корень. Координаты — относительно нового
      * родителя; дети едут вместе с узлом, их координаты не меняются. В другом родителе
-     * узел встаёт в конец содержимого, соседи не перенумеровываются.
+     * узел встаёт в конец содержимого, соседи не перенумеровываются. {@code null} — корень.
      */
-    public ViewNode moveToParent(ViewNodeId nodeId, Optional<ViewNodeId> parentId, int x, int y) {
+    public ViewNode moveToParent(ViewNodeId nodeId, ViewNodeId parentId, int x, int y) {
         requireEditable();
         ViewNode node = requireNode(nodeId);
-        parentId.ifPresent(parent -> {
-            requireContainer(parent);
-            if (parent.equals(nodeId) || isInside(parent, nodeId)) {
+        if (parentId != null) {
+            requireContainer(parentId);
+            if (parentId.equals(nodeId) || isInside(parentId, nodeId)) {
                 throw integrity(Message.of(ModelingMessages.NODE_NESTING_CYCLE, node.archiId()));
             }
-        });
+        }
         Bounds bounds = new Bounds(x, y, node.bounds().width(), node.bounds().height());
-        ViewNode moved = parentId.equals(node.parentId())
+        ViewNode moved = Objects.equals(parentId, node.parentId())
                 ? node.withBounds(bounds)
-                : node.withParent(parentId, bounds, nextOrderIn(parentId));
+                : node.withParent(parentId, bounds, nextNodeOrderIn(parentId));
         nodes.put(nodeId, moved);
         return moved;
     }
@@ -257,12 +261,12 @@ public final class View extends AggregateRoot<ViewId> {
     /** Лежит ли узел где-то внутри предка. */
     private boolean isInside(ViewNodeId nodeId, ViewNodeId ancestor) {
         Set<ViewNodeId> visited = new HashSet<>();
-        Optional<ViewNodeId> current = nodes.get(nodeId).flatMap(ViewNode::parentId);
-        while (current.isPresent() && visited.add(current.get())) {
-            if (current.get().equals(ancestor)) {
+        ViewNodeId current = parentOf(nodeId);
+        while (current != null && visited.add(current)) {
+            if (current.equals(ancestor)) {
                 return true;
             }
-            current = nodes.get(current.get()).flatMap(ViewNode::parentId);
+            current = parentOf(current);
         }
         return false;
     }
@@ -310,15 +314,15 @@ public final class View extends AggregateRoot<ViewId> {
             throw integrity(Message.of(ModelingMessages.EDGE_ENDS_MISMATCH, relationship.archiId()));
         }
         Optional<ViewEdge> existing = edges.values().stream()
-                .filter(e -> e.relationshipId().equals(Optional.of(relationshipId))
+                .filter(e -> relationshipId.equals(e.relationshipId())
                         && e.source().equals(source) && e.target().equals(target))
                 .findFirst();
         if (existing.isPresent()) {
             return new Created<>(existing.get(), false);
         }
         requireFreeArchiId(newArchiId);
-        ViewEdge edge = new ViewEdge(newId, newArchiId, DiagramType.CONNECTION, Optional.of(relationshipId), source,
-                target, bendpoints, StyleOverride.NONE, nextOrderIn(source), Optional.empty());
+        ViewEdge edge = new ViewEdge(newId, newArchiId, DiagramType.CONNECTION, relationshipId, source,
+                target, bendpoints, StyleOverride.NONE, nextOrderIn(source), null);
         edges.put(edge.id(), edge);
         return new Created<>(edge, true);
     }
@@ -326,7 +330,7 @@ public final class View extends AggregateRoot<ViewId> {
     /** Элемент удалён из модели: его размещения уходят вместе с ним, как в Archi. */
     public boolean removeElementReferences(ElementId elementId) {
         List<ViewNodeId> placed = nodes.values().stream()
-                .filter(n -> n.elementId().equals(Optional.of(elementId))).map(ViewNode::id).toList();
+                .filter(n -> elementId.equals(n.elementId())).map(ViewNode::id).toList();
         removeNodesCascading(placed);
         return !placed.isEmpty();
     }
@@ -334,7 +338,7 @@ public final class View extends AggregateRoot<ViewId> {
     /** Связь удалена из модели: её отрисовки уходят вместе с ней. */
     public boolean removeRelationshipReferences(RelationshipId relationshipId) {
         List<ViewEdgeId> drawn = edges.values().stream()
-                .filter(e -> e.relationshipId().equals(Optional.of(relationshipId))).map(ViewEdge::id).toList();
+                .filter(e -> relationshipId.equals(e.relationshipId())).map(ViewEdge::id).toList();
         removeEdgesCascading(drawn);
         return !drawn.isEmpty();
     }
@@ -345,7 +349,7 @@ public final class View extends AggregateRoot<ViewId> {
         while (!queue.isEmpty()) {
             ViewNodeId current = queue.pop();
             if (removed.add(current)) {
-                nodes.values().stream().filter(n -> n.parentId().equals(Optional.of(current)))
+                nodes.values().stream().filter(n -> current.equals(n.parentId()))
                         .forEach(child -> queue.push(child.id()));
             }
         }
@@ -383,12 +387,15 @@ public final class View extends AggregateRoot<ViewId> {
         headerChanged = true;
     }
 
-    /** Правка собственных полей: имени, документации, точки зрения и свойств; пустые строки — значения нет. */
-    public void edit(String newName, Optional<String> newDocumentation, Optional<String> newViewpoint,
+    /**
+     * Правка собственных полей: имени, документации, точки зрения и свойств;
+     * {@code null} и пустые строки — значения нет.
+     */
+    public void edit(String newName, String newDocumentation, String newViewpoint,
                      List<PropertyEntry> newProperties) {
         name = Names.limited(newName, Names.VIEW);
-        documentation = newDocumentation.filter(d -> !d.isEmpty());
-        viewpoint = newViewpoint.filter(v -> !v.isEmpty());
+        documentation = newDocumentation == null || newDocumentation.isEmpty() ? null : newDocumentation;
+        viewpoint = newViewpoint == null || newViewpoint.isEmpty() ? null : newViewpoint;
         properties = List.copyOf(newProperties);
         headerChanged = true;
     }
@@ -429,9 +436,9 @@ public final class View extends AggregateRoot<ViewId> {
     private boolean depicts(ViewEndpoint endpoint, ConceptRef concept) {
         return switch (endpoint) {
             case ViewNodeId node -> concept instanceof ElementId element
-                    && nodes.get(node).flatMap(ViewNode::elementId).equals(Optional.of(element));
+                    && element.equals(nodes.get(node).map(ViewNode::elementId).orElse(null));
             case ViewEdgeId edge -> concept instanceof RelationshipId relationship
-                    && edges.get(edge).flatMap(ViewEdge::relationshipId).equals(Optional.of(relationship));
+                    && relationship.equals(edges.get(edge).map(ViewEdge::relationshipId).orElse(null));
         };
     }
 
@@ -473,18 +480,23 @@ public final class View extends AggregateRoot<ViewId> {
     /** Цепочка родителей узла не замыкается в цикл; цикл — нарушение целостности. */
     private void requireAcyclic(ViewNode node) {
         Set<ViewNodeId> visited = new HashSet<>();
-        Optional<ViewNodeId> current = node.parentId();
-        while (current.isPresent()) {
-            if (!visited.add(current.get())) {
+        ViewNodeId current = node.parentId();
+        while (current != null) {
+            if (!visited.add(current)) {
                 throw integrity(Message.of(ModelingMessages.NODE_NESTING_CYCLE, node.archiId()));
             }
-            current = nodes.get(current.get()).flatMap(ViewNode::parentId);
+            current = parentOf(current);
         }
     }
 
-    /** Конец содержимого для нового узла: верхнего уровня или внутри узла-родителя. */
-    private SortOrder nextOrderIn(Optional<ViewNodeId> parent) {
-        return parent.map(this::nextOrderIn).orElseGet(() -> SortOrder.afterLast(childNodeOrders(Optional.empty())));
+    /** Родитель узла; узла нет или он в корне — {@code null}. */
+    private ViewNodeId parentOf(ViewNodeId nodeId) {
+        return nodes.get(nodeId).map(ViewNode::parentId).orElse(null);
+    }
+
+    /** Конец содержимого для нового узла: верхнего уровня ({@code null}) или внутри узла-родителя. */
+    private SortOrder nextNodeOrderIn(ViewNodeId parent) {
+        return parent != null ? nextOrderIn(parent) : SortOrder.afterLast(childNodeOrders(null));
     }
 
     /**
@@ -494,14 +506,15 @@ public final class View extends AggregateRoot<ViewId> {
     private SortOrder nextOrderIn(ViewEndpoint parent) {
         List<SortOrder> taken = new ArrayList<>();
         if (parent instanceof ViewNodeId node) {
-            taken.addAll(childNodeOrders(Optional.of(node)));
+            taken.addAll(childNodeOrders(node));
         }
         edges.values().stream().filter(e -> e.source().equals(parent)).forEach(e -> taken.add(e.sortOrder()));
         return SortOrder.afterLast(taken);
     }
 
-    private List<SortOrder> childNodeOrders(Optional<ViewNodeId> parent) {
-        return nodes.values().stream().filter(n -> n.parentId().equals(parent)).map(ViewNode::sortOrder).toList();
+    private List<SortOrder> childNodeOrders(ViewNodeId parent) {
+        return nodes.values().stream().filter(n -> Objects.equals(n.parentId(), parent)).map(ViewNode::sortOrder)
+                .toList();
     }
 
     private static ModelingDomainException integrity(Message reason) {

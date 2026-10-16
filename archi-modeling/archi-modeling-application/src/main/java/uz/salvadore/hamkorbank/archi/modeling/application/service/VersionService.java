@@ -61,9 +61,10 @@ public final class VersionService {
     /**
      * Сохранение. Изменений с последней версии нет — версия не создаётся:
      * журнал версий — не журнал нажатий. Повтор с тем же ключом отдаёт первую версию.
+     * {@code null} в комментарии и ключе — не заданы.
      */
-    public SaveResult save(EditorIdentity actor, ModelId modelId, Optional<String> comment,
-                           Optional<String> idempotencyKey) {
+    public SaveResult save(EditorIdentity actor, ModelId modelId, String comment,
+                           String idempotencyKey) {
         return kernel.run(Operation.SAVE_MODEL, actor, () -> kernel.unitOfWork.write(() -> {
             boolean[] created = {false};
             ModelVersion version = kernel.idempotent("SaveModel", actor, idempotencyKey,
@@ -83,9 +84,9 @@ public final class VersionService {
     /**
      * Версия из текущего содержимого базы. Тот же отпечаток, что у последней версии, —
      * новая не пишется и возвращается последняя. Снимок собирается из базы, а не из
-     * того, что держит вызывающий: так он проверяет и хранение.
+     * того, что держит вызывающий: так он проверяет и хранение. {@code null} — без комментария.
      */
-    ModelVersion commit(ArchitectureModel model, EditorIdentity actor, Optional<String> comment) {
+    ModelVersion commit(ArchitectureModel model, EditorIdentity actor, String comment) {
         ModelContent content = new ModelContent(kernel.models.load(model.id()).orElseThrow(),
                 kernel.views.loadAll(model.id()));
         byte[] xml = snapshotWriter.write(content);
@@ -95,8 +96,8 @@ public final class VersionService {
             return last.get();
         }
         Instant now = kernel.now();
-        ModelVersion.Committed committed = ModelVersion.commit(last, VersionId.next(kernel.uuids), model.id(),
-                model.workspaceId(), actor.subject(), comment, now, Snapshots.gzip(xml), hash,
+        ModelVersion.Committed committed = ModelVersion.commit(last.orElse(null), VersionId.next(kernel.uuids),
+                model.id(), model.workspaceId(), actor.subject(), comment, now, Snapshots.gzip(xml), hash,
                 new ModelVersion.ModelSize(content.model().elements().size(),
                         content.model().relationships().size()));
         kernel.versions.save(committed.version());
@@ -112,8 +113,11 @@ public final class VersionService {
         }));
     }
 
-    /** Метка релиза. Содержимого модели не меняет, поэтому блокировки не требует. */
-    public ModelVersion label(EditorIdentity actor, ModelId modelId, long versionNo, Optional<String> label) {
+    /**
+     * Метка релиза. Содержимого модели не меняет, поэтому блокировки не требует.
+     * {@code null} и пустая метка снимают пометку.
+     */
+    public ModelVersion label(EditorIdentity actor, ModelId modelId, long versionNo, String label) {
         return kernel.run(Operation.LABEL_VERSION, actor, () -> kernel.unitOfWork.write(() -> {
             kernel.visibleHeader(modelId, actor, AclAccess.WRITE);
             ModelVersion labelled = requireVersion(modelId, versionNo).labelled(label);
@@ -124,14 +128,15 @@ public final class VersionService {
 
     /**
      * Откат: содержимое версии становится текущим и фиксируется новой версией — история
-     * не переписывается, а дописывается.
+     * не переписывается, а дописывается. {@code null} и пустой комментарий — комментарий по умолчанию.
      */
-    public ModelVersion rollback(EditorIdentity actor, ModelId modelId, long versionNo, Optional<String> comment) {
+    public ModelVersion rollback(EditorIdentity actor, ModelId modelId, long versionNo, String comment) {
         return kernel.run(Operation.RESTORE_VERSION, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.writableModel(modelId, actor);
             byte[] xml = content(model.header(), requireVersion(modelId, versionNo));
-            return replace(model, xml, actor, comment.filter(c -> !c.isBlank()).orElseGet(
-                    () -> kernel.texts.text(Message.of(ModelingMessages.COMMENT_ROLLBACK, versionNo)))).version();
+            return replace(model, xml, actor, comment == null || comment.isBlank()
+                    ? kernel.texts.text(Message.of(ModelingMessages.COMMENT_ROLLBACK, versionNo))
+                    : comment).version();
         }));
     }
 
@@ -148,7 +153,7 @@ public final class VersionService {
         kernel.models.replaceContent(restored);
         int opaque = (int) (restored.model().elements().values().stream().filter(e -> !e.supported()).count()
                 + restored.model().relationships().values().stream().filter(r -> !r.supported()).count());
-        return new Replacement(commit(restored.model(), actor, Optional.of(comment)), opaque);
+        return new Replacement(commit(restored.model(), actor, comment), opaque);
     }
 
     /** Текущее содержимое модели в базе — тем же снимком, который соберёт сохранение. */
@@ -160,19 +165,19 @@ public final class VersionService {
     /**
      * Снимок версии для выгрузки: указанной или последней.
      * Удалённая модель не выгружается ({@code 409}); очищенный снимок возвращается из Git,
-     * а без Git — {@code 410}.
+     * а без Git — {@code 410}. {@code null} в номере — последняя версия.
      */
-    public VersionSnapshot snapshot(EditorIdentity actor, ModelId modelId, Optional<Long> versionNo) {
+    public VersionSnapshot snapshot(EditorIdentity actor, ModelId modelId, Long versionNo) {
         return kernel.unitOfWork.read(() -> {
             ModelHeader header = kernel.visibleHeader(modelId, actor, AclAccess.READ);
             if (header.status() != ModelStatus.ACTIVE) {
                 throw new ModelingDomainException(MODEL_DELETED, Failure.CONFLICT,
                         Message.of(ModelingMessages.MODEL_DELETED));
             }
-            ModelVersion version = versionNo.map(no -> requireVersion(modelId, no))
-                    .orElseGet(() -> kernel.versions.last(modelId)
+            ModelVersion version = versionNo != null ? requireVersion(modelId, versionNo)
+                    : kernel.versions.last(modelId)
                             .orElseThrow(() -> ModelingDomainException.notFound(
-                                    Message.of(ModelingMessages.MODEL_VERSION, modelId))));
+                                    Message.of(ModelingMessages.MODEL_VERSION, modelId)));
             return new VersionSnapshot(header, version.versionNo(), content(header, version));
         });
     }
@@ -185,7 +190,7 @@ public final class VersionService {
         if (version.hasSnapshot()) {
             return Snapshots.gunzip(version.requireSnapshot());
         }
-        Optional<byte[]> restored = version.gitSha().isPresent() ? archive.restore(header, version) : Optional.empty();
+        Optional<byte[]> restored = version.gitSha() != null ? archive.restore(header, version) : Optional.empty();
         return restored.orElseGet(() -> Snapshots.gunzip(version.requireSnapshot()));
     }
 
@@ -202,7 +207,7 @@ public final class VersionService {
     /** Последняя опубликованная в Git версия модели. */
     public Optional<ModelVersion> lastPublished(ModelId modelId) {
         return kernel.unitOfWork.read(() -> kernel.versions.list(modelId).stream()
-                .filter(v -> v.gitSha().isPresent()).findFirst());
+                .filter(v -> v.gitSha() != null).findFirst());
     }
 
     /** Связать версию с коммитом, в котором её содержимое лежит в репозитории. */

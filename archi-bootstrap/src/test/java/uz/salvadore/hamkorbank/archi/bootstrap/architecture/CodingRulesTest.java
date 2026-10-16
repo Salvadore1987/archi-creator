@@ -51,6 +51,8 @@ class CodingRulesTest {
     /** Контексты, корни агрегатов которых уже сведены к AggregateRoot. */
     private static final List<String> AGGREGATE_ROOT_CONTEXTS = List.of("modeling", "interchange", "advisor");
     private static final Path SPEC = Path.of("../spec");
+    /** Пакеты, где Optional уже не бывает ни полем, ни параметром. */
+    private static final List<String> OPTIONAL_FREE = List.of(ROOT + ".modeling..");
     private static final String TRACKED_MAP = ROOT + ".modeling.domain.common.TrackedMap";
     /** Агрегаты, которые держат свои сущности в {@code TrackedMap}, и сам класс. */
     private static final Set<String> TRACKED_OWNERS = Set.of(TRACKED_MAP,
@@ -235,6 +237,35 @@ class CodingRulesTest {
             }
         }
         return roots;
+    }
+
+    @Test
+    @DisplayName("Optional — только результат поиска и локальная переменная: не поле и не параметр")
+    void optionalIsNeitherFieldNorParameter() {
+        for (String packages : OPTIONAL_FREE) {
+            noFields().that().areDeclaredInClassesThat().resideInAPackage(packages)
+                    .should().haveRawType(Optional.class)
+                    .because("поле держит само значение, отсутствие — null с проверкой в конструкторе")
+                    .check(classes);
+            codeUnits().that().areDeclaredInClassesThat().resideInAPackage(packages)
+                    .should(notTakeOptional())
+                    .because("отсутствие значения передаётся null, Optional — для результата поиска")
+                    .check(classes);
+        }
+    }
+
+    private static ArchCondition<JavaCodeUnit> notTakeOptional() {
+        return new ArchCondition<>("not take Optional parameters") {
+            @Override
+            public void check(JavaCodeUnit unit, ConditionEvents events) {
+                if (unit.getModifiers().contains(JavaModifier.SYNTHETIC)) {
+                    return;
+                }
+                if (unit.getRawParameterTypes().stream().anyMatch(t -> t.isEquivalentTo(Optional.class))) {
+                    events.add(SimpleConditionEvent.violated(unit, unit.getFullName() + " takes Optional"));
+                }
+            }
+        };
     }
 
     @Test

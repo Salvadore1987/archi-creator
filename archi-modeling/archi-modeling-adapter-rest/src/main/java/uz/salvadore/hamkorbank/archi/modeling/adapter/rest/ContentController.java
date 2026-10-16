@@ -71,11 +71,11 @@ public class ContentController {
 
     /** Создаёт элемент в модели — {@code 201} с адресом нового элемента. */
     @PostMapping("/models/{id}/elements")
-    public ResponseEntity<ElementDto> createElement(EditorIdentity actor, @PathVariable UUID id,
-                                                    @RequestBody CreateElementRequest request,
-                                                    @RequestHeader("Idempotency-Key") Optional<String> key) {
+    public ResponseEntity<ElementDto> createElement(
+            EditorIdentity actor, @PathVariable UUID id, @RequestBody CreateElementRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String key) {
         Element element = elements.create(actor, ModelId.of(id), archiType(request.archiType()), request.name(),
-                Optional.ofNullable(request.folderId()).map(FolderId::of),
+                request.folderId() == null ? null : FolderId.of(request.folderId()),
                 RequestedIds.of(request.id(), request.archiId()), key);
         return ResponseEntity.created(URI.create("/api/v1/elements/" + element.id())).body(DtoMapper.element(element));
     }
@@ -83,8 +83,8 @@ public class ContentController {
     /** Правит имя, описание и свойства элемента; не переданное поле не меняется. */
     @PatchMapping("/elements/{id}")
     public ElementDto updateElement(EditorIdentity actor, @PathVariable UUID id, @RequestBody ElementPatch patch) {
-        return DtoMapper.element(elements.update(actor, ElementId.of(id), Optional.ofNullable(patch.name()),
-                Optional.ofNullable(patch.documentation()), properties(patch.properties())));
+        return DtoMapper.element(elements.update(actor, ElementId.of(id), patch.name(),
+                patch.documentation(), properties(patch.properties())));
     }
 
     /** Со связями — {@code 409} с их перечнем в {@code relationships}. */
@@ -98,21 +98,22 @@ public class ContentController {
 
     /** Новая — {@code 201}; дубль того же типа между той же парой — {@code 200} с существующей. */
     @PostMapping("/models/{id}/relationships")
-    public ResponseEntity<RelationshipDto> createRelationship(EditorIdentity actor, @PathVariable UUID id,
-                                                              @RequestBody CreateRelationshipRequest request,
-                                                              @RequestHeader("Idempotency-Key") Optional<String> key) {
-        Optional<RelationshipService.EdgePlacement> placement = Optional.ofNullable(request.view())
+    public ResponseEntity<RelationshipDto> createRelationship(
+            EditorIdentity actor, @PathVariable UUID id, @RequestBody CreateRelationshipRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String key) {
+        RelationshipService.EdgePlacement placement = Optional.ofNullable(request.view())
                 .map(v -> new RelationshipService.EdgePlacement(ViewId.of(require(v.viewId(), "view.viewId")),
                         require(v.sourceNodeId(), "view.sourceNodeId"), require(v.targetNodeId(), "view.targetNodeId"),
-                        RequestedIds.of(v.edgeId(), v.edgeArchiId())));
-        RelationshipService.Details details = new RelationshipService.Details(Optional.ofNullable(request.name()),
-                Optional.ofNullable(request.folderId()).map(FolderId::of), accessType(request.accessType()),
-                Optional.ofNullable(request.directed()), RequestedIds.of(request.id(), request.archiId()));
+                        RequestedIds.of(v.edgeId(), v.edgeArchiId())))
+                .orElse(null);
+        RelationshipService.Details details = new RelationshipService.Details(request.name(),
+                request.folderId() == null ? null : FolderId.of(request.folderId()), accessType(request.accessType()),
+                request.directed(), RequestedIds.of(request.id(), request.archiId()));
         RelationshipService.Result result = relationships.create(actor, ModelId.of(id), archiType(request.archiType()),
                 require(request.sourceId(), "sourceId"), require(request.targetId(), "targetId"), details,
                 placement, key);
         RelationshipDto body = DtoMapper.relationship(result.relationship(),
-                result.edge().map(e -> e.value()).orElse(null));
+                result.edge() == null ? null : result.edge().value());
         return result.created()
                 ? ResponseEntity.created(URI.create("/api/v1/relationships/" + body.id())).body(body)
                 : ResponseEntity.ok(body);
@@ -123,7 +124,7 @@ public class ContentController {
     public RelationshipDto updateRelationship(EditorIdentity actor, @PathVariable UUID id,
                                               @RequestBody ElementPatch patch) {
         return DtoMapper.relationship(relationships.update(actor, RelationshipId.of(id),
-                Optional.ofNullable(patch.name()), Optional.ofNullable(patch.documentation()),
+                patch.name(), patch.documentation(),
                 properties(patch.properties())), null);
     }
 
@@ -138,9 +139,9 @@ public class ContentController {
 
     /** Создаёт папку в дереве модели — {@code 201}. */
     @PostMapping("/models/{id}/folders")
-    public ResponseEntity<FolderDto> createFolder(EditorIdentity actor, @PathVariable UUID id,
-                                                  @RequestBody CreateFolderRequest request,
-                                                  @RequestHeader("Idempotency-Key") Optional<String> key) {
+    public ResponseEntity<FolderDto> createFolder(
+            EditorIdentity actor, @PathVariable UUID id, @RequestBody CreateFolderRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String key) {
         ModelFolder folder = tree.createFolder(actor, ModelId.of(id),
                 FolderId.of(require(request.parentId(), "parentId")),
                 request.name(), RequestedIds.of(request.id(), request.archiId()), key);
@@ -180,7 +181,7 @@ public class ContentController {
         return java.util.stream.Stream.of(ConceptKind.ELEMENT, ConceptKind.JUNCTION)
                 .flatMap(kind -> registry.concepts(kind).stream())
                 .map(c -> new ElementTypeDto(c.type().value(), c.kind().name(), c.layer().name(),
-                        c.phase().map(Enum::name).orElse(null), c.supported()))
+                        c.phase() == null ? null : c.phase().name(), c.supported()))
                 .toList();
     }
 
@@ -199,20 +200,20 @@ public class ContentController {
         }
     }
 
-    private static Optional<AccessType> accessType(String value) {
+    private static AccessType accessType(String value) {
         if (value == null) {
-            return Optional.empty();
+            return null;
         }
         try {
-            return Optional.of(AccessType.valueOf(value));
+            return AccessType.valueOf(value);
         } catch (IllegalArgumentException invalid) {
             throw ModelingDomainException.invalid(Message.of(ModelingMessages.ACCESS_TYPE_REQUESTED, value));
         }
     }
 
-    private static Optional<List<ElementService.PropertyValue>> properties(List<PropertyDto> properties) {
-        return Optional.ofNullable(properties).map(list -> list.stream()
-                .map(p -> new ElementService.PropertyValue(p.key(), p.value() == null ? "" : p.value())).toList());
+    private static List<ElementService.PropertyValue> properties(List<PropertyDto> properties) {
+        return properties == null ? null : properties.stream()
+                .map(p -> new ElementService.PropertyValue(p.key(), p.value() == null ? "" : p.value())).toList();
     }
 
     private static List<UUID> items(List<UUID> ids) {

@@ -8,7 +8,6 @@ import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
@@ -80,7 +79,7 @@ class ArchitectureModelTest {
         Element goal = Models.element(model, "Goal", FolderType.MOTIVATION, "Платёж за 10 секунд");
         Element component = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
 
-        Element renamed = model.updateElement(capability.id(), "Мгновенные платежи", Optional.of("Уровень 1"),
+        Element renamed = model.updateElement(capability.id(), "Мгновенные платежи", "Уровень 1",
                 List.of(), NOW);
         Relationship realizes = Models.relate(model, "RealizationRelationship", component.id(), capability.id());
         Models.relate(model, "RealizationRelationship", capability.id(), goal.id());
@@ -101,7 +100,7 @@ class ArchitectureModelTest {
 
         Relationship serving = Models.relate(model, "ServingRelationship", component.id(), actor.id());
         ArchitectureModel.Created<Relationship> again = model.addRelationship(
-                ArchiType.ofSimpleName("ServingRelationship"), component.id(), actor.id(), Optional.empty(),
+                ArchiType.ofSimpleName("ServingRelationship"), component.id(), actor.id(), null,
                 RelationshipId.next(UUIDS), Models.archiId(), NOW);
 
         assertFalse(again.created());

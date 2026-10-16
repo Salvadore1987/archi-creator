@@ -22,7 +22,8 @@ public final class ModelingWorkspaceDirectory implements WorkspaceDirectory {
     public WorkspaceId resolve(Optional<WorkspaceId> requested) {
         try {
             return WorkspaceId.of(workspaces.resolve(requested.map(w ->
-                    uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId.of(w.value()))).value());
+                    uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId.of(w.value()))
+                    .orElse(null)).value());
         } catch (ModelingDomainException missing) {
             throw AdvisorDomainException.notFound(Message.of(AdvisorMessages.WORKSPACE, requested.map(Object::toString)
                     .orElse("")));

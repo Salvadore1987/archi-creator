@@ -39,9 +39,11 @@ public final class LockService {
                     .ifPresent(l -> kernel.metrics.lockWait(modelId,
                             java.time.Duration.between(kernel.now(), l.expiresAt())));
             ModelLock.Acquisition acquisition =
-                    ModelLock.acquire(modelId, current, actor, kernel.now(), kernel.lockTtl);
+                    ModelLock.acquire(modelId, current.orElse(null), actor, kernel.now(), kernel.lockTtl);
             kernel.locks.save(acquisition.lock());
-            acquisition.expiredPrevious().ifPresent(e -> kernel.events.publish(List.of(e)));
+            if (acquisition.expiredPrevious() != null) {
+                kernel.events.publish(List.of(acquisition.expiredPrevious()));
+            }
             return acquisition.lock();
         }));
     }

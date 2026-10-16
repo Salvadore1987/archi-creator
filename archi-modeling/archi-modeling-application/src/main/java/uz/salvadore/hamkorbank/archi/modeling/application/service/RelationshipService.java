@@ -64,39 +64,48 @@ public final class RelationshipService {
     /**
      * Что создать, кроме концов и типа.
      *
-     * @param folderId   папка в поддереве {@code Relations}; пусто — его корень
-     * @param accessType только у Access
-     * @param directed   только у Association
+     * @param name       имя; {@code null} — без имени
+     * @param folderId   папка в поддереве {@code Relations}; {@code null} — его корень
+     * @param accessType только у Access; {@code null} — не задан
+     * @param directed   только у Association; {@code null} — не задано
      * @param ids        идентификаторы связи, выбранные клиентом
      */
-    public record Details(Optional<String> name, Optional<FolderId> folderId, Optional<AccessType> accessType,
-                          Optional<Boolean> directed, RequestedIds ids) {
+    public record Details(String name, FolderId folderId, AccessType accessType,
+                          Boolean directed, RequestedIds ids) {
 
-        /** Детали, в которых задано только имя. */
-        public static Details named(Optional<String> name) {
-            return new Details(name, Optional.empty(), Optional.empty(), Optional.empty(), RequestedIds.NONE);
+        /** Детали, в которых задано только имя ({@code null} — без имени). */
+        public static Details named(String name) {
+            return new Details(name, null, null, null, RequestedIds.NONE);
         }
     }
 
-    /** Итог: связь и, если просили, её ребро; {@code created} ложно у возвращённого дубля. */
-    public record Result(Relationship relationship, boolean created, Optional<ViewEdgeId> edge) {
+    /**
+     * Итог: связь и, если просили, её ребро; {@code created} ложно у возвращённого дубля.
+     *
+     * @param edge ребро на представлении; {@code null} — ребро не просили
+     */
+    public record Result(Relationship relationship, boolean created, ViewEdgeId edge) {
     }
 
-    /** Создание связи только с именем и идентификаторами от сервера; дубль возвращается как есть. */
+    /**
+     * Создание связи только с именем и идентификаторами от сервера; дубль возвращается как есть.
+     * {@code null} в имени, размещении и ключе — не заданы.
+     */
     public Result create(EditorIdentity actor, ModelId modelId, ArchiType archiType, UUID sourceId, UUID targetId,
-                         Optional<String> name, Optional<EdgePlacement> placement, Optional<String> idempotencyKey) {
+                         String name, EdgePlacement placement, String idempotencyKey) {
         return create(actor, modelId, archiType, sourceId, targetId, Details.named(name), placement, idempotencyKey);
     }
 
     /**
      * Связь-дубль того же типа между той же парой возвращается как есть: идентификаторы
-     * и атрибуты из запроса к ней не применяются.
+     * и атрибуты из запроса к ней не применяются. {@code null} в размещении — ребро не рисуется,
+     * в ключе — без идемпотентности.
      */
     public Result create(EditorIdentity actor, ModelId modelId, ArchiType archiType, UUID sourceId, UUID targetId,
-                         Details details, Optional<EdgePlacement> placement, Optional<String> idempotencyKey) {
+                         Details details, EdgePlacement placement, String idempotencyKey) {
         return kernel.run(Operation.CREATE_RELATIONSHIP, actor, () -> kernel.unitOfWork.write(() -> {
             boolean[] created = {false};
-            Optional<ViewEdgeId>[] edge = new Optional[] {Optional.empty()};
+            ViewEdgeId[] edge = {null};
             Relationship relationship = kernel.idempotent("CreateRelationship", actor, idempotencyKey,
                     IdempotentCommand.fingerprint(modelId, archiType, sourceId, targetId, details, placement),
                     () -> {
@@ -115,7 +124,9 @@ public final class RelationshipService {
                                         kernel.newArchiId(model, details.ids()), kernel.now());
                         created[0] = result.created();
                         kernel.save(model);
-                        placement.ifPresent(p -> edge[0] = Optional.of(drawEdge(model, result.value(), p)));
+                        if (placement != null) {
+                            edge[0] = drawEdge(model, result.value(), placement);
+                        }
                         return result.value().id().toString();
                     },
                     ref -> kernel.models.load(modelId).orElseThrow().requireRelationship(RelationshipId.of(ref)));
@@ -131,7 +142,7 @@ public final class RelationshipService {
         ViewEndpoint source = ViewService.endpoint(view, placement.sourceEndpoint());
         ViewEndpoint target = ViewService.endpoint(view, placement.targetEndpoint());
         Optional<ViewEdge> drawn = view.edges().values().stream()
-                .filter(e -> e.relationshipId().equals(Optional.of(relationship.id()))
+                .filter(e -> relationship.id().equals(e.relationshipId())
                         && e.source().equals(source) && e.target().equals(target))
                 .findFirst();
         if (drawn.isPresent()) {
@@ -144,16 +155,19 @@ public final class RelationshipService {
         return edge.value().id();
     }
 
-    /** Правка имени, описания и свойств связи; незаданное поле остаётся прежним. Нужна блокировка модели. */
-    public Relationship update(EditorIdentity actor, RelationshipId relationshipId, Optional<String> name,
-                               Optional<String> documentation,
-                               Optional<List<ElementService.PropertyValue>> properties) {
+    /**
+     * Правка имени, описания и свойств связи; незаданное ({@code null}) поле остаётся прежним.
+     * Нужна блокировка модели.
+     */
+    public Relationship update(EditorIdentity actor, RelationshipId relationshipId, String name,
+                               String documentation,
+                               List<ElementService.PropertyValue> properties) {
         return kernel.run(Operation.UPDATE_RELATIONSHIP, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.writableModel(elements.ownerOf(relationshipId.value()), actor);
             Relationship current = model.requireRelationship(relationshipId);
-            Relationship updated = model.updateRelationship(relationshipId, name.isPresent() ? name : current.name(),
-                    documentation.isPresent() ? documentation : current.documentation(),
-                    properties.map(ElementService::numbered).orElse(current.properties()), kernel.now());
+            Relationship updated = model.updateRelationship(relationshipId, name != null ? name : current.name(),
+                    documentation != null ? documentation : current.documentation(),
+                    properties != null ? ElementService.numbered(properties) : current.properties(), kernel.now());
             kernel.save(model);
             return updated;
         }));

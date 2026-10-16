@@ -172,7 +172,7 @@ public class InterchangeController {
     }
 
     private UUID workspace(Optional<UUID> requested) {
-        return workspaces.resolve(requested.map(WorkspaceId::of)).value();
+        return workspaces.resolve(requested.map(WorkspaceId::of).orElse(null)).value();
     }
 
     private static byte[] bytes(MultipartFile file) {

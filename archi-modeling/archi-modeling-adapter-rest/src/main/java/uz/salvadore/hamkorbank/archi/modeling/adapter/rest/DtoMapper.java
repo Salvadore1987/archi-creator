@@ -29,7 +29,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelFolder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Relationship;
@@ -52,7 +51,7 @@ public final class DtoMapper {
     /** Заголовок модели для списка и ответов на правку. */
     public static ModelSummary summary(ModelHeader h) {
         return new ModelSummary(h.id().value(), h.workspaceId().value(), h.archiId().value(), h.name(),
-                h.documentation().orElse(null), h.status().name(), h.archiVersion(), h.createdBy(), h.createdAt(),
+                h.documentation(), h.status().name(), h.archiVersion(), h.createdBy(), h.createdAt(),
                 h.updatedAt());
     }
 
@@ -74,22 +73,22 @@ public final class DtoMapper {
 
     /** Папка дерева; у корневой — тип, у вложенной — родитель. */
     public static FolderDto folder(ModelFolder f) {
-        return new FolderDto(f.id().value(), f.parentId().map(FolderId::value).orElse(null), f.archiId().value(),
-                f.name(), f.folderType().map(Enum::name).orElse(null), f.sortOrder().value());
+        return new FolderDto(f.id().value(), f.parentId() == null ? null : f.parentId().value(), f.archiId().value(),
+                f.name(), f.folderType() == null ? null : f.folderType().name(), f.sortOrder().value());
     }
 
     /** Элемент со свойствами в порядке документа. */
     public static ElementDto element(Element e) {
         return new ElementDto(e.id().value(), e.folderId().value(), e.archiId().value(), e.archiType().value(),
-                e.layer().name(), e.name(), e.documentation().orElse(null), properties(e.properties()), e.supported(),
+                e.layer().name(), e.name(), e.documentation(), properties(e.properties()), e.supported(),
                 e.sortOrder().value());
     }
 
     /** Связь; {@code edgeId} — ребро, нарисованное вместе с ней, иначе {@code null}. */
     public static RelationshipDto relationship(Relationship r, java.util.UUID edgeId) {
         return new RelationshipDto(r.id().value(), r.folderId().value(), r.archiId().value(), r.archiType().value(),
-                r.source().value(), r.target().value(), r.name().orElse(null), r.documentation().orElse(null),
-                r.accessType().map(Enum::name).orElse(null), r.directed().orElse(null), properties(r.properties()),
+                r.source().value(), r.target().value(), r.name(), r.documentation(),
+                r.accessType() == null ? null : r.accessType().name(), r.directed(), properties(r.properties()),
                 r.supported(), r.sortOrder().value(), edgeId);
     }
 
@@ -110,7 +109,7 @@ public final class DtoMapper {
     public static ViewPayload payload(View view) {
         ViewHeader h = view.header();
         return new ViewPayload(h.id().value(), h.modelId().value(), h.folderId().value(), h.archiId().value(),
-                h.archiType().value(), h.name(), h.documentation().orElse(null), h.viewpoint().orElse(null),
+                h.archiType().value(), h.name(), h.documentation(), h.viewpoint(),
                 properties(h.properties()), h.editable(),
                 view.nodes().values().stream().sorted(Comparator.comparing(ViewNode::sortOrder)).map(DtoMapper::node)
                         .toList(),
@@ -120,24 +119,24 @@ public final class DtoMapper {
 
     /** Узел представления; границы — относительно родителя. */
     public static ViewNodeDto node(ViewNode n) {
-        return new ViewNodeDto(n.id().value(), n.parentId().map(p -> p.value()).orElse(null), n.archiId().value(),
-                n.archiType().value(), n.kind().name(), n.elementId().map(e -> e.value()).orElse(null),
+        return new ViewNodeDto(n.id().value(), n.parentId() == null ? null : n.parentId().value(), n.archiId().value(),
+                n.archiType().value(), n.kind().name(), n.elementId() == null ? null : n.elementId().value(),
                 n.bounds().x(), n.bounds().y(), n.bounds().width(), n.bounds().height(), style(n.style()),
-                n.label().orElse(null), n.content().orElse(null), n.sortOrder().value());
+                n.label(), n.content(), n.sortOrder().value());
     }
 
     /** Ребро представления с точками перегиба и стилем. */
     public static ViewEdgeDto edge(ViewEdge e) {
         return new ViewEdgeDto(e.id().value(), e.archiId().value(), e.archiType().value(),
-                e.relationshipId().map(r -> r.value()).orElse(null), e.source().value(), e.target().value(),
+                e.relationshipId() == null ? null : e.relationshipId().value(), e.source().value(), e.target().value(),
                 e.bendpoints().stream().map(b -> new BendpointDto(b.startX(), b.startY(), b.endX(), b.endY())).toList(),
                 style(e.style()), e.sortOrder().value());
     }
 
     /** Версия модели без снимка; есть ли снимок — отдельным флагом. */
     public static VersionInfo version(ModelVersion v) {
-        return new VersionInfo(v.versionNo(), v.author(), v.comment().orElse(null), v.label().orElse(null),
-                v.createdAt(), v.hasSnapshot(), v.gitSha().orElse(null));
+        return new VersionInfo(v.versionNo(), v.author(), v.comment(), v.label(),
+                v.createdAt(), v.hasSnapshot(), v.gitSha());
     }
 
     /** Блокировка модели: владелец и срок. */
@@ -148,12 +147,12 @@ public final class DtoMapper {
     /** Находка с текстом на языке запроса: сообщение и подсказка хранятся ключами. */
     public static Finding finding(ValidationFinding f, TextCatalog text) {
         return new Finding(f.severity().name(), f.code(), text.text(f.message()), f.targetKind(), f.targetId(),
-                f.suggestion().map(text::text).orElse(null));
+                f.suggestion() == null ? null : text.text(f.suggestion()));
     }
 
     private static StyleDto style(StyleOverride s) {
-        return s.empty() ? null : new StyleDto(s.fillColor().orElse(null), s.font().orElse(null),
-                s.fontColor().orElse(null), s.lineColor().orElse(null), s.textAlignment().orElse(null));
+        return s.empty() ? null : new StyleDto(s.fillColor(), s.font(),
+                s.fontColor(), s.lineColor(), s.textAlignment());
     }
 
     private static List<PropertyDto> properties(List<PropertyEntry> entries) {

@@ -41,14 +41,14 @@ class IdempotentCommandTest {
     @DisplayName("INV-MDL-003: отпечаток различает поля, а не их склейку")
     void fingerprintSeparatesFields() {
         assertEquals(IdempotentCommand.fingerprint("a", Optional.of("b")), IdempotentCommand.fingerprint("a", "b"));
-        assertInstanceOf(IdempotentCommand.Execute.class, IdempotentCommand.decide(Optional.empty(), "x"));
+        assertInstanceOf(IdempotentCommand.Execute.class, IdempotentCommand.decide(null, "x"));
         assertEquals(false, IdempotentCommand.fingerprint("ab", "c").equals(IdempotentCommand.fingerprint("a", "bc")));
     }
 
     /** Команда «сохранить версию» в миниатюре: решение домена плюс запись результата. */
     private String save(String key, String comment) {
         String fingerprint = IdempotentCommand.fingerprint("SaveModel", comment);
-        return switch (IdempotentCommand.decide(Optional.ofNullable(records.get(key)), fingerprint)) {
+        return switch (IdempotentCommand.decide(records.get(key), fingerprint)) {
             case IdempotentCommand.Replay replay -> replay.resultRef();
             case IdempotentCommand.Execute execute -> {
                 long versionNo = versions.size() + 1L;

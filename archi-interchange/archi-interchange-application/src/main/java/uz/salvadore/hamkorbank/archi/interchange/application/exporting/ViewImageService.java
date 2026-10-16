@@ -140,7 +140,7 @@ public final class ViewImageService {
             operation.require(actor);
             Settings settings = settings(request);
             View view = queries.openView(actor, uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId.of(viewId));
-            VersionSnapshot snapshot = versions.snapshot(actor, view.modelId(), request.versionNo());
+            VersionSnapshot snapshot = versions.snapshot(actor, view.modelId(), request.versionNo().orElse(null));
             ModelDocument document = read(snapshot);
             DocumentNode node = document.find(ArchiId.of(view.archiId().value()))
                     .filter(n -> n.tag().equals("element"))
@@ -168,7 +168,8 @@ public final class ViewImageService {
             operation.require(actor);
             Settings settings = settings(request);
             VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), request.versionNo());
+                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId),
+                    request.versionNo().orElse(null));
             ModelDocument document = read(snapshot);
             List<LossEntry> all = new ArrayList<>();
             StringBuilder report = new StringBuilder("{\"format\":\"").append(settings.format().name())

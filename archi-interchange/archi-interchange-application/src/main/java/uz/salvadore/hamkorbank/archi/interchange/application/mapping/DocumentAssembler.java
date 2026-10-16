@@ -83,7 +83,7 @@ public final class DocumentAssembler {
 
         ModelDocument assemble() {
             ModelHeader header = model.header();
-            NodeResidue residue = residue(header.rawXml());
+            NodeResidue residue = residue(Optional.ofNullable(header.rawXml()));
             Map<String, Optional<String>> typed = new LinkedHashMap<>();
             typed.put("name", Optional.of(header.name()));
             typed.put("id", Optional.of(header.archiId().value()));
@@ -92,7 +92,8 @@ public final class DocumentAssembler {
                     : attributes(residue, typed, Set.of("name"));
             Content content = new Content(residue);
             // У корня Archi пишет описание и свойства после папок, а не перед ними.
-            content.single("purpose", header.documentation().map(d -> text("purpose", d)), XmlSchema.AFTER_ALL - 1);
+            content.single("purpose", Optional.ofNullable(header.documentation()).map(d -> text("purpose", d)),
+                    XmlSchema.AFTER_ALL - 1);
             content.properties(header.properties(), XmlSchema.AFTER_ALL);
             model.folders().values().stream().filter(ModelFolder::root)
                     .forEach(f -> content.child(f.sortOrder().value(), folder(f)));
@@ -102,14 +103,14 @@ public final class DocumentAssembler {
         // ── Дерево модели ───────────────────────────────────────────
 
         private DocumentNode folder(ModelFolder folder) {
-            NodeResidue residue = residue(folder.rawXml());
+            NodeResidue residue = residue(Optional.ofNullable(folder.rawXml()));
             Map<String, Optional<String>> typed = new LinkedHashMap<>();
             typed.put("name", Optional.of(folder.name()));
             typed.put("id", Optional.of(folder.archiId().value()));
-            typed.put("type", folder.folderType().map(t -> t.fileValue()));
+            typed.put("type", Optional.ofNullable(folder.folderType()).map(t -> t.fileValue()));
             Content content = new Content(residue);
             FolderId id = folder.id();
-            model.folders().values().stream().filter(f -> f.parentId().equals(Optional.of(id)))
+            model.folders().values().stream().filter(f -> id.equals(f.parentId()))
                     .forEach(f -> content.child(f.sortOrder().value(), folder(f)));
             model.elements().values().stream().filter(e -> e.folderId().equals(id))
                     .forEach(e -> content.child(e.sortOrder().value(), element(e)));
@@ -122,13 +123,14 @@ public final class DocumentAssembler {
         }
 
         private DocumentNode element(Element element) {
-            NodeResidue residue = residue(element.rawXml());
+            NodeResidue residue = residue(Optional.ofNullable(element.rawXml()));
             Map<String, Optional<String>> typed = new LinkedHashMap<>();
             typed.put(XmlSchema.XSI_TYPE, Optional.of(element.archiType().value()));
             typed.put("name", Optional.of(element.name()));
             typed.put("id", Optional.of(element.archiId().value()));
             Content content = new Content(residue);
-            content.single("documentation", element.documentation().map(d -> text("documentation", d)),
+            content.single("documentation",
+                    Optional.ofNullable(element.documentation()).map(d -> text("documentation", d)),
                     XmlSchema.DOCUMENTATION_FIRST);
             content.properties(element.properties(), XmlSchema.PROPERTIES_FIRST);
             return node("element", element.archiId(),
@@ -136,17 +138,19 @@ public final class DocumentAssembler {
         }
 
         private DocumentNode relationship(Relationship relationship) {
-            NodeResidue residue = residue(relationship.rawXml());
+            NodeResidue residue = residue(Optional.ofNullable(relationship.rawXml()));
             Map<String, Optional<String>> typed = new LinkedHashMap<>();
             typed.put(XmlSchema.XSI_TYPE, Optional.of(relationship.archiType().value()));
-            typed.put("name", relationship.name());
+            typed.put("name", Optional.ofNullable(relationship.name()));
             typed.put("id", Optional.of(relationship.archiId().value()));
             typed.put("source", Optional.of(archiId(relationship.source())));
             typed.put("target", Optional.of(archiId(relationship.target())));
-            typed.put("accessType", relationship.accessType().map(a -> String.valueOf(a.fileValue())));
-            typed.put("directed", relationship.directed().map(String::valueOf));
+            typed.put("accessType",
+                    Optional.ofNullable(relationship.accessType()).map(a -> String.valueOf(a.fileValue())));
+            typed.put("directed", Optional.ofNullable(relationship.directed()).map(String::valueOf));
             Content content = new Content(residue);
-            content.single("documentation", relationship.documentation().map(d -> text("documentation", d)),
+            content.single("documentation",
+                    Optional.ofNullable(relationship.documentation()).map(d -> text("documentation", d)),
                     XmlSchema.DOCUMENTATION_FIRST);
             content.properties(relationship.properties(), XmlSchema.PROPERTIES_FIRST);
             return node("element", relationship.archiId(),
@@ -157,36 +161,39 @@ public final class DocumentAssembler {
 
         private DocumentNode view(View view) {
             ViewHeader header = view.header();
-            NodeResidue residue = residue(header.rawXml());
+            NodeResidue residue = residue(Optional.ofNullable(header.rawXml()));
             Map<String, Optional<String>> typed = new LinkedHashMap<>();
             typed.put(XmlSchema.XSI_TYPE, Optional.of(header.archiType().value()));
             typed.put("name", Optional.of(header.name()));
             typed.put("id", Optional.of(header.archiId().value()));
-            typed.put("viewpoint", header.viewpoint());
+            typed.put("viewpoint", Optional.ofNullable(header.viewpoint()));
             Content content = new Content(residue);
-            content.single("documentation", header.documentation().map(d -> text("documentation", d)),
+            content.single("documentation",
+                    Optional.ofNullable(header.documentation()).map(d -> text("documentation", d)),
                     XmlSchema.DOCUMENTATION_FIRST);
             content.properties(header.properties(), XmlSchema.PROPERTIES_FIRST);
-            view.nodes().values().stream().filter(n -> n.parentId().isEmpty())
+            view.nodes().values().stream().filter(n -> n.parentId() == null)
                     .forEach(n -> content.child(n.sortOrder().value(), viewNode(view, n)));
             return node("element", header.archiId(), attributes(residue, typed, XmlSchema.VIEW_ORDER, Set.of("name")),
                     content);
         }
 
         private DocumentNode viewNode(View view, ViewNode node) {
-            NodeResidue residue = residue(node.rawXml());
+            NodeResidue residue = residue(Optional.ofNullable(node.rawXml()));
             Map<String, Optional<String>> typed = new LinkedHashMap<>();
             typed.put(XmlSchema.XSI_TYPE, Optional.of(node.archiType().value()));
             typed.put("id", Optional.of(node.archiId().value()));
             typed.put(XmlSchema.TARGET_CONNECTIONS, targetConnections(node.id().value(), residue));
-            typed.put("name", node.label());
+            typed.put("name", Optional.ofNullable(node.label()));
             style(typed, node.style());
-            typed.put("archimateElement", node.elementId().map(e -> archiIds.get(e.value()).value()));
+            typed.put("archimateElement",
+                    Optional.ofNullable(node.elementId()).map(e -> archiIds.get(e.value()).value()));
             Content content = new Content(residue);
             content.single("bounds", bounds(node.bounds(), residue), XmlSchema.BOUNDS_FIRST);
-            content.single("content", node.content().map(c -> text("content", c)), XmlSchema.CONTENT_AFTER_BOUNDS);
+            content.single("content", Optional.ofNullable(node.content()).map(c -> text("content", c)),
+                    XmlSchema.CONTENT_AFTER_BOUNDS);
             ViewNodeId id = node.id();
-            view.nodes().values().stream().filter(n -> n.parentId().equals(Optional.of(id)))
+            view.nodes().values().stream().filter(n -> id.equals(n.parentId()))
                     .forEach(n -> content.child(n.sortOrder().value(), viewNode(view, n)));
             view.edges().values().stream().filter(e -> e.source().equals(id))
                     .forEach(e -> content.child(e.sortOrder().value(), viewEdge(view, e)));
@@ -194,7 +201,7 @@ public final class DocumentAssembler {
         }
 
         private DocumentNode viewEdge(View view, ViewEdge edge) {
-            NodeResidue residue = residue(edge.rawXml());
+            NodeResidue residue = residue(Optional.ofNullable(edge.rawXml()));
             Map<String, Optional<String>> typed = new LinkedHashMap<>();
             typed.put(XmlSchema.XSI_TYPE, Optional.of(edge.archiType().value()));
             typed.put("id", Optional.of(edge.archiId().value()));
@@ -202,7 +209,8 @@ public final class DocumentAssembler {
             style(typed, edge.style());
             typed.put("source", Optional.of(archiIds.get(edge.source().value()).value()));
             typed.put("target", Optional.of(archiIds.get(edge.target().value()).value()));
-            typed.put("archimateRelationship", edge.relationshipId().map(r -> archiIds.get(r.value()).value()));
+            typed.put("archimateRelationship",
+                    Optional.ofNullable(edge.relationshipId()).map(r -> archiIds.get(r.value()).value()));
             Content content = new Content(residue);
             List<ResidueItem.Slot> slots = residue.slots("bendpoint");
             List<Bendpoint> points = edge.bendpoints();
@@ -245,14 +253,14 @@ public final class DocumentAssembler {
         /** Порядок рёбер в файле: обход представления — узлы, затем рёбра узла, в порядке содержимого. */
         private void rankEdges(View view) {
             int[] rank = {edgeRank.size()};
-            walk(view, view.nodes().values().stream().filter(n -> n.parentId().isEmpty())
+            walk(view, view.nodes().values().stream().filter(n -> n.parentId() == null)
                     .sorted(Comparator.comparing(ViewNode::sortOrder)).toList(), rank);
         }
 
         private void walk(View view, List<ViewNode> nodes, int[] rank) {
             for (ViewNode node : nodes) {
                 List<Object> content = new ArrayList<>();
-                view.nodes().values().stream().filter(n -> n.parentId().equals(Optional.of(node.id())))
+                view.nodes().values().stream().filter(n -> node.id().equals(n.parentId()))
                         .forEach(content::add);
                 view.edges().values().stream().filter(e -> e.source().equals(node.id())).forEach(content::add);
                 content.sort(Comparator.comparingLong(o -> o instanceof ViewNode n ? n.sortOrder().value()
@@ -316,11 +324,11 @@ public final class DocumentAssembler {
         }
 
         private static void style(Map<String, Optional<String>> typed, StyleOverride style) {
-            typed.put("fillColor", style.fillColor());
-            typed.put("font", style.font());
-            typed.put("fontColor", style.fontColor());
-            typed.put("lineColor", style.lineColor());
-            typed.put("textAlignment", style.textAlignment().map(String::valueOf));
+            typed.put("fillColor", Optional.ofNullable(style.fillColor()));
+            typed.put("font", Optional.ofNullable(style.font()));
+            typed.put("fontColor", Optional.ofNullable(style.fontColor()));
+            typed.put("lineColor", Optional.ofNullable(style.lineColor()));
+            typed.put("textAlignment", Optional.ofNullable(style.textAlignment()).map(String::valueOf));
         }
 
         private String archiId(ConceptRef concept) {

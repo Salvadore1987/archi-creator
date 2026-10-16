@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
@@ -62,19 +61,19 @@ public final class ModelLock extends AggregateRoot<ModelId> {
 
     /**
      * Захват. Чужая действующая блокировка — {@code 409} с её владельцем; своя —
-     * продление; просроченная — захват с событием о её истечении.
+     * продление; просроченная — захват с событием о её истечении. {@code null} — блокировки нет.
      */
-    public static Acquisition acquire(ModelId modelId, Optional<ModelLock> current, EditorIdentity by, Instant now,
+    public static Acquisition acquire(ModelId modelId, ModelLock current, EditorIdentity by, Instant now,
                                       Duration ttl) {
-        Optional<ModelLockReleasedEvent> expired = Optional.empty();
-        if (current.isPresent()) {
-            ModelLock lock = current.get();
+        ModelLockReleasedEvent expired = null;
+        if (current != null) {
+            ModelLock lock = current;
             if (lock.status(now) == LockStatus.HELD && !lock.owner.equals(by.subject())) {
                 throw heldByOther(lock);
             }
             if (lock.status(now) == LockStatus.EXPIRED) {
-                expired = Optional.of(new ModelLockReleasedEvent(modelId, lock.owner, lock.owner,
-                        LockReleaseReason.EXPIRED, now));
+                expired = new ModelLockReleasedEvent(modelId, lock.owner, lock.owner,
+                        LockReleaseReason.EXPIRED, now);
             } else {
                 return new Acquisition(new ModelLock(modelId, lock.owner, lock.acquiredAt, now.plus(ttl)), expired);
             }
@@ -102,20 +101,20 @@ public final class ModelLock extends AggregateRoot<ModelId> {
 
     /**
      * Запись требует действующей блокировки автора команды. Иначе — {@code 409}:
-     * клиент показывает владельца и предлагает read-only.
+     * клиент показывает владельца и предлагает read-only. {@code null} — блокировки нет.
      */
-    public static void requireWriteAccess(ModelId modelId, Optional<ModelLock> lock, String subject, Instant now) {
-        if (lock.isEmpty()) {
+    public static void requireWriteAccess(ModelId modelId, ModelLock lock, String subject, Instant now) {
+        if (lock == null) {
             throw new ModelingDomainException(INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.LOCK_NOT_HELD, modelId));
         }
-        if (lock.get().status(now) == LockStatus.EXPIRED) {
+        if (lock.status(now) == LockStatus.EXPIRED) {
             throw new ModelingDomainException(INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.LOCK_EXPIRED, modelId),
-                    Map.of("lockOwner", lock.get().owner, "expiresAt", lock.get().expiresAt.toString()));
+                    Map.of("lockOwner", lock.owner, "expiresAt", lock.expiresAt.toString()));
         }
-        if (!lock.get().owner.equals(subject)) {
-            throw heldByOther(lock.get());
+        if (!lock.owner.equals(subject)) {
+            throw heldByOther(lock);
         }
     }
 
@@ -125,8 +124,12 @@ public final class ModelLock extends AggregateRoot<ModelId> {
                 Map.of("lockOwner", lock.owner, "expiresAt", lock.expiresAt.toString()));
     }
 
-    /** Итог захвата: новая блокировка и, если была просроченная, событие о её истечении. */
-    public record Acquisition(ModelLock lock, Optional<ModelLockReleasedEvent> expiredPrevious) {
+    /**
+     * Итог захвата: новая блокировка и, если была просроченная, событие о её истечении.
+     *
+     * @param expiredPrevious событие об истечении прежней; {@code null} — просроченной не было
+     */
+    public record Acquisition(ModelLock lock, ModelLockReleasedEvent expiredPrevious) {
     }
 
     /** Заблокированная модель. */

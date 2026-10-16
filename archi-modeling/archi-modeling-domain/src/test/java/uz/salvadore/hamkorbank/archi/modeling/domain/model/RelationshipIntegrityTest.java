@@ -8,7 +8,6 @@ import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
@@ -48,7 +47,7 @@ class RelationshipIntegrityTest {
 
         ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
                 () -> model.addRelationship(ArchiType.ofSimpleName("ServingRelationship"), own.id(), foreign.id(),
-                        Optional.empty(), RelationshipId.next(UUIDS), Models.archiId(), NOW));
+                        null, RelationshipId.next(UUIDS), Models.archiId(), NOW));
 
         assertEquals("INV-MDL-004", rejected.code());
         assertEquals(Failure.UNPROCESSABLE, rejected.failure());

@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.modeling.adapter.rest;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -74,15 +73,15 @@ public class ModelController {
 
     /** Без {@code workspaceId} — первое пространство: до мультиарендности оно одно. */
     @GetMapping("/models")
-    public List<ModelSummary> list(EditorIdentity actor, @RequestParam Optional<UUID> workspaceId) {
+    public List<ModelSummary> list(EditorIdentity actor, @RequestParam(required = false) UUID workspaceId) {
         return queries.list(actor, workspace(workspaceId)).stream().map(DtoMapper::summary).toList();
     }
 
     /** Создаёт модель — {@code 201} с адресом; без {@code workspaceId} — в первом пространстве. */
     @PostMapping("/models")
     public ResponseEntity<ModelSummary> create(EditorIdentity actor, @RequestBody CreateModelRequest request,
-                                               @RequestHeader("Idempotency-Key") Optional<String> key) {
-        ArchitectureModel model = lifecycle.create(actor, workspace(Optional.ofNullable(request.workspaceId())),
+                                               @RequestHeader(value = "Idempotency-Key", required = false) String key) {
+        ArchitectureModel model = lifecycle.create(actor, workspace(request.workspaceId()),
                 request.name(), key);
         return ResponseEntity.created(URI.create("/api/v1/models/" + model.id()))
                 .body(DtoMapper.summary(model.header()));
@@ -97,8 +96,8 @@ public class ModelController {
     /** Правит имя и описание модели; не переданное поле не меняется. */
     @PatchMapping("/models/{id}")
     public ModelSummary edit(EditorIdentity actor, @PathVariable UUID id, @RequestBody ModelPatch patch) {
-        return DtoMapper.summary(lifecycle.edit(actor, ModelId.of(id), Optional.ofNullable(patch.name()),
-                Optional.ofNullable(patch.documentation())).header());
+        return DtoMapper.summary(lifecycle.edit(actor, ModelId.of(id), patch.name(),
+                patch.documentation()).header());
     }
 
     /** Мягко удаляет модель: данные и история остаются. */
@@ -176,7 +175,7 @@ public class ModelController {
         }
     }
 
-    private WorkspaceId workspace(Optional<UUID> requested) {
-        return workspaces.resolve(requested.map(WorkspaceId::of));
+    private WorkspaceId workspace(UUID requested) {
+        return workspaces.resolve(requested == null ? null : WorkspaceId.of(requested));
     }
 }

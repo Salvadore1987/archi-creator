@@ -37,7 +37,7 @@ public final class Models {
     }
 
     public static Relationship relate(ArchitectureModel model, String type, ConceptRef source, ConceptRef target) {
-        return model.addRelationship(ArchiType.ofSimpleName(type), source, target, java.util.Optional.empty(),
+        return model.addRelationship(ArchiType.ofSimpleName(type), source, target, null,
                 RelationshipId.next(UUIDS), ARCHI_IDS.next(), NOW).value();
     }
 

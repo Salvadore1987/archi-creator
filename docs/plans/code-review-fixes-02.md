@@ -76,7 +76,7 @@
 
 | № | Задача | Проверка | Статус |
 |---|---|---|---|
-| C1 | modeling: домен и application | ArchUnit: нет полей и параметров `Optional` (по контексту) | ⬜ |
+| C1 | modeling: домен, application, адаптеры и все вызовы | ArchUnit `optionalIsNeitherFieldNorParameter` (по пакетам `OPTIONAL_FREE`) | ✅ |
 | C2 | interchange: домен и application | то же | ⬜ |
 | C3 | advisor и адаптеры, `archi-bootstrap` | то же правило без исключений | ⬜ |
 
@@ -155,6 +155,13 @@
 - **Урок по ходу B4a.** Прогон модуля с `-pl` берёт соседние модули из локального репозитория
   Maven: после `verify` без `install` правило ArchUnit видело старый jar interchange и «падало»
   на уже исправленном коде. Перед `-pl` — `install`.
+- **C1.** 56 полей и 80 методов modeling; «не менять» — `null`, «снять» — `""`, где раньше
+  различались `Optional.empty()` и `Optional.of("")`. Перегрузка `View.nextOrderIn(Optional<…>)`
+  переименована в `nextNodeOrderIn`: с `null` вызов был бы неоднозначен. Тонкость, которую
+  компилятор не ловит: сравнения вида `x.parentId().equals(Optional.of(id))` — найдены
+  и переписаны вручную. **Отпечаток идемпотентности `CreateRelationship` изменился**: он
+  строится из `toString()` record'ов `Details`/`EdgePlacement` — повтор с ключом, записанным
+  до выкладки, ответит `409`. Отпечаток из `toString()` хрупок сам по себе — к этапу 5 ревью.
 
 ## Отменённые варианты
 

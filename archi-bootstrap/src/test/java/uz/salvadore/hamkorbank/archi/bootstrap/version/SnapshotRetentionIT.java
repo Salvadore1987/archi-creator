@@ -3,7 +3,6 @@ package uz.salvadore.hamkorbank.archi.bootstrap.version;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.ZoneOffset;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,12 +40,12 @@ class SnapshotRetentionIT extends IntegrationTest {
     @Test
     @DisplayName("INV-MDL-010: без привязки к Git очистка снимков не трогает ни одного")
     void purgeIsDisabledWithoutGitBinding() {
-        ModelId model = lifecycle.create(ARCHITECT, workspace(), "Ретеншен", Optional.empty()).id();
+        ModelId model = lifecycle.create(ARCHITECT, workspace(), "Ретеншен", null).id();
         locks.acquire(ARCHITECT, model);
         for (int i = 0; i < 3; i++) {
             elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "Система " + i,
-                    Optional.empty(), Optional.empty());
-            versions.save(ARCHITECT, model, Optional.of("правка " + i), Optional.empty());
+                    null, null);
+            versions.save(ARCHITECT, model, "правка " + i, null);
         }
         // Версии «стареют» на полгода и получают git_sha — по правилу ретеншена их снимки лишние.
         jdbc.update("update model_version set created_at = created_at - interval '180 days', git_sha = ? "

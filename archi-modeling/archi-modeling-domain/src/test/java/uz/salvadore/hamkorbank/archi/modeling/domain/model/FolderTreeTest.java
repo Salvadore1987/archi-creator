@@ -8,7 +8,6 @@ import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
@@ -34,7 +33,7 @@ class FolderTreeTest {
     @DisplayName("INV-MDL-009: импорт без корня получает его дописанным, как в Archi")
     void importedModelGetsMissingRoots() {
         ModelHeader header = new ModelHeader(ModelId.next(UUIDS), WorkspaceId.next(UUIDS), Models.archiId(), "Файл",
-                Optional.empty(), "5.0.0", ModelStatus.ACTIVE, List.of(), Optional.empty(), "a", NOW, NOW, 0);
+                null, "5.0.0", ModelStatus.ACTIVE, List.of(), null, "a", NOW, NOW, 0);
         ModelFolder business = FolderTreeInitializer.root(FolderType.BUSINESS, FolderId.next(UUIDS),
                 Models.archiId(), SortOrder.ofPosition(0));
 
@@ -58,7 +57,7 @@ class FolderTreeTest {
                 () -> model.moveToFolder(core.id(), List.of(masters.id().value()), Instant.now()));
 
         assertEquals("INV-MDL-009", cycle.code());
-        assertEquals(Optional.of(application), model.folders().get(masters.id()).orElseThrow().parentId());
+        assertEquals(application, model.folders().get(masters.id()).orElseThrow().parentId());
     }
 
     @Test

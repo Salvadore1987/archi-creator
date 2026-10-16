@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.service;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
@@ -33,21 +32,24 @@ public final class ElementService {
     public record PropertyValue(String key, String value) {
     }
 
-    /** Новый элемент в папке своего слоя; повтор с тем же ключом — тот же элемент. */
+    /**
+     * Новый элемент в папке своего слоя; повтор с тем же ключом — тот же элемент.
+     * {@code null} в папке — корень слоя, в ключе — без идемпотентности.
+     */
     public Element create(EditorIdentity actor, ModelId modelId, ArchiType archiType, String name,
-                          Optional<FolderId> folderId, Optional<String> idempotencyKey) {
+                          FolderId folderId, String idempotencyKey) {
         return create(actor, modelId, archiType, name, folderId, RequestedIds.NONE, idempotencyKey);
     }
 
     /** То же с идентификаторами, которые выбрал клиент; занятые — {@code 409}. */
     public Element create(EditorIdentity actor, ModelId modelId, ArchiType archiType, String name,
-                          Optional<FolderId> folderId, RequestedIds ids, Optional<String> idempotencyKey) {
+                          FolderId folderId, RequestedIds ids, String idempotencyKey) {
         return kernel.run(Operation.CREATE_ELEMENT, actor, () -> kernel.unitOfWork.write(() ->
                 kernel.idempotent("CreateElement", actor, idempotencyKey,
                         IdempotentCommand.fingerprint(modelId, archiType, name, folderId, ids.id(), ids.archiId()),
                         () -> {
                             ArchitectureModel model = kernel.writableModel(modelId, actor);
-                            FolderId folder = folderId.orElseGet(() -> defaultFolder(model, archiType));
+                            FolderId folder = folderId != null ? folderId : defaultFolder(model, archiType);
                             Element element = model.addElement(archiType, name, folder,
                                     ElementId.of(kernel.newId(ids)), kernel.newArchiId(model, ids), kernel.now());
                             kernel.save(model);
@@ -58,16 +60,16 @@ public final class ElementService {
 
     /**
      * PATCH элемента. Переименование видно на всех представлениях сразу: узел ссылается
-     * на элемент, а не копирует его имя.
+     * на элемент, а не копирует его имя. {@code null} — поле не меняется.
      */
-    public Element update(EditorIdentity actor, ElementId elementId, Optional<String> name,
-                          Optional<String> documentation, Optional<List<PropertyValue>> properties) {
+    public Element update(EditorIdentity actor, ElementId elementId, String name,
+                          String documentation, List<PropertyValue> properties) {
         return kernel.run(Operation.UPDATE_ELEMENT, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.writableModel(ownerOf(elementId.value()), actor);
             Element current = model.requireElement(elementId);
-            Element updated = model.updateElement(elementId, name.orElse(current.name()),
-                    documentation.isPresent() ? documentation : current.documentation(),
-                    properties.map(ElementService::numbered).orElse(current.properties()), kernel.now());
+            Element updated = model.updateElement(elementId, name != null ? name : current.name(),
+                    documentation != null ? documentation : current.documentation(),
+                    properties != null ? numbered(properties) : current.properties(), kernel.now());
             kernel.save(model);
             return updated;
         }));

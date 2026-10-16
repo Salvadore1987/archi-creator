@@ -7,7 +7,6 @@ import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
@@ -43,17 +42,17 @@ class ModelValidatorTest {
                 FolderTreeInitializer.root(FolderType.BUSINESS, business, Models.archiId(), SortOrder.ofPosition(1)),
                 FolderTreeInitializer.root(FolderType.RELATIONS, relations, Models.archiId(), SortOrder.ofPosition(2)));
         Element component = new Element(ElementId.next(UUIDS), app, Models.archiId(),
-                ArchiType.ofSimpleName("ApplicationComponent"), "АБС", Optional.empty(), List.of(),
-                SortOrder.ofPosition(0), true, Optional.empty());
+                ArchiType.ofSimpleName("ApplicationComponent"), "АБС", null, List.of(),
+                SortOrder.ofPosition(0), true, null);
         Element actor = new Element(ElementId.next(UUIDS), business, Models.archiId(),
-                ArchiType.ofSimpleName("BusinessActor"), "Клиент", Optional.empty(), List.of(),
-                SortOrder.ofPosition(0), true, Optional.empty());
+                ArchiType.ofSimpleName("BusinessActor"), "Клиент", null, List.of(),
+                SortOrder.ofPosition(0), true, null);
         Relationship forbidden = new Relationship(RelationshipId.next(UUIDS), relations, Models.archiId(),
-                ArchiType.ofSimpleName("AssignmentRelationship"), component.id(), actor.id(), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty(), List.of(), SortOrder.ofPosition(0), true,
-                Optional.empty());
+                ArchiType.ofSimpleName("AssignmentRelationship"), component.id(), actor.id(), null,
+                null, null, null, List.of(), SortOrder.ofPosition(0), true,
+                null);
         ModelHeader header = new ModelHeader(ModelId.next(UUIDS), WorkspaceId.next(UUIDS), Models.archiId(), "Файл",
-                Optional.empty(), "5.0.0", ModelStatus.ACTIVE, List.of(), Optional.empty(), "a", NOW, NOW, 0);
+                null, "5.0.0", ModelStatus.ACTIVE, List.of(), null, "a", NOW, NOW, 0);
 
         ArchitectureModel model = ArchitectureModel.imported(header, roots, List.of(component, actor),
                 List.of(forbidden), List.of(), () -> FolderId.next(UUIDS), Models::archiId);
@@ -68,22 +67,22 @@ class ModelValidatorTest {
     @Test
     @DisplayName("Неподдержанный элемент и связь неизвестного типа — сведения в отчёте, не ошибка")
     void opaqueObjectsAreReportedAsInfo() {
-        Optional<RawXml> residue = Optional.of(new RawXml("<element/>"));
+        RawXml residue = new RawXml("<element/>");
         FolderId other = FolderId.next(UUIDS);
         FolderId relations = FolderId.next(UUIDS);
         List<ModelFolder> roots = List.of(
                 FolderTreeInitializer.root(FolderType.OTHER, other, Models.archiId(), SortOrder.ofPosition(0)),
                 FolderTreeInitializer.root(FolderType.RELATIONS, relations, Models.archiId(), SortOrder.ofPosition(1)));
         Element first = new Element(ElementId.next(UUIDS), other, Models.archiId(), ArchiType.ofSimpleName("Location"),
-                "Ташкент", Optional.empty(), List.of(), SortOrder.ofPosition(0), false, residue);
+                "Ташкент", null, List.of(), SortOrder.ofPosition(0), false, residue);
         Element second = new Element(ElementId.next(UUIDS), other, Models.archiId(), ArchiType.ofSimpleName("Location"),
-                "Самарканд", Optional.empty(), List.of(), SortOrder.ofPosition(1), false, residue);
+                "Самарканд", null, List.of(), SortOrder.ofPosition(1), false, residue);
         Relationship unknown = new Relationship(RelationshipId.next(UUIDS), relations, Models.archiId(),
-                ArchiType.ofSimpleName("TeleportRelationship"), first.id(), second.id(), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty(), List.of(), SortOrder.ofPosition(0), false,
+                ArchiType.ofSimpleName("TeleportRelationship"), first.id(), second.id(), null,
+                null, null, null, List.of(), SortOrder.ofPosition(0), false,
                 residue);
         ModelHeader header = new ModelHeader(ModelId.next(UUIDS), WorkspaceId.next(UUIDS), Models.archiId(), "Файл",
-                Optional.empty(), "5.0.0", ModelStatus.ACTIVE, List.of(), Optional.empty(), "a", NOW, NOW, 0);
+                null, "5.0.0", ModelStatus.ACTIVE, List.of(), null, "a", NOW, NOW, 0);
 
         ArchitectureModel model = ArchitectureModel.imported(header, roots, List.of(first, second),
                 List.of(unknown), List.of(), () -> FolderId.next(UUIDS), Models::archiId);
@@ -103,7 +102,7 @@ class ModelValidatorTest {
         List<ModelFolder> roots = List.of(FolderTreeInitializer.root(FolderType.APPLICATION, FolderId.next(UUIDS),
                 modelArchiId, SortOrder.ofPosition(0)));
         ModelHeader header = new ModelHeader(ModelId.next(UUIDS), WorkspaceId.next(UUIDS), modelArchiId, "Файл",
-                Optional.empty(), "5.0.0", ModelStatus.ACTIVE, List.of(), Optional.empty(), "a", NOW, NOW, 0);
+                null, "5.0.0", ModelStatus.ACTIVE, List.of(), null, "a", NOW, NOW, 0);
 
         ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
                 () -> ArchitectureModel.imported(header, roots, List.of(), List.of(), List.of(),

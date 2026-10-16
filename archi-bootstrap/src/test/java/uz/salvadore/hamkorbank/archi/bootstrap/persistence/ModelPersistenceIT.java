@@ -51,10 +51,10 @@ class ModelPersistenceIT extends IntegrationTest {
     @Test
     @DisplayName("INV-MDL-001: дубль archi_id в модели отклоняет база — UNIQUE (model_id, archi_id)")
     void duplicateArchiIdViolatesUniqueConstraint() {
-        ModelId model = lifecycle.create(ARCHITECT, workspace(), "Уникальность", Optional.empty()).id();
+        ModelId model = lifecycle.create(ARCHITECT, workspace(), "Уникальность", null).id();
         locks.acquire(ARCHITECT, model);
         Element element = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "АБС",
-                Optional.empty(), Optional.empty());
+                null, null);
         UUID folder = jdbc.queryForObject("select folder_id from element where id = ?", UUID.class,
                 element.id().value());
 
@@ -67,38 +67,38 @@ class ModelPersistenceIT extends IntegrationTest {
     @Test
     @DisplayName("§4.3: дерево и представление переживают запись и чтение — поля, порядок, геометрия")
     void modelAndViewSurviveStorage() {
-        ModelId model = lifecycle.create(ARCHITECT, workspace(), "Хранение", Optional.of("persist-1")).id();
+        ModelId model = lifecycle.create(ARCHITECT, workspace(), "Хранение", "persist-1").id();
         locks.acquire(ARCHITECT, model);
         Element component = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "АБС",
-                Optional.empty(), Optional.empty());
+                null, null);
         Element actor = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("BusinessActor"), "Клиент",
-                Optional.empty(), Optional.empty());
-        elements.update(ARCHITECT, component.id(), Optional.empty(), Optional.of("Ядро банка"),
-                Optional.of(List.of(new ElementService.PropertyValue("owner", "ИТ"),
-                        new ElementService.PropertyValue("criticality", "high"))));
-        View view = views.create(ARCHITECT, model, "Контекст", Optional.empty(), Optional.empty());
-        ViewNode c = views.place(ARCHITECT, view.id(), component.id(), new Bounds(20, 60, 150, 60), Optional.empty());
-        ViewNode a = views.place(ARCHITECT, view.id(), actor.id(), new Bounds(300, 60, 150, 60), Optional.empty());
+                null, null);
+        elements.update(ARCHITECT, component.id(), null, "Ядро банка",
+                List.of(new ElementService.PropertyValue("owner", "ИТ"),
+                        new ElementService.PropertyValue("criticality", "high")));
+        View view = views.create(ARCHITECT, model, "Контекст", null, null);
+        ViewNode c = views.place(ARCHITECT, view.id(), component.id(), new Bounds(20, 60, 150, 60), null);
+        ViewNode a = views.place(ARCHITECT, view.id(), actor.id(), new Bounds(300, 60, 150, 60), null);
         RelationshipService.Result serving = relationships.create(ARCHITECT, model,
                 ArchiType.ofSimpleName("ServingRelationship"),
-                component.id().value(), actor.id().value(), Optional.of("обслуживает"),
-                Optional.of(new RelationshipService.EdgePlacement(view.id(), c.id().value(), a.id().value())),
-                Optional.empty());
+                component.id().value(), actor.id().value(), "обслуживает",
+                new RelationshipService.EdgePlacement(view.id(), c.id().value(), a.id().value()),
+                null);
         views.saveLayout(ARCHITECT, view.id(), Map.of(a.id(), new Bounds(320, 80, 150, 60)),
-                Map.of(serving.edge().orElseThrow(), List.of(new Bendpoint(0, 40, -50, 0))));
+                Map.of(Optional.ofNullable(serving.edge()).orElseThrow(), List.of(new Bendpoint(0, 40, -50, 0))));
 
         ArchitectureModel loaded = queries.open(VIEWER, model);
         View loadedView = queries.openView(VIEWER, view.id());
 
         Element reloaded = loaded.requireElement(component.id());
-        assertEquals(Optional.of("Ядро банка"), reloaded.documentation());
+        assertEquals("Ядро банка", reloaded.documentation());
         assertEquals(List.of("owner", "criticality"), reloaded.properties().stream().map(p -> p.key()).toList());
         assertEquals(1000, reloaded.sortOrder().value());
         assertEquals(1, loaded.relationships().size());
         assertEquals(9, loaded.roots().size());
         assertEquals(new Bounds(320, 80, 150, 60), loadedView.requireNode(a.id()).bounds());
         assertEquals(List.of(new Bendpoint(0, 40, -50, 0)),
-                loadedView.requireEdge(serving.edge().orElseThrow()).bendpoints());
+                loadedView.requireEdge(Optional.ofNullable(serving.edge()).orElseThrow()).bendpoints());
         assertTrue(loaded.view(view.id()).isPresent(), "дерево знает о представлении");
     }
 }

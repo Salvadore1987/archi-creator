@@ -79,9 +79,9 @@ public class ViewController {
     @PostMapping("/models/{id}/views")
     public ResponseEntity<ViewSummary> create(EditorIdentity actor, @PathVariable UUID id,
                                               @RequestBody CreateViewRequest request,
-                                              @RequestHeader("Idempotency-Key") Optional<String> key) {
+                                              @RequestHeader(value = "Idempotency-Key", required = false) String key) {
         View view = views.create(actor, ModelId.of(id), request.name(),
-                Optional.ofNullable(request.folderId()).map(FolderId::of),
+                request.folderId() == null ? null : FolderId.of(request.folderId()),
                 RequestedIds.of(request.id(), request.archiId()), key);
         return ResponseEntity.created(URI.create("/api/v1/views/" + view.id())).body(DtoMapper.view(view));
     }
@@ -108,7 +108,7 @@ public class ViewController {
     /** Предложение авторазметки; база не меняется. */
     @PostMapping("/views/{id}/auto-layout")
     public LayoutPatch autoLayout(EditorIdentity actor, @PathVariable UUID id, @RequestBody AutoLayoutRequest request) {
-        return DtoMapper.layoutPatch(views.proposeLayout(actor, ViewId.of(id), Optional.ofNullable(request.strategy()),
+        return DtoMapper.layoutPatch(views.proposeLayout(actor, ViewId.of(id), request.strategy(),
                 layoutGraph(request)));
     }
 
@@ -121,10 +121,10 @@ public class ViewController {
                                              @RequestBody PlaceNodeRequest request) {
         ArchitectureModel.Created<ViewNode> node = views.placeNode(actor, ViewId.of(id),
                 new ViewService.NewNode(kind(request.kind()),
-                Optional.ofNullable(request.elementId()).map(ElementId::of), Optional.ofNullable(request.label()),
-                Optional.ofNullable(request.content()), request.x(), request.y(),
-                Optional.ofNullable(request.width()), Optional.ofNullable(request.height()),
-                Optional.ofNullable(request.parentId()).map(ViewNodeId::of),
+                request.elementId() == null ? null : ElementId.of(request.elementId()), request.label(),
+                request.content(), request.x(), request.y(),
+                request.width(), request.height(),
+                request.parentId() == null ? null : ViewNodeId.of(request.parentId()),
                 RequestedIds.of(request.id(), request.archiId())));
         ViewNodeDto body = DtoMapper.node(node.value());
         return node.created()
@@ -137,22 +137,21 @@ public class ViewController {
     public ViewNodeDto moveToParent(EditorIdentity actor, @PathVariable UUID id,
                                     @RequestBody MoveNodeRequest request) {
         return DtoMapper.node(views.moveToParent(actor, ViewNodeId.of(id),
-                Optional.ofNullable(request.parentId()).map(ViewNodeId::of), request.x(), request.y()));
+                request.parentId() == null ? null : ViewNodeId.of(request.parentId()), request.x(), request.y()));
     }
 
     /** Правит подпись, текст и собственный стиль узла. */
     @PatchMapping("/view-nodes/{id}")
     public ViewNodeDto editNode(EditorIdentity actor, @PathVariable UUID id, @RequestBody EditNodeRequest request) {
-        return DtoMapper.node(views.editNode(actor, ViewNodeId.of(id), Optional.ofNullable(request.label()),
-                Optional.ofNullable(request.content()),
-                Optional.ofNullable(request.style()).map(ViewController::style)));
+        return DtoMapper.node(views.editNode(actor, ViewNodeId.of(id), request.label(),
+                request.content(), request.style() == null ? null : style(request.style())));
     }
 
     /** Правит собственный стиль ребра. */
     @PatchMapping("/view-edges/{id}")
     public ViewEdgeDto editEdge(EditorIdentity actor, @PathVariable UUID id, @RequestBody EditEdgeRequest request) {
         return DtoMapper.edge(views.editEdge(actor, ViewEdgeId.of(id),
-                Optional.ofNullable(request.style()).map(ViewController::style).orElse(StyleOverride.NONE)));
+                request.style() == null ? StyleOverride.NONE : style(request.style())));
     }
 
     /** Удаляет ребро с представления; связь в модели остаётся. */
@@ -197,8 +196,8 @@ public class ViewController {
             if (n.id() == null) {
                 throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_MISSING, LAYOUT_NODE_ID));
             }
-            return new LayoutGraph.Node(n.id(), Optional.ofNullable(n.parentId()),
-                    Optional.ofNullable(n.conceptType()).map(ContentController::archiType),
+            return new LayoutGraph.Node(n.id(), n.parentId(),
+                    n.conceptType() == null ? null : ContentController.archiType(n.conceptType()),
                     new Bounds(n.x(), n.y(), n.width(), n.height()));
         }).toList();
         List<LayoutGraph.Edge> edges = Optional.ofNullable(request.edges()).orElse(List.of()).stream().map(e -> {
@@ -223,8 +222,7 @@ public class ViewController {
     }
 
     private static StyleOverride style(StyleDto dto) {
-        return new StyleOverride(Optional.ofNullable(dto.fillColor()), Optional.ofNullable(dto.font()),
-                Optional.ofNullable(dto.fontColor()), Optional.ofNullable(dto.lineColor()),
-                Optional.ofNullable(dto.textAlignment()));
+        return new StyleOverride(dto.fillColor(), dto.font(), dto.fontColor(), dto.lineColor(),
+                dto.textAlignment());
     }
 }

@@ -128,7 +128,7 @@ public final class ExportService {
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
             VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
+                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo.orElse(null));
             return deliver(actor, snapshot, ExportFormat.ARCHIMATE, ExportOptions.none(),
                     Artifact.of(snapshot.xml(), ARCHIMATE_MEDIA_TYPE, fileName(snapshot, "archimate")));
         });
@@ -144,7 +144,7 @@ public final class ExportService {
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
             VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
+                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo.orElse(null));
             byte[] zip = new CatalogCsvWriter(texts).write(snapshot.xml(), options);
             ExportOptions exportOptions = new ExportOptions(Optional.empty(), Optional.empty(), Optional.empty(),
                     Optional.of(String.valueOf(options.separator())), options.folderArchiId());
@@ -165,7 +165,7 @@ public final class ExportService {
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
             VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
+                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo.orElse(null));
             OefWriter.Written written = new OefWriter(notation)
                     .write(new StaxArchiDocumentReader().read(new ByteArrayInputStream(snapshot.xml())));
             ExportJob job = job(actor, snapshot, ExportFormat.OPEN_EXCHANGE, ExportOptions.none());

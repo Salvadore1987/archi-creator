@@ -2,7 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
@@ -27,7 +27,7 @@ public final class FolderTreeInitializer {
 
     /** Корневая папка данного типа с именем, которое ей даёт Archi. */
     public static ModelFolder root(FolderType type, FolderId id, ArchiId archiId, SortOrder order) {
-        return new ModelFolder(id, Optional.empty(), archiId, type.defaultName(), Optional.of(type), order,
-                Optional.empty());
+        return new ModelFolder(id, null, archiId, type.defaultName(), Objects.requireNonNull(type, "type"), order,
+                null);
     }
 }

@@ -54,7 +54,7 @@ public final class ModelValidator {
             if (!element.supported()) {
                 findings.add(new ValidationFinding(Severity.INFO, OPAQUE_CODE,
                         Message.of(ModelingMessages.VALIDATION_OPAQUE_ELEMENT, element.archiType().simpleName()),
-                        "ELEMENT", element.archiId().value(), Optional.empty()));
+                        "ELEMENT", element.archiId().value(), null));
             }
         }
         for (Relationship relationship : model.relationships().values()) {
@@ -62,18 +62,18 @@ public final class ModelValidator {
                 findings.add(new ValidationFinding(Severity.INFO, OPAQUE_CODE,
                         Message.of(ModelingMessages.VALIDATION_UNKNOWN_RELATIONSHIP,
                                 relationship.archiType().simpleName()),
-                        "RELATIONSHIP", relationship.archiId().value(), Optional.empty()));
+                        "RELATIONSHIP", relationship.archiId().value(), null));
             }
         }
         findings.sort(Comparator.comparing(ValidationFinding::severity).thenComparing(ValidationFinding::targetId));
         return findings;
     }
 
-    private static Optional<Message> suggestion(RelationViolation violation) {
+    private static Message suggestion(RelationViolation violation) {
         if (violation.permitted().isEmpty()) {
-            return Optional.of(Message.of(ModelingMessages.VALIDATION_NONE_PERMITTED));
+            return Message.of(ModelingMessages.VALIDATION_NONE_PERMITTED);
         }
-        return Optional.of(Message.of(ModelingMessages.VALIDATION_PERMITTED, violation.permitted().stream().sorted()
-                .map(RelationshipType::name).collect(Collectors.joining(", "))));
+        return Message.of(ModelingMessages.VALIDATION_PERMITTED, violation.permitted().stream().sorted()
+                .map(RelationshipType::name).collect(Collectors.joining(", ")));
     }
 }

@@ -12,7 +12,6 @@ import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -57,7 +56,7 @@ class AutoLayoutTest {
         LayoutGraph.Node tech = node("Node", 0, 0);
         LayoutGraph.Node app = node("ApplicationComponent", 0, 0);
         LayoutGraph.Node business = node("BusinessProcess", 0, 0);
-        LayoutGraph.Node wide = new LayoutGraph.Node(IDS.generate(), Optional.empty(), type("ApplicationService"),
+        LayoutGraph.Node wide = new LayoutGraph.Node(IDS.generate(), null, type("ApplicationService"),
                 new Bounds(500, 500, 300, -1));
         LayoutGraph graph = new LayoutGraph(List.of(tech, app, wide, business), List.of());
 
@@ -106,9 +105,9 @@ class AutoLayoutTest {
     @Test
     @DisplayName("UI-004: контейнер переносится целиком, дети не перечислены; группа — в полосе своего содержимого")
     void containersMoveWhole() {
-        LayoutGraph.Node group = new LayoutGraph.Node(IDS.generate(), Optional.empty(), Optional.empty(),
+        LayoutGraph.Node group = new LayoutGraph.Node(IDS.generate(), null, null,
                 new Bounds(0, 0, 400, 140));
-        LayoutGraph.Node inside = new LayoutGraph.Node(IDS.generate(), Optional.of(group.id()), type("Node"),
+        LayoutGraph.Node inside = new LayoutGraph.Node(IDS.generate(), group.id(), type("Node"),
                 new Bounds(10, 10, 120, 55));
         LayoutGraph.Node business = node("BusinessProcess", 0, 0);
         LayoutGraph.Node app = node("ApplicationComponent", 0, 0);
@@ -123,8 +122,8 @@ class AutoLayoutTest {
     private static LayoutGraph randomGraph(Random random, int nodeCount, int edgeCount) {
         List<LayoutGraph.Node> nodes = new ArrayList<>();
         for (int i = 0; i < nodeCount; i++) {
-            Optional<UUID> parent = i > 10 && random.nextInt(10) == 0
-                    ? Optional.of(nodes.get(random.nextInt(i)).id()) : Optional.empty();
+            UUID parent = i > 10 && random.nextInt(10) == 0
+                    ? nodes.get(random.nextInt(i)).id() : null;
             int width = random.nextInt(5) == 0 ? -1 : 80 + random.nextInt(200);
             nodes.add(new LayoutGraph.Node(fixedId(0, i), parent, type(TYPES[random.nextInt(TYPES.length)]),
                     new Bounds(random.nextInt(2000), random.nextInt(2000), width, 40 + random.nextInt(80))));
@@ -140,7 +139,7 @@ class AutoLayoutTest {
     }
 
     private static long nested(LayoutGraph graph) {
-        return graph.nodes().stream().filter(n -> n.parentId().isPresent()).count();
+        return graph.nodes().stream().filter(n -> n.parentId() != null).count();
     }
 
     private static boolean overlap(Bounds a, Bounds b) {
@@ -161,15 +160,15 @@ class AutoLayoutTest {
     }
 
     private static LayoutGraph.Node node(String type, int x, int y) {
-        return new LayoutGraph.Node(IDS.generate(), Optional.empty(), type(type), new Bounds(x, y, 120, 55));
+        return new LayoutGraph.Node(IDS.generate(), null, type(type), new Bounds(x, y, 120, 55));
     }
 
     private static LayoutGraph.Edge edge(LayoutGraph.Node source, LayoutGraph.Node target) {
         return new LayoutGraph.Edge(IDS.generate(), source.id(), target.id());
     }
 
-    private static Optional<ArchiType> type(String simpleName) {
-        return Optional.of(ArchiType.ofSimpleName(simpleName));
+    private static ArchiType type(String simpleName) {
+        return ArchiType.ofSimpleName(simpleName);
     }
 
     /** Детерминированный идентификатор: случайный граф воспроизводится от прогона к прогону. */
@@ -182,14 +181,14 @@ class AutoLayoutTest {
     void parentCycleIsRejected() {
         UUID first = IDS.generate();
         UUID second = IDS.generate();
-        LayoutGraph.Node a = new LayoutGraph.Node(first, Optional.of(second), type("Node"), new Bounds(0, 0, 120, 55));
-        LayoutGraph.Node b = new LayoutGraph.Node(second, Optional.of(first), type("Node"), new Bounds(0, 0, 120, 55));
+        LayoutGraph.Node a = new LayoutGraph.Node(first, second, type("Node"), new Bounds(0, 0, 120, 55));
+        LayoutGraph.Node b = new LayoutGraph.Node(second, first, type("Node"), new Bounds(0, 0, 120, 55));
         LayoutGraph.Node root = node("BusinessActor", 0, 0);
         List<LayoutGraph.Edge> edges = List.of(new LayoutGraph.Edge(IDS.generate(), root.id(), first));
 
         assertThrows(InvalidValueException.class, () -> new LayoutGraph(List.of(root, a, b), edges));
         UUID self = IDS.generate();
-        LayoutGraph.Node own = new LayoutGraph.Node(self, Optional.of(self), type("Node"), new Bounds(0, 0, 120, 55));
+        LayoutGraph.Node own = new LayoutGraph.Node(self, self, type("Node"), new Bounds(0, 0, 120, 55));
         assertThrows(InvalidValueException.class, () -> new LayoutGraph(List.of(own), List.of()));
     }
 }

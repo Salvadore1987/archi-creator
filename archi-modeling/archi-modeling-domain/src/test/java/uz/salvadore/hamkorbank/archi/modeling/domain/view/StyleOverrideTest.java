@@ -3,7 +3,6 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -16,7 +15,7 @@ class StyleOverrideTest {
     @ValueSource(ints = {1, 2, 4})
     @DisplayName("Выравнивание текста — значения Archi: влево, по центру, вправо")
     void archiAlignmentsAreAccepted(int alignment) {
-        assertEquals(Optional.of(alignment), alignment(alignment).textAlignment());
+        assertEquals(alignment, alignment(alignment).textAlignment());
     }
 
     @Test
@@ -27,7 +26,7 @@ class StyleOverrideTest {
     }
 
     private static StyleOverride alignment(int value) {
-        return new StyleOverride(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.of(value));
+        return new StyleOverride(null, null, null, null,
+                value);
     }
 }

@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.service;
 
 import java.util.List;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
@@ -31,10 +30,10 @@ public final class ModelLifecycleService {
 
     /**
      * Пустая модель с девятью корневыми папками и версией 1 — точкой отсчёта истории.
-     * Повтор с тем же ключом возвращает ту же модель.
+     * Повтор с тем же ключом возвращает ту же модель; {@code null} в ключе — без идемпотентности.
      */
     public ArchitectureModel create(EditorIdentity actor, WorkspaceId workspaceId, String name,
-                                    Optional<String> idempotencyKey) {
+                                    String idempotencyKey) {
         return kernel.run(Operation.CREATE_MODEL, actor, () -> kernel.unitOfWork.write(() ->
                 kernel.idempotent("CreateModel", actor, idempotencyKey,
                         IdempotentCommand.fingerprint(workspaceId, name),
@@ -47,19 +46,23 @@ public final class ModelLifecycleService {
                                     () -> FolderId.next(kernel.uuids), kernel.archiIds::next);
                             kernel.save(model);
                             versions.commit(model, actor,
-                                    Optional.of(kernel.texts.text(Message.of(ModelingMessages.COMMENT_MODEL_CREATED))));
+                                    kernel.texts.text(Message.of(ModelingMessages.COMMENT_MODEL_CREATED)));
                             return model.id().toString();
                         },
                         ref -> kernel.models.load(ModelId.of(ref)).orElseThrow())));
     }
 
-    /** PATCH: переименование и документация; пустая документация её снимает. */
-    public ArchitectureModel edit(EditorIdentity actor, ModelId modelId, Optional<String> name,
-                                  Optional<String> documentation) {
+    /** PATCH: переименование и документация; {@code null} — не менять, пустая документация её снимает. */
+    public ArchitectureModel edit(EditorIdentity actor, ModelId modelId, String name,
+                                  String documentation) {
         return kernel.run(Operation.RENAME_MODEL, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.writableModel(modelId, actor);
-            name.ifPresent(n -> model.rename(n, kernel.now()));
-            documentation.ifPresent(d -> model.changeDocumentation(Optional.of(d), kernel.now()));
+            if (name != null) {
+                model.rename(name, kernel.now());
+            }
+            if (documentation != null) {
+                model.changeDocumentation(documentation, kernel.now());
+            }
             kernel.save(model);
             return model;
         }));
@@ -70,7 +73,8 @@ public final class ModelLifecycleService {
         kernel.run(Operation.DELETE_MODEL, actor, () -> kernel.unitOfWork.write(() -> {
             ArchitectureModel model = kernel.visibleModel(modelId, actor, AclAccess.WRITE);
             model.requireActive();
-            ModelLock.requireWriteAccess(modelId, kernel.locks.find(modelId), actor.subject(), kernel.now());
+            ModelLock.requireWriteAccess(modelId, kernel.locks.find(modelId).orElse(null), actor.subject(),
+                    kernel.now());
             model.delete(actor, kernel.now());
             kernel.save(model);
             ModelLock lock = kernel.locks.find(modelId).orElseThrow();

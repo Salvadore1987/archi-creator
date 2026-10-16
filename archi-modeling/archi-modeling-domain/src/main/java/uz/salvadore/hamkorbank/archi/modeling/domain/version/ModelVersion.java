@@ -3,7 +3,6 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.version;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
@@ -33,38 +32,36 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
     private final ModelId modelId;
     private final long versionNo;
     private final String author;
-    private final Optional<String> comment;
-    private final Optional<String> label;
+    private final String comment;
+    private final String label;
     private final Instant createdAt;
-    private final Optional<byte[]> snapshot;
+    private final byte[] snapshot;
     private final String contentHash;
-    private final Optional<String> gitSha;
+    private final String gitSha;
 
-    private ModelVersion(VersionId id, ModelId modelId, long versionNo, String author, Optional<String> comment,
-                         Optional<String> label, Instant createdAt, Optional<byte[]> snapshot, String contentHash,
-                         Optional<String> gitSha) {
+    private ModelVersion(VersionId id, ModelId modelId, long versionNo, String author, String comment,
+                         String label, Instant createdAt, byte[] snapshot, String contentHash,
+                         String gitSha) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(author, "author");
-        Objects.requireNonNull(comment, "comment");
-        Objects.requireNonNull(label, "label");
         Objects.requireNonNull(createdAt, "createdAt");
-        Objects.requireNonNull(snapshot, "snapshot");
-        Objects.requireNonNull(gitSha, "gitSha");
         if (versionNo <= 0) {
             throw new InvalidValueException(ModelingMessages.VERSION_NUMBER_POSITIVE);
         }
         if (contentHash == null || !SHA256.matcher(contentHash).matches()) {
             throw new InvalidValueException(ModelingMessages.HASH_NOT_SHA256);
         }
-        comment.ifPresent(c -> requireLength(c, COMMENT_MAX, ModelingMessages.FIELD_COMMENT));
-        label.ifPresent(l -> requireLength(l, LABEL_MAX, ModelingMessages.FIELD_LABEL));
-        gitSha.ifPresent(sha -> {
-            if (!GIT_SHA.matcher(sha).matches()) {
-                throw new InvalidValueException(ModelingMessages.GIT_SHA_INVALID);
-            }
-        });
-        snapshot = snapshot.map(bytes -> Arrays.copyOf(bytes, bytes.length));
+        if (comment != null) {
+            requireLength(comment, COMMENT_MAX, ModelingMessages.FIELD_COMMENT);
+        }
+        if (label != null) {
+            requireLength(label, LABEL_MAX, ModelingMessages.FIELD_LABEL);
+        }
+        if (gitSha != null && !GIT_SHA.matcher(gitSha).matches()) {
+            throw new InvalidValueException(ModelingMessages.GIT_SHA_INVALID);
+        }
+        snapshot = copy(snapshot);
         super(id);
         this.modelId = modelId;
         this.versionNo = versionNo;
@@ -77,10 +74,13 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
         this.gitSha = gitSha;
     }
 
-    /** Сборка из сохранённых значений — для хранилища; значения проверяются, как при создании. */
+    /**
+     * Сборка из сохранённых значений — для хранилища; значения проверяются, как при создании.
+     * {@code null} в комментарии, метке, снимке и коммите — значения нет.
+     */
     public static ModelVersion restore(VersionId id, ModelId modelId, long versionNo, String author,
-                                       Optional<String> comment, Optional<String> label, Instant createdAt,
-                                       Optional<byte[]> snapshot, String contentHash, Optional<String> gitSha) {
+                                       String comment, String label, Instant createdAt,
+                                       byte[] snapshot, String contentHash, String gitSha) {
         return new ModelVersion(id, modelId, versionNo, author, comment, label, createdAt, snapshot, contentHash,
                                 gitSha);
     }
@@ -89,29 +89,32 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
      * Фиксация следующей версии: номер строго больше последнего и не переиспользуется,
      * событие о фиксации рождается вместе с версией — без него версия не создаётся.
      *
-     * @param last          последняя версия модели; пусто — версий ещё не было
+     * @param last          последняя версия модели; {@code null} — версий ещё не было
+     * @param comment       комментарий; {@code null} и пустой — без комментария
      * @param modelSize     сколько в снимке элементов и связей — для события
      */
-    public static Committed commit(Optional<ModelVersion> last, VersionId id, ModelId modelId,
-                                   WorkspaceId workspaceId, String author, Optional<String> comment, Instant now,
+    public static Committed commit(ModelVersion last, VersionId id, ModelId modelId,
+                                   WorkspaceId workspaceId, String author, String comment, Instant now,
                                    byte[] snapshot, String contentHash, ModelSize modelSize) {
-        last.ifPresent(previous -> {
-            if (!previous.modelId.equals(modelId)) {
-                throw new InvalidValueException(ModelingMessages.VERSION_OTHER_MODEL);
-            }
-        });
-        long number = last.map(v -> v.versionNo + 1).orElse(1L);
-        ModelVersion version = new ModelVersion(id, modelId, number, author, comment.filter(c -> !c.isBlank()),
-                Optional.empty(), now, Optional.of(snapshot), contentHash, Optional.empty());
+        if (last != null && !last.modelId.equals(modelId)) {
+            throw new InvalidValueException(ModelingMessages.VERSION_OTHER_MODEL);
+        }
+        long number = last != null ? last.versionNo + 1 : 1L;
+        ModelVersion version = new ModelVersion(id, modelId, number, author,
+                comment == null || comment.isBlank() ? null : comment,
+                null, now, Objects.requireNonNull(snapshot, "snapshot"), contentHash, null);
         ModelVersionCommittedEvent event = new ModelVersionCommittedEvent(modelId, workspaceId, number, author,
                 version.comment, modelSize.elements(), modelSize.relationships(), now);
         return new Committed(version, event);
     }
 
-    /** Метка релиза: снимок помеченной версии не удаляется. Пустая метка снимает пометку. */
-    public ModelVersion labelled(Optional<String> newLabel) {
-        Optional<String> normalized = newLabel.map(String::strip).filter(l -> !l.isEmpty());
-        normalized.ifPresent(l -> requireLength(l, LABEL_MAX, ModelingMessages.FIELD_LABEL));
+    /** Метка релиза: снимок помеченной версии не удаляется. {@code null} и пустая метка снимают пометку. */
+    public ModelVersion labelled(String newLabel) {
+        String stripped = newLabel == null ? null : newLabel.strip();
+        String normalized = stripped == null || stripped.isEmpty() ? null : stripped;
+        if (normalized != null) {
+            requireLength(normalized, LABEL_MAX, ModelingMessages.FIELD_LABEL);
+        }
         return new ModelVersion(id(), modelId, versionNo, author, comment, normalized, createdAt, snapshot, contentHash,
                 gitSha);
     }
@@ -121,15 +124,15 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
      * из которого его можно восстановить. Без Git снимок — единственная копия.
      */
     public ModelVersion snapshotPurged(boolean gitBound) {
-        if (!gitBound || gitSha.isEmpty()) {
+        if (!gitBound || gitSha == null) {
             throw new ModelingDomainException(INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.SNAPSHOT_ONLY_COPY, versionNo));
         }
-        if (label.isPresent()) {
+        if (label != null) {
             throw new ModelingDomainException(INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.SNAPSHOT_LABELLED, versionNo));
         }
-        return new ModelVersion(id(), modelId, versionNo, author, comment, label, createdAt, Optional.empty(),
+        return new ModelVersion(id(), modelId, versionNo, author, comment, label, createdAt, null,
                 contentHash, gitSha);
     }
 
@@ -139,29 +142,35 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
      * по которой восстанавливается снимок, не переписывается.
      */
     public ModelVersion publishedAs(String sha) {
-        if (gitSha.isPresent() && !gitSha.get().equals(sha)) {
+        if (gitSha != null && !gitSha.equals(sha)) {
             throw new ModelingDomainException(INVARIANT, Failure.CONFLICT,
-                    Message.of(ModelingMessages.VERSION_ALREADY_PUBLISHED, versionNo, gitSha.get()));
+                    Message.of(ModelingMessages.VERSION_ALREADY_PUBLISHED, versionNo, gitSha));
         }
         return new ModelVersion(id(), modelId, versionNo, author, comment, label, createdAt, snapshot, contentHash,
-                Optional.of(sha));
+                Objects.requireNonNull(sha, "sha"));
     }
 
-    /** Сжатый снимок — копией: массив версии не меняется снаружи; пусто — очищен по ретеншену. */
-    public Optional<byte[]> snapshot() {
-        return snapshot.map(bytes -> Arrays.copyOf(bytes, bytes.length));
+    /** Сжатый снимок — копией: массив версии не меняется снаружи; {@code null} — очищен по ретеншену. */
+    public byte[] snapshot() {
+        return copy(snapshot);
     }
 
     /** Лежит ли снимок в базе — без копирования массива. */
     public boolean hasSnapshot() {
-        return snapshot.isPresent();
+        return snapshot != null;
     }
 
-    /** Снимок на месте; пусто — очищен, и восстановить его без Git неоткуда ({@code 410}). */
+    /** Снимок на месте; очищен — восстановить его без Git неоткуда ({@code 410}). */
     public byte[] requireSnapshot() {
-        return snapshot.map(bytes -> Arrays.copyOf(bytes, bytes.length))
-                .orElseThrow(() -> new ModelingDomainException(ModelingCodes.SNAPSHOT_PURGED, Failure.GONE,
-                        Message.of(ModelingMessages.SNAPSHOT_PURGED, versionNo)));
+        if (snapshot == null) {
+            throw new ModelingDomainException(ModelingCodes.SNAPSHOT_PURGED, Failure.GONE,
+                    Message.of(ModelingMessages.SNAPSHOT_PURGED, versionNo));
+        }
+        return copy(snapshot);
+    }
+
+    private static byte[] copy(byte[] bytes) {
+        return bytes == null ? null : Arrays.copyOf(bytes, bytes.length);
     }
 
     private static void requireLength(String value, int max, String fieldKey) {
@@ -198,13 +207,13 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
         return author;
     }
 
-    /** Комментарий к версии; пусто — не задан. */
-    public Optional<String> comment() {
+    /** Комментарий к версии; {@code null} — не задан. */
+    public String comment() {
         return comment;
     }
 
-    /** Метка версии; пусто — не поставлена. */
-    public Optional<String> label() {
+    /** Метка версии; {@code null} — не поставлена. */
+    public String label() {
         return label;
     }
 
@@ -218,8 +227,8 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
         return contentHash;
     }
 
-    /** Коммит Git, которым опубликована версия; пусто — ещё не опубликована. */
-    public Optional<String> gitSha() {
+    /** Коммит Git, которым опубликована версия; {@code null} — ещё не опубликована. */
+    public String gitSha() {
         return gitSha;
     }
 }

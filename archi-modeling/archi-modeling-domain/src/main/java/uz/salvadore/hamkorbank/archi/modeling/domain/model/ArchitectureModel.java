@@ -55,11 +55,11 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     private final WorkspaceId workspaceId;
     private final ArchiId archiId;
     private String name;
-    private Optional<String> documentation;
+    private String documentation;
     private final String archiVersion;
     private ModelStatus status;
     private List<PropertyEntry> properties;
-    private final Optional<RawXml> rawXml;
+    private final RawXml rawXml;
     private final String createdBy;
     private final Instant createdAt;
     private Instant updatedAt;
@@ -98,8 +98,8 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
                                            EditorIdentity author, Instant now, Supplier<FolderId> folderIds,
                                            Supplier<ArchiId> archiIds) {
         ModelHeader header = new ModelHeader(id, workspaceId, archiId, Names.required(name, Names.MODEL),
-                Optional.empty(), ModelHeader.DEFAULT_ARCHI_VERSION, ModelStatus.ACTIVE, List.of(),
-                Optional.empty(), author.subject(), now, now, 0);
+                null, ModelHeader.DEFAULT_ARCHI_VERSION, ModelStatus.ACTIVE, List.of(),
+                null, author.subject(), now, now, 0);
         ArchitectureModel model = new ArchitectureModel(header, true);
         FolderTreeInitializer.rootFolders(folderIds, archiIds).forEach(f -> model.folders.put(f.id(), f));
         return model;
@@ -169,11 +169,13 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
                 });
         Map<FolderType, Integer> rootCount = new EnumMap<>(FolderType.class);
         for (ModelFolder folder : folders.values()) {
-            folder.folderType().ifPresent(t -> rootCount.merge(t, 1, Integer::sum));
-            folder.parentId().ifPresent(parent -> {
-                requireFolder(parent);
+            if (folder.folderType() != null) {
+                rootCount.merge(folder.folderType(), 1, Integer::sum);
+            }
+            if (folder.parentId() != null) {
+                requireFolder(folder.parentId());
                 rootOf(folder.id());
-            });
+            }
         }
         rootCount.forEach((type, count) -> {
             if (count > 1) {
@@ -240,10 +242,10 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
         touch(now);
     }
 
-    /** Новая документация модели; пустая строка — документации нет. */
-    public void changeDocumentation(Optional<String> newDocumentation, Instant now) {
+    /** Новая документация модели; {@code null} и пустая строка — документации нет. */
+    public void changeDocumentation(String newDocumentation, Instant now) {
         requireActive();
-        documentation = newDocumentation.filter(d -> !d.isEmpty());
+        documentation = nonEmpty(newDocumentation);
         touch(now);
     }
 
@@ -255,8 +257,8 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
         requireActive();
         requireFolder(parentId);
         requireFreeArchiId(newArchiId);
-        ModelFolder folder = new ModelFolder(newId, Optional.of(parentId), newArchiId,
-                Names.required(folderName, Names.FOLDER), Optional.empty(), nextOrderIn(parentId), Optional.empty());
+        ModelFolder folder = new ModelFolder(newId, parentId, newArchiId,
+                Names.required(folderName, Names.FOLDER), null, nextOrderIn(parentId), null);
         folders.put(folder.id(), folder);
         touch(now);
         return folder;
@@ -297,7 +299,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
      */
     public List<ViewRef> moveToFolder(FolderId targetId, List<UUID> itemIds, Instant now) {
         requireActive();
-        FolderType targetRoot = rootOf(requireFolder(targetId)).folderType().orElseThrow();
+        FolderType targetRoot = Objects.requireNonNull(rootOf(requireFolder(targetId)).folderType());
         for (UUID itemId : itemIds) {
             requireMovable(itemId, targetId, targetRoot);
         }
@@ -357,7 +359,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     }
 
     private void requireSameRoot(FolderId current, FolderType targetRoot, Message what) {
-        FolderType currentRoot = rootOf(requireFolder(current)).folderType().orElseThrow();
+        FolderType currentRoot = Objects.requireNonNull(rootOf(requireFolder(current)).folderType());
         if (currentRoot != targetRoot) {
             throw new ModelingDomainException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
                     Message.of(ModelingMessages.WRONG_ROOT, what, currentRoot.fileValue(), targetRoot.fileValue()));
@@ -385,20 +387,23 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
                 Message.of(ModelingMessages.ELEMENT_OF_TYPE, archiType.simpleName()));
         requireFreeArchiId(newArchiId);
         Element element = new Element(newId, folderId, newArchiId, archiType, Names.limited(elementName, Names.ELEMENT),
-                Optional.empty(), List.of(), nextOrderIn(folderId), true, Optional.empty());
+                null, List.of(), nextOrderIn(folderId), true, null);
         elements.put(element.id(), element);
         touch(now);
         return element;
     }
 
-    /** Правка имени, документации и свойств элемента; нередактируемый тип отклоняется. */
-    public Element updateElement(ElementId elementId, String newName, Optional<String> newDocumentation,
+    /**
+     * Правка имени, документации и свойств элемента; нередактируемый тип отклоняется.
+     * {@code null} и пустая строка в документации — документации нет.
+     */
+    public Element updateElement(ElementId elementId, String newName, String newDocumentation,
                                  List<PropertyEntry> newProperties, Instant now) {
         requireActive();
         Element element = requireElement(elementId);
         requireEditable(element.supported(), element.archiType());
         Element edited = element.edited(Names.limited(newName, Names.ELEMENT),
-                newDocumentation.filter(d -> !d.isEmpty()), newProperties);
+                nonEmpty(newDocumentation), newProperties);
         elements.put(elementId, edited);
         touch(now);
         return edited;
@@ -422,32 +427,32 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     /**
      * Новая связь в папке {@code Relations}. Тип проверяется по матрице ArchiMate 3.2;
      * дубль того же типа между той же парой не создаётся — возвращается
-     * существующая связь.
+     * существующая связь. {@code null} и пустая строка в имени — имени нет.
      */
     public Created<Relationship> addRelationship(ArchiType archiType, ConceptRef source, ConceptRef target,
-                                                 Optional<String> relationshipName, RelationshipId newId,
+                                                 String relationshipName, RelationshipId newId,
                                                  ArchiId newArchiId, Instant now) {
-        return addRelationship(archiType, source, target, relationshipName, Optional.empty(), Optional.empty(),
-                Optional.empty(), newId, newArchiId, now);
+        return addRelationship(archiType, source, target, relationshipName, null, null,
+                null, newId, newArchiId, now);
     }
 
     /**
      * То же с местом в дереве и атрибутами типа. Папка — в поддереве {@code Relations},
      * без неё связь ложится в корень; вид доступа бывает только у Access, направленность —
-     * только у Association.
+     * только у Association. {@code null} в любом из необязательных аргументов — не задан.
      */
     public Created<Relationship> addRelationship(ArchiType archiType, ConceptRef source, ConceptRef target,
-                                                 Optional<String> relationshipName, Optional<FolderId> folderId,
-                                                 Optional<AccessType> accessType, Optional<Boolean> directed,
+                                                 String relationshipName, FolderId folderId,
+                                                 AccessType accessType, Boolean directed,
                                                  RelationshipId newId, ArchiId newArchiId, Instant now) {
         requireActive();
         RelationshipType type = RelationshipType.fromArchiType(archiType)
                 .orElseThrow(() -> ModelingDomainException.invalid(
                         Message.of(ModelingMessages.NOT_RELATIONSHIP_TYPE, archiType)));
-        if (accessType.isPresent() && type != RelationshipType.ACCESS) {
+        if (accessType != null && type != RelationshipType.ACCESS) {
             throw ModelingDomainException.invalid(Message.of(ModelingMessages.ACCESS_TYPE_MISPLACED, archiType));
         }
-        if (directed.isPresent() && type != RelationshipType.ASSOCIATION) {
+        if (directed != null && type != RelationshipType.ASSOCIATION) {
             throw ModelingDomainException.invalid(Message.of(ModelingMessages.DIRECTED_MISPLACED, archiType));
         }
         ArchiType sourceType = conceptType(source);
@@ -459,28 +464,28 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
             return new Created<>(duplicate.get(), false);
         }
         RelationMatrix.archimate32().requirePermitted(sourceType, targetType, type);
-        FolderId folder = folderId.orElseGet(() -> roots().get(FolderType.RELATIONS).id());
+        FolderId folder = folderId != null ? folderId : roots().get(FolderType.RELATIONS).id();
         requireSameRoot(folder, FolderType.RELATIONS,
                 Message.of(ModelingMessages.RELATIONSHIP_OF_TYPE, archiType.simpleName()));
         requireFreeArchiId(newArchiId);
         Relationship relationship = new Relationship(newId, folder, newArchiId, archiType, source, target,
-                relationshipName.filter(n -> !n.isEmpty()), Optional.empty(), accessType, directed,
-                List.of(), nextOrderIn(folder), true, Optional.empty());
+                nonEmpty(relationshipName), null, accessType, directed,
+                List.of(), nextOrderIn(folder), true, null);
         relationships.put(relationship.id(), relationship);
         touch(now);
         return new Created<>(relationship, true);
     }
 
-    /** Правка имени, документации и свойств связи; пустое имя — имени нет. */
-    public Relationship updateRelationship(RelationshipId relationshipId, Optional<String> newName,
-                                           Optional<String> newDocumentation, List<PropertyEntry> newProperties,
+    /** Правка имени, документации и свойств связи; {@code null} и пустая строка — значения нет. */
+    public Relationship updateRelationship(RelationshipId relationshipId, String newName,
+                                           String newDocumentation, List<PropertyEntry> newProperties,
                                            Instant now) {
         requireActive();
         Relationship relationship = requireRelationship(relationshipId);
         requireEditable(relationship.supported(), relationship.archiType());
         Relationship edited = relationship.edited(
-                newName.filter(n -> !n.isEmpty()).map(n -> Names.limited(n, Names.RELATIONSHIP)),
-                newDocumentation.filter(d -> !d.isEmpty()), newProperties);
+                newName == null || newName.isEmpty() ? null : Names.limited(newName, Names.RELATIONSHIP),
+                nonEmpty(newDocumentation), newProperties);
         relationships.put(relationshipId, edited);
         touch(now);
         return edited;
@@ -610,7 +615,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     /** Корневые папки по типу. */
     public Map<FolderType, ModelFolder> roots() {
         Map<FolderType, ModelFolder> roots = new EnumMap<>(FolderType.class);
-        folders.values().stream().filter(ModelFolder::root).forEach(f -> roots.put(f.folderType().orElseThrow(), f));
+        folders.values().stream().filter(ModelFolder::root).forEach(f -> roots.put(f.folderType(), f));
         return roots;
     }
 
@@ -622,24 +627,24 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     private ModelFolder rootOf(ModelFolder folder) {
         ModelFolder current = folder;
         Set<FolderId> visited = new HashSet<>();
-        while (current.parentId().isPresent()) {
+        while (current.parentId() != null) {
             if (!visited.add(current.id())) {
                 throw new ModelingDomainException(ModelingCodes.FOLDER_TREE, Failure.UNPROCESSABLE,
                         Message.of(ModelingMessages.FOLDER_CYCLE, current.archiId()));
             }
-            current = requireFolder(current.parentId().get());
+            current = requireFolder(current.parentId());
         }
         return current;
     }
 
     /** Лежит ли {@code candidate} в поддереве {@code ancestor}, включая его самого. */
     private boolean isWithin(FolderId candidate, FolderId ancestor) {
-        Optional<FolderId> current = Optional.of(candidate);
-        while (current.isPresent()) {
-            if (current.get().equals(ancestor)) {
+        FolderId current = candidate;
+        while (current != null) {
+            if (current.equals(ancestor)) {
                 return true;
             }
-            current = requireFolder(current.get()).parentId();
+            current = requireFolder(current).parentId();
         }
         return false;
     }
@@ -647,7 +652,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     /** Позиции всех, кто лежит в папке: подпапки, элементы, связи, представления. */
     private List<SortOrder> childOrders(FolderId folderId) {
         List<SortOrder> orders = new ArrayList<>();
-        folders.values().stream().filter(f -> f.parentId().equals(Optional.of(folderId)))
+        folders.values().stream().filter(f -> folderId.equals(f.parentId()))
                 .forEach(f -> orders.add(f.sortOrder()));
         elements.values().stream().filter(e -> e.folderId().equals(folderId)).forEach(e -> orders.add(e.sortOrder()));
         relationships.values().stream().filter(r -> r.folderId().equals(folderId))
@@ -659,6 +664,11 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     /** Конец папки: соседи не перенумеровываются. */
     private SortOrder nextOrderIn(FolderId folderId) {
         return SortOrder.afterLast(childOrders(folderId));
+    }
+
+    /** Пустая строка — значения нет. */
+    private static String nonEmpty(String value) {
+        return value == null || value.isEmpty() ? null : value;
     }
 
     // ── Состояние для хранилища и чтения ────────────────────────────

@@ -42,18 +42,19 @@ public final class IdempotentCommand {
     /**
      * Решение по команде: выполнить заново или отдать первый результат.
      *
+     * @param existing запись по ключу; {@code null} — ключ ещё не исполнялся
      * @throws ModelingDomainException ключ уже использован с другим отпечатком тела
      */
-    public static Decision decide(Optional<IdempotencyRecord> existing, String fingerprint) {
-        if (existing.isEmpty()) {
+    public static Decision decide(IdempotencyRecord existing, String fingerprint) {
+        if (existing == null) {
             return new Execute();
         }
-        if (!existing.get().fingerprint().equals(fingerprint)) {
+        if (!existing.fingerprint().equals(fingerprint)) {
             throw new ModelingDomainException(INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.IDEMPOTENCY_KEY_REUSED),
-                    Map.of("idempotencyKey", existing.get().key()));
+                    Map.of("idempotencyKey", existing.key()));
         }
-        return new Replay(existing.get().resultRef());
+        return new Replay(existing.resultRef());
     }
 
     /**

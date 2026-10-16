@@ -32,7 +32,7 @@ class WorkspaceServiceTest {
     @Test
     @DisplayName("Пустая база: имя первого пространства — текст ресурса, а не строка в конфигурации")
     void defaultNameComesFromCatalog() {
-        Workspace created = service.ensureDefault(Optional.empty());
+        Workspace created = service.ensureDefault(null);
 
         assertEquals("текст:" + ModelingMessages.DEFAULT_WORKSPACE_NAME, created.name());
         assertEquals(List.of(created), stored);
@@ -41,7 +41,7 @@ class WorkspaceServiceTest {
     @Test
     @DisplayName("Имя, заданное установкой, сильнее текста ресурса")
     void configuredNameWins() {
-        assertEquals("Хамкорбанк", service.ensureDefault(Optional.of("Хамкорбанк")).name());
+        assertEquals("Хамкорбанк", service.ensureDefault("Хамкорбанк").name());
     }
 
     @Test
@@ -50,7 +50,7 @@ class WorkspaceServiceTest {
         Workspace existing = Workspace.restore(WorkspaceId.of(IDS.generate()), "Архитектура", NOW);
         stored.add(existing);
 
-        assertEquals(existing, service.ensureDefault(Optional.of("Другое")));
+        assertEquals(existing, service.ensureDefault("Другое"));
         assertEquals(List.of(existing), stored);
     }
 

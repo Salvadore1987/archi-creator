@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.modeling.application.service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
@@ -38,15 +37,15 @@ public final class TreeService {
         this.relationships = relationships;
     }
 
-    /** Создание папки с идентификаторами от сервера. */
+    /** Создание папки с идентификаторами от сервера; {@code null} в ключе — без идемпотентности. */
     public ModelFolder createFolder(EditorIdentity actor, ModelId modelId, FolderId parentId, String name,
-                                    Optional<String> idempotencyKey) {
+                                    String idempotencyKey) {
         return createFolder(actor, modelId, parentId, name, RequestedIds.NONE, idempotencyKey);
     }
 
     /** То же с идентификаторами, которые выбрал клиент; занятые — {@code 409}. */
     public ModelFolder createFolder(EditorIdentity actor, ModelId modelId, FolderId parentId, String name,
-                                    RequestedIds ids, Optional<String> idempotencyKey) {
+                                    RequestedIds ids, String idempotencyKey) {
         return kernel.run(Operation.REORGANIZE_TREE, actor, () -> kernel.unitOfWork.write(() ->
                 kernel.idempotent("CreateFolder", actor, idempotencyKey,
                         IdempotentCommand.fingerprint(modelId, parentId, name, ids.id(), ids.archiId()),
@@ -71,7 +70,7 @@ public final class TreeService {
                 model.updateElement(element.id(), name, element.documentation(), element.properties(), kernel.now());
             } else if (model.relationships().contains(RelationshipId.of(itemId))) {
                 Relationship relationship = model.requireRelationship(RelationshipId.of(itemId));
-                model.updateRelationship(relationship.id(), Optional.of(name), relationship.documentation(),
+                model.updateRelationship(relationship.id(), name, relationship.documentation(),
                         relationship.properties(), kernel.now());
             } else if (model.view(ViewId.of(itemId)).isPresent()) {
                 View view = kernel.views.load(ViewId.of(itemId)).orElseThrow();

@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.modeling.application.service;
 
 import java.time.Clock;
 import java.util.List;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
@@ -38,20 +37,23 @@ public final class WorkspaceService {
 
     /**
      * Пространство команды: заданное клиентом — или первое, если клиент его не назвал.
-     * Пространств нет вовсе — отказ «не найдено», а не сбой.
+     * Пространств нет вовсе — отказ «не найдено», а не сбой. {@code null} — клиент не назвал.
      */
-    public WorkspaceId resolve(Optional<WorkspaceId> requested) {
-        return requested.orElseGet(() -> unitOfWork.read(workspaces::first)
-                .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.ANY_WORKSPACE))).id());
+    public WorkspaceId resolve(WorkspaceId requested) {
+        if (requested != null) {
+            return requested;
+        }
+        return unitOfWork.read(workspaces::first)
+                .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.ANY_WORKSPACE))).id();
     }
 
     /**
      * Первое пространство на пустой базе. Имя, не заданное установкой, — текст ресурса
-     * на текущем языке; записывается один раз и дальше хранится как данные.
+     * на текущем языке ({@code null}); записывается один раз и дальше хранится как данные.
      */
-    public Workspace ensureDefault(Optional<String> name) {
+    public Workspace ensureDefault(String name) {
         return unitOfWork.write(() -> workspaces.first().orElseGet(() -> {
-            String title = name.orElseGet(() -> texts.text(Message.of(ModelingMessages.DEFAULT_WORKSPACE_NAME)));
+            String title = name != null ? name : texts.text(Message.of(ModelingMessages.DEFAULT_WORKSPACE_NAME));
             Workspace workspace = Workspace.restore(WorkspaceId.next(new UuidV7(clock)), title, clock.instant());
             workspaces.insert(workspace);
             return workspace;

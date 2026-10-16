@@ -67,7 +67,7 @@ public final class AutoLayout {
         graph.nodes().forEach(n -> nodes.putIfAbsent(n.id(), n));
         graph.edges().forEach(e -> edges.putIfAbsent(e.id(), e));
         for (LayoutGraph.Node node : nodes.values()) {
-            if (node.parentId().filter(nodes::containsKey).isEmpty()) {
+            if (node.parentId() == null || !nodes.containsKey(node.parentId())) {
                 roots.add(node.id());
                 outgoing.put(node.id(), new ArrayList<>());
                 neighbours.put(node.id(), new ArrayList<>());
@@ -106,11 +106,11 @@ public final class AutoLayout {
         UUID current = nodeId;
         Set<UUID> visited = new HashSet<>();
         while (visited.add(current)) {
-            Optional<UUID> parent = nodes.get(current).parentId().filter(nodes::containsKey);
-            if (parent.isEmpty()) {
+            UUID parent = nodes.get(current).parentId();
+            if (parent == null || !nodes.containsKey(parent)) {
                 return current;
             }
-            current = parent.get();
+            current = parent;
         }
         return current;
     }
@@ -136,13 +136,13 @@ public final class AutoLayout {
      */
     private Layer layerOf(UUID rootId) {
         LayoutGraph.Node root = nodes.get(rootId);
-        if (root.conceptType().isPresent()) {
-            return registry.layerOf(root.conceptType().get());
+        if (root.conceptType() != null) {
+            return registry.layerOf(root.conceptType());
         }
         Map<Layer, Integer> counts = new EnumMap<>(Layer.class);
         for (LayoutGraph.Node node : nodes.values()) {
-            if (!node.id().equals(rootId) && node.conceptType().isPresent() && rootOf(node.id()).equals(rootId)) {
-                counts.merge(registry.layerOf(node.conceptType().get()), 1, Integer::sum);
+            if (!node.id().equals(rootId) && node.conceptType() != null && rootOf(node.id()).equals(rootId)) {
+                counts.merge(registry.layerOf(node.conceptType()), 1, Integer::sum);
             }
         }
         return counts.entrySet().stream()

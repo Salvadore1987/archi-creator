@@ -139,8 +139,9 @@ public final class DocumentDecomposer {
             String version = document.attributes().get("version").filter(ModelHeader::validArchiVersion)
                     .orElse(ModelHeader.DEFAULT_ARCHI_VERSION);
             ModelHeader header = new ModelHeader(identity.modelId(), identity.workspaceId(),
-                    ArchiId.of(document.archiId().value()), document.name(), Optional.ofNullable(documentation[0]),
-                    version, ModelStatus.ACTIVE, properties, root.encode(), identity.createdBy(), identity.createdAt(),
+                    ArchiId.of(document.archiId().value()), document.name(), documentation[0],
+                    version, ModelStatus.ACTIVE, properties, root.encode().orElse(null), identity.createdBy(),
+                    identity.createdAt(),
                     identity.now(), identity.version());
             ArchitectureModel model = ArchitectureModel.imported(header, folders, elements, relationships,
                     views.stream().map(ViewParts::ref).toList(), () -> FolderId.of(uuids.get()), archiIds);
@@ -172,8 +173,9 @@ public final class DocumentDecomposer {
                     case RawXmlFragment raw -> residue.fragment(childOrder, raw);
                 }
             }
-            folders.add(new ModelFolder(id, parent, archiId(node), node.attribute("name").orElse(""), type,
-                    SortOrder.of(order), residue.encode()));
+            folders.add(new ModelFolder(id, parent.orElse(null), archiId(node), node.attribute("name").orElse(""),
+                    type.orElse(null),
+                    SortOrder.of(order), residue.encode().orElse(null)));
         }
 
         private void modelObject(DocumentNode node, FolderId folder, long order) {
@@ -197,8 +199,8 @@ public final class DocumentDecomposer {
                     .filter(c -> c.kind() == ConceptKind.ELEMENT || c.kind() == ConceptKind.JUNCTION)
                     .map(c -> c.supported()).orElse(false);
             elements.add(new Element(ElementId.of(key(node)), folder, archiId(node), type,
-                    node.attribute("name").orElse(""), described.documentation(), described.properties(),
-                    SortOrder.of(order), supported, residue.encode()));
+                    node.attribute("name").orElse(""), described.documentation().orElse(null), described.properties(),
+                    SortOrder.of(order), supported, residue.encode().orElse(null)));
         }
 
         private void relationship(DocumentNode node, FolderId folder, long order) {
@@ -219,9 +221,10 @@ public final class DocumentDecomposer {
             Described described = describedContent(node, residue);
             boolean supported = RelationshipType.fromArchiType(type).isPresent();
             relationships.add(new Relationship(RelationshipId.of(key(node)), folder, archiId(node), type,
-                    concept(node, "source"), concept(node, "target"), node.attribute("name"),
-                    described.documentation(), accessType, directed, described.properties(), SortOrder.of(order),
-                    supported, residue.encode()));
+                    concept(node, "source"), concept(node, "target"), node.attribute("name").orElse(null),
+                    described.documentation().orElse(null), accessType.orElse(null), directed.orElse(null),
+                    described.properties(), SortOrder.of(order),
+                    supported, residue.encode().orElse(null)));
         }
 
         private ConceptRef concept(DocumentNode node, String attribute) {
@@ -292,9 +295,9 @@ public final class DocumentDecomposer {
             }
             DiagramType type = DiagramType.of(node.archiType().orElseThrow());
             ViewHeader header = new ViewHeader(id, identity.modelId(), folder, archiId(node), type,
-                    node.attribute("name").orElse(""), Optional.ofNullable(documentation[0]),
-                    node.attribute("viewpoint"), properties,
-                    SortOrder.of(order), residue.encode(), 0);
+                    node.attribute("name").orElse(""), documentation[0],
+                    node.attribute("viewpoint").orElse(null), properties,
+                    SortOrder.of(order), residue.encode().orElse(null), 0);
             parts.header = header;
             parts.ref = new ViewRef(id, folder, header.archiId(), type, header.name(), header.sortOrder());
             views.add(parts);
@@ -338,11 +341,11 @@ public final class DocumentDecomposer {
                     case RawXmlFragment raw -> residue.fragment(childOrder, raw);
                 }
             }
-            view.nodes.add(new ViewNode(id, parent, archiId(node), DiagramType.of(node.archiType().orElseThrow()),
-                    element, Optional.ofNullable(bounds[0])
+            view.nodes.add(new ViewNode(id, parent.orElse(null), archiId(node),
+                    DiagramType.of(node.archiType().orElseThrow()), element.orElse(null), Optional.ofNullable(bounds[0])
                             .orElse(new Bounds(0, 0, Bounds.DEFAULT_SIZE, Bounds.DEFAULT_SIZE)),
-                    style.style(), node.attribute("name"), Optional.ofNullable(text[0]), SortOrder.of(order),
-                    residue.encode()));
+                    style.style(), node.attribute("name").orElse(null), text[0], SortOrder.of(order),
+                    residue.encode().orElse(null)));
         }
 
         private void viewEdge(DocumentNode node, long order, ViewParts view) {
@@ -378,8 +381,9 @@ public final class DocumentDecomposer {
                 }
             }
             view.edges.add(new ViewEdge(id, archiId(node), DiagramType.of(node.archiType().orElseThrow()),
-                    relationship, endpoint(node, "source"), endpoint(node, "target"), bendpoints, style.style(),
-                    SortOrder.of(order), residue.encode()));
+                    relationship.orElse(null), endpoint(node, "source"), endpoint(node, "target"), bendpoints,
+                    style.style(),
+                    SortOrder.of(order), residue.encode().orElse(null)));
         }
 
         private ViewEndpoint endpoint(DocumentNode edge, String attribute) {
@@ -511,7 +515,8 @@ public final class DocumentDecomposer {
         }
 
         StyleOverride style() {
-            return new StyleOverride(fillColor, font, fontColor, lineColor, textAlignment);
+            return new StyleOverride(fillColor.orElse(null), font.orElse(null), fontColor.orElse(null),
+                    lineColor.orElse(null), textAlignment.orElse(null));
         }
 
         static Optional<Integer> integer(String value) {

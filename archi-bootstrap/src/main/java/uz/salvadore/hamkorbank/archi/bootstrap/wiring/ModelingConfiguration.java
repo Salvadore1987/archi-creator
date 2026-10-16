@@ -175,7 +175,7 @@ public class ModelingConfiguration {
             LocaleContextHolder.setLocale(Optional.ofNullable(web.getLocale()).orElse(Locale.ROOT));
             try {
                 workspaces.ensureDefault(Optional.ofNullable(settings.defaultWorkspaceName())
-                        .filter(name -> !name.isBlank()));
+                        .filter(name -> !name.isBlank()).orElse(null));
             } finally {
                 LocaleContextHolder.resetLocaleContext();
             }

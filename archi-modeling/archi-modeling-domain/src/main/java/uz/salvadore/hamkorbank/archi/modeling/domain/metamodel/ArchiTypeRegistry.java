@@ -130,7 +130,7 @@ public final class ArchiTypeRegistry {
         void add(String name, ConceptKind kind, Layer layer, MetamodelPhase phase) {
             ArchiType type = ArchiType.ofSimpleName(name);
             ConceptDefinition previous = concepts.put(type,
-                    new ConceptDefinition(type, kind, layer, Optional.ofNullable(phase)));
+                    new ConceptDefinition(type, kind, layer, phase));
             if (previous != null) {
                 throw new IllegalStateException(Message.of(ModelingMessages.CATALOG_DUPLICATE, type).toString());
             }

@@ -47,21 +47,24 @@ public final class ViewService {
         this.kernel = kernel;
     }
 
-    /** Создание представления с идентификаторами от сервера; без папки — в корень представлений. */
-    public View create(EditorIdentity actor, ModelId modelId, String name, Optional<FolderId> folderId,
-                       Optional<String> idempotencyKey) {
+    /**
+     * Создание представления с идентификаторами от сервера; без папки ({@code null}) — в корень
+     * представлений; {@code null} в ключе — без идемпотентности.
+     */
+    public View create(EditorIdentity actor, ModelId modelId, String name, FolderId folderId,
+                       String idempotencyKey) {
         return create(actor, modelId, name, folderId, RequestedIds.NONE, idempotencyKey);
     }
 
     /** То же с идентификаторами, которые выбрал клиент; занятые — {@code 409}. */
-    public View create(EditorIdentity actor, ModelId modelId, String name, Optional<FolderId> folderId,
-                       RequestedIds ids, Optional<String> idempotencyKey) {
+    public View create(EditorIdentity actor, ModelId modelId, String name, FolderId folderId,
+                       RequestedIds ids, String idempotencyKey) {
         return kernel.run(Operation.CREATE_VIEW, actor, () -> kernel.unitOfWork.write(() ->
                 kernel.idempotent("CreateView", actor, idempotencyKey,
                         IdempotentCommand.fingerprint(modelId, name, folderId, ids.id(), ids.archiId()),
                         () -> {
                             ArchitectureModel model = kernel.writableModel(modelId, actor);
-                            FolderId folder = folderId.orElseGet(() -> model.roots().get(FolderType.DIAGRAMS).id());
+                            FolderId folder = folderId != null ? folderId : model.roots().get(FolderType.DIAGRAMS).id();
                             ViewRef place = model.placeNewView(ViewId.of(kernel.newId(ids)), DiagramType.DIAGRAM_MODEL,
                                     name, folder, kernel.newArchiId(model, ids), kernel.now());
                             kernel.save(model);
@@ -72,9 +75,9 @@ public final class ViewService {
                         ref -> kernel.views.load(ViewId.of(ref)).orElseThrow())));
     }
 
-    /** Разместить элемент; уже размещённый не дублируется. */
+    /** Разместить элемент; уже размещённый не дублируется. {@code null} в родителе — корень представления. */
     public ViewNode place(EditorIdentity actor, ViewId viewId, ElementId elementId, Bounds bounds,
-                          Optional<ViewNodeId> parentId) {
+                          ViewNodeId parentId) {
         return place(actor, viewId, elementId, bounds, parentId, RequestedIds.NONE).value();
     }
 
@@ -83,12 +86,12 @@ public final class ViewService {
      * возвращает существующий узел: заданные идентификаторы тогда не проверяются и не применяются.
      */
     public Created<ViewNode> place(EditorIdentity actor, ViewId viewId, ElementId elementId, Bounds bounds,
-                                   Optional<ViewNodeId> parentId, RequestedIds ids) {
+                                   ViewNodeId parentId, RequestedIds ids) {
         return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
             View view = loadView(viewId);
             ArchitectureModel model = kernel.writableModel(view.modelId(), actor);
             Optional<ViewNode> placed = view.nodes().values().stream()
-                    .filter(n -> n.elementId().equals(Optional.of(elementId))).findFirst();
+                    .filter(n -> elementId.equals(n.elementId())).findFirst();
             if (placed.isPresent()) {
                 return new Created<>(placed.get(), false);
             }
@@ -113,7 +116,7 @@ public final class ViewService {
             ViewEndpoint source = endpoint(view, sourceId);
             ViewEndpoint target = endpoint(view, targetId);
             Optional<ViewEdge> drawn = view.edges().values().stream()
-                    .filter(e -> e.relationshipId().equals(Optional.of(relationshipId))
+                    .filter(e -> relationshipId.equals(e.relationshipId())
                             && e.source().equals(source) && e.target().equals(target))
                     .findFirst();
             if (drawn.isPresent()) {
@@ -135,11 +138,16 @@ public final class ViewService {
      * Что поставить на представление: элемент, группу или заметку. Незаданный размер —
      * размер Archi для вида узла.
      *
-     * @param elementId обязателен у узла элемента, запрещён у группы и заметки
+     * @param elementId обязателен у узла элемента, запрещён у группы и заметки; {@code null} — не задан
+     * @param label     подпись группы; {@code null} — не задана
+     * @param content   текст заметки; {@code null} — не задан
+     * @param width     ширина; {@code null} — по умолчанию для вида узла
+     * @param height    высота; {@code null} — по умолчанию для вида узла
+     * @param parentId  родитель; {@code null} — корень представления
      */
-    public record NewNode(ViewNodeKind kind, Optional<ElementId> elementId, Optional<String> label,
-                          Optional<String> content, int x, int y, Optional<Integer> width, Optional<Integer> height,
-                          Optional<ViewNodeId> parentId, RequestedIds ids) {
+    public record NewNode(ViewNodeKind kind, ElementId elementId, String label,
+                          String content, int x, int y, Integer width, Integer height,
+                          ViewNodeId parentId, RequestedIds ids) {
     }
 
     /**
@@ -149,11 +157,12 @@ public final class ViewService {
     public Created<ViewNode> placeNode(EditorIdentity actor, ViewId viewId, NewNode request) {
         Bounds bounds = bounds(request);
         if (request.kind() == ViewNodeKind.DIAGRAM_OBJECT) {
-            ElementId elementId = request.elementId().orElseThrow(() ->
-                    ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_MISSING, ELEMENT_ID)));
-            return place(actor, viewId, elementId, bounds, request.parentId(), request.ids());
+            if (request.elementId() == null) {
+                throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_MISSING, ELEMENT_ID));
+            }
+            return place(actor, viewId, request.elementId(), bounds, request.parentId(), request.ids());
         }
-        if (request.elementId().isPresent()) {
+        if (request.elementId() != null) {
             throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_NOT_FOR_KIND, ELEMENT_ID,
                     request.kind()));
         }
@@ -172,8 +181,11 @@ public final class ViewService {
         return Bounds.ofNew(request.kind(), request.x(), request.y(), request.width(), request.height());
     }
 
-    /** Вложить узел в контейнер или вынести в корень; координаты — относительно нового родителя. */
-    public ViewNode moveToParent(EditorIdentity actor, ViewNodeId nodeId, Optional<ViewNodeId> parentId, int x,
+    /**
+     * Вложить узел в контейнер или вынести в корень ({@code null}); координаты — относительно
+     * нового родителя.
+     */
+    public ViewNode moveToParent(EditorIdentity actor, ViewNodeId nodeId, ViewNodeId parentId, int x,
                                  int y) {
         return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
             View view = viewOf(nodeId);
@@ -184,9 +196,9 @@ public final class ViewService {
         }));
     }
 
-    /** Подпись группы, текст заметки, собственный стиль узла; отсутствующее не меняется. */
-    public ViewNode editNode(EditorIdentity actor, ViewNodeId nodeId, Optional<String> label,
-                             Optional<String> content, Optional<StyleOverride> style) {
+    /** Подпись группы, текст заметки, собственный стиль узла; {@code null} — не меняется. */
+    public ViewNode editNode(EditorIdentity actor, ViewNodeId nodeId, String label,
+                             String content, StyleOverride style) {
         return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
             View view = viewOf(nodeId);
             kernel.writableModel(view.modelId(), actor);
@@ -220,13 +232,13 @@ public final class ViewService {
 
     /**
      * Предложение авторазметки по графу из браузера; база не меняется. Стратегия —
-     * имя из контракта, по умолчанию раскладка по слоям.
+     * имя из контракта, по умолчанию ({@code null}) раскладка по слоям.
      */
-    public LayoutProposal proposeLayout(EditorIdentity actor, ViewId viewId, Optional<String> strategyName,
+    public LayoutProposal proposeLayout(EditorIdentity actor, ViewId viewId, String strategyName,
                                         LayoutGraph graph) {
-        LayoutStrategy strategy = strategyName.map(name -> LayoutStrategy.named(name).orElseThrow(() ->
-                ModelingDomainException.invalid(Message.of(ModelingMessages.LAYOUT_STRATEGY_REQUESTED, name))))
-                .orElse(LayoutStrategy.LAYERED);
+        LayoutStrategy strategy = strategyName == null ? LayoutStrategy.LAYERED
+                : LayoutStrategy.named(strategyName).orElseThrow(() -> ModelingDomainException.invalid(
+                        Message.of(ModelingMessages.LAYOUT_STRATEGY_REQUESTED, strategyName)));
         return kernel.run(Operation.AUTO_LAYOUT_VIEW, actor, () -> kernel.unitOfWork.read(() -> {
             View view = loadView(viewId);
             kernel.visibleHeader(view.modelId(), actor, AclAccess.WRITE);

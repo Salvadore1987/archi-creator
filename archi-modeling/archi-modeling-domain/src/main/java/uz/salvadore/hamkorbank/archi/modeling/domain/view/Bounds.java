@@ -1,6 +1,5 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
@@ -32,18 +31,22 @@ public record Bounds(int x, int y, int width, int height) {
         }
     }
 
-    /** Узел нового размещения: незаданный размер — размер элемента Archi по умолчанию. */
-    public static Bounds ofNewElement(int x, int y, Optional<Integer> width, Optional<Integer> height) {
-        return new Bounds(x, y, width.orElse(ELEMENT_WIDTH), height.orElse(ELEMENT_HEIGHT));
+    /** Узел нового размещения: незаданный ({@code null}) размер — размер элемента Archi по умолчанию. */
+    public static Bounds ofNewElement(int x, int y, Integer width, Integer height) {
+        return new Bounds(x, y, orDefault(width, ELEMENT_WIDTH), orDefault(height, ELEMENT_HEIGHT));
     }
 
-    /** Узел нового размещения любого вида: незаданный размер — размер Archi для этого вида. */
-    public static Bounds ofNew(ViewNodeKind kind, int x, int y, Optional<Integer> width, Optional<Integer> height) {
+    /** Узел нового размещения любого вида: незаданный ({@code null}) размер — размер Archi для этого вида. */
+    public static Bounds ofNew(ViewNodeKind kind, int x, int y, Integer width, Integer height) {
         return switch (kind) {
-            case GROUP -> new Bounds(x, y, width.orElse(GROUP_WIDTH), height.orElse(GROUP_HEIGHT));
-            case NOTE -> new Bounds(x, y, width.orElse(NOTE_WIDTH), height.orElse(NOTE_HEIGHT));
+            case GROUP -> new Bounds(x, y, orDefault(width, GROUP_WIDTH), orDefault(height, GROUP_HEIGHT));
+            case NOTE -> new Bounds(x, y, orDefault(width, NOTE_WIDTH), orDefault(height, NOTE_HEIGHT));
             case DIAGRAM_OBJECT, OTHER -> ofNewElement(x, y, width, height);
         };
+    }
+
+    private static int orDefault(Integer size, int fallback) {
+        return size != null ? size : fallback;
     }
 
     /** Допустим ли размер: положительный или «по умолчанию». */
