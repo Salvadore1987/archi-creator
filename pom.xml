@@ -326,11 +326,13 @@
                                             <exclude>jakarta.persistence:*</exclude>
                                             <exclude>jakarta.transaction:*</exclude>
                                             <exclude>org.hibernate*:*</exclude>
+                                            <exclude>com.fasterxml.jackson*:*</exclude>
+                                            <exclude>tools.jackson*:*</exclude>
                                         </excludes>
                                         <message>
                                             ADR-0001: в модулях domain и application не должно быть
-                                            ни Spring, ни JPA, ни Hibernate — ни прямо, ни транзитивно.
-                                            Фреймворк живёт в адаптерах и в archi-bootstrap.
+                                            ни Spring, ни JPA, ни Hibernate, ни Jackson — ни прямо, ни транзитивно.
+                                            Фреймворк и разбор JSON живут в адаптерах и в archi-bootstrap.
                                         </message>
                                     </bannedDependencies>
                                 </rules>
