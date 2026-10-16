@@ -198,6 +198,12 @@ class ViewEditingIT extends ApiTest {
                         .contentType(MediaType.APPLICATION_JSON).content(graph.replace("layered", "spiral")))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("MDL_INVALID_INPUT"));
+        String cycle = "{\"strategy\":\"layered\",\"nodes\":[{\"id\":\"" + unsaved + "\",\"parentId\":\"" + unsaved
+                + "\",\"conceptType\":\"archimate:Node\",\"x\":0,\"y\":0,\"width\":120,\"height\":55}],\"edges\":[]}";
+        mvc.perform(post("/api/v1/views/" + view + "/auto-layout").with(architect())
+                        .contentType(MediaType.APPLICATION_JSON).content(cycle))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("MDL_INVALID_INPUT"));
         mvc.perform(post("/api/v1/views/" + view + "/auto-layout").with(viewer())
                         .contentType(MediaType.APPLICATION_JSON).content(graph))
                 .andExpect(status().isForbidden());

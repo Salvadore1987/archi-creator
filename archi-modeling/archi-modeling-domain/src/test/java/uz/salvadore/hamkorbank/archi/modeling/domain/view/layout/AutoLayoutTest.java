@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.view.layout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.uuid.Generators;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
 
@@ -173,5 +175,21 @@ class AutoLayoutTest {
     /** Детерминированный идентификатор: случайный граф воспроизводится от прогона к прогону. */
     private static UUID fixedId(long high, long low) {
         return UUIDUtil.constructUUID(UUIDType.TIME_BASED_EPOCH, high, low);
+    }
+
+    @Test
+    @DisplayName("Цикл родителей в графе клиента — отказ в данных, а не сбой разметки")
+    void parentCycleIsRejected() {
+        UUID first = IDS.generate();
+        UUID second = IDS.generate();
+        LayoutGraph.Node a = new LayoutGraph.Node(first, Optional.of(second), type("Node"), new Bounds(0, 0, 120, 55));
+        LayoutGraph.Node b = new LayoutGraph.Node(second, Optional.of(first), type("Node"), new Bounds(0, 0, 120, 55));
+        LayoutGraph.Node root = node("BusinessActor", 0, 0);
+        List<LayoutGraph.Edge> edges = List.of(new LayoutGraph.Edge(IDS.generate(), root.id(), first));
+
+        assertThrows(InvalidValueException.class, () -> new LayoutGraph(List.of(root, a, b), edges));
+        UUID self = IDS.generate();
+        LayoutGraph.Node own = new LayoutGraph.Node(self, Optional.of(self), type("Node"), new Bounds(0, 0, 120, 55));
+        assertThrows(InvalidValueException.class, () -> new LayoutGraph(List.of(own), List.of()));
     }
 }

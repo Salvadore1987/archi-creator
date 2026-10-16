@@ -207,7 +207,11 @@ public class ViewController {
             }
             return new LayoutGraph.Edge(e.id(), e.sourceId(), e.targetId());
         }).toList();
-        return new LayoutGraph(nodes, edges);
+        try {
+            return new LayoutGraph(nodes, edges);
+        } catch (IllegalArgumentException invalid) {
+            throw ModelingException.invalid(invalid);
+        }
     }
 
     /** Вид узла по имени из контракта; нет — узел элемента. */
