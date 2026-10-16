@@ -1,6 +1,6 @@
 ---
-version: 1.6
-last_modified: 2026-10-14
+version: 1.7
+last_modified: 2026-10-16
 ---
 
 # ───────────────────────────────────────────────────────────────────
@@ -381,3 +381,19 @@ decisions:
       sections: ['§3.3.6.1', '§3.3.6.4']
     note: |
       Приводит домен к стандарту (§2.7, §3.3.6), отступая в деталях: базовый тип событий агрегата — sealed interface, DomainEvent без параметра типа, BaseId.equals учитывает тип.
+
+  - id: ADR-0028
+    title: Транзакция сценария охватывает агрегаты одной модели
+    status: accepted
+    date: 2026-10-16
+    kind: architecture
+    adr_file: 0028-transaction-spans-model-aggregates.md
+    affects: [modeling, interchange]
+    requirements: []
+    implemented: 2026-10-16
+    deviates_from:
+      standard: java-spring-code-guidelines-v2@97bce16
+      sections: ['§4.8.4']
+    note: |
+      Атомарность, которой требует спецификация (сохранение версии, групповые операции дерева, импорт и откат), охватывает модель, её представления, версию, блокировку и запись идемпотентности — разные агрегаты одной модели.
+
