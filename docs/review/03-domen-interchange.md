@@ -7,6 +7,9 @@
 Ключевые находки сверены с кодом; 03-01, 03-02 и 03-04 субагенты подтвердили прогоном
 скомпилированных классов (одноразовые пробы вне репозитория).
 
+**Исправлено 2026-10-16** — план [`code-review-fixes-03.md`](../plans/code-review-fixes-03.md).
+Все 18 находок закрыты; колонка «Ловит сборка?» ниже — состояние на момент ревью.
+
 ## Находки
 
 Пути — от `archi-interchange/archi-interchange-domain/src/main/java/uz/salvadore/hamkorbank/archi/interchange/domain/`.

@@ -211,6 +211,12 @@ Logback и ECS; нарушения (D-02 покрытие Javadoc, D-14…D-17) 
 по ссылке показывает ложное изменение диаграммы (03-02); сессия импорта переходит в `APPLIED`
 до проверки модели (03-03); пределы разбора XML не заданы явно (03-04).
 
+**Находки исправлены 2026-10-16** — план [`code-review-fixes-03.md`](code-review-fixes-03.md).
+Новые проверки сборки: имя события по агрегату, StAX только `newDefaultFactory()`, домен interchange
+без голых исключений JDK, фабрики событий только в домене (ArchUnit); код ошибки вне `*Codes`
+(`check-string-literals.py`); «этап N» в комментариях (`check-comment-refs.py`); осиротевший
+Javadoc (checkstyle `InvalidJavadocPosition`). Этапу 4 они уже действуют.
+
 ### Этап 4. Домен advisor ⬜
 
 `archi-advisor/archi-advisor-domain` — 52 файла, ~1,8 тыс. строк.
