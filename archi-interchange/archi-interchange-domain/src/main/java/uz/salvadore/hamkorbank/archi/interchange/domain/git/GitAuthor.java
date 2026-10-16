@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.git;
 import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 
 /**
  * Соответствие субъекта Keycloak автору коммита: сервер коммитит от имени архитектора,
@@ -25,7 +26,8 @@ public record GitAuthor(String subject, String name, String email) {
 
     private static void require(String value) {
         if (value == null || value.isBlank() || value.length() > FIELD_MAX || value.contains("\n")) {
-            throw new InvalidValueException(InterchangeMessages.GIT_AUTHOR_INVALID, String.valueOf(value));
+            throw new InvalidValueException(InterchangeMessages.GIT_AUTHOR_INVALID,
+                                            value == null ? Message.of(InterchangeMessages.VALUE_MISSING) : value);
         }
     }
 }

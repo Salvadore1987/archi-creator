@@ -11,7 +11,9 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 
 class ImportSessionStateMachineTest {
@@ -93,5 +95,17 @@ class ImportSessionStateMachineTest {
         assertEquals(ImportStatus.VALIDATED, session.status());
         session.apply(MODEL, 1, 0, NOW);
         assertEquals(ImportStatus.APPLIED, session.status());
+    }
+
+    @Test
+    @DisplayName("Отказ перехода сессии импорта называет команду и состояние ключами — их переводят")
+    void importTransitionRefusalIsTranslatable() {
+        ImportSession received = Sessions.received(VALID, false);
+
+        IllegalImportTransitionException e = assertThrows(IllegalImportTransitionException.class,
+                () -> received.apply(MODEL, 1, 0, NOW));
+
+        assertEquals(List.of(Message.of(InterchangeMessages.COMMAND_APPLY_IMPORT),
+                Message.of(InterchangeMessages.STATUS_IMPORT_RECEIVED)), e.reason().args());
     }
 }

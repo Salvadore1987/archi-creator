@@ -12,10 +12,10 @@ public final class IllegalImportTransitionException extends InterchangeDomainExc
     public static final String INVARIANT = InterchangeCodes.IMPORT_TRANSITION;
 
     private final ImportStatus from;
-    private final String command;
+    private final Message command;
 
-    IllegalImportTransitionException(ImportStatus from, String command) {
-        super(INVARIANT, Message.of(InterchangeMessages.IMPORT_TRANSITION, command, from));
+    IllegalImportTransitionException(ImportStatus from, Message command) {
+        super(INVARIANT, Message.of(InterchangeMessages.IMPORT_TRANSITION, command, from.label()));
         this.from = from;
         this.command = command;
     }
@@ -26,7 +26,7 @@ public final class IllegalImportTransitionException extends InterchangeDomainExc
     }
 
     /** Команда, которую отклонил автомат. */
-    public String command() {
+    public Message command() {
         return command;
     }
 }

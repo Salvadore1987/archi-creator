@@ -47,10 +47,12 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
         Objects.requireNonNull(tokenRef, "tokenRef");
         Objects.requireNonNull(status, "status");
         if (repoUrl == null || repoUrl.length() > URL_MAX || !URL.matcher(repoUrl).matches()) {
-            throw new InvalidValueException(InterchangeMessages.GIT_URL_INVALID, String.valueOf(repoUrl));
+            throw new InvalidValueException(InterchangeMessages.GIT_URL_INVALID,
+                                            repoUrl == null ? Message.of(InterchangeMessages.VALUE_MISSING) : repoUrl);
         }
         if (branch == null || branch.length() > BRANCH_MAX || !BRANCH.matcher(branch).matches()) {
-            throw new InvalidValueException(InterchangeMessages.GIT_BRANCH_INVALID, String.valueOf(branch));
+            throw new InvalidValueException(InterchangeMessages.GIT_BRANCH_INVALID,
+                                            branch == null ? Message.of(InterchangeMessages.VALUE_MISSING) : branch);
         }
         authors = List.copyOf(authors);
         Set<String> subjects = new HashSet<>();

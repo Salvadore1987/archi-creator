@@ -14,6 +14,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.codec.CorruptDocumentExc
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
@@ -94,7 +95,7 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
      * в {@code REJECTED} сразу, в любом режиме — со всеми дефектами в отчёте.
      */
     public void parse(ArchiDocumentReader reader, InputStream content, Supplier<FindingId> findingIds, Instant now) {
-        require(ImportStatus.RECEIVED, "parse");
+        require(ImportStatus.RECEIVED, Message.of(InterchangeMessages.COMMAND_PARSE_IMPORT));
         try {
             document = reader.read(content);
             status = ImportStatus.PARSED;
@@ -109,7 +110,7 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
      * в строгом режиме хотя бы одна {@link Severity#ERROR} даёт {@code REJECTED}.
      */
     public void validate(List<ImportFinding> methodologyFindings, Instant now) {
-        require(ImportStatus.PARSED, "validate");
+        require(ImportStatus.PARSED, Message.of(InterchangeMessages.COMMAND_VALIDATE_IMPORT));
         findings.addAll(methodologyFindings);
         boolean hasErrors = methodologyFindings.stream().anyMatch(f -> f.severity() == Severity.ERROR);
         if (strictMode && hasErrors) {
@@ -122,7 +123,7 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
     /** Отказ из любого нетерминального состояния — с причинами в отчёте. */
     public void reject(List<ImportFinding> reasons, Instant now) {
         if (status.terminal()) {
-            throw new IllegalImportTransitionException(status, "RejectImport");
+            throw new IllegalImportTransitionException(status, Message.of(InterchangeMessages.COMMAND_REJECT_IMPORT));
         }
         findings.addAll(reasons);
         finish(ImportStatus.REJECTED, now);
@@ -138,7 +139,7 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
         if (versionNo < 1) {
             throw new InvalidValueException(InterchangeMessages.IMPORT_VERSION_NO, versionNo);
         }
-        require(ImportStatus.VALIDATED, "ApplyImport");
+        require(ImportStatus.VALIDATED, Message.of(InterchangeMessages.COMMAND_APPLY_IMPORT));
         finish(ImportStatus.APPLIED, now);
         this.appliedModelId = modelId;
         this.appliedVersionNo = versionNo;
@@ -165,7 +166,7 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
         return counts;
     }
 
-    private void require(ImportStatus expected, String command) {
+    private void require(ImportStatus expected, Message command) {
         if (status != expected) {
             throw new IllegalImportTransitionException(status, command);
         }

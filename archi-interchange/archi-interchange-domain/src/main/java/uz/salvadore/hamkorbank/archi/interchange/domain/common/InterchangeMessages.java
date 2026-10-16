@@ -6,6 +6,53 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.common;
  */
 public final class InterchangeMessages {
 
+    /** Название команды «разобрать файл импорта». */
+    public static final String COMMAND_PARSE_IMPORT = "interchange.command.parse-import";
+    /** Название команды «проверить импорт». */
+    public static final String COMMAND_VALIDATE_IMPORT = "interchange.command.validate-import";
+    /** Название команды «отклонить импорт». */
+    public static final String COMMAND_REJECT_IMPORT = "interchange.command.reject-import";
+    /** Название команды «применить импорт». */
+    public static final String COMMAND_APPLY_IMPORT = "interchange.command.apply-import";
+    /** Название команды «собрать выгрузку». */
+    public static final String COMMAND_RENDER_EXPORT = "interchange.command.render-export";
+    /** Название команды «отдать выгрузку». */
+    public static final String COMMAND_DELIVER_EXPORT = "interchange.command.deliver-export";
+    /** Название команды «отметить сбой выгрузки». */
+    public static final String COMMAND_FAIL_EXPORT = "interchange.command.fail-export";
+    /** Состояние сессии импорта «получен». */
+    public static final String STATUS_IMPORT_RECEIVED = "interchange.status.import.received";
+    /** Состояние сессии импорта «разобран». */
+    public static final String STATUS_IMPORT_PARSED = "interchange.status.import.parsed";
+    /** Состояние сессии импорта «проверен». */
+    public static final String STATUS_IMPORT_VALIDATED = "interchange.status.import.validated";
+    /** Состояние сессии импорта «применён». */
+    public static final String STATUS_IMPORT_APPLIED = "interchange.status.import.applied";
+    /** Состояние сессии импорта «отклонён». */
+    public static final String STATUS_IMPORT_REJECTED = "interchange.status.import.rejected";
+    /** Состояние задания выгрузки «запрошена». */
+    public static final String STATUS_EXPORT_REQUESTED = "interchange.status.export.requested";
+    /** Состояние задания выгрузки «собрана». */
+    public static final String STATUS_EXPORT_RENDERED = "interchange.status.export.rendered";
+    /** Состояние задания выгрузки «выдана». */
+    public static final String STATUS_EXPORT_DELIVERED = "interchange.status.export.delivered";
+    /** Состояние задания выгрузки «сбой». */
+    public static final String STATUS_EXPORT_FAILED = "interchange.status.export.failed";
+    /** Название формата выгрузки .archimate. */
+    public static final String FORMAT_ARCHIMATE = "interchange.format.archimate";
+    /** Название формата выгрузки Open Exchange. */
+    public static final String FORMAT_OPEN_EXCHANGE = "interchange.format.open-exchange";
+    /** Название формата выгрузки — каталог CSV. */
+    public static final String FORMAT_CSV_CATALOG = "interchange.format.csv-catalog";
+    /** Название формата выгрузки SVG. */
+    public static final String FORMAT_SVG = "interchange.format.svg";
+    /** Название формата выгрузки PNG. */
+    public static final String FORMAT_PNG = "interchange.format.png";
+    /** Название формата — разложенный YAML для Git. */
+    public static final String FORMAT_GIT_YAML = "interchange.format.git-yaml";
+    /** Подпись отсутствующего значения в тексте отказа. */
+    public static final String VALUE_MISSING = "interchange.value.missing";
+
     /** Значение атрибута или элемента содержит символы, которых не может быть в файле Archi. */
     public static final String TEXT_NOT_XML = "interchange.document.text-not-xml";
     /** Применённый импорт записывает версию с номером меньше единицы. */

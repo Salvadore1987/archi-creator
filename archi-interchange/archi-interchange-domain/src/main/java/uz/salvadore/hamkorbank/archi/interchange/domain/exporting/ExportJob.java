@@ -27,7 +27,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 public final class ExportJob extends AggregateRoot<ExportJobId> {
 
     /** Имя команды сбоя — в сообщении о недопустимом переходе. */
-    private static final String FAIL = "fail";
 
     private final WorkspaceId workspaceId;
     private final ModelId modelId;
@@ -76,7 +75,7 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
      *         или непустой отчёт у формата без потерь
      */
     public void render(long renderedFromVersionNo, Artifact artifact, LossReport lossReport) {
-        require(ExportStatus.REQUESTED, "render");
+        require(ExportStatus.REQUESTED, Message.of(InterchangeMessages.COMMAND_RENDER_EXPORT));
         Objects.requireNonNull(artifact, "artifact");
         if (renderedFromVersionNo != sourceVersionNo) {
             throw new ExportRuleViolationException(InterchangeCodes.EXPORT_VERSION,
@@ -88,7 +87,8 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
         }
         if (format.lossless() && !lossReport.empty()) {
             throw new ExportRuleViolationException(InterchangeCodes.LOSS_REPORT,
-                    Message.of(InterchangeMessages.EXPORT_LOSSLESS_WITH_LOSSES, format, lossReport.entries().size()));
+                    Message.of(InterchangeMessages.EXPORT_LOSSLESS_WITH_LOSSES, format.label(),
+                               lossReport.entries().size()));
         }
         this.artifact = artifact;
         this.lossReport = lossReport;
@@ -97,23 +97,24 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
 
     /** {@code RENDERED → DELIVERED}. */
     public void deliver() {
-        require(ExportStatus.RENDERED, "deliver");
+        require(ExportStatus.RENDERED, Message.of(InterchangeMessages.COMMAND_DELIVER_EXPORT));
         status = ExportStatus.DELIVERED;
     }
 
     /** Сбой из любого нетерминального состояния. */
     public void fail(String reason) {
         if (status == ExportStatus.DELIVERED || status == ExportStatus.FAILED) {
-            throw new IllegalExportTransitionException(Message.of(InterchangeMessages.EXPORT_TRANSITION, FAIL, status));
+            throw new IllegalExportTransitionException(Message.of(InterchangeMessages.EXPORT_TRANSITION,
+                    Message.of(InterchangeMessages.COMMAND_FAIL_EXPORT), status.label()));
         }
         failureReason = Objects.requireNonNull(reason, "reason");
         status = ExportStatus.FAILED;
     }
 
-    private void require(ExportStatus expected, String command) {
+    private void require(ExportStatus expected, Message command) {
         if (status != expected) {
             throw new IllegalExportTransitionException(
-                    Message.of(InterchangeMessages.EXPORT_TRANSITION, command, status));
+                    Message.of(InterchangeMessages.EXPORT_TRANSITION, command, status.label()));
         }
     }
 
