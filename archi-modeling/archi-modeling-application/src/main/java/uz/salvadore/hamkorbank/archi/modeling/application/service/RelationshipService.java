@@ -25,7 +25,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdge;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEndpoint;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 
 /** Создать связь по матрице, предложить допустимые типы, изменить и удалить. */
@@ -112,16 +111,10 @@ public final class RelationshipService {
                         ArchitectureModel model = kernel.writableModel(modelId, actor);
                         ConceptRef source = concept(model, sourceId);
                         ConceptRef target = concept(model, targetId);
-                        Optional<Relationship> duplicate = model.relationships().values().stream()
-                                .filter(r -> r.archiType().equals(archiType) && r.source().equals(source)
-                                        && r.target().equals(target))
-                                .findFirst();
-                        ArchitectureModel.Created<Relationship> result = duplicate.isPresent()
-                                ? new ArchitectureModel.Created<>(duplicate.get(), false)
-                                : model.addRelationship(archiType, source, target, details.name(), details.folderId(),
-                                        details.accessType(), details.directed(),
-                                        RelationshipId.of(kernel.newId(details.ids())),
-                                        kernel.newArchiId(model, details.ids()), kernel.now());
+                        ArchitectureModel.Created<Relationship> result = model.addRelationship(archiType, source,
+                                target, details.name(), details.folderId(), details.accessType(), details.directed(),
+                                () -> RelationshipId.of(kernel.newId(details.ids())),
+                                () -> kernel.newArchiId(model, details.ids()), kernel.now());
                         created[0] = result.created();
                         kernel.save(model);
                         if (placement != null) {
@@ -139,19 +132,14 @@ public final class RelationshipService {
                 .filter(v -> v.modelId().equals(model.id()))
                 .orElseThrow(() -> ModelingDomainException.notFound(
                         Message.of(ModelingMessages.VIEW, placement.viewId())));
-        ViewEndpoint source = ViewService.endpoint(view, placement.sourceEndpoint());
-        ViewEndpoint target = ViewService.endpoint(view, placement.targetEndpoint());
-        Optional<ViewEdge> drawn = view.edges().values().stream()
-                .filter(e -> relationship.id().equals(e.relationshipId())
-                        && e.source().equals(source) && e.target().equals(target))
-                .findFirst();
-        if (drawn.isPresent()) {
-            return drawn.get().id();
+        ArchitectureModel.Created<ViewEdge> edge = view.connect(model, relationship.id(),
+                ViewService.endpoint(view, placement.sourceEndpoint()),
+                ViewService.endpoint(view, placement.targetEndpoint()), List.of(),
+                () -> ViewEdgeId.of(kernel.newId(placement.edgeIds())),
+                () -> kernel.newArchiId(model, view, placement.edgeIds()));
+        if (edge.created()) {
+            kernel.views.save(view);
         }
-        ArchitectureModel.Created<ViewEdge> edge = view.connect(model, relationship.id(), source, target,
-                ViewEdgeId.of(kernel.newId(placement.edgeIds())),
-                kernel.newArchiId(model, view, placement.edgeIds()));
-        kernel.views.save(view);
         return edge.value().id();
     }
 

@@ -456,6 +456,19 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
                                                  String relationshipName, FolderId folderId,
                                                  AccessType accessType, Boolean directed,
                                                  RelationshipId newId, ArchiId newArchiId, Instant now) {
+        return addRelationship(archiType, source, target, relationshipName, folderId, accessType, directed,
+                () -> newId, () -> newArchiId, now);
+    }
+
+    /**
+     * То же с идентификаторами, которые выдаются, только если связь действительно создаётся:
+     * у дубля их не запрашивают — заданные клиентом не проверяются.
+     */
+    public Created<Relationship> addRelationship(ArchiType archiType, ConceptRef source, ConceptRef target,
+                                                 String relationshipName, FolderId folderId,
+                                                 AccessType accessType, Boolean directed,
+                                                 Supplier<RelationshipId> newId, Supplier<ArchiId> newArchiId,
+                                                 Instant now) {
         XmlText.require(relationshipName, Message.of(ModelingMessages.FIELD_NAME));
         requireActive();
         RelationshipType type = RelationshipType.fromArchiType(archiType)
@@ -479,8 +492,9 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
         FolderId folder = folderId != null ? folderId : roots().get(FolderType.RELATIONS).id();
         requireSameRoot(folder, FolderType.RELATIONS,
                 Message.of(ModelingMessages.RELATIONSHIP_OF_TYPE, archiType.simpleName()));
-        requireFreeArchiId(newArchiId);
-        Relationship relationship = new Relationship(newId, folder, newArchiId, archiType, source, target,
+        ArchiId archiId = newArchiId.get();
+        requireFreeArchiId(archiId);
+        Relationship relationship = new Relationship(newId.get(), folder, archiId, archiType, source, target,
                 nonEmpty(relationshipName), null, accessType, directed,
                 List.of(), nextOrderIn(folder), true, null);
         relationships.put(relationship.id(), relationship);

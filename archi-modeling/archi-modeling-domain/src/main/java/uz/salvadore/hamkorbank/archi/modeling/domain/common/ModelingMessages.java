@@ -300,6 +300,10 @@ public final class ModelingMessages {
     public static final String NODE_TEXT_NOT_APPLICABLE = "modeling.view.node-text-not-applicable";
     /** Элемент узла не принадлежит модели представления. */
     public static final String NODE_ELEMENT_ELSEWHERE = "modeling.view.node-element-elsewhere";
+    /** Новый узел над элементом, которого нет в модели представления. */
+    public static final String ELEMENT_OF_OTHER_MODEL = "modeling.view.element-of-other-model";
+    /** Конец нового ребра — узел или ребро, которых на представлении нет. */
+    public static final String ENDPOINT_ELSEWHERE = "modeling.view.endpoint-elsewhere";
     /** Родитель узла не на этом представлении. */
     public static final String NODE_PARENT_ELSEWHERE = "modeling.view.node-parent-elsewhere";
     /** Узел указан своим же родителем. */

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
 
@@ -60,6 +61,34 @@ class ViewIntegrityTest {
         assertFalse(second.created());
         assertEquals(first.id(), second.value().id());
         assertEquals(1, view.nodes().size());
+    }
+
+    @Test
+    @DisplayName("дубль решает агрегат: идентификаторы нового объекта у существующего не запрашиваются")
+    void duplicatesDoNotDrawNewIds() {
+        ArchitectureModel model = Models.empty();
+        Element component = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
+        Element actor = Models.element(model, "BusinessActor", FolderType.BUSINESS, "Клиент");
+        Relationship serving = Models.relate(model, "ServingRelationship", component.id(), actor.id());
+        View view = newView(model);
+        ViewNode c = view.placeElement(model, component.id(), BOX, null, ViewNodeId.next(UUIDS),
+                Models.archiId()).value();
+        ViewNode a = view.placeElement(model, actor.id(), new Bounds(300, 10, 120, 55), null,
+                ViewNodeId.next(UUIDS), Models.archiId()).value();
+        view.connect(model, serving.id(), c.id(), a.id(), ViewEdgeId.next(UUIDS), Models.archiId());
+
+        ArchitectureModel.Created<ViewNode> node = view.placeElement(model, component.id(), BOX, null,
+                () -> fail("ключ узла не нужен"), () -> fail("archiId узла не нужен"));
+        ArchitectureModel.Created<ViewEdge> edge = view.connect(model, serving.id(), c.id(), a.id(), List.of(),
+                () -> fail("ключ ребра не нужен"), () -> fail("archiId ребра не нужен"));
+        ArchitectureModel.Created<Relationship> relation = model.addRelationship(serving.archiType(),
+                component.id(), actor.id(), null, null, null, null, () -> fail("ключ связи не нужен"),
+                () -> fail("archiId связи не нужен"), NOW);
+
+        assertFalse(node.created());
+        assertFalse(edge.created());
+        assertFalse(relation.created());
+        assertEquals(serving.id(), relation.value().id());
     }
 
     @Test

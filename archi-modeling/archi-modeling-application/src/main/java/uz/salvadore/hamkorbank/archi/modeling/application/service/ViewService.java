@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.modeling.application.service;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
@@ -90,13 +89,8 @@ public final class ViewService {
         return kernel.run(Operation.SAVE_VIEW_LAYOUT, actor, () -> kernel.unitOfWork.write(() -> {
             View view = loadView(viewId);
             ArchitectureModel model = kernel.writableModel(view.modelId(), actor);
-            Optional<ViewNode> placed = view.nodes().values().stream()
-                    .filter(n -> elementId.equals(n.elementId())).findFirst();
-            if (placed.isPresent()) {
-                return new Created<>(placed.get(), false);
-            }
             Created<ViewNode> node = view.placeElement(model, elementId, bounds, parentId,
-                    ViewNodeId.of(kernel.newId(ids)), kernel.newArchiId(model, view, ids));
+                    () -> ViewNodeId.of(kernel.newId(ids)), () -> kernel.newArchiId(model, view, ids));
             kernel.views.save(view);
             return node;
         }));
@@ -113,17 +107,9 @@ public final class ViewService {
             View view = loadView(viewId);
             ArchitectureModel model = kernel.writableModel(view.modelId(), actor);
             model.requireRelationship(relationshipId);
-            ViewEndpoint source = endpoint(view, sourceId);
-            ViewEndpoint target = endpoint(view, targetId);
-            Optional<ViewEdge> drawn = view.edges().values().stream()
-                    .filter(e -> relationshipId.equals(e.relationshipId())
-                            && e.source().equals(source) && e.target().equals(target))
-                    .findFirst();
-            if (drawn.isPresent()) {
-                return new Created<>(drawn.get(), false);
-            }
-            Created<ViewEdge> edge = view.connect(model, relationshipId, source, target, bendpoints,
-                    ViewEdgeId.of(kernel.newId(ids)), kernel.newArchiId(model, view, ids));
+            Created<ViewEdge> edge = view.connect(model, relationshipId, endpoint(view, sourceId),
+                    endpoint(view, targetId), bendpoints, () -> ViewEdgeId.of(kernel.newId(ids)),
+                    () -> kernel.newArchiId(model, view, ids));
             kernel.views.save(view);
             return edge;
         }));

@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
@@ -148,8 +149,18 @@ public final class View extends AggregateRoot<ViewId> {
      */
     public Created<ViewNode> placeElement(ArchitectureModel model, ElementId elementId, Bounds bounds,
                                           ViewNodeId parentId, ViewNodeId newId, ArchiId newArchiId) {
+        return placeElement(model, elementId, bounds, parentId, () -> newId, () -> newArchiId);
+    }
+
+    /**
+     * То же с идентификаторами, которые выдаются, только если узел действительно создаётся:
+     * у уже размещённого элемента их не запрашивают — заданные клиентом не проверяются.
+     */
+    public Created<ViewNode> placeElement(ArchitectureModel model, ElementId elementId, Bounds bounds,
+                                          ViewNodeId parentId, Supplier<ViewNodeId> newId,
+                                          Supplier<ArchiId> newArchiId) {
         requireEditable();
-        requireElementOf(model, elementId, newArchiId);
+        requireElementOf(model, elementId);
         Optional<ViewNode> existing = nodes.values().stream()
                 .filter(n -> elementId.equals(n.elementId())).findFirst();
         if (existing.isPresent()) {
@@ -158,8 +169,9 @@ public final class View extends AggregateRoot<ViewId> {
         if (parentId != null) {
             requireContainer(parentId);
         }
-        requireFreeArchiId(newArchiId);
-        ViewNode node = new ViewNode(newId, parentId, newArchiId, DiagramType.DIAGRAM_OBJECT, elementId,
+        ArchiId archiId = newArchiId.get();
+        requireFreeArchiId(archiId);
+        ViewNode node = new ViewNode(newId.get(), parentId, archiId, DiagramType.DIAGRAM_OBJECT, elementId,
                 bounds, StyleOverride.NONE, nextNodeOrderIn(parentId), null);
         nodes.put(node.id(), node);
         return new Created<>(node, true);
@@ -317,10 +329,20 @@ public final class View extends AggregateRoot<ViewId> {
     public Created<ViewEdge> connect(ArchitectureModel model, RelationshipId relationshipId, ViewEndpoint source,
                                      ViewEndpoint target, List<Bendpoint> bendpoints, ViewEdgeId newId,
                                      ArchiId newArchiId) {
+        return connect(model, relationshipId, source, target, bendpoints, () -> newId, () -> newArchiId);
+    }
+
+    /**
+     * То же с идентификаторами, которые выдаются, только если ребро действительно создаётся:
+     * у существующего ребра их не запрашивают — заданные клиентом не проверяются.
+     */
+    public Created<ViewEdge> connect(ArchitectureModel model, RelationshipId relationshipId, ViewEndpoint source,
+                                     ViewEndpoint target, List<Bendpoint> bendpoints, Supplier<ViewEdgeId> newId,
+                                     Supplier<ArchiId> newArchiId) {
         requireEditable();
         Relationship relationship = model.requireRelationship(relationshipId);
-        requireEndpoint(source, newArchiId);
-        requireEndpoint(target, newArchiId);
+        requireEndpoint(source);
+        requireEndpoint(target);
         if (!depicts(source, relationship.source()) || !depicts(target, relationship.target())) {
             throw integrity(Message.of(ModelingMessages.EDGE_ENDS_MISMATCH, relationship.archiId()));
         }
@@ -331,8 +353,9 @@ public final class View extends AggregateRoot<ViewId> {
         if (existing.isPresent()) {
             return new Created<>(existing.get(), false);
         }
-        requireFreeArchiId(newArchiId);
-        ViewEdge edge = new ViewEdge(newId, newArchiId, DiagramType.CONNECTION, relationshipId, source,
+        ArchiId archiId = newArchiId.get();
+        requireFreeArchiId(archiId);
+        ViewEdge edge = new ViewEdge(newId.get(), archiId, DiagramType.CONNECTION, relationshipId, source,
                 target, bendpoints, StyleOverride.NONE, nextOrderIn(source), null);
         edges.put(edge.id(), edge);
         return new Created<>(edge, true);
@@ -432,20 +455,35 @@ public final class View extends AggregateRoot<ViewId> {
         }
     }
 
+    private void requireElementOf(ArchitectureModel model, ElementId elementId) {
+        if (!model.id().equals(modelId) || !model.elements().contains(elementId)) {
+            throw integrity(Message.of(ModelingMessages.ELEMENT_OF_OTHER_MODEL, elementId));
+        }
+    }
+
     private void requireElementOf(ArchitectureModel model, ElementId elementId, ArchiId nodeArchiId) {
         if (!model.id().equals(modelId) || !model.elements().contains(elementId)) {
             throw integrity(Message.of(ModelingMessages.NODE_ELEMENT_ELSEWHERE, nodeArchiId));
         }
     }
 
+    private void requireEndpoint(ViewEndpoint endpoint) {
+        if (!present(endpoint)) {
+            throw integrity(Message.of(ModelingMessages.ENDPOINT_ELSEWHERE, endpoint));
+        }
+    }
+
     private void requireEndpoint(ViewEndpoint endpoint, ArchiId edgeArchiId) {
-        boolean present = switch (endpoint) {
+        if (!present(endpoint)) {
+            throw integrity(Message.of(ModelingMessages.EDGE_END_ELSEWHERE, edgeArchiId));
+        }
+    }
+
+    private boolean present(ViewEndpoint endpoint) {
+        return switch (endpoint) {
             case ViewNodeId node -> nodes.contains(node);
             case ViewEdgeId edge -> edges.contains(edge);
         };
-        if (!present) {
-            throw integrity(Message.of(ModelingMessages.EDGE_END_ELSEWHERE, edgeArchiId));
-        }
     }
 
     /** Изображает ли конец ребра данный концепт модели. */
