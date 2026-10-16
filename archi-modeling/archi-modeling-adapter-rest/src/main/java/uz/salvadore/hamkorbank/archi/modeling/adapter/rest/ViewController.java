@@ -5,7 +5,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,6 +25,7 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.BendpointDto
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.CreateViewRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EditEdgeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EditNodeRequest;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.LayoutNode;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.LayoutPatch;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.MoveNodeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PlaceEdgeRequest;
@@ -50,6 +53,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.StyleOverride;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdge;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEndpoint;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
@@ -196,17 +200,25 @@ public class ViewController {
             if (n.id() == null) {
                 throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_MISSING, LAYOUT_NODE_ID));
             }
-            return new LayoutGraph.Node(n.id(), n.parentId(),
+            return new LayoutGraph.Node(ViewNodeId.of(n.id()),
+                                        n.parentId() == null ? null : ViewNodeId.of(n.parentId()), 
                     n.conceptType() == null ? null : ContentController.archiType(n.conceptType()),
                     new Bounds(n.x(), n.y(), n.width(), n.height()));
         }).toList();
+        Set<UUID> nodeIds = request.nodes().stream().map(LayoutNode::id).collect(Collectors.toSet());
         List<LayoutGraph.Edge> edges = Optional.ofNullable(request.edges()).orElse(List.of()).stream().map(e -> {
             if (e.id() == null || e.sourceId() == null || e.targetId() == null) {
                 throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELDS_MISSING, LAYOUT_EDGE_FIELDS));
             }
-            return new LayoutGraph.Edge(e.id(), e.sourceId(), e.targetId());
+            return new LayoutGraph.Edge(ViewEdgeId.of(e.id()), endpoint(e.sourceId(), nodeIds),
+                    endpoint(e.targetId(), nodeIds));
         }).toList();
         return new LayoutGraph(nodes, edges);
+    }
+
+    /** Конец ребра в запросе разметки: идентификатор узла из запроса — узел, иначе ребро. */
+    private static ViewEndpoint endpoint(UUID id, Set<UUID> nodeIds) {
+        return nodeIds.contains(id) ? ViewNodeId.of(id) : ViewEdgeId.of(id);
     }
 
     /** Вид узла по имени из контракта; нет — узел элемента. */

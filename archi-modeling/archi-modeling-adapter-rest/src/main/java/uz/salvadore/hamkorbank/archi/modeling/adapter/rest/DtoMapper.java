@@ -168,9 +168,9 @@ public final class DtoMapper {
     /** Предложение авторазметки в форме правки геометрии: точки перегиба рёбер — пустые. */
     static LayoutPatch layoutPatch(LayoutProposal proposal) {
         return new LayoutPatch(proposal.nodes().entrySet().stream()
-                .map(e -> new NodeBounds(e.getKey(), e.getValue().x(), e.getValue().y(), e.getValue().width(),
+                .map(e -> new NodeBounds(e.getKey().value(), e.getValue().x(), e.getValue().y(), e.getValue().width(),
                         e.getValue().height()))
                 .toList(),
-                proposal.clearedEdges().stream().map(id -> new EdgeBendpoints(id, List.of())).toList());
+                proposal.clearedEdges().stream().map(id -> new EdgeBendpoints(id.value(), List.of())).toList());
     }
 }

@@ -6,11 +6,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEndpoint;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 
 /**
  * Представление глазами раскладки: узлы с родителем, типом концепта и геометрией,
@@ -28,15 +30,15 @@ public record LayoutGraph(List<Node> nodes, List<Edge> edges) {
     }
 
     private static void requireAcyclicParents(List<Node> nodes) {
-        Map<UUID, UUID> parentOf = new HashMap<>();
+        Map<ViewNodeId, ViewNodeId> parentOf = new HashMap<>();
         for (Node node : nodes) {
             if (node.parentId() != null) {
                 parentOf.put(node.id(), node.parentId());
             }
         }
         for (Node node : nodes) {
-            Set<UUID> path = new HashSet<>();
-            for (UUID current = node.id(); current != null; current = parentOf.get(current)) {
+            Set<ViewNodeId> path = new HashSet<>();
+            for (ViewNodeId current = node.id(); current != null; current = parentOf.get(current)) {
                 if (!path.add(current)) {
                     throw new InvalidValueException(ModelingMessages.NODE_NESTING_CYCLE, current);
                 }
@@ -50,7 +52,7 @@ public record LayoutGraph(List<Node> nodes, List<Edge> edges) {
      * @param parentId    родитель; {@code null} — узел верхнего уровня
      * @param conceptType тип элемента узла; {@code null} — группа, заметка или иное
      */
-    public record Node(UUID id, UUID parentId, ArchiType conceptType, Bounds bounds) {
+    public record Node(ViewNodeId id, ViewNodeId parentId, ArchiType conceptType, Bounds bounds) {
 
         public Node {
             Objects.requireNonNull(id, "id");
@@ -59,12 +61,12 @@ public record LayoutGraph(List<Node> nodes, List<Edge> edges) {
     }
 
     /** Концы — узлы или другие рёбра графа. */
-    public record Edge(UUID id, UUID sourceId, UUID targetId) {
+    public record Edge(ViewEdgeId id, ViewEndpoint source, ViewEndpoint target) {
 
         public Edge {
             Objects.requireNonNull(id, "id");
-            Objects.requireNonNull(sourceId, "sourceId");
-            Objects.requireNonNull(targetId, "targetId");
+            Objects.requireNonNull(source, "source");
+            Objects.requireNonNull(target, "target");
         }
     }
 }
