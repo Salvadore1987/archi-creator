@@ -35,7 +35,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
-import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportCompletedEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportFormat;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportJob;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportOptions;
@@ -268,8 +267,8 @@ public final class ViewImageService {
                 new WorkspaceId(snapshot.model().workspaceId().value()), new ModelId(snapshot.model().id().value()),
                 viewId, settings.format(), settings.options(), snapshot.versionNo(), actor.subject(), clock.instant());
         job.render(snapshot.versionNo(), artifact, report);
-        job.deliver();
-        events.publish(List.of(ExportCompletedEvent.of(job, clock.instant())));
+        job.deliver(clock.instant());
+        events.publish(job.pullEvents());
         metrics.exportLosses(settings.format().name(), report.entries().size());
     }
 

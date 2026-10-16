@@ -31,11 +31,12 @@ class ImportSessionStateMachineTest {
         assertThrows(IllegalImportTransitionException.class, () -> received.apply(MODEL, 1, 0, NOW));
 
         received.validate(List.of(), NOW);
-        ImportAppliedEvent applied = received.apply(MODEL, 1, 0, NOW);
+        received.apply(MODEL, 1, 0, NOW);
 
         assertEquals(ImportStatus.APPLIED, received.status());
+        ImportAppliedEvent applied = (ImportAppliedEvent) received.pullEvents().getFirst();
         assertEquals(MODEL, applied.modelId());
-        assertEquals(List.of(applied), received.pullEvents());
+        assertEquals(List.of(), received.pullEvents());
         assertEquals(Optional.of(NOW), received.finishedAt());
     }
 

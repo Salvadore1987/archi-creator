@@ -45,4 +45,9 @@ public record Artifact(byte[] bytes, String mediaType, String fileName, ContentH
     public String toString() {
         return "Artifact[" + fileName + ", " + mediaType + ", " + bytes.length + " B, " + hash + "]";
     }
+
+    /** Размер содержимого в байтах — без копирования массива. */
+    public int size() {
+        return bytes.length;
+    }
 }

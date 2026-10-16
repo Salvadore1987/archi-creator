@@ -26,6 +26,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.PublishedVersi
 import uz.salvadore.hamkorbank.archi.interchange.application.port.SecretResolver;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
@@ -45,7 +46,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
-import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportAppliedEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
@@ -300,7 +300,7 @@ public final class GitMergeService {
                     }
                     ModelStates.Replaced replaced = states.replace(actor, model, attempt.xml(), comment);
                     Instant at = clock.instant();
-                    ImportAppliedEvent event = session.apply(model, replaced.versionNo(), replaced.opaqueObjects(), at);
+                    session.apply(model, replaced.versionNo(), replaced.opaqueObjects(), at);
                     sessions.save(session);
                     merges.record(model, sha, at);
                     if (sides.absorbsHead() && outbox.head(model)
@@ -309,13 +309,13 @@ public final class GitMergeService {
                         GitSha head = Objects.requireNonNull(sides.head());
                         bindings.save(bindings.find(binding.workspaceId()).orElse(binding).committed(head, at));
                     }
-                    return new Applied(replaced, event);
+                    return new Applied(replaced, session.pullEvents());
                 });
             } catch (RuntimeException failure) {
                 attempts.recordFailure(session, failure);
                 throw failure;
             }
-            events.publish(List.of(applied.event()));
+            events.publish(applied.events());
             metrics.importFinished("applied", session.strictMode(), session.findings());
             if (applied.replaced().created()) {
                 metrics.opaqueObjects(model.value(), applied.replaced().opaqueObjects());
@@ -325,7 +325,7 @@ public final class GitMergeService {
         });
     }
 
-    private record Applied(ModelStates.Replaced replaced, ImportAppliedEvent event) {
+    private record Applied(ModelStates.Replaced replaced, List<DomainEvent> events) {
     }
 
     /**

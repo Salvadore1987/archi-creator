@@ -5,6 +5,8 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaConstructorCall;
+import com.tngtech.archunit.core.domain.JavaMethodCall;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import java.util.Map;
@@ -49,8 +51,14 @@ class DomainEventOriginTest {
                 "конструктор события " + context + ", кроме фактов внешней системы",
                 call -> call.getTargetOwner().isAssignableTo(marker)
                         && !EXTERNAL_FACTS.containsKey(call.getTargetOwner().getName()));
+        DescribedPredicate<JavaMethodCall> eventFactory = DescribedPredicate.describe(
+                "статическая фабрика события " + context,
+                call -> call.getTargetOwner().isAssignableTo(marker)
+                        && call.getTarget().resolveMember()
+                        .map(method -> method.getModifiers().contains(JavaModifier.STATIC)).orElse(false));
         noClasses().that().resideOutsideOfPackage(ROOT + "." + context + ".domain..")
                 .should().callConstructorWhere(eventConstructor)
+                .orShould().callMethodWhere(eventFactory)
                 .because("событие рождается в бизнес-методе агрегата вместе с переходом состояния")
                 .check(classes);
     }

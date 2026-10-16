@@ -1,9 +1,12 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.AggregateRoot;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
@@ -26,8 +29,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
  */
 public final class ExportJob extends AggregateRoot<ExportJobId> {
 
-    /** Имя команды сбоя — в сообщении о недопустимом переходе. */
-
     private final WorkspaceId workspaceId;
     private final ModelId modelId;
     private final ViewId viewId;
@@ -41,6 +42,7 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
     private Artifact artifact;
     private LossReport lossReport;
     private String failureReason;
+    private final List<DomainEvent> events = new ArrayList<>();
 
     private ExportJob(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, ViewId viewId,
                       ExportFormat format, ExportOptions options, long sourceVersionNo, String requestedBy,
@@ -95,10 +97,19 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
         this.status = ExportStatus.RENDERED;
     }
 
-    /** {@code RENDERED → DELIVERED}. */
-    public void deliver() {
+    /** {@code RENDERED → DELIVERED}: выгрузка отдана, событие о ней — в {@link #pullEvents()}. */
+    public void deliver(Instant now) {
         require(ExportStatus.RENDERED, Message.of(InterchangeMessages.COMMAND_DELIVER_EXPORT));
         status = ExportStatus.DELIVERED;
+        events.add(new ExportCompletedEvent(id(), workspaceId, modelId, viewId, format, sourceVersionNo,
+                artifact.hash(), artifact.size(), lossReport.entries().size(), now));
+    }
+
+    /** События, накопленные с последнего вызова; публикует их слой приложения после коммита. */
+    public List<DomainEvent> pullEvents() {
+        List<DomainEvent> pulled = List.copyOf(events);
+        events.clear();
+        return pulled;
     }
 
     /** Сбой из любого нетерминального состояния. */

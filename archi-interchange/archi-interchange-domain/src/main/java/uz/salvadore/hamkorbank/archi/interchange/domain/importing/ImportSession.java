@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.CorruptDocumentException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.AggregateRoot;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
@@ -51,7 +52,7 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
     private Instant finishedAt;
     private ModelId appliedModelId;
     private long appliedVersionNo;
-    private final List<ImportAppliedEvent> events = new ArrayList<>();
+    private final List<DomainEvent> events = new ArrayList<>();
 
     private ImportSession(ImportSessionId id, ImportRequest request, Instant startedAt) {
         super(id);
@@ -134,7 +135,7 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
      * разбор без проверки не даёт права писать в модель, а повтор терминальной сессии
      * удвоил бы модель.
      */
-    public ImportAppliedEvent apply(ModelId modelId, long versionNo, int opaqueObjectCount, Instant now) {
+    public void apply(ModelId modelId, long versionNo, int opaqueObjectCount, Instant now) {
         Objects.requireNonNull(modelId, "modelId");
         if (versionNo < 1) {
             throw new InvalidValueException(InterchangeMessages.IMPORT_VERSION_NO, versionNo);
@@ -143,15 +144,13 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
         finish(ImportStatus.APPLIED, now);
         this.appliedModelId = modelId;
         this.appliedVersionNo = versionNo;
-        ImportAppliedEvent applied = new ImportAppliedEvent(id(), workspaceId, modelId, versionNo, sourceName,
-                sourceHash, strictMode, findingCounts(), opaqueObjectCount, now);
-        events.add(applied);
-        return applied;
+        events.add(new ImportAppliedEvent(id(), workspaceId, modelId, versionNo, sourceName,
+                sourceHash, strictMode, findingCounts(), opaqueObjectCount, now));
     }
 
     /** События, накопленные с последнего вызова; публикует их слой приложения после коммита. */
-    public List<ImportAppliedEvent> pullEvents() {
-        List<ImportAppliedEvent> pulled = List.copyOf(events);
+    public List<DomainEvent> pullEvents() {
+        List<DomainEvent> pulled = List.copyOf(events);
         events.clear();
         return pulled;
     }

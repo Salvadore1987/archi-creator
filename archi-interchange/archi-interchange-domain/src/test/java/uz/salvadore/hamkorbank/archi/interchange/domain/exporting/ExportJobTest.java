@@ -44,9 +44,12 @@ class ExportJobTest {
         assertEquals(ExportStatus.REQUESTED, job.status());
 
         job.render(7, FILE, new LossReport(List.of(loss()), true));
-        job.deliver();
+        job.deliver(NOW);
         assertEquals(ExportStatus.DELIVERED, job.status());
         assertTrue(job.lossReport().isPresent());
+        ExportCompletedEvent completed = (ExportCompletedEvent) job.pullEvents().getFirst();
+        assertEquals(1, completed.lossEntryCount());
+        assertEquals(List.of(), job.pullEvents());
     }
 
     @Test
@@ -82,7 +85,7 @@ class ExportJobTest {
 
         ExportJob delivered = job(ExportFormat.ARCHIMATE, 1);
         delivered.render(1, FILE, LossReport.lossless());
-        delivered.deliver();
+        delivered.deliver(NOW);
         assertThrows(IllegalExportTransitionException.class, () -> delivered.fail("поздно"));
     }
 
