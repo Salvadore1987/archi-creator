@@ -102,7 +102,7 @@ class ExportJobTest {
     }
 
     private static LossEntry loss() {
-        return new LossEntry(LossEntryId.next(UUIDS), ArchiId.of("id-e1"), "element", "raw_xml",
+        return new LossEntry(LossEntryId.next(UUIDS), ArchiId.of("id-e1"), LossObjectKind.ELEMENT, "raw_xml",
                 "в OEF нет места для непрозрачных узлов");
     }
 }

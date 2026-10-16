@@ -29,6 +29,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentValue;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
+import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossObjectKind;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.AccessType;
 
 /**
@@ -889,7 +890,7 @@ public final class OefWriter {
         }
 
         private void loss(String archiId, String kind, String aspect, Message reason) {
-            losses.add(new OefLoss(archiId, kind, aspect, reason));
+            losses.add(new OefLoss(archiId, LossObjectKind.of(kind), aspect, reason));
         }
     }
 

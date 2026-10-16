@@ -14,6 +14,7 @@ public record GitAuthor(String subject, String name, String email) {
     /** Наибольшая длина субъекта, имени и почты автора. */
     public static final int FIELD_MAX = 200;
     private static final Pattern EMAIL = Pattern.compile("^[^\\s<>@]+@[^\\s<>@]+$");
+    private static final Pattern CONTROL = Pattern.compile("\\p{Cntrl}");
 
     public GitAuthor {
         require(subject);
@@ -25,7 +26,7 @@ public record GitAuthor(String subject, String name, String email) {
     }
 
     private static void require(String value) {
-        if (value == null || value.isBlank() || value.length() > FIELD_MAX || value.contains("\n")) {
+        if (value == null || value.isBlank() || value.length() > FIELD_MAX || CONTROL.matcher(value).find()) {
             throw new InvalidValueException(InterchangeMessages.GIT_AUTHOR_INVALID,
                                             value == null ? Message.of(InterchangeMessages.VALUE_MISSING) : value);
         }

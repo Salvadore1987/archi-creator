@@ -60,7 +60,8 @@ class OefWriterTest {
     void rawFragmentsAreListedAsLosses() throws IOException {
         OefWriter.Written written = WRITER.write(read(fixture("unknown_extension.archimate")));
         String xml = text(written);
-        Set<String> losses = written.losses().stream().map(l -> l.archiId() + " " + l.objectKind() + " " + l.aspect())
+        Set<String> losses = written.losses().stream()
+                .map(l -> l.archiId() + " " + l.objectKind().value() + " " + l.aspect())
                 .collect(Collectors.toSet());
 
         assertEquals(Optional.empty(), SCHEMA.violation(written.xml()));

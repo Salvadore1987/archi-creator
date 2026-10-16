@@ -72,8 +72,8 @@ public final class InterchangeMessages {
     public static final String CSV_YES = "interchange.csv.yes";
     /** Идентификатор Archi не годится по виду. */
     public static final String ARCHI_ID_INVALID = "interchange.document.archi-id-invalid";
-    /** У атрибута узла документа пустое имя. */
-    public static final String ATTRIBUTE_NAME_EMPTY = "interchange.document.attribute-name-empty";
+    /** Имя атрибута узла документа — не имя XML. */
+    public static final String ATTRIBUTE_NAME_INVALID = "interchange.document.attribute-name-invalid";
     /** Атрибуты заданы не парами имя–значение. */
     public static final String ATTRIBUTE_PAIRS_EXPECTED = "interchange.document.attribute-pairs-expected";
     /** Атрибут узла документа задан дважды. */

@@ -20,6 +20,7 @@ public record ExportJobCompletedEvent(ExportJobId exportJobId, WorkspaceId works
 
     public ExportJobCompletedEvent {
         Objects.requireNonNull(exportJobId, "exportJobId");
+        Objects.requireNonNull(workspaceId, "workspaceId");
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(format, "format");
         Objects.requireNonNull(artifactHash, "artifactHash");

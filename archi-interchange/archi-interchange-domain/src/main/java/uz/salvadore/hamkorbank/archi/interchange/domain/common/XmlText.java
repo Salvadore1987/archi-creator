@@ -1,5 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.common;
 
+import java.util.regex.Pattern;
+
 /**
  * Текст, который можно записать в файл Archi: только символы XML 1.0 — табуляция,
  * переводы строки и печатные символы, суррогатные пары — только парами. Управляющий символ
@@ -7,7 +9,25 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.common;
  */
 public final class XmlText {
 
+    private static final String NAME_START = "[\\p{L}_]";
+    private static final String NAME_PART = NAME_START + "[\\p{L}\\p{N}\\p{M}_.\\-\u00B7]*";
+    private static final Pattern QUALIFIED_NAME = Pattern.compile(NAME_PART + "(?::" + NAME_PART + ")?");
+    private static final Pattern ELEMENT_START = Pattern.compile("<" + NAME_START);
+
     private XmlText() {
+    }
+
+    /** Имя атрибута или элемента XML, с префиксом пространства имён или без: {@code xsi:type}, {@code name}. */
+    public static boolean isName(String value) {
+        return value != null && QUALIFIED_NAME.matcher(value).matches();
+    }
+
+    /**
+     * Разметка одного элемента: начинается открывающим тегом и кончается закрывающим.
+     * Комментарий, инструкция обработки, секция CDATA и текст элементом не являются.
+     */
+    public static boolean isElement(String xml) {
+        return xml != null && ELEMENT_START.matcher(xml).lookingAt() && xml.endsWith(">");
     }
 
     /** Состоит ли строка только из символов XML 1.0; {@code null} — допустимо. */

@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.document;
 import java.util.Objects;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.XmlText;
 
 /**
  * Непрозрачный фрагмент: узел, которого кодек не понимает, — дословно и с адресом.
@@ -19,7 +20,7 @@ public record RawXmlFragment(String xml, ArchiId parentArchiId, DocumentOrder or
     public RawXmlFragment {
         Objects.requireNonNull(xml, "xml");
         Objects.requireNonNull(order, "order");
-        if (!xml.startsWith("<")) {
+        if (!XmlText.isElement(xml)) {
             throw new InvalidValueException(InterchangeMessages.FRAGMENT_NOT_ELEMENT);
         }
     }

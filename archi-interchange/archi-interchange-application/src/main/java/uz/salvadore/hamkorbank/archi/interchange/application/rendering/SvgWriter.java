@@ -28,6 +28,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessag
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
+import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossObjectKind;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
 
 /**
@@ -127,7 +128,7 @@ public final class SvgWriter {
                 Optional<Node> source = nodeOf(edge.sourceId(), 0);
                 Optional<Node> target = nodeOf(edge.targetId(), 0);
                 if (source.isEmpty() || target.isEmpty()) {
-                    losses.add(new ImageLoss(edge.archiId(), "edge", "route",
+                    losses.add(new ImageLoss(edge.archiId(), LossObjectKind.EDGE, "route",
                             Message.of(InterchangeMessages.IMAGE_LOSS_EDGE)));
                     continue;
                 }
@@ -173,11 +174,11 @@ public final class SvgWriter {
             body.append("</g>");
 
             if (node.opaque()) {
-                losses.add(new ImageLoss(node.archiId(), "node", "shape",
+                losses.add(new ImageLoss(node.archiId(), LossObjectKind.NODE, "shape",
                         Message.of(InterchangeMessages.IMAGE_LOSS_PLACEHOLDER, shortType(node.shapeType()))));
             }
             if (node.image()) {
-                losses.add(new ImageLoss(node.archiId(), "node", "image",
+                losses.add(new ImageLoss(node.archiId(), LossObjectKind.NODE, "image",
                         Message.of(InterchangeMessages.IMAGE_LOSS_IMAGE)));
             }
         }
@@ -214,7 +215,7 @@ public final class SvgWriter {
             } else {
                 String family = own.map(ArchiFont::family).orElse(notation.family());
                 if (!typesetter.hasFamily(family)) {
-                    losses.add(new ImageLoss(node.archiId(), "node", "font",
+                    losses.add(new ImageLoss(node.archiId(), LossObjectKind.NODE, "font",
                             Message.of(InterchangeMessages.IMAGE_LOSS_FONT, family)));
                     family = notation.family();
                 }
@@ -247,7 +248,7 @@ public final class SvgWriter {
             }
             boolean clipped = overflowsBox || overflowsSide;
             if (lines.truncated() || overflowsBox && !text.isBlank()) {
-                losses.add(new ImageLoss(node.archiId(), "node", "label",
+                losses.add(new ImageLoss(node.archiId(), LossObjectKind.NODE, "label",
                         Message.of(InterchangeMessages.IMAGE_LOSS_LABEL)));
             }
 
@@ -326,7 +327,7 @@ public final class SvgWriter {
             Optional<Rect> source = endpoint(edge.sourceId(), 0);
             Optional<Rect> target = endpoint(edge.targetId(), 0);
             if (source.isEmpty() || target.isEmpty()) {
-                losses.add(new ImageLoss(edge.archiId(), "edge", "route",
+                losses.add(new ImageLoss(edge.archiId(), LossObjectKind.EDGE, "route",
                         Message.of(InterchangeMessages.IMAGE_LOSS_EDGE)));
                 return;
             }

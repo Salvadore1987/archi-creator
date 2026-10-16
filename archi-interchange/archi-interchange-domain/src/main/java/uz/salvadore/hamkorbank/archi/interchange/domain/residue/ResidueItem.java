@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.XmlText;
 
 /**
  * Единица содержимого узла без собственного идентификатора — с позицией {@code order}
@@ -49,6 +50,9 @@ public sealed interface ResidueItem permits ResidueItem.Slot, ResidueItem.Value,
 
         public Fragment {
             Objects.requireNonNull(xml, "xml");
+            if (!XmlText.isElement(xml)) {
+                throw new InvalidValueException(InterchangeMessages.FRAGMENT_NOT_ELEMENT);
+            }
         }
     }
 }

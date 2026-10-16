@@ -29,8 +29,6 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
     /** Ветка, если в привязке она не задана. */
     public static final String DEFAULT_BRANCH = "main";
     private static final Pattern URL = Pattern.compile("^(https?|ssh|git|file)://\\S+$|^[\\w.-]+@[\\w.-]+:\\S+$");
-    private static final Pattern BRANCH = Pattern.compile("^(?!/)(?!.*//)(?!.*\\.\\.)(?!.*@\\{)(?!.*\\.lock$)"
-            + "(?!.*/$)(?!.*\\.$)[^\\s~^:?*\\[\\\\\\x00-\\x1f\\x7f]+$");
 
     private final String repoUrl;
     private final String branch;
@@ -50,7 +48,7 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
             throw new InvalidValueException(InterchangeMessages.GIT_URL_INVALID,
                                             repoUrl == null ? Message.of(InterchangeMessages.VALUE_MISSING) : repoUrl);
         }
-        if (branch == null || branch.length() > BRANCH_MAX || !BRANCH.matcher(branch).matches()) {
+        if (branch == null || branch.length() > BRANCH_MAX || !GitNames.valid(branch)) {
             throw new InvalidValueException(InterchangeMessages.GIT_BRANCH_INVALID,
                                             branch == null ? Message.of(InterchangeMessages.VALUE_MISSING) : branch);
         }

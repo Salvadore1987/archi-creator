@@ -21,7 +21,11 @@ public record ImportSessionAppliedEvent(ImportSessionId importSessionId, Workspa
 
     public ImportSessionAppliedEvent {
         Objects.requireNonNull(importSessionId, "importSessionId");
+        Objects.requireNonNull(workspaceId, "workspaceId");
         Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(sourceName, "sourceName");
+        Objects.requireNonNull(sourceHash, "sourceHash");
+        Objects.requireNonNull(occurredAt, "occurredAt");
         findingCounts = Map.copyOf(findingCounts);
     }
 }

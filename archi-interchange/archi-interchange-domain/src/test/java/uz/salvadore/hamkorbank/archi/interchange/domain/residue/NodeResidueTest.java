@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeDomainException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 class NodeResidueTest {
 
@@ -41,5 +42,13 @@ class NodeResidueTest {
                     () -> NodeResidue.decode(broken), broken);
             assertEquals(InterchangeCodes.RESIDUE_CORRUPTED, e.code(), broken);
         }
+    }
+
+    @Test
+    @DisplayName("фрагмент остатка — элемент XML, атрибут остатка — с именем XML")
+    void residueValuesCheckThemselves() {
+        assertThrows(InvalidValueException.class, () -> new ResidueItem.Fragment(0, "text"));
+        assertThrows(InvalidValueException.class, () -> new ResidueItem.Fragment(0, "<!-- c -->"));
+        assertThrows(InvalidValueException.class, () -> ResidueAttribute.literal("na me", "v"));
     }
 }

@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.residue;
 import java.util.Objects;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.XmlText;
 
 /**
  * Атрибут в остатке на своём месте среди прочих. Без значения — метка типизированного
@@ -14,8 +15,8 @@ public record ResidueAttribute(String name, String value) {
 
     public ResidueAttribute {
         Objects.requireNonNull(name, "name");
-        if (name.isBlank()) {
-            throw new InvalidValueException(InterchangeMessages.ATTRIBUTE_NAME_EMPTY);
+        if (!XmlText.isName(name)) {
+            throw new InvalidValueException(InterchangeMessages.ATTRIBUTE_NAME_INVALID, name);
         }
     }
 

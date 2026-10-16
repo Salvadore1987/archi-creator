@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
+import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossObjectKind;
 
 class SvgWriterTest {
 
@@ -80,7 +81,7 @@ class SvgWriterTest {
                         + "\n                </element>\n              </folder>\n            </archimate:model>");
         List<ImageLoss> losses = render(RenderingFixtures.document(xml), TEXT).losses();
 
-        assertTrue(losses.contains(new ImageLoss("id-n4", "node", "shape",
+        assertTrue(losses.contains(new ImageLoss("id-n4", LossObjectKind.NODE, "shape",
                 uz.salvadore.hamkorbank.archi.interchange.domain.common.Message.of(
                         "interchange.image.loss-placeholder", "WorkPackage"))), losses.toString());
         assertTrue(losses.stream().anyMatch(l -> l.archiId().equals("id-n2") && l.aspect().equals("font")));

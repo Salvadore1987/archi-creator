@@ -14,8 +14,8 @@ public record Attribute(String name, String value) {
     public Attribute {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(value, "value");
-        if (name.isBlank()) {
-            throw new InvalidValueException(InterchangeMessages.ATTRIBUTE_NAME_EMPTY);
+        if (!XmlText.isName(name)) {
+            throw new InvalidValueException(InterchangeMessages.ATTRIBUTE_NAME_INVALID, name);
         }
         XmlText.require(value, name);
     }
