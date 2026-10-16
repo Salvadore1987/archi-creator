@@ -34,6 +34,8 @@ public final class ModelingCodes {
     public static final String RELATION_NOT_PERMITTED = "RELATION_NOT_PERMITTED";
     /** Модель удалена: выгрузка и замена её содержимого недоступны. */
     public static final String MODEL_DELETED = "MODEL_DELETED";
+    /** Снимок версии в хранилище повреждён и не распаковывается — дефект сервера. */
+    public static final String SNAPSHOT_CORRUPTED = "MDL_SNAPSHOT_CORRUPTED";
     /** Запрошенный объект не найден или не виден автору запроса. */
     public static final String NOT_FOUND = "MDL_NOT_FOUND";
     /** Запрос не разбирается: поле не задано или значение не того формата. */

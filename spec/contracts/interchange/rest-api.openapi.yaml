@@ -160,7 +160,8 @@ paths:
             X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Только oef: результат не прошёл официальную XSD — `IXC_OEF_SCHEMA_VIOLATION`.
-            Файл не отдаётся, это ошибка сервера, а не запроса (FR-43).
+            Файл не отдаётся, это ошибка сервера, а не запроса (FR-43). Любой формат: снимок версии
+            в хранилище повреждён и не распаковывается — `MDL_SNAPSHOT_CORRUPTED`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 

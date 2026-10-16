@@ -32,6 +32,7 @@ public final class ProblemFactory {
             case FORBIDDEN -> HttpStatus.FORBIDDEN;
             case GONE -> HttpStatus.GONE;
             case UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+            case DEFECT -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
     }
 

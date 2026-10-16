@@ -38,6 +38,7 @@ public class InterchangeProblemHandler {
             case FORBIDDEN -> HttpStatus.FORBIDDEN;
             case GONE -> HttpStatus.GONE;
             case UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+            case DEFECT -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
         return problem(status, e.code(), text.text(e.reason()), e.details(), request, text);
     }

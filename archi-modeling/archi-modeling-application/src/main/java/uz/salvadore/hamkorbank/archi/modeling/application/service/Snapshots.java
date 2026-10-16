@@ -9,7 +9,10 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /** Сжатие снимка (gzip, хранится в {@code bytea}) и его отпечаток. */
@@ -34,7 +37,10 @@ final class Snapshots {
         try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(compressed))) {
             return gzip.readAllBytes();
         } catch (IOException e) {
-            throw new UncheckedIOException(Message.of(ModelingMessages.SNAPSHOT_CORRUPTED).toString(), e);
+            ModelingDomainException corrupted = new ModelingDomainException(ModelingCodes.SNAPSHOT_CORRUPTED,
+                    Failure.DEFECT, Message.of(ModelingMessages.SNAPSHOT_CORRUPTED));
+            corrupted.initCause(e);
+            throw corrupted;
         }
     }
 
