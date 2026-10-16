@@ -14,9 +14,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotReader;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotWriter;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
@@ -24,7 +22,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelStatus;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.SnapshotRetention;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.VersionId;
@@ -35,9 +32,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
  * снимки для экспорта и их ретеншен.
  */
 public final class VersionService {
-
-    /** Код отказа выгрузки удалённой модели. */
-    public static final String MODEL_DELETED = ModelingCodes.MODEL_DELETED;
 
     private final ModelingKernel kernel;
     private final SnapshotWriter snapshotWriter;
@@ -188,10 +182,7 @@ public final class VersionService {
     public VersionSnapshot snapshot(EditorIdentity actor, ModelId modelId, Long versionNo) {
         Located located = kernel.unitOfWork.read(() -> {
             ModelHeader header = kernel.visibleHeader(modelId, actor, AclAccess.READ);
-            if (header.status() != ModelStatus.ACTIVE) {
-                throw new ModelingDomainException(MODEL_DELETED, Failure.CONFLICT,
-                        Message.of(ModelingMessages.MODEL_DELETED));
-            }
+            header.requireExportable();
             ModelVersion version = versionNo != null ? requireVersion(modelId, versionNo)
                     : kernel.versions.last(modelId)
                             .orElseThrow(() -> ModelingDomainException.notFound(

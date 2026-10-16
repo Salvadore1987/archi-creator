@@ -6,15 +6,12 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelStatus;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 
 /**
@@ -78,10 +75,7 @@ public final class ModelImportService {
     public CurrentContent current(EditorIdentity actor, ModelId modelId) {
         return kernel.unitOfWork.read(() -> {
             ModelHeader header = kernel.visibleHeader(modelId, actor, AclAccess.WRITE);
-            if (header.status() != ModelStatus.ACTIVE) {
-                throw new ModelingDomainException(ModelingCodes.MODEL_DELETED, Failure.CONFLICT,
-                        Message.of(ModelingMessages.MODEL_DELETED));
-            }
+            header.requireExportable();
             return new CurrentContent(header, kernel.versions.last(modelId).map(ModelVersion::versionNo).orElse(null),
                     versions.currentXml(modelId));
         });

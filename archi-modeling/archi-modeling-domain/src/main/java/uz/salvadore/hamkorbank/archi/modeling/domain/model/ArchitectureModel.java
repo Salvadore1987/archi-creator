@@ -223,10 +223,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
 
     /** В {@code DELETED} любая команда изменения содержимого отклоняется. */
     public void requireActive() {
-        if (status != ModelStatus.ACTIVE) {
-            throw new ModelingDomainException(ModelingCodes.LIFECYCLE, Failure.CONFLICT,
-                    Message.of(ModelingMessages.MODEL_NOT_ACTIVE, status.label()));
-        }
+        status.requireActive();
     }
 
     /** Отметка, что заголовок модели изменён: время правки и запись строки модели. */

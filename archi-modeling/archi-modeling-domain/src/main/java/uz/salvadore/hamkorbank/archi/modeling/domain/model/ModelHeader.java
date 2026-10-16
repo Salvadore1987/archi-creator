@@ -43,6 +43,16 @@ public record ModelHeader(ModelId id, WorkspaceId workspaceId, ArchiId archiId, 
         }
     }
 
+    /** Содержимое модели правят только у активной; иначе — отказ жизненного цикла. */
+    public void requireActive() {
+        status.requireActive();
+    }
+
+    /** Выгружают и читают для замены только активную модель; удалённая — отказ «модель удалена». */
+    public void requireExportable() {
+        status.requireExportable();
+    }
+
     /** Подходит ли строка как версия Archi: три числа через точку. */
     public static boolean validArchiVersion(String value) {
         return value != null && ARCHI_VERSION.matcher(value).matches();

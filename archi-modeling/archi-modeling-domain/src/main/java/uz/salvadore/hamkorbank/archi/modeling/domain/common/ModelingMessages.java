@@ -162,8 +162,6 @@ public final class ModelingMessages {
     public static final String ARCHI_VERSION_FORMAT = "modeling.model.archi-version-format";
     /** Модель удалена, и выгрузка недоступна. */
     public static final String MODEL_DELETED = "modeling.model.deleted";
-    /** Удалённую модель пытаются изменить. */
-    public static final String DELETED_NOT_EDITABLE = "modeling.model.deleted-not-editable";
     /** Модель не в рабочем состоянии, и её содержимое не меняется. */
     public static final String MODEL_NOT_ACTIVE = "modeling.model.not-active";
     /** Переход жизненного цикла модели из текущего состояния не предусмотрен. */
