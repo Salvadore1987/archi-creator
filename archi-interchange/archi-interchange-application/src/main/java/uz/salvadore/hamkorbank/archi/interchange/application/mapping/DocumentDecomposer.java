@@ -580,7 +580,7 @@ public final class DocumentDecomposer {
         return ArchiId.of(node.archiId().value());
     }
 
-    private static IllegalArgumentException unexpected(DocumentNode node, Message where) {
+    private static InvalidValueException unexpected(DocumentNode node, Message where) {
         return new InvalidValueException(InterchangeMessages.UNEXPECTED_NODE, node.tag(), node.archiId(), where);
     }
 }

@@ -67,7 +67,7 @@
 | B4 | Корни агрегатов → `AggregateRoot`, создание фабрикой (record-агрегаты `ModelLock`, `ModelVersion`, `ModelAccessList` — в классы с `restore`) | ArchUnit: корни наследуют `AggregateRoot`, публичных конструкторов нет | ⬜ |
 | B5 | События → `{Aggregate}{Action}Event`, базовый `{Aggregate}Event` | ArchUnit: реализации `DomainEvent` оканчиваются на `Event` | ⬜ |
 | B6a | Исключения домена modeling → `DomainException` / `ModelingDomainException`; `InvalidValueException`, `RelationNotPermittedException` в общей иерархии | ArchUnit: исключения домена наследуют корень контекста | ✅ |
-| B6b | То же: interchange | правило расширено на interchange | ⬜ |
+| B6b | То же: interchange | правило расширено на interchange | ✅ |
 | B6c | То же: advisor | правило расширено на advisor | ⬜ |
 
 ### Часть C. `Optional` только в результате поиска и внутри методов (D-18)
@@ -123,6 +123,12 @@
   с типом не в нотации ArchiMate (`canvas:…`). Тесты этого не покрывали, `verify` был зелёным.
   Исправлено с тестом `MethodologyCheckTest`. Урок: при смене иерархии исключения искать
   перехваты по всему реактору, а не по модулю, где класс объявлен.
+- **B6b.** Корень interchange — без вида отказа (`Failure`): HTTP-статус для доменных отказов
+  выбирает application-слой. Перехват в interchange по реактору проверен заранее: домен
+  IAE/ISE ради своих исключений не ловил, `ImportService.request` переведён на явный
+  `InvalidValueException`. К этапу 3 ревью: `ExportJob` на недопустимом переходе бросает
+  голый `IllegalStateException` вне иерархии; `IllegalImportTransitionException` несёт
+  команду латиницей (`"RejectImport"`) и состояние без перевода — тот же дефект, что 02-09.
 
 ## Отменённые варианты
 

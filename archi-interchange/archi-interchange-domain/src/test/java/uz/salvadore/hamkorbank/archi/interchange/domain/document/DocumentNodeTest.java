@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 class DocumentNodeTest {
 
@@ -15,7 +16,7 @@ class DocumentNodeTest {
     @Test
     @DisplayName("INV-IXC-001: узел без id не строится")
     void nodeWithoutIdIsRejected() {
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(InvalidValueException.class,
                 () -> new DocumentNode("element", DocumentOrder.of(0), Attributes.of("name", "x"), List.of()));
     }
 
@@ -25,7 +26,7 @@ class DocumentNodeTest {
         DocumentValue misplaced = new DocumentValue("documentation", DocumentOrder.of(1), Attributes.of(),
                 Optional.of("x"));
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(InvalidValueException.class,
                 () -> new DocumentNode("element", DocumentOrder.of(0), Attributes.of("id", ID.value()),
                         List.of(misplaced)));
     }
@@ -36,7 +37,7 @@ class DocumentNodeTest {
         RawXmlFragment elsewhere = new RawXmlFragment("<feature/>",
                 Optional.of(ArchiId.of("id-other")), DocumentOrder.of(0));
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(InvalidValueException.class,
                 () -> new DocumentNode("child", DocumentOrder.of(0), Attributes.of("id", ID.value()),
                         List.of(elsewhere)));
     }
@@ -62,6 +63,6 @@ class DocumentNodeTest {
     @Test
     @DisplayName("атрибут не может повториться")
     void duplicateAttributeIsRejected() {
-        assertThrows(IllegalArgumentException.class, () -> Attributes.of("id", "a", "id", "b"));
+        assertThrows(InvalidValueException.class, () -> Attributes.of("id", "a", "id", "b"));
     }
 }

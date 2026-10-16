@@ -1,6 +1,8 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.codec;
 
 import java.util.List;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeDomainException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 
@@ -8,15 +10,12 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
  * Файл повреждён: отказ независимо от строгости импорта.
  * Несёт все найденные дефекты, а не первый: архитектор чинит файл за один проход.
  */
-public final class CorruptDocumentException extends RuntimeException {
+public final class CorruptDocumentException extends InterchangeDomainException {
 
     private final transient List<DocumentDefect> defects;
 
     public CorruptDocumentException(List<DocumentDefect> defects) {
-        super(defects.isEmpty() ? "" : summary(defects).toString());
-        if (defects.isEmpty()) {
-            throw new IllegalArgumentException(Message.of(InterchangeMessages.CORRUPT_WITHOUT_DEFECTS).toString());
-        }
+        super(InterchangeCodes.CORRUPT_DOCUMENT, summary(requireDefects(defects)));
         this.defects = List.copyOf(defects);
     }
 
@@ -27,7 +26,14 @@ public final class CorruptDocumentException extends RuntimeException {
 
     /** Первый дефект с местом и число остальных — сообщение с ключом, а не текст. */
     public Message summary() {
-        return summary(defects);
+        return reason();
+    }
+
+    private static List<DocumentDefect> requireDefects(List<DocumentDefect> defects) {
+        if (defects.isEmpty()) {
+            throw new IllegalArgumentException(Message.of(InterchangeMessages.CORRUPT_WITHOUT_DEFECTS).toString());
+        }
+        return defects;
     }
 
     private static Message summary(List<DocumentDefect> defects) {

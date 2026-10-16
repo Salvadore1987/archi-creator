@@ -1,11 +1,12 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.importing;
 
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeDomainException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 
 /** Переход, которого автомат сессии не допускает. */
-public final class IllegalImportTransitionException extends IllegalStateException {
+public final class IllegalImportTransitionException extends InterchangeDomainException {
 
     /** Код нарушенного правила переходов сессии импорта. */
     public static final String INVARIANT = InterchangeCodes.IMPORT_TRANSITION;
@@ -14,14 +15,9 @@ public final class IllegalImportTransitionException extends IllegalStateExceptio
     private final String command;
 
     IllegalImportTransitionException(ImportStatus from, String command) {
-        super(INVARIANT + ": " + Message.of(InterchangeMessages.IMPORT_TRANSITION, command, from));
+        super(INVARIANT, Message.of(InterchangeMessages.IMPORT_TRANSITION, command, from));
         this.from = from;
         this.command = command;
-    }
-
-    /** Сообщение с ключом, которое переводится на язык запроса. */
-    public Message reason() {
-        return Message.of(InterchangeMessages.IMPORT_TRANSITION, command, from);
     }
 
     /** Состояние, из которого переход не допускается. */

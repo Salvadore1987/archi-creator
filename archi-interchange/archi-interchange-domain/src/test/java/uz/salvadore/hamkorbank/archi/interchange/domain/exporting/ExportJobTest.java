@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ExportJobId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.LossEntryId;
@@ -88,7 +89,7 @@ class ExportJobTest {
     @Test
     @DisplayName("отпечаток артефакта считается по содержимому")
     void artifactHashMatchesContent() {
-        assertThrows(IllegalArgumentException.class, () -> new Artifact(new byte[] {1}, "application/xml", "a",
+        assertThrows(InvalidValueException.class, () -> new Artifact(new byte[] {1}, "application/xml", "a",
                 Artifact.of(new byte[] {2}, "application/xml", "a").hash()));
     }
 

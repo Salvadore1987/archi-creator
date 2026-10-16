@@ -1,27 +1,20 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.common;
 
-import java.util.Objects;
 
 /**
  * Значение не проходит правило типа: пустое имя, отрицательный размер, неверный
  * формат идентификатора. Остаётся {@link IllegalArgumentException}, чтобы место
  * перехвата не менялось, но вместо текста несёт сообщение с ключом.
  */
-public final class InvalidValueException extends IllegalArgumentException {
+public final class InvalidValueException extends InterchangeDomainException {
 
-    private final Message reason;
-
+    /** Отказ с причиной-сообщением. */
     public InvalidValueException(Message reason) {
-        super(Objects.requireNonNull(reason, "reason").toString());
-        this.reason = reason;
+        super(InterchangeCodes.INVALID_REQUEST, reason);
     }
 
+    /** Отказ с причиной по ключу и аргументам. */
     public InvalidValueException(String key, Object... args) {
         this(Message.of(key, args));
-    }
-
-    /** Сообщение с ключом, которое переводится на язык запроса. */
-    public Message reason() {
-        return reason;
     }
 }

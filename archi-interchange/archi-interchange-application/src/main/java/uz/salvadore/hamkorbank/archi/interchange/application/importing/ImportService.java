@@ -163,11 +163,12 @@ public final class ImportService {
         try {
             return ImportRequest.of(workspace, Optional.empty(), fileName, content, key,
                     policy.strictImport(workspace), actor.subject());
+        } catch (InvalidValueException invalid) {
+            throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE, invalid.reason(),
+                    Map.of());
         } catch (IllegalArgumentException invalid) {
             throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE,
-                    invalid instanceof InvalidValueException value ? value.reason()
-                            : Message.of(InterchangeMessages.INVALID_REQUEST),
-                    Map.of());
+                    Message.of(InterchangeMessages.INVALID_REQUEST), Map.of());
         }
     }
 

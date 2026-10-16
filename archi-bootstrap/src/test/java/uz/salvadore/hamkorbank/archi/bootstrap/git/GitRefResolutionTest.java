@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Remote;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.RefKind;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
@@ -99,9 +100,9 @@ class GitRefResolutionTest {
     void unknownReferenceIsEmpty() {
         assertThat(resolve("nope")).isEmpty();
         assertThat(resolve("0123456789abcdef0123456789abcdef01234567")).isEmpty();
-        assertThatThrownBy(() -> GitRef.of("main..feature")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> GitRef.of("")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> GitRef.of("-upload-pack")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> GitRef.of("main..feature")).isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> GitRef.of("")).isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> GitRef.of("-upload-pack")).isInstanceOf(InvalidValueException.class);
     }
 
     @Test

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 class ArchiIdTest {
 
@@ -24,6 +25,6 @@ class ArchiIdTest {
     @ValueSource(strings = {"", " id-1", "id 1", "id-\"1", "-id", "id<1>"})
     @DisplayName("значение, ломающее атрибут id, отклоняется")
     void malformedIdsAreRejected(String value) {
-        assertThrows(IllegalArgumentException.class, () -> ArchiId.of(value));
+        assertThrows(InvalidValueException.class, () -> ArchiId.of(value));
     }
 }
