@@ -30,6 +30,24 @@ public final class ModelingMessages {
     public static final String FIELD_COMMENT = "modeling.field.comment";
     /** Подпись поля «метка» версии — аргумент сообщений о длине. */
     public static final String FIELD_LABEL = "modeling.field.label";
+    /** Подпись поля «имя» — аргумент отказа о недопустимом тексте. */
+    public static final String FIELD_NAME = "modeling.field.name";
+    /** Подпись поля «документация» — аргумент отказа о недопустимом тексте. */
+    public static final String FIELD_DOCUMENTATION = "modeling.field.documentation";
+    /** Подпись поля «точка зрения» — аргумент отказа о недопустимом тексте. */
+    public static final String FIELD_VIEWPOINT = "modeling.field.viewpoint";
+    /** Подпись поля «ключ свойства» — аргумент отказа о недопустимом тексте. */
+    public static final String FIELD_PROPERTY_KEY = "modeling.field.property-key";
+    /** Подпись поля «значение свойства» — аргумент отказа о недопустимом тексте. */
+    public static final String FIELD_PROPERTY_VALUE = "modeling.field.property-value";
+    /** Подпись поля «подпись узла» — аргумент отказа о недопустимом тексте. */
+    public static final String FIELD_NODE_LABEL = "modeling.field.node-label";
+    /** Подпись поля «текст заметки» — аргумент отказа о недопустимом тексте. */
+    public static final String FIELD_NODE_CONTENT = "modeling.field.node-content";
+    /** Подпись поля «шрифт» — аргумент отказа о недопустимом тексте. */
+    public static final String FIELD_FONT = "modeling.field.font";
+    /** В тексте поля есть символы, которых не может быть в файле Archi: управляющие или одиночные суррогаты. */
+    public static final String TEXT_NOT_XML = "modeling.text.not-xml";
     /** Дерево папок модели замкнулось в цикл. */
     public static final String FOLDER_CYCLE = "modeling.folder.cycle";
     /** Папку переносят внутрь неё самой. */

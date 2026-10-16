@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationNotPermittedException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.DiagramType;
@@ -143,5 +145,27 @@ class ArchitectureModelTest {
 
         model.delete(Models.ARCHITECT, NOW);
         assertThrows(ModelingDomainException.class, () -> model.renameView(view.id(), "Другое", NOW));
+    }
+
+    @Test
+    @DisplayName("Текст, которого не может быть в файле Archi, отклоняется на входе — выгрузка не ломается")
+    void textOutsideXmlIsRejected() {
+        ArchitectureModel model = Models.empty();
+        FolderId application = Models.root(model, FolderType.APPLICATION);
+        Element element = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
+
+        assertThrows(ModelingDomainException.class, () -> model.addElement(
+                ArchiType.ofSimpleName("ApplicationComponent"), "а\u0001б", application, ElementId.next(UUIDS),
+                Models.archiId(), NOW));
+        assertThrows(ModelingDomainException.class, () -> model.updateElement(element.id(), "АБС", "текст\uD800",
+                List.of(), NOW));
+        assertThrows(ModelingDomainException.class, () -> model.updateElement(element.id(), "АБС", null,
+                List.of(new PropertyEntry("ключ", "\uFFFE", SortOrder.ofPosition(0))), NOW));
+        assertThrows(ModelingDomainException.class, () -> model.createFolder(application, "\u0007",
+                     FolderId.next(UUIDS), 
+                Models.archiId(), NOW));
+
+        Element kept = model.updateElement(element.id(), "АБС\tтаб", "строка\nстрока", List.of(), NOW);
+        assertEquals("АБС\tтаб", kept.name());
     }
 }

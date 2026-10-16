@@ -65,4 +65,14 @@ class DocumentNodeTest {
     void duplicateAttributeIsRejected() {
         assertThrows(InvalidValueException.class, () -> Attributes.of("id", "a", "id", "b"));
     }
+
+    @Test
+    @DisplayName("Значение документа без символов вне XML 1.0: иначе выгрузка нечитаема или искажена")
+    void textOutsideXmlIsRejected() {
+        assertThrows(InvalidValueException.class, () -> new Attribute("name", "а\u0001б"));
+        assertThrows(InvalidValueException.class, () -> new Attribute("name", "\uD800"));
+        assertThrows(InvalidValueException.class, () -> new DocumentValue("documentation", DocumentOrder.of(0),
+                new Attributes(List.of()), "\uFFFE"));
+        new Attribute("name", "таб\tи\nстрока \uD83D\uDE00");
+    }
 }

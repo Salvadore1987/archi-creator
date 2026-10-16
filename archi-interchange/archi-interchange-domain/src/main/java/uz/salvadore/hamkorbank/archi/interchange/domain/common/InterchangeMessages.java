@@ -6,6 +6,9 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.common;
  */
 public final class InterchangeMessages {
 
+    /** Значение атрибута или элемента содержит символы, которых не может быть в файле Archi. */
+    public static final String TEXT_NOT_XML = "interchange.document.text-not-xml";
+
     /** Операция недоступна роли пользователя; в тексте — операция и допущенные роли. */
     public static final String OPERATION_DENIED = "interchange.access.operation-denied";
     /** Значение «нет» логического поля в выгрузке CSV. */

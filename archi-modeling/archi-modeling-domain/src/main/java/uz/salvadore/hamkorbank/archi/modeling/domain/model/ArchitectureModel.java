@@ -28,6 +28,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedEntities;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedMap;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.XmlText;
 import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelDeletedEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
@@ -97,6 +98,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     public static ArchitectureModel create(ModelId id, WorkspaceId workspaceId, ArchiId archiId, String name,
                                            EditorIdentity author, Instant now, Supplier<FolderId> folderIds,
                                            Supplier<ArchiId> archiIds) {
+        XmlText.require(name, Message.of(ModelingMessages.FIELD_NAME));
         ModelHeader header = new ModelHeader(id, workspaceId, archiId, Names.required(name, Names.MODEL),
                 null, ModelHeader.DEFAULT_ARCHI_VERSION, ModelStatus.ACTIVE, List.of(),
                 null, author.subject(), now, now, 0);
@@ -237,6 +239,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
 
     /** Новое имя модели; пустое отклоняется. */
     public void rename(String newName, Instant now) {
+        XmlText.require(newName, Message.of(ModelingMessages.FIELD_NAME));
         requireActive();
         name = Names.required(newName, Names.MODEL);
         touch(now);
@@ -244,6 +247,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
 
     /** Новая документация модели; {@code null} и пустая строка — документации нет. */
     public void changeDocumentation(String newDocumentation, Instant now) {
+        XmlText.require(newDocumentation, Message.of(ModelingMessages.FIELD_DOCUMENTATION));
         requireActive();
         documentation = nonEmpty(newDocumentation);
         touch(now);
@@ -254,6 +258,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     /** Новая пользовательская папка в конце родителя; родитель должен быть в этой модели. */
     public ModelFolder createFolder(FolderId parentId, String folderName, FolderId newId, ArchiId newArchiId,
                                     Instant now) {
+        XmlText.require(folderName, Message.of(ModelingMessages.FIELD_NAME));
         requireActive();
         requireFolder(parentId);
         requireFreeArchiId(newArchiId);
@@ -266,6 +271,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
 
     /** Новое имя папки; пустое отклоняется. */
     public ModelFolder renameFolder(FolderId folderId, String newName, Instant now) {
+        XmlText.require(newName, Message.of(ModelingMessages.FIELD_NAME));
         requireActive();
         ModelFolder renamed = requireFolder(folderId).withName(Names.required(newName, Names.FOLDER));
         folders.put(folderId, renamed);
@@ -374,6 +380,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
      */
     public Element addElement(ArchiType archiType, String elementName, FolderId folderId, ElementId newId,
                               ArchiId newArchiId, Instant now) {
+        XmlText.require(elementName, Message.of(ModelingMessages.FIELD_NAME));
         requireActive();
         ConceptDefinition concept = REGISTRY.find(archiType)
                 .filter(c -> c.kind() == ConceptKind.ELEMENT || c.kind() == ConceptKind.JUNCTION)
@@ -399,6 +406,9 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
      */
     public Element updateElement(ElementId elementId, String newName, String newDocumentation,
                                  List<PropertyEntry> newProperties, Instant now) {
+        XmlText.require(newName, Message.of(ModelingMessages.FIELD_NAME));
+        XmlText.require(newDocumentation, Message.of(ModelingMessages.FIELD_DOCUMENTATION));
+        XmlText.require(newProperties);
         requireActive();
         Element element = requireElement(elementId);
         requireEditable(element.supported(), element.archiType());
@@ -432,6 +442,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     public Created<Relationship> addRelationship(ArchiType archiType, ConceptRef source, ConceptRef target,
                                                  String relationshipName, RelationshipId newId,
                                                  ArchiId newArchiId, Instant now) {
+        XmlText.require(relationshipName, Message.of(ModelingMessages.FIELD_NAME));
         return addRelationship(archiType, source, target, relationshipName, null, null,
                 null, newId, newArchiId, now);
     }
@@ -445,6 +456,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
                                                  String relationshipName, FolderId folderId,
                                                  AccessType accessType, Boolean directed,
                                                  RelationshipId newId, ArchiId newArchiId, Instant now) {
+        XmlText.require(relationshipName, Message.of(ModelingMessages.FIELD_NAME));
         requireActive();
         RelationshipType type = RelationshipType.fromArchiType(archiType)
                 .orElseThrow(() -> ModelingDomainException.invalid(
@@ -480,6 +492,9 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     public Relationship updateRelationship(RelationshipId relationshipId, String newName,
                                            String newDocumentation, List<PropertyEntry> newProperties,
                                            Instant now) {
+        XmlText.require(newName, Message.of(ModelingMessages.FIELD_NAME));
+        XmlText.require(newDocumentation, Message.of(ModelingMessages.FIELD_DOCUMENTATION));
+        XmlText.require(newProperties);
         requireActive();
         Relationship relationship = requireRelationship(relationshipId);
         requireEditable(relationship.supported(), relationship.archiType());
@@ -516,6 +531,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     /** Место для нового представления: папка в поддереве {@code diagrams}. */
     public ViewRef placeNewView(ViewId viewId, DiagramType archiType, String viewName, FolderId folderId,
                                 ArchiId newArchiId, Instant now) {
+        XmlText.require(viewName, Message.of(ModelingMessages.FIELD_NAME));
         requireActive();
         requireSameRoot(folderId, FolderType.DIAGRAMS, Message.of(ModelingMessages.VIEW, viewName));
         requireFreeArchiId(newArchiId);
@@ -538,6 +554,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
      * вызывается вместе с переименованием самого представления.
      */
     public void renameView(ViewId viewId, String newName, Instant now) {
+        XmlText.require(newName, Message.of(ModelingMessages.FIELD_NAME));
         requireActive();
         ViewRef view = view(viewId)
                 .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.VIEW, viewId)));

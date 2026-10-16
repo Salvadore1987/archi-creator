@@ -23,6 +23,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedEntities;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedMap;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.XmlText;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel.Created;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ConceptRef;
@@ -171,6 +172,8 @@ public final class View extends AggregateRoot<ViewId> {
     public ViewNode placeAnnotation(ViewNodeKind kind, String label, String content,
                                     Bounds bounds, ViewNodeId parentId, ViewNodeId newId,
                                     ArchiId newArchiId) {
+        XmlText.require(label, Message.of(ModelingMessages.FIELD_NODE_LABEL));
+        XmlText.require(content, Message.of(ModelingMessages.FIELD_NODE_CONTENT));
         requireEditable();
         if (kind != ViewNodeKind.GROUP && kind != ViewNodeKind.NOTE) {
             throw new ModelingDomainException(ModelingCodes.INVALID_INPUT, Failure.UNPROCESSABLE,
@@ -194,6 +197,11 @@ public final class View extends AggregateRoot<ViewId> {
      * пустая строка снимает текст; стиль заменяется целиком.
      */
     public ViewNode editNode(ViewNodeId nodeId, String label, String content, StyleOverride style) {
+        XmlText.require(label, Message.of(ModelingMessages.FIELD_NODE_LABEL));
+        XmlText.require(content, Message.of(ModelingMessages.FIELD_NODE_CONTENT));
+        if (style != null) {
+            XmlText.require(style.font(), Message.of(ModelingMessages.FIELD_FONT));
+        }
         requireEditable();
         ViewNode node = requireNode(nodeId);
         requireTextFits(node, label, content);
@@ -223,6 +231,9 @@ public final class View extends AggregateRoot<ViewId> {
 
     /** Собственный стиль ребра; заменяется целиком. */
     public ViewEdge editEdge(ViewEdgeId edgeId, StyleOverride style) {
+        if (style != null) {
+            XmlText.require(style.font(), Message.of(ModelingMessages.FIELD_FONT));
+        }
         requireEditable();
         ViewEdge edge = requireEdge(edgeId).withStyle(style);
         edges.put(edgeId, edge);
@@ -383,6 +394,7 @@ public final class View extends AggregateRoot<ViewId> {
 
     /** Новое имя представления. */
     public void rename(String newName) {
+        XmlText.require(newName, Message.of(ModelingMessages.FIELD_NAME));
         name = Names.limited(newName, Names.VIEW);
         headerChanged = true;
     }
@@ -393,6 +405,10 @@ public final class View extends AggregateRoot<ViewId> {
      */
     public void edit(String newName, String newDocumentation, String newViewpoint,
                      List<PropertyEntry> newProperties) {
+        XmlText.require(newName, Message.of(ModelingMessages.FIELD_NAME));
+        XmlText.require(newDocumentation, Message.of(ModelingMessages.FIELD_DOCUMENTATION));
+        XmlText.require(newViewpoint, Message.of(ModelingMessages.FIELD_VIEWPOINT));
+        XmlText.require(newProperties);
         name = Names.limited(newName, Names.VIEW);
         documentation = newDocumentation == null || newDocumentation.isEmpty() ? null : newDocumentation;
         viewpoint = newViewpoint == null || newViewpoint.isEmpty() ? null : newViewpoint;

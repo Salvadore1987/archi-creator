@@ -3,11 +3,16 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.codec;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attribute;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attributes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentContent;
@@ -42,7 +47,12 @@ public final class ArchiXmlWriter implements ArchiDocumentWriter {
         xml.append(DECLARATION);
         element(xml, 0, rootTag(document.attributes()), document.attributes(), document.content());
         try {
-            out.write(xml.toString().getBytes(StandardCharsets.UTF_8));
+            ByteBuffer bytes = StandardCharsets.UTF_8.newEncoder()
+                    .onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .encode(CharBuffer.wrap(xml));
+            out.write(bytes.array(), bytes.arrayOffset() + bytes.position(), bytes.remaining());
+        } catch (CharacterCodingException e) {
+            throw new IllegalStateException(Message.of(InterchangeMessages.TEXT_NOT_XML, e.getMessage()).toString(), e);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

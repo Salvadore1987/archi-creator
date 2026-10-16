@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.Set;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.XmlText;
 
 /**
  * Значение без собственного идентификатора: {@code documentation}, {@code purpose},
@@ -30,6 +31,7 @@ public record DocumentValue(String tag, DocumentOrder order, Attributes attribut
         if (!TAGS.contains(tag)) {
             throw new InvalidValueException(InterchangeMessages.NOT_DOCUMENT_VALUE, tag);
         }
+        XmlText.require(text, tag);
     }
 
     /** Значение атрибута по имени. */
