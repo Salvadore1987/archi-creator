@@ -47,22 +47,31 @@ public record AdvisorRequest(AdvisorFunction function, ModelId modelId, ViewId v
                 if (elementId == null) {
                     throw new InvalidValueException(AdvisorMessages.ELEMENT_REQUIRED);
                 }
+                requireAbsent(viewId == null && prompt == null);
             }
             case PLAN -> {
                 if (prompt == null) {
                     throw new InvalidValueException(AdvisorMessages.PROMPT_REQUIRED);
                 }
+                requireAbsent(viewId == null && elementId == null);
             }
             case DOCUMENT -> {
                 if (viewId != null && elementId != null) {
                     throw new InvalidValueException(AdvisorMessages.DOCUMENT_TARGET_AMBIGUOUS);
                 }
+                requireAbsent(prompt == null);
             }
-            case REVIEW -> {
-            }
+            case REVIEW -> requireAbsent(elementId == null && prompt == null);
         }
         if (prompt != null && prompt.length() > PROMPT_MAX) {
             throw new InvalidValueException(AdvisorMessages.PROMPT_TOO_LONG, PROMPT_MAX);
+        }
+    }
+
+    /** Параметр, который функции не нужен, — отказ: он изменил бы отпечаток и попал бы в сессию. */
+    private static void requireAbsent(boolean absent) {
+        if (!absent) {
+            throw new InvalidValueException(AdvisorMessages.PARAMETER_NOT_FOR_FUNCTION);
         }
     }
 

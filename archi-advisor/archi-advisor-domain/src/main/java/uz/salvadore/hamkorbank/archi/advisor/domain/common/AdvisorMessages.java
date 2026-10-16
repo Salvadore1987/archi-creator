@@ -76,6 +76,8 @@ public final class AdvisorMessages {
     public static final String ELEMENT_REQUIRED = "advisor.request.element-required";
     /** Идентификатор элемента в запросе не похож на идентификатор Archi. */
     public static final String ELEMENT_ID_INVALID = "advisor.request.element-id-invalid";
+    /** В запросе параметр, который выбранной функции не нужен. */
+    public static final String PARAMETER_NOT_FOR_FUNCTION = "advisor.request.parameter-not-for-function";
     /** План запрошен без описания фрагмента архитектуры. */
     public static final String PROMPT_REQUIRED = "advisor.request.prompt-required";
     /** Описание для плана слишком длинное. */

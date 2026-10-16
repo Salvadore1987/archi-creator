@@ -25,7 +25,7 @@
 | 6 | Обязательные поля событий проверяются | 04-06 | `AdvisorEventsTest` | ✅ |
 | 7 | События бюджета: спецификация по коду | 04-07 | `TokenBudgetTest#eventsFollowEveryUpwardTransition` | ✅ |
 | 8 | Результат сессии: обязательность и чужой результат | 04-08 | `AdvisorSessionTest#resultBelongsToFunction` | ✅ |
-| 9 | Параметры, не нужные функции, отклоняются | 04-09 | `AdvisorRequestTest` | ⬜ |
+| 9 | Параметры, не нужные функции, отклоняются | 04-09 | `AdvisorRequestTest#foreignParametersAreRejected` | ✅ |
 | 10 | Спецификация агрегатов advisor по коду | 04-10 | `check-links.py`, `check-traceability.py` | ⬜ |
 | 11 | Поиск по контексту — по индексу | 04-11 | — | ⬜ |
 
