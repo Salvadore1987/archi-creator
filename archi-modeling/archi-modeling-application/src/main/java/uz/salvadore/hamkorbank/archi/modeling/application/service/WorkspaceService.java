@@ -14,7 +14,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
  * Рабочие пространства. Первое заводится при старте приложения, если их нет вовсе:
- * миграция строки не сажает — её {@code id} пришлось бы выдумать (журнал этапа 0).
+ * миграция строки не сажает — её {@code id} пришлось бы выдумать.
  */
 public final class WorkspaceService {
 

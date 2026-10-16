@@ -30,16 +30,15 @@ public record ImportFinding(FindingId id, Severity severity, String code, Messag
         }
     }
 
-    /**
-     * Повреждение данных как находка. Всегда {@link Severity#ERROR}; идентификатор,
-     * который сам и повреждён, в {@code archiId} не попадает — он остаётся в сообщении.
-     */
     /** Текст находки, сохранённый раньше, — как сообщение, которое выводит его без перевода. */
     public static Message storedText(String text) {
         return Message.of(InterchangeMessages.STORED_TEXT, text);
     }
 
-    /** Находка уровня {@code ERROR} по дефекту разбора документа. */
+    /**
+     * Повреждение данных как находка. Всегда {@link Severity#ERROR}; идентификатор,
+     * который сам и повреждён, в {@code archiId} не попадает — он остаётся в сообщении.
+     */
     public static ImportFinding of(FindingId id, DocumentDefect defect) {
         ArchiId archiId = defect.archiId() != null && ArchiId.isValid(defect.archiId())
                 ? ArchiId.of(defect.archiId()) : null;

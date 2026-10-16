@@ -52,6 +52,8 @@
             <property name="allowMissingPropertyJavadoc" value="false"/>
             <property name="tokens" value="METHOD_DEF,ANNOTATION_FIELD_DEF"/>
         </module>
+        <!-- Javadoc стоит прямо перед объявлением: осиротевший блок описывает не тот метод. -->
+        <module name="InvalidJavadocPosition"/>
         <module name="JavadocVariable">
             <property name="accessModifiers" value="public"/>
             <property name="tokens" value="VARIABLE_DEF"/>

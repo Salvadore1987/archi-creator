@@ -113,7 +113,7 @@ class KeycloakIT {
         return "http://" + KEYCLOAK.getHost() + ":" + KEYCLOAK.getMappedPort(8080) + "/realms/archi";
     }
 
-    /** Парольный грант публичного клиента SPA — как вход на этапе 0, только без браузера. */
+    /** Парольный грант публичного клиента SPA — как вход из интерфейса, только без браузера. */
     private static String token(String user) throws Exception {
         String form = "grant_type=password&client_id=archi-creator-ui&username=" + user + "&password="
                 + URLEncoder.encode(user, StandardCharsets.UTF_8);

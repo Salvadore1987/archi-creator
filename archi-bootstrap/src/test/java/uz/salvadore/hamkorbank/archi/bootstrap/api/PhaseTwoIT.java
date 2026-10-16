@@ -27,7 +27,7 @@ import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 
 /**
  * Фаза 2 метамодели: Capability и остальные типы Motivation и Strategy правятся
- * наравне с фазой 1, а модели, загруженные до этапа 6, получают это миграцией.
+ * наравне с фазой 1, а модели, загруженные, пока фаза 2 была opaque, получают это миграцией.
  */
 class PhaseTwoIT extends ApiTest {
 
@@ -95,7 +95,7 @@ class PhaseTwoIT extends ApiTest {
         String model = importFixture(Fixtures.fixture(FIXTURE));
         UUID modelId = UUIDUtil.uuid(model);
         Map<String, String> residueBefore = residue(modelId);
-        // Так строки фазы 2 выглядели после импорта до этапа 6.
+        // Так строки фазы 2 выглядели после импорта, пока фаза была opaque.
         jdbc.update("""
                 update element set supported = false
                 where model_id = ? and layer in ('MOTIVATION', 'STRATEGY')

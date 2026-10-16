@@ -8,7 +8,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
  * Операции modeling и роли, которым они доступны. Имя в скобках — имя use case'а:
  * по нему же метрики и аудит.
  *
- * <p>Таблица одна, и это она: матчеры URL роли не проверяют (SecurityConfig, этап 0).
+ * <p>Таблица одна, и это она: матчеры URL в {@code SecurityConfig} роли не проверяют.
  */
 public enum Operation {
     OPEN_MODEL("OpenModel", Role.VIEWER, Role.ARCHITECT, Role.ADMIN),

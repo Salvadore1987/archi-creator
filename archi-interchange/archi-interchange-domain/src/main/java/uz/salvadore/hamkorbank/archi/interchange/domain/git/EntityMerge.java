@@ -73,11 +73,15 @@ public final class EntityMerge {
 
     /**
      * Конфликт: поле, изменённое в обеих ветвях по-разному, или удаление против правки.
+     * У конфликта поля {@code base}, {@code ours} и {@code theirs} — значения этого поля.
+     * У удаления против правки (поле {@value #REMOVAL}) смысл другой: {@code base} — имя
+     * объекта в общем предке, а у стороны, которая объект правила, — перечень изменённых ею
+     * полей через запятую; у стороны, которая объект удалила, — {@code null}.
      *
      * @param id         адрес {@code <archiId>:<поле>}, ключ выбора
      * @param archiType  тип без префикса {@code archimate:}; у папок и модели {@code null}
      * @param base       значение в общем предке; нет — {@code null}
-     * @param ours       «наше»; удалено — {@code null}. У удаления против правки — изменённые поля
+     * @param ours       «наше»; удалено — {@code null}
      * @param theirs     «их»; удалено — {@code null}
      * @param resolution сделанный выбор; нет ({@code null}) — результат взят «нашим»
      */
@@ -162,7 +166,6 @@ public final class EntityMerge {
     private record RawKey(int index) implements Key {
     }
 
-    /** Значение без позиций: сдвиг соседей значение не меняет. */
     /** Состояние одной стороны: объекты по идентификатору в порядке файла. */
     private static final class State {
 

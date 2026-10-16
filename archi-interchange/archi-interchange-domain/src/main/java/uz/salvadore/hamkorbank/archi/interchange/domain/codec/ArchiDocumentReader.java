@@ -3,7 +3,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.codec;
 import java.io.InputStream;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 
-/** Порт чтения {@code .archimate}. */
+/** Читатель {@code .archimate}: файл — в документ. */
 public interface ArchiDocumentReader {
 
     /**

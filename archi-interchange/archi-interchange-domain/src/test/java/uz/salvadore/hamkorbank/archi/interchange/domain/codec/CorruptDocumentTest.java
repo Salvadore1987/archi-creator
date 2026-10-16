@@ -32,6 +32,20 @@ class CorruptDocumentTest {
     }
 
     @Test
+    @DisplayName("FR-50: поломка XML не отбрасывает дефекты, найденные до неё")
+    void malformedXmlKeepsEarlierDefects() {
+        CorruptDocumentException e = reject("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <archimate:model xmlns:archimate="http://www.archimatetool.com/archimate" id="id-1">
+                  <folder name="Business" id="id-1"/>
+                  <folder name="Other" id="id-2">
+                </archimate:model>
+                """);
+
+        assertEquals(List.of(InterchangeCodes.DUPLICATE_ID, InterchangeCodes.MALFORMED_XML), codes(e));
+    }
+
+    @Test
     @DisplayName("FR-50: ссылка на несуществующий элемент")
     void danglingReferenceIsRejected() {
         DocumentDefect defect = single(Xml.model("""

@@ -20,7 +20,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportSer
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
 
 /**
- * Критерий готовности этапа 2 на уровне сценариев: импорт → таблицы → экспорт даёт
+ * Круг без потерь на уровне сценариев: импорт → таблицы → экспорт даёт
  * исходный файл без потерь. Тот же круг через REST — {@code RoundTripApiIT}.
  */
 class ModelImportIT extends IntegrationTest {

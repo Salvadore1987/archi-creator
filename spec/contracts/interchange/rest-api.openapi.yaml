@@ -940,9 +940,13 @@ components:
           description: |
             Поле по тем же правилам, что `GitChange.fields` (`type` и `@type` — разные поля);
             `*` — удаление в одной ветви против правки в другой.
-        base:       { type: string, description: "Значение в общем предке; нет — поля нет." }
-        ours:       { type: string, description: "«Наше»; удалено — поля нет." }
-        theirs:     { type: string, description: "«Их»; удалено — поля нет." }
+        base:       { type: string, description: "Значение в общем предке; нет — поля нет. У `*` — имя объекта в предке." }
+        ours:
+          type: string
+          description: "«Наше»; удалено — поля нет. У `*` — изменённые «нашей» ветвью поля через запятую."
+        theirs:
+          type: string
+          description: "«Их»; удалено — поля нет. У `*` — изменённые «их» ветвью поля через запятую."
         resolution: { $ref: '#/components/schemas/GitMergeResolution' }
 
     GitMergeCascade:

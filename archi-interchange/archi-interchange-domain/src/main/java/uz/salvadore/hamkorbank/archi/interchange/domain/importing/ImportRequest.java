@@ -41,13 +41,15 @@ public record ImportRequest(WorkspaceId workspaceId, ModelId targetModelId, Stri
         }
     }
 
-    /** Отпечаток и размер считаются по самому содержимому, а не принимаются на веру. */
     /** Имя источника: переданное клиентом, а пустое или отсутствующее ({@code null}) — имя по умолчанию. */
     public static String sourceNameOrDefault(String fileName) {
         return fileName == null || fileName.isBlank() ? DEFAULT_SOURCE_NAME : fileName;
     }
 
-    /** Запрос импорта с отпечатком и размером присланного содержимого; без модели ({@code null}) — новая. */
+    /**
+     * Запрос импорта; без модели ({@code null}) — новая. Отпечаток и размер считаются по самому
+     * содержимому, а не принимаются на веру.
+     */
     public static ImportRequest of(WorkspaceId workspaceId, ModelId targetModelId, String sourceName,
                                    byte[] content, String idempotencyKey, boolean strictMode, String startedBy) {
         return new ImportRequest(workspaceId, targetModelId, sourceName, ContentHash.of(content), content.length,

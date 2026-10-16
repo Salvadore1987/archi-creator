@@ -53,9 +53,17 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
  * <p>Повреждённые данные собираются все за один проход и бросаются
  * {@link CorruptDocumentException}: невалидный XML, узел без {@code id} или
  * {@code xsi:type}, дубль идентификатора, ссылка в пустоту, связь без конца,
- * {@code targetConnections}, не совпадающий с соединениями узла.
+ * {@code targetConnections}, не совпадающий с соединениями узла. Если разбор
+ * обрывается — XML ломается, корень не тот, вложенность глубже предела, — отказ
+ * несёт дефекты, найденные до места обрыва, и сам обрыв; ссылки дальше обрыва
+ * не проверить.
  *
- * <p>DTD и внешние сущности выключены: файл приходит от пользователя.
+ * <p>Комментарии и инструкции обработки между узлами и внутри значения (описания,
+ * свойства) отбрасываются: Archi их не пишет, а круг без потерь обещает равенство
+ * модели, а не байтов. Внутри непрозрачного фрагмента они сохраняются дословно.
+ *
+ * <p>Объявление {@code DOCTYPE} не отклоняется, а пропускается: DTD не читается,
+ * внешние сущности не загружаются — файл приходит от пользователя.
  */
 public final class StaxArchiDocumentReader implements ArchiDocumentReader {
 
@@ -69,15 +77,19 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
     @Override
     public ModelDocument read(InputStream in) {
         Objects.requireNonNull(in, "in");
+        Parse parse = null;
         try {
             XMLStreamReader xml = factory().createXMLStreamReader(in);
             try {
-                return new Parse(xml).document();
+                parse = new Parse(xml);
+                return parse.document();
             } finally {
                 xml.close();
             }
         } catch (XMLStreamException e) {
-            throw new CorruptDocumentException(List.of(malformed(e)));
+            List<DocumentDefect> defects = parse == null ? new ArrayList<>() : new ArrayList<>(parse.defects);
+            defects.add(malformed(e));
+            throw new CorruptDocumentException(defects);
         }
     }
 
@@ -125,9 +137,9 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
                 // пролог: объявление XML, комментарии, пробелы
             }
             if (!"model".equals(xml.getLocalName()) || !ModelDocument.NAMESPACE.equals(xml.getNamespaceURI())) {
-                throw new CorruptDocumentException(List.of(DocumentDefect.at(InterchangeCodes.NOT_ARCHIMATE_MODEL,
+                throw broken(DocumentDefect.at(InterchangeCodes.NOT_ARCHIMATE_MODEL,
                         Message.of(InterchangeMessages.NOT_ARCHIMATE_ROOT, qname(), ModelDocument.NAMESPACE),
-                        null, line())));
+                        null, line()));
             }
             int line = line();
             Attributes attributes = attributes();
@@ -151,6 +163,12 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
                 throw new CorruptDocumentException(defects);
             }
             return new ModelDocument(attributes, content);
+        }
+
+        /** Разбор оборван: отказ с дефектами, найденными до обрыва, и самим обрывом. */
+        private CorruptDocumentException broken(DocumentDefect defect) {
+            defects.add(defect);
+            return new CorruptDocumentException(defects);
         }
 
         /** Содержимое текущего элемента до его закрывающего тега. */
@@ -197,8 +215,8 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
 
         private DocumentNode node(String tag, DocumentOrder order) throws XMLStreamException {
             if (depth == MAX_DEPTH) {
-                throw new CorruptDocumentException(List.of(DocumentDefect.at(InterchangeCodes.NESTING_TOO_DEEP,
-                        Message.of(InterchangeMessages.NESTING_TOO_DEEP, MAX_DEPTH), null, line())));
+                throw broken(DocumentDefect.at(InterchangeCodes.NESTING_TOO_DEEP,
+                        Message.of(InterchangeMessages.NESTING_TOO_DEEP, MAX_DEPTH), null, line()));
             }
             depth++;
             try {
