@@ -86,6 +86,9 @@ EXEMPT = {
     ("archi-bootstrap/src/main/java/uz/salvadore/hamkorbank/archi/bootstrap/wiring/"
      "MicrometerUseCaseMetrics.java", "{@code INV-MDL-006}"):
         "буквальное значение метки error_code, по которому фильтрует алерт",
+    ("archi-bootstrap/src/test/java/uz/salvadore/hamkorbank/archi/bootstrap/architecture/"
+     "CodingRulesTest.java", "spec/domain/<контекст>/aggregates.yaml"):
+        "тест читает список корней агрегатов из этого файла",
 }
 
 C_LIKE = {".java", ".ts", ".tsx", ".js", ".mjs", ".cjs"}
