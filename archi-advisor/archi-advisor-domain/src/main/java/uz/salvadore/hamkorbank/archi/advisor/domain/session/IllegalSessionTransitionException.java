@@ -10,9 +10,14 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 /** Переход сессии, которого нет в state machine: завершённая сессия не дополняется. */
 public final class IllegalSessionTransitionException extends AdvisorDomainException {
 
-    public IllegalSessionTransitionException(SessionStatus from, String transition) {
+    /**
+     * Отказ перехода.
+     *
+     * @param command команда, которую сессия не принимает, — сообщением, чтобы текст переводился
+     */
+    public IllegalSessionTransitionException(SessionStatus from, Message command) {
         super(AdvisorCodes.SESSION_TRANSITION, Failure.CONFLICT,
-                Message.of(AdvisorMessages.SESSION_TRANSITION, from.name(), transition),
+                Message.of(AdvisorMessages.SESSION_TRANSITION, from.label(), command),
                 Map.of("status", from.name()));
     }
 }

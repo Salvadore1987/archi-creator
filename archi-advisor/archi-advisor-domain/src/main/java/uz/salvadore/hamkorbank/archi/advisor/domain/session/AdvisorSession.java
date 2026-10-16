@@ -9,6 +9,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AdvisorSessionId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AuditEntryId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.ModelId;
@@ -114,14 +115,14 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
 
     /** Отказ до обращения к внешнему API: токены не расходуются, аудит пишется. */
     public void reject(RejectionReason reason, AuditEntryId auditId, Instant now) {
-        require(SessionStatus.REQUESTED, "reject");
+        require(SessionStatus.REQUESTED, AdvisorMessages.COMMAND_REJECT);
         this.rejectionReason = Objects.requireNonNull(reason, "reason");
         finish(SessionStatus.REJECTED, auditId, now);
     }
 
     /** Внешний API принял запрос — пошёл поток. Размер контекста известен к этому моменту. */
     public void startStreaming(int contextTokens, boolean truncated) {
-        require(SessionStatus.REQUESTED, "startStreaming");
+        require(SessionStatus.REQUESTED, AdvisorMessages.COMMAND_START_STREAMING);
         if (contextTokens < 0) {
             throw new InvalidValueException(AdvisorMessages.USAGE_NEGATIVE);
         }
@@ -132,7 +133,7 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
 
     /** Первые токены ответа — для контроля времени до первого токена; повторно не перезаписывается. */
     public void firstToken(Instant now) {
-        require(SessionStatus.STREAMING, "firstToken");
+        require(SessionStatus.STREAMING, AdvisorMessages.COMMAND_FIRST_TOKEN);
         if (firstTokenAt == null) {
             firstTokenAt = now;
         }
@@ -140,9 +141,9 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
 
     /** Находка ревью по ходу потока. У прочих функций находок нет. */
     public void addFinding(Finding finding) {
-        require(SessionStatus.STREAMING, "addFinding");
+        require(SessionStatus.STREAMING, AdvisorMessages.COMMAND_ADD_FINDING);
         if (function != AdvisorFunction.REVIEW) {
-            throw new IllegalSessionTransitionException(status, "addFinding:" + function.name());
+            throw new IllegalSessionTransitionException(status, Message.of(AdvisorMessages.COMMAND_ADD_FINDING));
         }
         findings.add(Objects.requireNonNull(finding, "finding"));
     }
@@ -150,7 +151,7 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
     /** Ответ получен целиком. План обязателен у функции плана, ответ — у подсказки и документации. */
     public void complete(TokenUsage usage, ModelPlan plan, AdvisorAnswer answer,
                          AuditEntryId auditId, Instant now) {
-        require(SessionStatus.STREAMING, "complete");
+        require(SessionStatus.STREAMING, AdvisorMessages.COMMAND_COMPLETE);
         if (function == AdvisorFunction.PLAN && plan == null) {
             throw new InvalidValueException(AdvisorMessages.PLAN_REQUIRED);
         }
@@ -164,7 +165,7 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
     /** Внешний API не ответил или оборвал поток. Израсходованное учитывается всё равно. */
     public void fail(TokenUsage usage, AuditEntryId auditId, Instant now) {
         if (status != SessionStatus.REQUESTED && status != SessionStatus.STREAMING) {
-            throw new IllegalSessionTransitionException(status, "fail");
+            throw new IllegalSessionTransitionException(status, Message.of(AdvisorMessages.COMMAND_FAIL));
         }
         this.usage = Objects.requireNonNull(usage, "usage");
         finish(SessionStatus.FAILED, auditId, now);
@@ -179,9 +180,9 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
                 Duration.between(requestedAt, now).toMillis(), requestedBy, now));
     }
 
-    private void require(SessionStatus expected, String transition) {
+    private void require(SessionStatus expected, String commandKey) {
         if (status != expected) {
-            throw new IllegalSessionTransitionException(status, transition);
+            throw new IllegalSessionTransitionException(status, Message.of(commandKey));
         }
     }
 

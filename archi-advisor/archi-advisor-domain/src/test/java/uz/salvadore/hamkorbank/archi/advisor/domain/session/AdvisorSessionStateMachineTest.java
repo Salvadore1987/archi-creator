@@ -3,8 +3,11 @@ package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 
 class AdvisorSessionStateMachineTest {
 
@@ -17,6 +20,8 @@ class AdvisorSessionStateMachineTest {
         IllegalSessionTransitionException late = assertThrows(IllegalSessionTransitionException.class,
                 () -> streaming.reject(RejectionReason.BUDGET_EXHAUSTED, Sessions.audit(), Sessions.NOW));
         assertEquals("INV-ADV-002", late.code());
+        assertEquals(List.of(Message.of(AdvisorMessages.STATUS_STREAMING), Message.of(AdvisorMessages.COMMAND_REJECT)),
+                late.reason().args(), "состояние и команда — ключами, а не именами констант");
         assertEquals(SessionStatus.STREAMING, streaming.status());
 
         AdvisorSession requested = Sessions.review();

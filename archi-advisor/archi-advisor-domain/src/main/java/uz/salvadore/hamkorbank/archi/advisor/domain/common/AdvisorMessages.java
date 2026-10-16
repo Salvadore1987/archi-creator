@@ -28,6 +28,28 @@ public final class AdvisorMessages {
     public static final String SESSION_IN_PROGRESS = "advisor.idempotency.in-progress";
     /** Сессия в своём состоянии не допускает запрошенного перехода. */
     public static final String SESSION_TRANSITION = "advisor.session.transition";
+    /** Состояние сессии: запрошена. */
+    public static final String STATUS_REQUESTED = "advisor.status.requested";
+    /** Состояние сессии: идёт ответ. */
+    public static final String STATUS_STREAMING = "advisor.status.streaming";
+    /** Состояние сессии: завершена. */
+    public static final String STATUS_COMPLETED = "advisor.status.completed";
+    /** Состояние сессии: сбой внешнего API. */
+    public static final String STATUS_FAILED = "advisor.status.failed";
+    /** Состояние сессии: отклонена. */
+    public static final String STATUS_REJECTED = "advisor.status.rejected";
+    /** Команда сессии: отказ до вызова внешнего API. */
+    public static final String COMMAND_REJECT = "advisor.command.reject";
+    /** Команда сессии: начало ответа. */
+    public static final String COMMAND_START_STREAMING = "advisor.command.start-streaming";
+    /** Команда сессии: первые токены ответа. */
+    public static final String COMMAND_FIRST_TOKEN = "advisor.command.first-token";
+    /** Команда сессии: находка ревью. */
+    public static final String COMMAND_ADD_FINDING = "advisor.command.add-finding";
+    /** Команда сессии: завершение ответа. */
+    public static final String COMMAND_COMPLETE = "advisor.command.complete";
+    /** Команда сессии: отметка сбоя. */
+    public static final String COMMAND_FAIL = "advisor.command.fail";
     /** Функция плана завершилась без плана. */
     public static final String PLAN_REQUIRED = "advisor.session.plan-required";
     /** У автора обращения нет идентификатора. */
