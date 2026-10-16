@@ -22,6 +22,8 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.LockResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListReplaceCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockAcquireCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockReleaseCommandHandler;
@@ -40,6 +42,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.AccessListApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.ModelAccessList;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
@@ -350,7 +353,8 @@ final class InMemoryPorts {
     final RelationshipService relationships = new RelationshipService(kernel, elements);
     final ViewService viewService = new ViewService(kernel);
     final TreeService tree = new TreeService(kernel, elements, relationships);
-    final AccessListService accessLists = new AccessListService(kernel);
+    final AccessListApplicationService accessLists = new AccessListApplicationServiceImpl(
+            new AccessListGetQueryHandler(kernel), new AccessListReplaceCommandHandler(kernel));
 
     /** Блокировка модели автором — короткий путь для сценариев, которым нужна запись. */
     LockResponse lock(EditorIdentity actor, ModelId model) {

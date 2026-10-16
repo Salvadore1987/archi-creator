@@ -10,9 +10,8 @@ import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
-import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclEntry;
-import uz.salvadore.hamkorbank.archi.modeling.domain.access.PrincipalType;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceAccessListCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.AccessListResponse;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
@@ -142,22 +141,23 @@ class ModelingScenariosTest {
     @DisplayName("INV-MDL-011: модель со списком скрыта от чужих — её нет в списке, прямой запрос 404")
     void accessListHidesModel() {
         ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Секретная", null).id();
-        ports.accessLists.replace(ALICE, model, List.of(new AclEntry(PrincipalType.USER, "alice", AclAccess.WRITE)));
+        ports.accessLists.replaceAccessList(ALICE, new ReplaceAccessListCommand(model.value(),
+                List.of(acl("USER", "alice", "WRITE"))));
 
         assertEquals(List.of(), ports.queries.list(BOB, ports.workspace.id()));
         assertEquals(Failure.NOT_FOUND, assertThrows(ModelingDomainException.class,
                 () -> ports.queries.open(BOB, model)).failure());
         assertEquals(1, ports.queries.list(ALICE, ports.workspace.id()).size());
         assertEquals(Failure.NOT_FOUND, assertThrows(ModelingDomainException.class,
-                () -> ports.accessLists.replace(BOB, model, List.of())).failure(),
+                () -> clearAccess(BOB, model)).failure(),
                 "скрытая модель отвечает 404 раньше, чем выдала бы себя отказом 403");
 
-        ports.accessLists.replace(ALICE, model, List.of(new AclEntry(PrincipalType.USER, "alice", AclAccess.WRITE),
-                new AclEntry(PrincipalType.GROUP, "audit", AclAccess.READ)));
+        ports.accessLists.replaceAccessList(ALICE, new ReplaceAccessListCommand(model.value(),
+                List.of(acl("USER", "alice", "WRITE"), acl("GROUP", "audit", "READ"))));
         EditorIdentity auditor = new EditorIdentity("carol", Set.of(Role.ARCHITECT), Set.of("audit"));
         assertEquals("Секретная", ports.queries.open(auditor, model).name());
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
-                () -> ports.accessLists.replace(auditor, model, List.of())).failure(), "список меняют автор и ADMIN");
+                () -> clearAccess(auditor, model)).failure(), "список меняют автор и ADMIN");
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> ports.lock(auditor, model)).failure(), "READ не даёт правки");
     }
@@ -224,5 +224,13 @@ class ModelingScenariosTest {
                 RelationshipService.suggestions(COMPONENT, ArchiType.ofSimpleName("BusinessProcess"));
         assertFalse(componentInProcess.stream().anyMatch(RelationshipService.Suggestion::nesting),
                 "вложенность связи не подразумевает");
+    }
+
+    private static ReplaceAccessListCommand.Entry acl(String principalType, String principal, String access) {
+        return new ReplaceAccessListCommand.Entry(principalType, principal, access);
+    }
+
+    private AccessListResponse clearAccess(EditorIdentity actor, ModelId model) {
+        return ports.accessLists.replaceAccessList(actor, new ReplaceAccessListCommand(model.value(), List.of()));
     }
 }

@@ -23,6 +23,8 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EnsureDefaultWorkspaceCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListReplaceCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockAcquireCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockReleaseCommandHandler;
@@ -40,9 +42,10 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.AccessListApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.AccessListService;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.AccessListApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.LockApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
@@ -158,8 +161,9 @@ public class ModelingConfiguration {
     }
 
     @Bean
-    AccessListService accessListService(ModelingKernel kernel) {
-        return new AccessListService(kernel);
+    AccessListApplicationService accessListApplicationService(ModelingKernel kernel) {
+        return new AccessListApplicationServiceImpl(new AccessListGetQueryHandler(kernel),
+                new AccessListReplaceCommandHandler(kernel));
     }
 
     @Bean

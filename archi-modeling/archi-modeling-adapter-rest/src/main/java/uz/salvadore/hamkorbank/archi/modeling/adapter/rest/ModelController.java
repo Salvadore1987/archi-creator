@@ -25,22 +25,17 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelTree;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.WorkspaceDto;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReleaseLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceAccessListCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetAccessListQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetLockQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ResolveWorkspaceQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.AccessListApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.AccessListService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
-import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
-import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclEntry;
-import uz.salvadore.hamkorbank.archi.modeling.domain.access.PrincipalType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
@@ -55,12 +50,13 @@ public class ModelController {
     private final ModelQueryService queries;
     private final ModelLifecycleService lifecycle;
     private final LockApplicationService locks;
-    private final AccessListService accessLists;
+    private final AccessListApplicationService accessLists;
     private final WorkspaceApplicationService workspaces;
     private final TextCatalog text;
 
     public ModelController(ModelQueryService queries, ModelLifecycleService lifecycle, LockApplicationService locks,
-                           AccessListService accessLists, WorkspaceApplicationService workspaces, TextCatalog text) {
+                           AccessListApplicationService accessLists, WorkspaceApplicationService workspaces,
+                           TextCatalog text) {
         this.text = text;
         this.queries = queries;
         this.lifecycle = lifecycle;
@@ -157,27 +153,20 @@ public class ModelController {
     /** Список доступа модели. */
     @GetMapping("/models/{id}/acl")
     public List<AclEntryDto> acl(EditorIdentity actor, @PathVariable UUID id) {
-        return accessLists.get(actor, ModelId.of(id)).entries().stream()
-                .map(e -> new AclEntryDto(e.principalType().name(), e.principal(), e.access().name())).toList();
+        return accessLists.getAccessList(actor, new GetAccessListQuery(id)).entries().stream()
+                .map(e -> new AclEntryDto(e.principalType(), e.principal(), e.access())).toList();
     }
 
     /** Заменяет список доступа модели целиком и возвращает итог. */
     @PutMapping("/models/{id}/acl")
     public List<AclEntryDto> replaceAcl(EditorIdentity actor, @PathVariable UUID id,
                                         @RequestBody List<AclEntryDto> entries) {
-        List<AclEntry> domain = entries.stream().map(ModelController::entry).toList();
-        return accessLists.replace(actor, ModelId.of(id), domain).entries().stream()
-                .map(e -> new AclEntryDto(e.principalType().name(), e.principal(), e.access().name())).toList();
+        return accessLists.replaceAccessList(actor, new ReplaceAccessListCommand(id, entries.stream()
+                        .map(e -> new ReplaceAccessListCommand.Entry(e.principalType(), e.principal(), e.access()))
+                        .toList()))
+                .entries().stream().map(e -> new AclEntryDto(e.principalType(), e.principal(), e.access())).toList();
     }
 
-    private static AclEntry entry(AclEntryDto dto) {
-        try {
-            return new AclEntry(PrincipalType.valueOf(dto.principalType()), dto.principal(),
-                    AclAccess.valueOf(dto.access()));
-        } catch (IllegalArgumentException | InvalidValueException | NullPointerException invalid) {
-            throw ModelingDomainException.invalid(Message.of(ModelingMessages.ACL_ENTRY_FORMAT));
-        }
-    }
 
     private WorkspaceId workspace(UUID requested) {
         return WorkspaceId.of(workspaces.resolveWorkspace(new ResolveWorkspaceQuery(requested)).workspaceId());

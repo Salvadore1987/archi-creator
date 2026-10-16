@@ -97,6 +97,11 @@ public final class ModelingKernel {
         return locks;
     }
 
+    /** Хранилище списков доступа. */
+    public ModelAccessListRepository accessLists() {
+        return accessLists;
+    }
+
     /** Публикация доменных событий после коммита. */
     public DomainEventPublisher events() {
         return events;
