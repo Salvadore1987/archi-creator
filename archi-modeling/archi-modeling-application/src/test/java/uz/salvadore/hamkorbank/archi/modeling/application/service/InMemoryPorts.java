@@ -78,17 +78,34 @@ final class InMemoryPorts {
     final List<DomainEvent> published = new ArrayList<>();
     final Workspace workspace = Workspace.restore(WorkspaceId.of(IDS.generate()), "Банк", NOW);
 
+    /** Глубина вложенных транзакций: больше нуля — работа идёт внутри транзакции. */
+    private int transactionDepth;
+
     final UnitOfWork unitOfWork = new UnitOfWork() {
         @Override
         public <T> T write(Supplier<T> work) {
-            return work.get();
+            return inTransaction(work);
         }
 
         @Override
         public <T> T read(Supplier<T> work) {
-            return work.get();
+            return inTransaction(work);
         }
     };
+
+    private <T> T inTransaction(Supplier<T> work) {
+        transactionDepth++;
+        try {
+            return work.get();
+        } finally {
+            transactionDepth--;
+        }
+    }
+
+    /** Идёт ли сейчас транзакция — чтобы проверить, что внешний вызов сделан вне её. */
+    boolean inTransaction() {
+        return transactionDepth > 0;
+    }
 
     final ModelRepository modelRepository = new ModelRepository() {
         @Override

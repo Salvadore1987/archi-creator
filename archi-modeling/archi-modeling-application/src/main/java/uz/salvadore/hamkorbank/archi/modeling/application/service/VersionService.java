@@ -2,7 +2,9 @@ package uz.salvadore.hamkorbank.archi.modeling.application.service;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.GitBinding;
@@ -18,6 +20,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
+import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
@@ -25,6 +28,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelStatus;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.SnapshotRetention;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.VersionId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
  * Сохранить модель как версию, пометить версию, откатиться к версии;
@@ -129,15 +133,29 @@ public final class VersionService {
     /**
      * Откат: содержимое версии становится текущим и фиксируется новой версией — история
      * не переписывается, а дописывается. {@code null} и пустой комментарий — комментарий по умолчанию.
+     * Очищенный снимок восстанавливается из Git между транзакцией чтения и транзакцией записи:
+     * сетевой вызов не держит соединение с базой; доступ и блокировка проверяются в обеих.
      */
     public ModelVersion rollback(EditorIdentity actor, ModelId modelId, long versionNo, String comment) {
-        return kernel.run(Operation.RESTORE_VERSION, actor, () -> kernel.unitOfWork.write(() -> {
-            ArchitectureModel model = kernel.writableModel(modelId, actor);
-            byte[] xml = content(model.header(), requireVersion(modelId, versionNo));
-            return replace(model, xml, actor, comment == null || comment.isBlank()
-                    ? kernel.texts.text(Message.of(ModelingMessages.COMMENT_ROLLBACK, versionNo))
-                    : comment).version();
-        }));
+        return kernel.run(Operation.RESTORE_VERSION, actor, () -> {
+            Located located = kernel.unitOfWork.read(() -> {
+                ModelHeader header = kernel.visibleHeader(modelId, actor, AclAccess.WRITE);
+                ModelLock.requireWriteAccess(modelId, kernel.locks.find(modelId).orElse(null), actor.subject(),
+                        kernel.now());
+                return new Located(header, requireVersion(modelId, versionNo));
+            });
+            byte[] xml = content(located.header(), located.version());
+            return kernel.unitOfWork.write(() -> {
+                ArchitectureModel model = kernel.writableModel(modelId, actor);
+                return replace(model, xml, actor, comment == null || comment.isBlank()
+                        ? kernel.texts.text(Message.of(ModelingMessages.COMMENT_ROLLBACK, versionNo))
+                        : comment).version();
+            });
+        });
+    }
+
+    /** Версия и заголовок её модели, прочитанные в транзакции, — до обращения к архиву вне её. */
+    private record Located(ModelHeader header, ModelVersion version) {
     }
 
     /** Итог замены содержимого: версия и сколько объектов в новом содержимом непрозрачны. */
@@ -168,7 +186,7 @@ public final class VersionService {
      * а без Git — {@code 410}. {@code null} в номере — последняя версия.
      */
     public VersionSnapshot snapshot(EditorIdentity actor, ModelId modelId, Long versionNo) {
-        return kernel.unitOfWork.read(() -> {
+        Located located = kernel.unitOfWork.read(() -> {
             ModelHeader header = kernel.visibleHeader(modelId, actor, AclAccess.READ);
             if (header.status() != ModelStatus.ACTIVE) {
                 throw new ModelingDomainException(MODEL_DELETED, Failure.CONFLICT,
@@ -178,13 +196,16 @@ public final class VersionService {
                     : kernel.versions.last(modelId)
                             .orElseThrow(() -> ModelingDomainException.notFound(
                                     Message.of(ModelingMessages.MODEL_VERSION, modelId)));
-            return new VersionSnapshot(header, version.versionNo(), content(header, version));
+            return new Located(header, version);
         });
+        return new VersionSnapshot(located.header(), located.version().versionNo(),
+                content(located.header(), located.version()));
     }
 
     /**
      * Содержимое версии: снимок из базы, а очищенный — из коммита версии. Вернуть
-     * неоткуда — {@code 410}, как и раньше.
+     * неоткуда — {@code 410}, как и раньше. Зовётся вне транзакции: восстановление
+     * из коммита ходит в репозиторий по сети.
      */
     private byte[] content(ModelHeader header, ModelVersion version) {
         if (version.hasSnapshot()) {
@@ -234,10 +255,12 @@ public final class VersionService {
             return 0;
         }
         int purged = 0;
+        Map<WorkspaceId, Boolean> reachable = new HashMap<>();
         for (ModelId modelId : kernel.unitOfWork.read(kernel.versions::modelsWithSnapshots)) {
+            WorkspaceId workspace = kernel.unitOfWork.read(() -> kernel.models.findHeader(modelId).orElseThrow())
+                    .workspaceId();
+            boolean gitBound = reachable.computeIfAbsent(workspace, gitBinding::boundAndReachable);
             purged += kernel.unitOfWork.write(() -> {
-                ModelHeader header = kernel.models.findHeader(modelId).orElseThrow();
-                boolean gitBound = gitBinding.boundAndReachable(header.workspaceId());
                 List<ModelVersion> purgeable = retention.purgeable(kernel.versions.list(modelId), kernel.now(),
                         gitBound);
                 purgeable.forEach(v -> kernel.versions.save(v.snapshotPurged(gitBound)));
