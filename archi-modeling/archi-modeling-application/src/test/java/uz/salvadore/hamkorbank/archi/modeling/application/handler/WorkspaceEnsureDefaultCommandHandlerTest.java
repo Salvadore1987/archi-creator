@@ -1,4 +1,4 @@
-package uz.salvadore.hamkorbank.archi.modeling.application.service;
+package uz.salvadore.hamkorbank.archi.modeling.application.handler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -13,6 +13,8 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EnsureDefaultWorkspaceCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.WorkspaceResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
@@ -20,28 +22,29 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.Workspace;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
-class WorkspaceServiceTest {
+class WorkspaceEnsureDefaultCommandHandlerTest {
 
     private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
     private static final Instant NOW = Instant.parse("2026-10-14T10:00:00Z");
 
     private final List<Workspace> stored = new ArrayList<>();
-    private final WorkspaceService service = new WorkspaceService(repository(), direct(),
-            catalog(), Clock.fixed(NOW, ZoneOffset.UTC));
+    private final WorkspaceEnsureDefaultCommandHandler handler = new WorkspaceEnsureDefaultCommandHandler(
+            repository(), direct(), catalog(), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @Test
     @DisplayName("Пустая база: имя первого пространства — текст ресурса, а не строка в конфигурации")
     void defaultNameComesFromCatalog() {
-        Workspace created = service.ensureDefault(null);
+        WorkspaceResponse created = handler.handle(new EnsureDefaultWorkspaceCommand(null));
 
         assertEquals("текст:" + ModelingMessages.DEFAULT_WORKSPACE_NAME, created.name());
-        assertEquals(List.of(created), stored);
+        assertEquals(1, stored.size());
+        assertEquals(created.id(), stored.getFirst().id().value());
     }
 
     @Test
     @DisplayName("Имя, заданное установкой, сильнее текста ресурса")
     void configuredNameWins() {
-        assertEquals("Хамкорбанк", service.ensureDefault("Хамкорбанк").name());
+        assertEquals("Хамкорбанк", handler.handle(new EnsureDefaultWorkspaceCommand("Хамкорбанк")).name());
     }
 
     @Test
@@ -50,7 +53,8 @@ class WorkspaceServiceTest {
         Workspace existing = Workspace.restore(WorkspaceId.of(IDS.generate()), "Архитектура", NOW);
         stored.add(existing);
 
-        assertEquals(existing, service.ensureDefault("Другое"));
+        assertEquals(new WorkspaceResponse(existing.id().value(), "Архитектура"),
+                handler.handle(new EnsureDefaultWorkspaceCommand("Другое")));
         assertEquals(List.of(existing), stored);
     }
 

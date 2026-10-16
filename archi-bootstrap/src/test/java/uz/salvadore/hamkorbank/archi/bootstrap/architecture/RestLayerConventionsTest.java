@@ -59,8 +59,9 @@ class RestLayerConventionsTest {
 
     /** Порт сценария, кроме каталога текстов: перевод сообщения — работа адаптера. */
     private static final DescribedPredicate<JavaClass> PORT_BUT_TEXTS = DescribedPredicate.describe(
-            "порт application-слоя, кроме TextCatalog",
-            c -> c.getPackageName().contains(".application.port") && !c.getSimpleName().equals("TextCatalog"));
+            "выходной порт application-слоя, кроме TextCatalog; входной порт port.in — сам сценарий",
+            c -> c.getPackageName().contains(".application.port") && !c.getPackageName().contains(".port.in")
+                    && !c.getSimpleName().equals("TextCatalog"));
 
     private static JavaClasses classes;
 

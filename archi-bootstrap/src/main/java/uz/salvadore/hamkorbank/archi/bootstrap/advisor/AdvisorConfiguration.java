@@ -26,8 +26,8 @@ import uz.salvadore.hamkorbank.archi.advisor.application.service.AdvisorService;
 import uz.salvadore.hamkorbank.archi.advisor.application.service.RateLimiter;
 import uz.salvadore.hamkorbank.archi.bootstrap.wiring.AfterCommitEventPublisher;
 import uz.salvadore.hamkorbank.archi.bootstrap.wiring.TransactionalUnitOfWork;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
 
 /**
  * Сценарии помощника — бинами. Мост к modeling — только чтение: сценарий запросов
@@ -60,7 +60,7 @@ public class AdvisorConfiguration {
     }
 
     @Bean
-    WorkspaceDirectory workspaceDirectory(WorkspaceService workspaces) {
+    WorkspaceDirectory workspaceDirectory(WorkspaceApplicationService workspaces) {
         return new ModelingWorkspaceDirectory(workspaces);
     }
 

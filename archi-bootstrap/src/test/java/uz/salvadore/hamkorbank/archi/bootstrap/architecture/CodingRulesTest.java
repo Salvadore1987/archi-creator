@@ -367,7 +367,7 @@ class CodingRulesTest {
      * и ждёт пагинации; искать одну запись среди всех нельзя.
      */
     private static final Set<String> UNBOUNDED_LIST_CALLERS = Set.of(
-            ROOT + ".modeling.application.service.WorkspaceService.list()");
+            ROOT + ".modeling.application.handler.WorkspaceListQueryHandler.handle()");
 
     @Test
     @DisplayName("findAll() порта без предела — только в списках, которые ждут пагинации")

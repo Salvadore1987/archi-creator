@@ -40,9 +40,9 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ResolveWorkspaceQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
-import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
  * Импорт и экспорт {@code .archimate}, строгость импорта пространства.
@@ -57,11 +57,11 @@ public class InterchangeController {
     private final ImportService imports;
     private final ExportService exports;
     private final ViewImageService images;
-    private final WorkspaceService workspaces;
+    private final WorkspaceApplicationService workspaces;
     private final TextCatalog text;
 
     public InterchangeController(ImportService imports, ExportService exports, ViewImageService images,
-                                 WorkspaceService workspaces, TextCatalog text) {
+                                 WorkspaceApplicationService workspaces, TextCatalog text) {
         this.text = text;
         this.images = images;
         this.imports = imports;
@@ -172,7 +172,7 @@ public class InterchangeController {
     }
 
     private UUID workspace(UUID requested) {
-        return workspaces.resolve(requested == null ? null : WorkspaceId.of(requested)).value();
+        return workspaces.resolveWorkspace(new ResolveWorkspaceQuery(requested)).workspaceId();
     }
 
     private static byte[] bytes(MultipartFile file) {

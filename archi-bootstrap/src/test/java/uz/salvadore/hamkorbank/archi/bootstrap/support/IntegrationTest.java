@@ -7,7 +7,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
@@ -43,10 +43,10 @@ public abstract class IntegrationTest {
     protected JdbcTemplate jdbc;
 
     @Autowired
-    protected WorkspaceService workspaces;
+    protected WorkspaceApplicationService workspaces;
 
     protected WorkspaceId workspace() {
-        return workspaces.list().getFirst().id();
+        return WorkspaceId.of(workspaces.listWorkspaces().getFirst().id());
     }
 
     protected <T> List<T> column(String sql, Class<T> type, Object... args) {

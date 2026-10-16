@@ -11,9 +11,11 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ResolveWorkspaceQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ResolveWorkspaceResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
 
 /**
  * Помощник не изменяет модель — и держится это не только формой типов результата,
@@ -29,7 +31,8 @@ class AdvisorArchitectureTest {
 
     /** Что мосту помощника можно взять из application-слоя modeling. */
     private static final Set<String> READ_ONLY_MODELING = Set.of(ModelQueryService.class.getName(),
-            ModelQueryService.OpenedModel.class.getName(), WorkspaceService.class.getName(),
+            ModelQueryService.OpenedModel.class.getName(), WorkspaceApplicationService.class.getName(),
+            ResolveWorkspaceQuery.class.getName(), ResolveWorkspaceResponse.class.getName(),
             ViewPlacements.class.getName());
 
     private static JavaClasses classes;

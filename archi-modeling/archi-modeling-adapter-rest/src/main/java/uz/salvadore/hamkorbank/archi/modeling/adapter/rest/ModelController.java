@@ -23,12 +23,13 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelPatch;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelSummary;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelTree;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.WorkspaceDto;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ResolveWorkspaceQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.AccessListService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.LockService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.PrincipalType;
@@ -52,11 +53,11 @@ public class ModelController {
     private final ModelLifecycleService lifecycle;
     private final LockService locks;
     private final AccessListService accessLists;
-    private final WorkspaceService workspaces;
+    private final WorkspaceApplicationService workspaces;
     private final TextCatalog text;
 
     public ModelController(ModelQueryService queries, ModelLifecycleService lifecycle, LockService locks,
-                           AccessListService accessLists, WorkspaceService workspaces, TextCatalog text) {
+                           AccessListService accessLists, WorkspaceApplicationService workspaces, TextCatalog text) {
         this.text = text;
         this.queries = queries;
         this.lifecycle = lifecycle;
@@ -68,7 +69,7 @@ public class ModelController {
     /** Рабочие пространства. */
     @GetMapping("/workspaces")
     public List<WorkspaceDto> workspaces() {
-        return workspaces.list().stream().map(w -> new WorkspaceDto(w.id().value(), w.name())).toList();
+        return workspaces.listWorkspaces().stream().map(w -> new WorkspaceDto(w.id(), w.name())).toList();
     }
 
     /** Без {@code workspaceId} — первое пространство: до мультиарендности оно одно. */
@@ -176,6 +177,6 @@ public class ModelController {
     }
 
     private WorkspaceId workspace(UUID requested) {
-        return workspaces.resolve(requested == null ? null : WorkspaceId.of(requested));
+        return WorkspaceId.of(workspaces.resolveWorkspace(new ResolveWorkspaceQuery(requested)).workspaceId());
     }
 }

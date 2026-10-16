@@ -22,6 +22,10 @@ import uz.salvadore.hamkorbank.archi.interchange.application.mapping.ArchimateSn
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EnsureDefaultWorkspaceCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceEnsureDefaultCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceListQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceResolveQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.DomainEventPublisher;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.IdempotencyRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelAccessListRepository;
@@ -33,6 +37,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.AccessListService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.LockService;
@@ -44,7 +49,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipSe
 import uz.salvadore.hamkorbank.archi.modeling.application.service.TreeService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiIdGenerator;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
 
@@ -159,9 +164,11 @@ public class ModelingConfiguration {
     }
 
     @Bean
-    WorkspaceService workspaceService(WorkspaceRepository workspaces, UnitOfWork unitOfWork, TextCatalog texts,
-                                      Clock clock) {
-        return new WorkspaceService(workspaces, unitOfWork, texts, clock);
+    WorkspaceApplicationService workspaceApplicationService(WorkspaceRepository workspaces, UnitOfWork unitOfWork,
+                                                            TextCatalog texts, Clock clock) {
+        return new WorkspaceApplicationServiceImpl(new WorkspaceListQueryHandler(workspaces, unitOfWork),
+                new WorkspaceResolveQueryHandler(workspaces, unitOfWork),
+                new WorkspaceEnsureDefaultCommandHandler(workspaces, unitOfWork, texts, clock));
     }
 
     /**
@@ -170,12 +177,14 @@ public class ModelingConfiguration {
      * локаль сервера.
      */
     @Bean
-    ApplicationRunner defaultWorkspace(WorkspaceService workspaces, ModelingSettings settings, WebProperties web) {
+    ApplicationRunner defaultWorkspace(WorkspaceApplicationService workspaces, ModelingSettings settings,
+                                       WebProperties web) {
         return args -> {
             LocaleContextHolder.setLocale(Optional.ofNullable(web.getLocale()).orElse(Locale.ROOT));
             try {
-                workspaces.ensureDefault(Optional.ofNullable(settings.defaultWorkspaceName())
-                        .filter(name -> !name.isBlank()).orElse(null));
+                workspaces.ensureDefaultWorkspace(new EnsureDefaultWorkspaceCommand(
+                        Optional.ofNullable(settings.defaultWorkspaceName()).filter(name -> !name.isBlank())
+                                .orElse(null)));
             } finally {
                 LocaleContextHolder.resetLocaleContext();
             }
