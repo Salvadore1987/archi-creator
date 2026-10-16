@@ -30,12 +30,13 @@ aggregates:
       - { name: workspaceId, type: WorkspaceId,      constraints: [not_null, immutable] }
       - { name: modelId,     type: ModelId,          constraints: [not_null, immutable] }
       - { name: viewId,      type: Optional<ViewId>, constraints: [optional], note: "для DOCUMENT по одному представлению" }
-      - { name: elementRef,  type: Optional<ElementRef>, constraints: [optional, not_null_when: "function = EXPLAIN"] }
+      - { name: elementId,   type: Optional<String>, constraints: [optional, archi_id, not_null_when: "function = EXPLAIN"], note: "archiId элемента; вид — как у ElementRef, имя не хранится" }
       - { name: function,    type: AdvisorFunction,  constraints: [not_null, immutable] }
-      - { name: prompt,      type: Optional<String>, constraints: [optional, max: 4000, not_null_when: "function = PLAN"] }
+      - { name: fingerprint, type: String,           constraints: [not_null, immutable], note: "SHA-256 параметров запроса (функция, модель, область, описание плана): отличает повтор от конфликта ключа. Текст описания плана (до 4000 символов, обязателен у PLAN) не хранится — только отпечаток (INV-ADV-009)" }
       - { name: idempotencyKey, type: String,        constraints: [not_null, immutable, max: 64] }
       - { name: status,      type: SessionStatus,    constraints: [not_null], default: REQUESTED }
       - { name: contextSize, type: Optional<Int>,    constraints: [optional, non_negative], note: "размер ModelContext в токенах" }
+      - { name: contextTruncated, type: Boolean,     constraints: [not_null], default: false, note: "контекст пришлось усечь (INV-ADV-007)" }
       - { name: usage,       type: TokenUsage,       constraints: [not_null] }
       - { name: findings,    type: List<Finding>,    constraints: [not_null], note: "непуст только у функции REVIEW" }
       - { name: plan,        type: Optional<ModelPlan>,    constraints: [optional, not_null_when: "function = PLAN and status = COMPLETED"] }
@@ -45,6 +46,7 @@ aggregates:
       - { name: requestedAt, type: Timestamp,        constraints: [not_null, immutable] }
       - { name: firstTokenAt, type: Optional<Timestamp>, constraints: [optional], note: "для контроля NFR-04" }
       - { name: finishedAt,  type: Optional<Timestamp>, constraints: [optional, not_null_when_status_in: [COMPLETED, FAILED, REJECTED]] }
+      - { name: auditEntry,  type: Optional<AuditEntry>, constraints: [optional, not_null_when_status_in: [COMPLETED, FAILED, REJECTED]] }
 
     state_machine:
       initial: REQUESTED
@@ -80,7 +82,7 @@ aggregates:
       - { name: consumedTokens, type: Long,       constraints: [not_null, non_negative], default: 0 }
       - { name: warningThresholdPercent, type: Int, constraints: [not_null, min: 1, max: 99], default: 80 }
       - { name: status,      type: BudgetStatus,  constraints: [not_null], default: OK }
-      - { name: advisorEnabled, type: Boolean,    constraints: [not_null], default: true }
+      - { name: advisorEnabled, type: Boolean,    constraints: [not_null], default: false, note: "выключатель пространства; включает администратор" }
       - { name: version,     type: Long,          constraints: [optimistic_lock] }
 
     state_machine:
@@ -144,7 +146,8 @@ entities:
       - { name: actor,      type: String,       constraints: [not_null, immutable], note: "subject из JWT" }
       - { name: function,   type: AdvisorFunction, constraints: [not_null, immutable] }
       - { name: usage,      type: TokenUsage,   constraints: [not_null] }
-      - { name: outcome,    type: SessionStatus, constraints: [not_null] }
+      - { name: outcome,    type: SessionStatus, constraints: [not_null, terminal] }
+      - { name: rejectionReason, type: Optional<RejectionReason>, constraints: [optional, not_null_when: "outcome = REJECTED"] }
       - { name: createdAt,  type: Timestamp,    constraints: [not_null, immutable] }
 
 # ───────────────────────────────────────────────────────────────────
