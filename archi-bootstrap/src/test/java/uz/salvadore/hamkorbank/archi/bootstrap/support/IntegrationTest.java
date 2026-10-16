@@ -36,6 +36,7 @@ public abstract class IntegrationTest {
         registry.add("spring.datasource.password", Containers.POSTGRES::getPassword);
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> "");
         registry.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", () -> "http://localhost:1/jwks");
+        registry.add("archi.git.allow-local-repositories", () -> "true");
     }
 
     @Autowired

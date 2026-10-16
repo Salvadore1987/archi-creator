@@ -208,6 +208,8 @@ public final class InterchangeMessages {
     public static final String GIT_UNREACHABLE = "interchange.git.unreachable";
     /** Адрес репозитория в привязке недопустим. */
     public static final String GIT_URL_INVALID = "interchange.git.url-invalid";
+    /** Адрес репозитория ведёт в файловую систему сервера, а это не разрешено настройкой. */
+    public static final String GIT_URL_LOCAL = "interchange.git.url-local";
     /** Потеря в картинке: конец связи не найден на представлении, связь не нарисована. */
     public static final String IMAGE_LOSS_EDGE = "interchange.image.loss-edge";
     /** Потеря в картинке: шрифта объекта нет на сервере, подпись напечатана шрифтом по умолчанию. */

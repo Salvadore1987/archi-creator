@@ -30,13 +30,21 @@ public final class GitBindingService {
     private final UnitOfWork unitOfWork;
     private final InterchangeMetrics metrics;
     private final Clock clock;
+    private final boolean localRepositories;
 
+    /**
+     * Сценарии привязки.
+     *
+     * @param localRepositories можно ли привязать репозиторий в файловой системе сервера ({@code file://});
+     *                          в работе — нет: администратор получил бы доступ к любому каталогу сервера
+     */
     public GitBindingService(GitBindingRepository bindings, UnitOfWork unitOfWork, InterchangeMetrics metrics,
-                             Clock clock) {
+                             Clock clock, boolean localRepositories) {
         this.bindings = bindings;
         this.unitOfWork = unitOfWork;
         this.metrics = metrics;
         this.clock = clock;
+        this.localRepositories = localRepositories;
     }
 
     /** Привязка пространства к репозиторию; нет привязки — «не найдено». */
@@ -62,6 +70,10 @@ public final class GitBindingService {
             } catch (InvalidValueException e) {
                 throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE, e.reason(),
                         Map.of());
+            }
+            if (configured.local() && !localRepositories) {
+                throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE,
+                        Message.of(InterchangeMessages.GIT_URL_LOCAL, configured.repoUrl()), Map.of());
             }
             return unitOfWork.write(() -> {
                 if (!bindings.workspaceExists(workspace)) {

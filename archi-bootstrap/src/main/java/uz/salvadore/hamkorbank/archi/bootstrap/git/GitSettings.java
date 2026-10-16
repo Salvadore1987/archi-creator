@@ -17,6 +17,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param timeout           предел одного сетевого обращения к репозиторию
  * @param retryBase         первая пауза после отказа сети; дальше — вдвое
  * @param retryMax          предел паузы
+ * @param allowLocalRepositories можно ли привязать репозиторий в файловой системе сервера ({@code file://}) —
+ *                          только для тестов
  */
 @ConfigurationProperties("archi.git")
 public record GitSettings(Path cacheDir,
@@ -27,5 +29,6 @@ public record GitSettings(Path cacheDir,
                           @DefaultValue("10s") Duration pollInterval,
                           @DefaultValue("30s") Duration timeout,
                           @DefaultValue("5s") Duration retryBase,
-                          @DefaultValue("10m") Duration retryMax) {
+                          @DefaultValue("10m") Duration retryMax,
+                          @DefaultValue("false") boolean allowLocalRepositories) {
 }

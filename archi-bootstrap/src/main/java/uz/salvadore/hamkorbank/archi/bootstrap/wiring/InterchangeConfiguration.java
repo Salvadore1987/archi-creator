@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import uz.salvadore.hamkorbank.archi.bootstrap.export.BatikRasterizer;
 import uz.salvadore.hamkorbank.archi.bootstrap.export.InterTypesetter;
 import uz.salvadore.hamkorbank.archi.bootstrap.export.SharedNotation;
+import uz.salvadore.hamkorbank.archi.bootstrap.git.GitSettings;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ViewImageService;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingService;
@@ -59,8 +60,8 @@ public class InterchangeConfiguration {
 
     @Bean
     GitBindingService gitBindingService(GitBindingRepository bindings, UnitOfWork unitOfWork,
-                                        InterchangeMetrics metrics, Clock clock) {
-        return new GitBindingService(bindings, unitOfWork, metrics, clock);
+                                        InterchangeMetrics metrics, Clock clock, GitSettings settings) {
+        return new GitBindingService(bindings, unitOfWork, metrics, clock, settings.allowLocalRepositories());
     }
 
     /** Схема OEF компилируется один раз при старте: она неизменяема и потокобезопасна. */

@@ -89,6 +89,11 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
                 tokenRef, GitBindingStatus.CONFIGURED, null, null, authors);
     }
 
+    /** Репозиторий в файловой системе сервера, а не по сети: адрес {@code file://}. */
+    public boolean local() {
+        return repoUrl.startsWith("file:");
+    }
+
     /** Можно ли публиковать: снятая привязка — нет. */
     public boolean writable() {
         return status != GitBindingStatus.DISABLED;
