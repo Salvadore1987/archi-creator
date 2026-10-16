@@ -2,32 +2,54 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 
 import java.util.Arrays;
 import java.util.Objects;
-import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
-import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 
-/** Готовый файл выгрузки с отпечатком содержимого. */
-public record Artifact(byte[] bytes, String mediaType, String fileName, ContentHash hash) {
+/**
+ * Готовый файл выгрузки с отпечатком содержимого. Отпечаток считается по самому содержимому
+ * при создании, а не принимается на веру, — поэтому собрать файл с чужим отпечатком нельзя.
+ */
+public final class Artifact {
 
-    public Artifact {
-        Objects.requireNonNull(bytes, "bytes");
-        Objects.requireNonNull(mediaType, "mediaType");
-        Objects.requireNonNull(fileName, "fileName");
-        Objects.requireNonNull(hash, "hash");
-        bytes = bytes.clone();
-        if (!hash.equals(ContentHash.of(bytes))) {
-            throw new InvalidValueException(InterchangeMessages.ARTIFACT_HASH_MISMATCH);
-        }
+    private final byte[] bytes;
+    private final String mediaType;
+    private final String fileName;
+    private final ContentHash hash;
+
+    private Artifact(byte[] bytes, String mediaType, String fileName) {
+        this.bytes = Objects.requireNonNull(bytes, "bytes").clone();
+        this.mediaType = Objects.requireNonNull(mediaType, "mediaType");
+        this.fileName = Objects.requireNonNull(fileName, "fileName");
+        this.hash = ContentHash.of(this.bytes);
     }
 
-    /** Отпечаток считается по содержимому, а не принимается на веру. */
+    /** Файл из содержимого; массив копируется. */
     public static Artifact of(byte[] bytes, String mediaType, String fileName) {
-        return new Artifact(bytes, mediaType, fileName, ContentHash.of(bytes));
+        return new Artifact(bytes, mediaType, fileName);
     }
 
-    @Override
+    /** Содержимое — копией: файл неизменяем. */
     public byte[] bytes() {
         return bytes.clone();
+    }
+
+    /** Тип содержимого: {@code application/xml}, {@code application/zip}, … */
+    public String mediaType() {
+        return mediaType;
+    }
+
+    /** Имя файла для ответа. */
+    public String fileName() {
+        return fileName;
+    }
+
+    /** Отпечаток содержимого. */
+    public ContentHash hash() {
+        return hash;
+    }
+
+    /** Размер содержимого в байтах — без копирования массива. */
+    public int size() {
+        return bytes.length;
     }
 
     @Override
@@ -44,10 +66,5 @@ public record Artifact(byte[] bytes, String mediaType, String fileName, ContentH
     @Override
     public String toString() {
         return "Artifact[" + fileName + ", " + mediaType + ", " + bytes.length + " B, " + hash + "]";
-    }
-
-    /** Размер содержимого в байтах — без копирования массива. */
-    public int size() {
-        return bytes.length;
     }
 }

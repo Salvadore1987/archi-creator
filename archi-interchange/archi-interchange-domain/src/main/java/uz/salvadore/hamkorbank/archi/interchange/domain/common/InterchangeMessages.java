@@ -126,8 +126,6 @@ public final class InterchangeMessages {
     public static final String TARGET_CONNECTIONS_MISSING = "interchange.document.target-connections-missing";
     /** В файле встретился текст там, где значения быть не может. */
     public static final String TEXT_OUTSIDE_VALUE = "interchange.document.text-outside-value";
-    /** Отпечаток артефакта выгрузки не соответствует его содержимому. */
-    public static final String ARTIFACT_HASH_MISMATCH = "interchange.export.artifact-hash-mismatch";
     /** Выгрузка в запрошенный формат пока не поддерживается. */
     public static final String FORMAT_NOT_AVAILABLE = "interchange.export.format-not-available";
     /** Отпечаток содержимого модели в запросе недопустим по виду. */

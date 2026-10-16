@@ -13,8 +13,8 @@ import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
+import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ExportJobId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.LossEntryId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
@@ -91,8 +91,12 @@ class ExportJobTest {
     @Test
     @DisplayName("отпечаток артефакта считается по содержимому")
     void artifactHashMatchesContent() {
-        assertThrows(InvalidValueException.class, () -> new Artifact(new byte[] {1}, "application/xml", "a",
-                Artifact.of(new byte[] {2}, "application/xml", "a").hash()));
+        byte[] content = {1, 2, 3};
+        Artifact artifact = Artifact.of(content, "application/xml", "a");
+        content[0] = 9;
+
+        assertEquals(ContentHash.of(new byte[] {1, 2, 3}), artifact.hash());
+        assertEquals(3, artifact.size());
     }
 
     private static ExportJob job(ExportFormat format, long version) {

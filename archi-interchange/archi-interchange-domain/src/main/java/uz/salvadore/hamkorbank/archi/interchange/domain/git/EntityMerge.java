@@ -255,6 +255,8 @@ public final class EntityMerge {
         private final Map<String, Side> resolutions;
         private final Map<ArchiId, Merged> result = new LinkedHashMap<>();
         private final List<Conflict> conflicts = new ArrayList<>();
+        /** Контейнер → объекты в нём, в порядке результата; корень модели — ключ {@code null}. */
+        private final Map<ArchiId, List<ArchiId>> children = new HashMap<>();
         private final List<Cascade> cascade = new ArrayList<>();
 
         Merger(ModelDocument base, ModelDocument ours, ModelDocument theirs, Map<String, Side> resolutions) {
@@ -277,6 +279,8 @@ public final class EntityMerge {
             cascadeFolders();
             cascadeRelationships();
             Set<ArchiId> present = result.keySet();
+            result.values().stream().filter(c -> c.kind() != Kind.MODEL)
+                    .forEach(c -> children.computeIfAbsent(c.parent(), parent -> new ArrayList<>()).add(c.id()));
             Merged model = result.get(ours.document.archiId());
             List<DocumentContent> content = content(model, null, present);
             ModelDocument document = new ModelDocument(attributes(model), content);
@@ -533,8 +537,7 @@ public final class EntityMerge {
                         .forEach(node -> diagram.put(node.archiId(), node));
                 diagram.keySet().forEach(id -> keys.add(new NodeKey(id)));
             } else {
-                result.values().stream().filter(c -> c.kind() != Kind.MODEL && Objects.equals(c.parent(), container))
-                        .forEach(c -> keys.add(new NodeKey(c.id())));
+                children.getOrDefault(container, List.of()).forEach(id -> keys.add(new NodeKey(id)));
             }
             Map<String, List<DocumentContent>> fieldItems = new LinkedHashMap<>();
             for (Obj side : existing(m)) {
@@ -677,19 +680,20 @@ public final class EntityMerge {
             other = theirs;
         }
         List<Key> merged = new ArrayList<>(primary.stream().filter(keep::contains).distinct().toList());
+        Set<Key> placed = new HashSet<>(merged);
         for (List<Key> source : List.of(other, ours, theirs, base)) {
             int anchor = -1;
             for (Key key : source) {
-                int at = merged.indexOf(key);
-                if (at >= 0) {
-                    anchor = Math.max(anchor, at);
+                if (placed.contains(key)) {
+                    anchor = Math.max(anchor, merged.indexOf(key));
                 } else if (keep.contains(key)) {
                     merged.add(anchor + 1, key);
+                    placed.add(key);
                     anchor++;
                 }
             }
         }
-        keep.stream().filter(k -> !merged.contains(k)).forEach(merged::add);
+        keep.stream().filter(k -> !placed.contains(k)).forEach(merged::add);
         return merged;
     }
 
