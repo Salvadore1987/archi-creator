@@ -305,6 +305,26 @@ class CodingRulesTest {
                 .check(classes);
     }
 
+    @Test
+    @DisplayName("Загрузка restore — только для хранилища: новый объект собирает бизнес-фабрика")
+    void restoreIsForStorageOnly() {
+        codeUnits().that().areDeclaredInClassesThat().resideOutsideOfPackages("..adapter.persistence..", "..domain..")
+                .should(new ArchCondition<>("not call restore of domain types") {
+                    @Override
+                    public void check(JavaCodeUnit unit, ConditionEvents events) {
+                        unit.getMethodCallsFromSelf().stream()
+                                .filter(call -> call.getName().equals("restore")
+                                        && call.getTarget().resolveMember()
+                                        .map(m -> m.getModifiers().contains(JavaModifier.STATIC)).orElse(false)
+                                        && call.getTargetOwner().getPackageName().contains(".domain."))
+                                .forEach(call -> events.add(SimpleConditionEvent.violated(unit,
+                                        unit.getFullName() + " calls " + call.getTarget().getFullName())));
+                    }
+                })
+                .because("restore собирает сохранённое как есть, без проверок переходов; новое — через фабрику")
+                .check(classes);
+    }
+
     private static ArchCondition<JavaCodeUnit> notConstructJdkFailuresOutside(Set<String> allowed) {
         return new ArchCondition<>("not construct IllegalStateException or IllegalArgumentException") {
             @Override

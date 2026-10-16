@@ -54,6 +54,12 @@ public final class IdempotencyRecord extends AggregateRoot<IdempotencyRecord.Key
         this.createdAt = createdAt;
     }
 
+    /** Ключ, только что занятый выполненной командой: её отпечаток и ссылка на результат. */
+    public static IdempotencyRecord record(String scope, String actor, String key, String fingerprint,
+                                           String resultRef, Instant now) {
+        return new IdempotencyRecord(scope, actor, key, fingerprint, resultRef, now);
+    }
+
     /** Сборка из сохранённых значений — для хранилища; значения проверяются, как при создании. */
     public static IdempotencyRecord restore(String scope, String actor, String key, String fingerprint,
                                             String resultRef, Instant createdAt) {

@@ -30,6 +30,11 @@ public final class Workspace extends AggregateRoot<WorkspaceId> {
         this.createdAt = createdAt;
     }
 
+    /** Новое рабочее пространство. */
+    public static Workspace create(WorkspaceId id, String name, Instant now) {
+        return new Workspace(id, name, now);
+    }
+
     /** Сборка из сохранённых значений — для хранилища; значения проверяются, как при создании. */
     public static Workspace restore(WorkspaceId id, String name, Instant createdAt) {
         return new Workspace(id, name, createdAt);

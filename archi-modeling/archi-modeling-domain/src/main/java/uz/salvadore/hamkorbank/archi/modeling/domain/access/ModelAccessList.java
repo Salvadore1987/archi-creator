@@ -37,6 +37,16 @@ public final class ModelAccessList extends AggregateRoot<ModelId> {
         return new ModelAccessList(modelId, entries);
     }
 
+    /**
+     * Новый список доступа модели взамен прежнего — целиком: команда описывает итог, а не правку.
+     * Задаёт его только автор модели или {@code ADMIN}.
+     */
+    public static ModelAccessList replace(EditorIdentity editor, String modelCreatedBy, ModelId modelId,
+                                          List<AclEntry> entries) {
+        requireManager(editor, modelCreatedBy);
+        return new ModelAccessList(modelId, entries);
+    }
+
     /** Пустой список: модель открыта всем по ролям. */
     public static ModelAccessList open(ModelId modelId) {
         return new ModelAccessList(modelId, List.of());

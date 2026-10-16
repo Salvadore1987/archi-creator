@@ -30,8 +30,7 @@ public final class AccessListService {
     public ModelAccessList replace(EditorIdentity actor, ModelId modelId, List<AclEntry> entries) {
         return kernel.run(Operation.MANAGE_ACCESS, actor, () -> kernel.unitOfWork.write(() -> {
             ModelHeader header = kernel.visibleHeader(modelId, actor, AclAccess.READ);
-            ModelAccessList.requireManager(actor, header.createdBy());
-            ModelAccessList list = ModelAccessList.restore(modelId, entries);
+            ModelAccessList list = ModelAccessList.replace(actor, header.createdBy(), modelId, entries);
             kernel.accessLists.save(list);
             return list;
         }));

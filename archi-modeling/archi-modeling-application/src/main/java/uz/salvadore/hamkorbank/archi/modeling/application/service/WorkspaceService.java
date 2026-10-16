@@ -54,7 +54,7 @@ public final class WorkspaceService {
     public Workspace ensureDefault(String name) {
         return unitOfWork.write(() -> workspaces.first().orElseGet(() -> {
             String title = name != null ? name : texts.text(Message.of(ModelingMessages.DEFAULT_WORKSPACE_NAME));
-            Workspace workspace = Workspace.restore(WorkspaceId.next(new UuidV7(clock)), title, clock.instant());
+            Workspace workspace = Workspace.create(WorkspaceId.next(new UuidV7(clock)), title, clock.instant());
             workspaces.insert(workspace);
             return workspace;
         }));
