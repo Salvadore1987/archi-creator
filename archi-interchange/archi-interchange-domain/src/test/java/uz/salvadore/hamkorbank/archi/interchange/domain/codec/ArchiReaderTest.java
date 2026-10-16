@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attribute;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentContent;
@@ -188,6 +190,18 @@ class ArchiReaderTest {
                 () -> Xml.read(Xml.model(folders.toString())));
 
         assertEquals(DocumentDefect.NESTING_TOO_DEEP, e.defects().getFirst().code());
+    }
+
+    @Test
+    @DisplayName("Испорченный XML — отказ с местом ошибки, без текста парсера: он на языке сервера и о его устройстве")
+    void malformedXmlKeepsParserTextOut() {
+        CorruptDocumentException e = assertThrows(CorruptDocumentException.class,
+                () -> Xml.read(Xml.model("<folder name=\"a\" name=\"b\" id=\"id-f\"/>")));
+
+        DocumentDefect defect = e.defects().getFirst();
+        assertEquals(DocumentDefect.MALFORMED_XML, defect.code());
+        assertEquals(Message.of(InterchangeMessages.XML_UNREADABLE_NO_DETAIL), defect.message());
+        assertTrue(defect.line() != null);
     }
 
     @Test

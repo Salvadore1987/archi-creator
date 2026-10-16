@@ -311,8 +311,6 @@ public final class InterchangeMessages {
     public static final String WORKSPACE_NOT_FOUND = "interchange.workspace.not-found";
     /** У модели не объявлено пространство имён, нужное писателю. */
     public static final String NAMESPACE_MISSING = "interchange.writer.namespace-missing";
-    /** Файл не разбирается как XML; в тексте — подробность разборщика. */
-    public static final String XML_UNREADABLE = "interchange.xml.unreadable";
     /** Файл не разбирается как XML, а подробности разборщик не дал. */
     public static final String XML_UNREADABLE_NO_DETAIL = "interchange.xml.unreadable-no-detail";
 

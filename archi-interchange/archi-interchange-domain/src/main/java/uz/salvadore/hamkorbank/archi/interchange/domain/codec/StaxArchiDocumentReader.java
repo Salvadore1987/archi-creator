@@ -65,9 +65,6 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
      */
     static final int MAX_DEPTH = 64;
 
-    /** После этой метки парсер StAX пишет суть ошибки, до неё — служебное место. */
-    private static final String PARSER_MESSAGE_MARKER = "Message: ";
-
     @Override
     public ModelDocument read(InputStream in) {
         Objects.requireNonNull(in, "in");
@@ -92,14 +89,13 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         return factory;
     }
 
+    /**
+     * Дефект испорченного XML — с местом ошибки, но без текста парсера: тот на языке JVM сервера
+     * и говорит об устройстве разбора, а не о файле.
+     */
     private static DocumentDefect malformed(XMLStreamException e) {
         Location location = e.getLocation();
-        Optional<String> parserText = Optional.ofNullable(e.getMessage()).map(text -> {
-            int marker = text.indexOf(PARSER_MESSAGE_MARKER);
-            return marker >= 0 ? text.substring(marker + PARSER_MESSAGE_MARKER.length()) : text;
-        }).map(String::strip);
-        Message message = parserText.map(text -> Message.of(InterchangeMessages.XML_UNREADABLE, text))
-                .orElseGet(() -> Message.of(InterchangeMessages.XML_UNREADABLE_NO_DETAIL));
+        Message message = Message.of(InterchangeMessages.XML_UNREADABLE_NO_DETAIL);
         Integer line = location == null || location.getLineNumber() < 0 ? null : location.getLineNumber();
         Integer column = location == null || location.getColumnNumber() < 0 ? null : location.getColumnNumber();
         return new DocumentDefect(DocumentDefect.MALFORMED_XML, message, null, line, column);
