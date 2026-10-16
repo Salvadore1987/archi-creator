@@ -31,7 +31,7 @@ public final class AccessListService {
         return kernel.run(Operation.MANAGE_ACCESS, actor, () -> kernel.unitOfWork.write(() -> {
             ModelHeader header = kernel.visibleHeader(modelId, actor, AclAccess.READ);
             ModelAccessList.requireManager(actor, header.createdBy());
-            ModelAccessList list = new ModelAccessList(modelId, entries);
+            ModelAccessList list = ModelAccessList.restore(modelId, entries);
             kernel.accessLists.save(list);
             return list;
         }));

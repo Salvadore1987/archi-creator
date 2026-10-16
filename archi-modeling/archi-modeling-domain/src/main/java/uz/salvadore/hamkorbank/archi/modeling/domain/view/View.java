@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
@@ -44,9 +45,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutStrategy;
  * и заметки элемента нет; ребро соединяет узлы или рёбра этого же представления, а его связь
  * принадлежит той же модели. Геометрия — относительно родителя.
  */
-public final class View {
+public final class View extends AggregateRoot<ViewId> {
 
-    private final ViewId id;
     private final ModelId modelId;
     private FolderId folderId;
     private final ArchiId archiId;
@@ -66,7 +66,7 @@ public final class View {
     private boolean headerChanged;
 
     private View(ViewHeader header, boolean fresh) {
-        this.id = header.id();
+        super(header.id());
         this.modelId = header.modelId();
         this.folderId = header.folderId();
         this.archiId = header.archiId();
@@ -512,14 +512,10 @@ public final class View {
 
     /** Собственные поля представления для записи в хранилище. */
     public ViewHeader header() {
-        return new ViewHeader(id, modelId, folderId, archiId, archiType, name, documentation, viewpoint, properties,
+        return new ViewHeader(id(), modelId, folderId, archiId, archiType, name, documentation, viewpoint, properties,
                 sortOrder, rawXml, version);
     }
 
-    /** Внутренний ключ представления. */
-    public ViewId id() {
-        return id;
-    }
 
     /** Модель, которой принадлежит представление. */
     public ModelId modelId() {

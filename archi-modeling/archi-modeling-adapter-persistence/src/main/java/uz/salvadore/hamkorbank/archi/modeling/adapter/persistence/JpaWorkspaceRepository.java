@@ -47,6 +47,6 @@ public class JpaWorkspaceRepository implements WorkspaceRepository {
     }
 
     private static Workspace toDomain(WorkspaceEntity e) {
-        return new Workspace(WorkspaceId.of(e.id), e.name, e.createdAt);
+        return Workspace.restore(WorkspaceId.of(e.id), e.name, e.createdAt);
     }
 }

@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
@@ -17,13 +18,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
  * Запись истории — агрегат. Неизменяема, кроме метки и очистки снимка.
- *
- * @param snapshot    сжатый {@code .archimate}; пусто — очищен по ретеншену
- * @param contentHash SHA-256 несжатого снимка: переживает очистку и отвечает на «есть ли изменения»
  */
-public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String author, Optional<String> comment,
-                           Optional<String> label, Instant createdAt, Optional<byte[]> snapshot, String contentHash,
-                           Optional<String> gitSha) {
+public final class ModelVersion extends AggregateRoot<VersionId> {
 
     /** Код отказа при попытке изменить версию сверх метки и очистки снимка. */
     public static final String INVARIANT = ModelingCodes.VERSION;
@@ -34,7 +30,19 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
     private static final Pattern SHA256 = Pattern.compile("^[0-9a-f]{64}$");
     private static final Pattern GIT_SHA = Pattern.compile("^[0-9a-f]{40}$");
 
-    public ModelVersion {
+    private final ModelId modelId;
+    private final long versionNo;
+    private final String author;
+    private final Optional<String> comment;
+    private final Optional<String> label;
+    private final Instant createdAt;
+    private final Optional<byte[]> snapshot;
+    private final String contentHash;
+    private final Optional<String> gitSha;
+
+    private ModelVersion(VersionId id, ModelId modelId, long versionNo, String author, Optional<String> comment,
+                         Optional<String> label, Instant createdAt, Optional<byte[]> snapshot, String contentHash,
+                         Optional<String> gitSha) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(author, "author");
@@ -57,6 +65,24 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
             }
         });
         snapshot = snapshot.map(bytes -> Arrays.copyOf(bytes, bytes.length));
+        super(id);
+        this.modelId = modelId;
+        this.versionNo = versionNo;
+        this.author = author;
+        this.comment = comment;
+        this.label = label;
+        this.createdAt = createdAt;
+        this.snapshot = snapshot;
+        this.contentHash = contentHash;
+        this.gitSha = gitSha;
+    }
+
+    /** Сборка из сохранённых значений — для хранилища; значения проверяются, как при создании. */
+    public static ModelVersion restore(VersionId id, ModelId modelId, long versionNo, String author,
+                                       Optional<String> comment, Optional<String> label, Instant createdAt,
+                                       Optional<byte[]> snapshot, String contentHash, Optional<String> gitSha) {
+        return new ModelVersion(id, modelId, versionNo, author, comment, label, createdAt, snapshot, contentHash,
+                                gitSha);
     }
 
     /**
@@ -86,7 +112,7 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
     public ModelVersion labelled(Optional<String> newLabel) {
         Optional<String> normalized = newLabel.map(String::strip).filter(l -> !l.isEmpty());
         normalized.ifPresent(l -> requireLength(l, LABEL_MAX, ModelingMessages.FIELD_LABEL));
-        return new ModelVersion(id, modelId, versionNo, author, comment, normalized, createdAt, snapshot, contentHash,
+        return new ModelVersion(id(), modelId, versionNo, author, comment, normalized, createdAt, snapshot, contentHash,
                 gitSha);
     }
 
@@ -103,7 +129,7 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
             throw new ModelingDomainException(INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.SNAPSHOT_LABELLED, versionNo));
         }
-        return new ModelVersion(id, modelId, versionNo, author, comment, label, createdAt, Optional.empty(),
+        return new ModelVersion(id(), modelId, versionNo, author, comment, label, createdAt, Optional.empty(),
                 contentHash, gitSha);
     }
 
@@ -117,12 +143,11 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
             throw new ModelingDomainException(INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.VERSION_ALREADY_PUBLISHED, versionNo, gitSha.get()));
         }
-        return new ModelVersion(id, modelId, versionNo, author, comment, label, createdAt, snapshot, contentHash,
+        return new ModelVersion(id(), modelId, versionNo, author, comment, label, createdAt, snapshot, contentHash,
                 Optional.of(sha));
     }
 
     /** Сжатый снимок — копией: массив версии не меняется снаружи; пусто — очищен по ретеншену. */
-    @Override
     public Optional<byte[]> snapshot() {
         return snapshot.map(bytes -> Arrays.copyOf(bytes, bytes.length));
     }
@@ -145,16 +170,6 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
         }
     }
 
-    @Override
-    public boolean equals(Object other) {
-        return other instanceof ModelVersion v && v.id.equals(id);
-    }
-
-    @Override
-    public int hashCode() {
-        return id.hashCode();
-    }
-
     /** Зафиксированная версия и событие о ней: событие публикуется после записи версии. */
     public record Committed(ModelVersion version, ModelVersionCommittedEvent event) {
 
@@ -166,5 +181,45 @@ public record ModelVersion(VersionId id, ModelId modelId, long versionNo, String
 
     /** Размер содержимого версии, который несёт событие о фиксации. */
     public record ModelSize(int elements, int relationships) {
+    }
+
+    /** Модель, которой принадлежит версия. */
+    public ModelId modelId() {
+        return modelId;
+    }
+
+    /** Номер версии: следующий за последним, с единицы. */
+    public long versionNo() {
+        return versionNo;
+    }
+
+    /** Субъект, сохранивший версию. */
+    public String author() {
+        return author;
+    }
+
+    /** Комментарий к версии; пусто — не задан. */
+    public Optional<String> comment() {
+        return comment;
+    }
+
+    /** Метка версии; пусто — не поставлена. */
+    public Optional<String> label() {
+        return label;
+    }
+
+    /** Момент фиксации версии. */
+    public Instant createdAt() {
+        return createdAt;
+    }
+
+    /** SHA-256 несжатого снимка: переживает очистку и отвечает на «есть ли изменения». */
+    public String contentHash() {
+        return contentHash;
+    }
+
+    /** Коммит Git, которым опубликована версия; пусто — ещё не опубликована. */
+    public Optional<String> gitSha() {
+        return gitSha;
     }
 }

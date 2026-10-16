@@ -53,7 +53,7 @@ class IdempotentCommandTest {
             case IdempotentCommand.Execute execute -> {
                 long versionNo = versions.size() + 1L;
                 versions.add(versionNo);
-                records.put(key, new IdempotencyRecord("SaveModel", "architect-1", key, fingerprint,
+                records.put(key, IdempotencyRecord.restore("SaveModel", "architect-1", key, fingerprint,
                         String.valueOf(versionNo), Instant.EPOCH));
                 yield String.valueOf(versionNo);
             }

@@ -28,7 +28,7 @@ public class JpaModelLockRepository implements ModelLockRepository {
     @Override
     public Optional<ModelLock> find(ModelId modelId) {
         return Optional.ofNullable(em.find(ModelLockEntity.class, modelId.value()))
-                .map(e -> new ModelLock(ModelId.of(e.modelId), e.owner, e.acquiredAt, e.expiresAt));
+                .map(e -> ModelLock.restore(ModelId.of(e.modelId), e.owner, e.acquiredAt, e.expiresAt));
     }
 
     @Override

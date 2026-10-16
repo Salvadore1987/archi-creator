@@ -30,7 +30,7 @@ public class JpaIdempotencyRepository implements IdempotencyRepository {
         id.actor = actor;
         id.key = key;
         return Optional.ofNullable(em.find(IdempotencyEntity.class, id))
-                .map(e -> new IdempotencyRecord(e.scope, e.actor, e.key, e.fingerprint, e.resultRef, e.createdAt));
+                .map(e -> IdempotencyRecord.restore(e.scope, e.actor, e.key, e.fingerprint, e.resultRef, e.createdAt));
     }
 
     @Override

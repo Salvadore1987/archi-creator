@@ -23,7 +23,7 @@ class ModelAccessListTest {
     @Test
     @DisplayName("INV-MDL-011: список сужает роли, не расширяет; чужим модель не существует")
     void listedPrincipalsOnlyAndRolesStillApply() {
-        ModelAccessList acl = new ModelAccessList(MODEL, List.of(
+        ModelAccessList acl = ModelAccessList.restore(MODEL, List.of(
                 new AclEntry(PrincipalType.GROUP, "arch-retail", AclAccess.WRITE),
                 new AclEntry(PrincipalType.USER, "auditor-1", AclAccess.READ)));
         EditorIdentity retail = new EditorIdentity("anna", Set.of(Role.ARCHITECT), Set.of("arch-retail"));

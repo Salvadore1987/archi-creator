@@ -189,7 +189,7 @@ public final class ModelingKernel {
             return reload.apply(replay.resultRef());
         }
         String resultRef = execute.get();
-        idempotency.save(new IdempotencyRecord(scope, actor.subject(), key.get(), fingerprint, resultRef, now()));
+        idempotency.save(IdempotencyRecord.restore(scope, actor.subject(), key.get(), fingerprint, resultRef, now()));
         return reload.apply(resultRef);
     }
 }

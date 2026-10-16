@@ -6,6 +6,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaClass;
@@ -15,6 +16,7 @@ import com.tngtech.archunit.core.domain.JavaEnumConstant;
 import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.domain.JavaParameterizedType;
 import com.tngtech.archunit.core.domain.JavaType;
 import com.tngtech.archunit.core.domain.JavaWildcardType;
@@ -23,6 +25,10 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -42,6 +48,9 @@ class CodingRulesTest {
     private static final List<String> DOMAIN_EXCEPTION_ROOTS = List.of("modeling", "interchange", "advisor");
     /** Контексты, ключи сущностей которых уже наследуют BaseId. */
     private static final List<String> BASE_ID_CONTEXTS = List.of("modeling", "interchange", "advisor");
+    /** Контексты, корни агрегатов которых уже сведены к AggregateRoot. */
+    private static final List<String> AGGREGATE_ROOT_CONTEXTS = List.of("modeling");
+    private static final Path SPEC = Path.of("../spec");
     private static final String TRACKED_MAP = ROOT + ".modeling.domain.common.TrackedMap";
     /** Агрегаты, которые держат свои сущности в {@code TrackedMap}, и сам класс. */
     private static final Set<String> TRACKED_OWNERS = Set.of(TRACKED_MAP,
@@ -194,6 +203,38 @@ class CodingRulesTest {
                     .because("равенство и вывод ключа — в одном месте; ArchiId — значение из файла, не ключ")
                     .check(classes);
         }
+    }
+
+    @Test
+    @DisplayName("Корень агрегата из спецификации наследует AggregateRoot и создаётся фабрикой")
+    void aggregateRootsFollowSpecification() throws IOException {
+        for (String context : AGGREGATE_ROOT_CONTEXTS) {
+            String base = ROOT + "." + context + ".domain.common.AggregateRoot";
+            for (String root : aggregateRoots(context)) {
+                JavaClass type = classes.stream()
+                        .filter(c -> c.getPackageName().startsWith(ROOT + "." + context + ".domain"))
+                        .filter(c -> c.getSimpleName().equals(root)).findFirst()
+                        .orElseThrow(() -> new AssertionError(context + ": корня " + root + " нет в домене"));
+                assertTrue(type.isAssignableTo(base), type.getName() + " не наследует " + base);
+                assertTrue(type.getConstructors().stream()
+                                .noneMatch(c -> c.getModifiers().contains(JavaModifier.PUBLIC)),
+                        type.getName() + ": публичный конструктор — создание мимо фабрики и переходов");
+            }
+        }
+    }
+
+    /** Корни агрегатов — ключи раздела {@code aggregates:} в {@code spec/domain/<контекст>/aggregates.yaml}. */
+    private static List<String> aggregateRoots(String context) throws IOException {
+        List<String> roots = new ArrayList<>();
+        boolean inside = false;
+        for (String line : Files.readAllLines(SPEC.resolve("domain/" + context + "/aggregates.yaml"))) {
+            if (!line.startsWith(" ") && line.endsWith(":")) {
+                inside = line.equals("aggregates:");
+            } else if (inside && line.matches("  [A-Za-z]+:")) {
+                roots.add(line.strip().replace(":", ""));
+            }
+        }
+        return roots;
     }
 
     @Test

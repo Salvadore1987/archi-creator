@@ -47,7 +47,7 @@ class WorkspaceServiceTest {
     @Test
     @DisplayName("Пространство уже есть — новое не заводится, имя не меняется")
     void existingWorkspaceIsKept() {
-        Workspace existing = new Workspace(WorkspaceId.of(IDS.generate()), "Архитектура", NOW);
+        Workspace existing = Workspace.restore(WorkspaceId.of(IDS.generate()), "Архитектура", NOW);
         stored.add(existing);
 
         assertEquals(existing, service.ensureDefault(Optional.of("Другое")));

@@ -64,7 +64,9 @@
 | B1 | `BaseId`, `BaseEntity`, `AggregateRoot`, `{Ctx}DomainException` в `common` трёх доменов — вводятся вместе с задачами, которым нужны (B2–B4, B6) | — | ✅ |
 | B2 | Идентификаторы → `BaseId<UUID>`: modeling | ArchUnit: `*Id` домена наследуют `BaseId` | ✅ |
 | B3 | То же: interchange, advisor | то же правило без исключений | ✅ |
-| B4 | Корни агрегатов → `AggregateRoot`, создание фабрикой (record-агрегаты `ModelLock`, `ModelVersion`, `ModelAccessList` — в классы с `restore`) | ArchUnit: корни наследуют `AggregateRoot`, публичных конструкторов нет | ⬜ |
+| B4a | Корни агрегатов modeling → `AggregateRoot`; record-агрегаты (`Workspace`, `ModelLock`, `ModelVersion`, `ModelAccessList`, `IdempotencyRecord`) — классы с закрытым конструктором и `restore` | `CodingRulesTest`: корни из раздела `aggregates:` спецификации наследуют `AggregateRoot`, публичных конструкторов нет | ✅ |
+| B4b | То же: interchange (`ImportSession`, `ExportJob`, `GitBinding`) | правило расширено | ⬜ |
+| B4c | То же: advisor (`AdvisorSession`, `TokenBudget`) | правило расширено | ⬜ |
 | B5 | События → `{Aggregate}{Action}Event`, базовый `{Aggregate}Event` | ArchUnit: реализации `DomainEvent` оканчиваются на `Event` | ✅ |
 | B6a | Исключения домена modeling → `DomainException` / `ModelingDomainException`; `InvalidValueException`, `RelationNotPermittedException` в общей иерархии | ArchUnit: исключения домена наследуют корень контекста | ✅ |
 | B6b | То же: interchange | правило расширено на interchange | ✅ |
@@ -144,6 +146,15 @@
   (столбец `archi_id`), а не ключ сущности; правило ArchUnit его исключает явно.
   `AggregateWrites` доставал UUID ключа отражением компонента record — теперь `BaseId.value()`;
   ключ сообщения об ошибке отражения удалён.
+- **B4a.** Список корней правило берёт из раздела `aggregates:` в `spec/domain/<bc>/aggregates.yaml`:
+  агрегат, объявленный в спецификации, без `AggregateRoot` в коде не останется. Составной ключ
+  `IdempotencyRecord` — вложенный `record Key(scope, actor, key)`. У `ModelVersion` своё `equals`
+  по идентификатору было и раньше (из-за массива снимка) — теперь это `BaseEntity`.
+  Перевод record → класс сделан скриптом: тело компактного конструктора стало прологом перед
+  `super(...)` (Java 25 это разрешает), обращения к полю `id` — `id()` по ошибкам компилятора.
+- **Урок по ходу B4a.** Прогон модуля с `-pl` берёт соседние модули из локального репозитория
+  Maven: после `verify` без `install` правило ArchUnit видело старый jar interchange и «падало»
+  на уже исправленном коде. Перед `-pl` — `install`.
 
 ## Отменённые варианты
 

@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.access;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
@@ -17,14 +18,23 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
  * <p>Пустой — модель открыта по ролям. Непустой — только перечисленным и {@code ADMIN}.
  * Список сужает роль и не расширяет её: проверка роли идёт отдельно и раньше.
  */
-public record ModelAccessList(ModelId modelId, List<AclEntry> entries) {
+public final class ModelAccessList extends AggregateRoot<ModelId> {
 
     /** Код отказа, когда список доступа не пускает пользователя к модели. */
     public static final String INVARIANT = ModelingCodes.ACCESS_LIST;
 
-    public ModelAccessList {
+    private final List<AclEntry> entries;
+
+    private ModelAccessList(ModelId modelId, List<AclEntry> entries) {
         Objects.requireNonNull(modelId, "modelId");
         entries = List.copyOf(new LinkedHashSet<>(entries));
+        super(modelId);
+        this.entries = entries;
+    }
+
+    /** Сборка из сохранённых значений — для хранилища; значения проверяются, как при создании. */
+    public static ModelAccessList restore(ModelId modelId, List<AclEntry> entries) {
+        return new ModelAccessList(modelId, entries);
     }
 
     /** Пустой список: модель открыта всем по ролям. */
@@ -50,7 +60,7 @@ public record ModelAccessList(ModelId modelId, List<AclEntry> entries) {
         if (permits(editor, AclAccess.READ)) {
             throw new ModelingDomainException(INVARIANT, Failure.FORBIDDEN, Message.of(ModelingMessages.ACL_READ_ONLY));
         }
-        throw ModelingDomainException.notFound(Message.of(ModelingMessages.MODEL, modelId));
+        throw ModelingDomainException.notFound(Message.of(ModelingMessages.MODEL, modelId()));
     }
 
     /** Список меняют {@code ADMIN} и автор модели. */
@@ -59,5 +69,15 @@ public record ModelAccessList(ModelId modelId, List<AclEntry> entries) {
             throw new ModelingDomainException(ModelingCodes.ACCESS_DENIED, Failure.FORBIDDEN,
                     Message.of(ModelingMessages.ACL_MANAGERS_ONLY));
         }
+    }
+
+    /** Модель, доступ к которой ограничивает список. */
+    public ModelId modelId() {
+        return id();
+    }
+
+    /** Записи списка: кто и с каким уровнем доступа. */
+    public List<AclEntry> entries() {
+        return entries;
     }
 }

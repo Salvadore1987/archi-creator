@@ -62,7 +62,7 @@ class ModelVersionTest {
         assertArrayEquals(new byte[] {1, 2, 3}, first.requireSnapshot());
 
         assertThrows(ModelingDomainException.class, () -> first.snapshotPurged(false), "без Git снимок не чистится");
-        ModelVersion bound = new ModelVersion(first.id(), MODEL, 1, "a", Optional.empty(), Optional.empty(),
+        ModelVersion bound = ModelVersion.restore(first.id(), MODEL, 1, "a", Optional.empty(), Optional.empty(),
                 first.createdAt(), first.snapshot(), HASH, Optional.of("b".repeat(40)));
         ModelingDomainException gone = assertThrows(ModelingDomainException.class,
                 () -> bound.snapshotPurged(true).requireSnapshot());

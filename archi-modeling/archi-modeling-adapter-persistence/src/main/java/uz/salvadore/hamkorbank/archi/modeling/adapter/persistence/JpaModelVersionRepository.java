@@ -52,7 +52,7 @@ public class JpaModelVersionRepository implements ModelVersionRepository {
                         from ModelVersionEntity v where v.modelId = :m order by v.versionNo desc
                         """, Object[].class)
                 .setParameter("m", modelId.value()).getResultList().stream()
-                .map(row -> new ModelVersion(VersionId.of((UUID) row[0]), modelId, (Long) row[1], (String) row[2],
+                .map(row -> ModelVersion.restore(VersionId.of((UUID) row[0]), modelId, (Long) row[1], (String) row[2],
                         Optional.ofNullable((String) row[3]), Optional.ofNullable((String) row[4]), (Instant) row[5],
                         Boolean.TRUE.equals(row[6]) ? Optional.of(NOT_LOADED) : Optional.empty(), (String) row[7],
                         Optional.ofNullable((String) row[8])))
@@ -93,7 +93,7 @@ public class JpaModelVersionRepository implements ModelVersionRepository {
     }
 
     private static ModelVersion toDomain(ModelVersionEntity e) {
-        return new ModelVersion(VersionId.of(e.id), ModelId.of(e.modelId), e.versionNo, e.author,
+        return ModelVersion.restore(VersionId.of(e.id), ModelId.of(e.modelId), e.versionNo, e.author,
                 Optional.ofNullable(e.comment), Optional.ofNullable(e.label), e.createdAt,
                 Optional.ofNullable(e.snapshot), e.contentHash, Optional.ofNullable(e.gitSha));
     }

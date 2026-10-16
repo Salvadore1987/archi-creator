@@ -73,7 +73,7 @@ final class InMemoryPorts {
     final Map<ModelId, ModelAccessList> acl = new HashMap<>();
     final Map<String, IdempotencyRecord> keys = new HashMap<>();
     final List<DomainEvent> published = new ArrayList<>();
-    final Workspace workspace = new Workspace(WorkspaceId.of(IDS.generate()), "Банк", NOW);
+    final Workspace workspace = Workspace.restore(WorkspaceId.of(IDS.generate()), "Банк", NOW);
 
     final UnitOfWork unitOfWork = new UnitOfWork() {
         @Override

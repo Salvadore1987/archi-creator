@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
@@ -21,12 +22,16 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
  * <p>Хранится только действующая или просроченная запись: снятая блокировка строки
  * не оставляет. Просроченная прав не даёт, даже если запись ещё существует.
  */
-public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Instant expiresAt) {
+public final class ModelLock extends AggregateRoot<ModelId> {
 
     /** Код отказа при записи без действующей собственной блокировки модели. */
     public static final String INVARIANT = ModelingCodes.LOCK_REQUIRED;
 
-    public ModelLock {
+    private final String owner;
+    private final Instant acquiredAt;
+    private final Instant expiresAt;
+
+    private ModelLock(ModelId modelId, String owner, Instant acquiredAt, Instant expiresAt) {
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(acquiredAt, "acquiredAt");
@@ -34,6 +39,15 @@ public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Insta
         if (!expiresAt.isAfter(acquiredAt)) {
             throw new InvalidValueException(ModelingMessages.LOCK_EXPIRES_BEFORE_ACQUIRED);
         }
+        super(modelId);
+        this.owner = owner;
+        this.acquiredAt = acquiredAt;
+        this.expiresAt = expiresAt;
+    }
+
+    /** Сборка из сохранённых значений — для хранилища; значения проверяются, как при создании. */
+    public static ModelLock restore(ModelId modelId, String owner, Instant acquiredAt, Instant expiresAt) {
+        return new ModelLock(modelId, owner, acquiredAt, expiresAt);
     }
 
     /** Действует ли блокировка в момент {@code now} или уже просрочена. */
@@ -74,13 +88,13 @@ public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Insta
      */
     public ModelLockReleasedEvent release(EditorIdentity by, Instant now) {
         if (status(now) == LockStatus.EXPIRED) {
-            return new ModelLockReleasedEvent(modelId, owner, owner, LockReleaseReason.EXPIRED, now);
+            return new ModelLockReleasedEvent(modelId(), owner, owner, LockReleaseReason.EXPIRED, now);
         }
         if (owner.equals(by.subject())) {
-            return new ModelLockReleasedEvent(modelId, owner, by.subject(), LockReleaseReason.RELEASED_BY_OWNER, now);
+            return new ModelLockReleasedEvent(modelId(), owner, by.subject(), LockReleaseReason.RELEASED_BY_OWNER, now);
         }
         if (by.isAdmin()) {
-            return new ModelLockReleasedEvent(modelId, owner, by.subject(), LockReleaseReason.FORCED_BY_ADMIN, now);
+            return new ModelLockReleasedEvent(modelId(), owner, by.subject(), LockReleaseReason.FORCED_BY_ADMIN, now);
         }
         throw new ModelingDomainException(ModelingCodes.ACCESS_DENIED, Failure.FORBIDDEN,
                 Message.of(ModelingMessages.LOCK_FOREIGN_RELEASE), Map.of("lockOwner", owner));
@@ -113,5 +127,25 @@ public record ModelLock(ModelId modelId, String owner, Instant acquiredAt, Insta
 
     /** Итог захвата: новая блокировка и, если была просроченная, событие о её истечении. */
     public record Acquisition(ModelLock lock, Optional<ModelLockReleasedEvent> expiredPrevious) {
+    }
+
+    /** Заблокированная модель. */
+    public ModelId modelId() {
+        return id();
+    }
+
+    /** Субъект, который держит блокировку. */
+    public String owner() {
+        return owner;
+    }
+
+    /** Момент захвата или последнего продления. */
+    public Instant acquiredAt() {
+        return acquiredAt;
+    }
+
+    /** Момент, после которого блокировка истекает сама. */
+    public Instant expiresAt() {
+        return expiresAt;
     }
 }

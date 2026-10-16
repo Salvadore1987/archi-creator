@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
@@ -47,11 +48,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
  *
  * <p>Изменения копятся в {@link TrackedMap}: хранилище пишет только тронутое.
  */
-public final class ArchitectureModel {
+public final class ArchitectureModel extends AggregateRoot<ModelId> {
 
     private static final ArchiTypeRegistry REGISTRY = ArchiTypeRegistry.archimate32();
 
-    private final ModelId id;
     private final WorkspaceId workspaceId;
     private final ArchiId archiId;
     private String name;
@@ -75,7 +75,7 @@ public final class ArchitectureModel {
     private final List<DomainEvent> events = new ArrayList<>();
 
     private ArchitectureModel(ModelHeader header, boolean fresh) {
-        this.id = header.id();
+        super(header.id());
         this.workspaceId = header.workspaceId();
         this.archiId = header.archiId();
         this.name = header.name();
@@ -195,7 +195,7 @@ public final class ArchitectureModel {
     /** Перевод активной модели в удалённые; событие об удалении публикуется после коммита. */
     public void delete(EditorIdentity by, Instant now) {
         transition(ModelStatus.ACTIVE, ModelStatus.DELETED, Message.of(ModelingMessages.COMMAND_DELETE_MODEL), now);
-        events.add(new ModelDeletedEvent(id, workspaceId, by.subject(), now));
+        events.add(new ModelDeletedEvent(id(), workspaceId, by.subject(), now));
     }
 
     /** Возврат удалённой модели в активные. */
@@ -547,7 +547,7 @@ public final class ArchitectureModel {
     public ModelFolder requireFolder(FolderId folderId) {
         return folders.get(folderId)
                 .orElseThrow(() -> new ModelingDomainException(ModelingCodes.NOT_FOUND, Failure.UNPROCESSABLE,
-                        Message.of(ModelingMessages.FOLDER_OF_OTHER_MODEL, folderId, id)));
+                        Message.of(ModelingMessages.FOLDER_OF_OTHER_MODEL, folderId, id())));
     }
 
     /** Элемент этой модели; нет такого — «не найдено». */
@@ -579,7 +579,7 @@ public final class ArchitectureModel {
         };
         if (!present) {
             throw new ModelingDomainException(ModelingCodes.RELATIONSHIP_ENDS, Failure.UNPROCESSABLE,
-                    Message.of(ModelingMessages.END_OF_OTHER_MODEL, concept.value(), id));
+                    Message.of(ModelingMessages.END_OF_OTHER_MODEL, concept.value(), id()));
         }
     }
 
@@ -594,7 +594,7 @@ public final class ArchitectureModel {
     public void requireFreeArchiId(ArchiId candidate) {
         if (archiIdTaken(candidate)) {
             throw new ModelingDomainException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.CONFLICT,
-                    Message.of(ModelingMessages.ARCHI_ID_TAKEN, candidate, id));
+                    Message.of(ModelingMessages.ARCHI_ID_TAKEN, candidate, id()));
         }
     }
 
@@ -665,14 +665,10 @@ public final class ArchitectureModel {
 
     /** Собственные поля модели для записи в хранилище. */
     public ModelHeader header() {
-        return new ModelHeader(id, workspaceId, archiId, name, documentation, archiVersion, status, properties,
+        return new ModelHeader(id(), workspaceId, archiId, name, documentation, archiVersion, status, properties,
                 rawXml, createdBy, createdAt, updatedAt, version);
     }
 
-    /** Внутренний ключ модели. */
-    public ModelId id() {
-        return id;
-    }
 
     /** Пространство, которому принадлежит модель. */
     public WorkspaceId workspaceId() {
