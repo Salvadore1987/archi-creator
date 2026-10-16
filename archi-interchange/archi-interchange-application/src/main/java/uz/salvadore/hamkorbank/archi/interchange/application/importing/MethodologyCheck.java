@@ -14,6 +14,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.Severity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationMatrix;
@@ -65,7 +66,7 @@ public final class MethodologyCheck {
     private Optional<ArchiType> archiType(String value) {
         try {
             return Optional.of(ArchiType.of(value));
-        } catch (IllegalArgumentException | NullPointerException notArchimate) {
+        } catch (InvalidValueException | NullPointerException notArchimate) {
             return Optional.empty();
         }
     }
