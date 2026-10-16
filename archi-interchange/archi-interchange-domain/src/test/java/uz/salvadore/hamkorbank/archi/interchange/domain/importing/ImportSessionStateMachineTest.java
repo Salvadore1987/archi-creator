@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 
 class ImportSessionStateMachineTest {
@@ -77,5 +78,20 @@ class ImportSessionStateMachineTest {
         Sessions.parse(session, VALID);
         assertThrows(IllegalImportTransitionException.class, () -> Sessions.parse(session, VALID));
         assertTrue(session.document().isPresent());
+    }
+
+    @Test
+    @DisplayName("INV-IXC-002: применение без модели или с номером версии меньше единицы не меняет сессию")
+    void applyChecksBeforeTransition() {
+        ImportSession session = Sessions.received(VALID, false);
+        Sessions.parse(session, VALID);
+        session.validate(List.of(), NOW);
+
+        assertThrows(RuntimeException.class, () -> session.apply(null, 1, 0, NOW));
+        assertThrows(InvalidValueException.class, () -> session.apply(MODEL, 0, 0, NOW));
+
+        assertEquals(ImportStatus.VALIDATED, session.status());
+        session.apply(MODEL, 1, 0, NOW);
+        assertEquals(ImportStatus.APPLIED, session.status());
     }
 }

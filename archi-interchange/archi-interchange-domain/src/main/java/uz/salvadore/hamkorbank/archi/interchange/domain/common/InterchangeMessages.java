@@ -8,6 +8,8 @@ public final class InterchangeMessages {
 
     /** Значение атрибута или элемента содержит символы, которых не может быть в файле Archi. */
     public static final String TEXT_NOT_XML = "interchange.document.text-not-xml";
+    /** Применённый импорт записывает версию с номером меньше единицы. */
+    public static final String IMPORT_VERSION_NO = "interchange.import.version-no";
 
     /** Операция недоступна роли пользователя; в тексте — операция и допущенные роли. */
     public static final String OPERATION_DENIED = "interchange.access.operation-denied";

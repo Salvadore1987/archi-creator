@@ -12,6 +12,8 @@ import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.CorruptDocumentException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.AggregateRoot;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
@@ -132,9 +134,13 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
      * удвоил бы модель.
      */
     public ImportAppliedEvent apply(ModelId modelId, long versionNo, int opaqueObjectCount, Instant now) {
+        Objects.requireNonNull(modelId, "modelId");
+        if (versionNo < 1) {
+            throw new InvalidValueException(InterchangeMessages.IMPORT_VERSION_NO, versionNo);
+        }
         require(ImportStatus.VALIDATED, "ApplyImport");
         finish(ImportStatus.APPLIED, now);
-        this.appliedModelId = Objects.requireNonNull(modelId, "modelId");
+        this.appliedModelId = modelId;
         this.appliedVersionNo = versionNo;
         ImportAppliedEvent applied = new ImportAppliedEvent(id(), workspaceId, modelId, versionNo, sourceName,
                 sourceHash, strictMode, findingCounts(), opaqueObjectCount, now);
