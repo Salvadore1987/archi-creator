@@ -4,8 +4,14 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainExceptio
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 
-/** Код отказа для label {@code error_code}: код инварианта, а не имя класса исключения. */
+/**
+ * Коды отказов, которые не принадлежат ни одному контексту, и код отказа для label
+ * {@code error_code}: код инварианта, а не имя класса исключения.
+ */
 public final class ErrorCodes {
+
+    /** Код отказа на неразборчивый запрос: тело, параметр или часть формы не читаются. */
+    public static final String BAD_REQUEST = "BAD_REQUEST";
 
     private ErrorCodes() {
     }

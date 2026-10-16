@@ -11,7 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import uz.salvadore.hamkorbank.archi.interchange.domain.codec.DocumentDefect;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 
 class StrictImportTest {
@@ -57,7 +57,7 @@ class StrictImportTest {
         assertEquals(ImportStatus.REJECTED, session.status());
         assertNull(session.document());
         ImportFinding finding = session.findings().getFirst();
-        assertEquals(DocumentDefect.DANGLING_REFERENCE, finding.code());
+        assertEquals(InterchangeCodes.DANGLING_REFERENCE, finding.code());
         assertEquals(Severity.ERROR, finding.severity());
         assertEquals(ArchiId.of("id-r1"), finding.archiId());
         assertEquals(8, finding.xmlLine());

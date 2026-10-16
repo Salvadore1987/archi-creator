@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 
 /**
  * Повреждённые данные отклоняются — с кодом, объектом и строкой.
@@ -25,7 +26,7 @@ class CorruptDocumentTest {
                 </archimate:model>
                 """);
 
-        assertEquals(DocumentDefect.MALFORMED_XML, defect.code());
+        assertEquals(InterchangeCodes.MALFORMED_XML, defect.code());
         assertEquals(4, defect.line());
         assertNotNull(defect.column());
     }
@@ -43,7 +44,7 @@ class CorruptDocumentTest {
                 """));
 
         // Две ссылки на один и тот же отсутствующий id — две находки, но обе об id-e1.
-        assertEquals(DocumentDefect.DANGLING_REFERENCE, defect.code());
+        assertEquals(InterchangeCodes.DANGLING_REFERENCE, defect.code());
         assertEquals("id-r1", defect.archiId());
         assertEquals(4, defect.line());
     }
@@ -59,7 +60,7 @@ class CorruptDocumentTest {
                 <profile name="P" id="id-f2"/>
                 """));
 
-        assertEquals(List.of(DocumentDefect.DUPLICATE_ID, DocumentDefect.DUPLICATE_ID), codes(e));
+        assertEquals(List.of(InterchangeCodes.DUPLICATE_ID, InterchangeCodes.DUPLICATE_ID), codes(e));
         assertEquals("id-e1", e.defects().getFirst().archiId());
         assertEquals("id-f2", e.defects().get(1).archiId());
     }
@@ -76,7 +77,7 @@ class CorruptDocumentTest {
                 </folder>
                 """));
 
-        assertEquals(DocumentDefect.MISSING_END, defect.code());
+        assertEquals(InterchangeCodes.MISSING_END, defect.code());
         assertEquals("id-r1", defect.archiId());
     }
 
@@ -90,7 +91,7 @@ class CorruptDocumentTest {
                 <folder name="Other" id="id 6" type="other"/>
                 """));
 
-        assertEquals(List.of(DocumentDefect.MISSING_ATTRIBUTE, DocumentDefect.INVALID_ID), codes(e));
+        assertEquals(List.of(InterchangeCodes.MISSING_ATTRIBUTE, InterchangeCodes.INVALID_ID), codes(e));
     }
 
     @Test
@@ -111,7 +112,7 @@ class CorruptDocumentTest {
                 </folder>
                 """));
 
-        assertEquals(DocumentDefect.TARGET_CONNECTIONS_MISMATCH, defect.code());
+        assertEquals(InterchangeCodes.TARGET_CONNECTIONS_MISMATCH, defect.code());
         assertEquals("id-n1", defect.archiId());
     }
 
@@ -125,9 +126,9 @@ class CorruptDocumentTest {
                 </folder>
                 """));
 
-        assertEquals(List.of(DocumentDefect.MISSING_END, DocumentDefect.DUPLICATE_ID,
-                DocumentDefect.DANGLING_REFERENCE, DocumentDefect.DANGLING_REFERENCE,
-                DocumentDefect.DANGLING_REFERENCE), codes(e));
+        assertEquals(List.of(InterchangeCodes.MISSING_END, InterchangeCodes.DUPLICATE_ID,
+                InterchangeCodes.DANGLING_REFERENCE, InterchangeCodes.DANGLING_REFERENCE,
+                InterchangeCodes.DANGLING_REFERENCE), codes(e));
     }
 
     @Test
@@ -139,7 +140,7 @@ class CorruptDocumentTest {
                 <archimate:model xmlns:archimate="http://www.archimatetool.com/archimate" id="id-1" name="&xxe;"/>
                 """);
 
-        assertEquals(DocumentDefect.MALFORMED_XML, defect.code());
+        assertEquals(InterchangeCodes.MALFORMED_XML, defect.code());
     }
 
     private static DocumentDefect single(String xml) {

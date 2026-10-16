@@ -70,6 +70,28 @@ public final class InterchangeCodes {
     /** Слияние применяется только с выбором по каждому конфликту. */
     public static final String MERGE_CONFLICTS_UNRESOLVED = "IXC_MERGE_CONFLICTS_UNRESOLVED";
 
+    // Дефекты файла: код находки чтения, по нему клиент показывает место поломки.
+    /** Файл не разбирается как XML. */
+    public static final String MALFORMED_XML = "IXC_MALFORMED_XML";
+    /** Корень — не {@code archimate:model}. */
+    public static final String NOT_ARCHIMATE_MODEL = "IXC_NOT_ARCHIMATE_MODEL";
+    /** Нет обязательного атрибута: {@code id}, {@code xsi:type}. */
+    public static final String MISSING_ATTRIBUTE = "IXC_MISSING_ATTRIBUTE";
+    /** Идентификатор не годится для атрибута {@code id}. */
+    public static final String INVALID_ID = "IXC_INVALID_ID";
+    /** Идентификатор повторяется внутри файла. */
+    public static final String DUPLICATE_ID = "IXC_DUPLICATE_ID";
+    /** Ссылка на идентификатор, которого в файле нет. */
+    public static final String DANGLING_REFERENCE = "IXC_DANGLING_REFERENCE";
+    /** У связи или соединения нет одного из концов. */
+    public static final String MISSING_END = "IXC_MISSING_END";
+    /** {@code targetConnections} перечисляет не те соединения, что ведут к узлу. */
+    public static final String TARGET_CONNECTIONS_MISMATCH = "IXC_TARGET_CONNECTIONS_MISMATCH";
+    /** Текст там, где ждут только узлы: его некуда положить без потери. */
+    public static final String UNEXPECTED_TEXT = "IXC_UNEXPECTED_TEXT";
+    /** Узлы вложены глубже предела разбора. */
+    public static final String NESTING_TOO_DEEP = "IXC_NESTING_TOO_DEEP";
+
     private InterchangeCodes() {
     }
 }

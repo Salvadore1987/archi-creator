@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import uz.salvadore.hamkorbank.archi.bootstrap.wiring.ErrorCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 
@@ -30,8 +31,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 @Order(Ordered.LOWEST_PRECEDENCE)
 public class CommonProblemHandler {
 
-    /** Код отказа на неразборчивый запрос: тело, параметр или часть формы не читаются. */
-    public static final String BAD_REQUEST = "BAD_REQUEST";
     private static final String TYPE_BASE = "https://archi-creator/errors/";
 
     private final MessageSource messages;
@@ -63,8 +62,8 @@ public class CommonProblemHandler {
     @ExceptionHandler({HttpMessageNotReadableException.class, MissingServletRequestParameterException.class,
             MissingServletRequestPartException.class, MethodArgumentTypeMismatchException.class})
     ProblemDetail badRequest(Exception e, HttpServletRequest request) {
-        return problem(HttpStatus.BAD_REQUEST, BAD_REQUEST, text(BootstrapMessages.BAD_REQUEST, e.getMessage()),
-                request);
+        return problem(HttpStatus.BAD_REQUEST, ErrorCodes.BAD_REQUEST,
+                text(BootstrapMessages.BAD_REQUEST, e.getMessage()), request);
     }
 
     private ProblemDetail problem(HttpStatus status, String code, String detail, HttpServletRequest request) {

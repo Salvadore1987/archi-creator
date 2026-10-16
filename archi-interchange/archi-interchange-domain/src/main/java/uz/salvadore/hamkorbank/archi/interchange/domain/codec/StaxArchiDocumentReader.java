@@ -23,6 +23,7 @@ import javax.xml.stream.Location;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
@@ -98,7 +99,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         Message message = Message.of(InterchangeMessages.XML_UNREADABLE_NO_DETAIL);
         Integer line = location == null || location.getLineNumber() < 0 ? null : location.getLineNumber();
         Integer column = location == null || location.getColumnNumber() < 0 ? null : location.getColumnNumber();
-        return new DocumentDefect(DocumentDefect.MALFORMED_XML, message, null, line, column);
+        return new DocumentDefect(InterchangeCodes.MALFORMED_XML, message, null, line, column);
     }
 
     /** Состояние одного прохода по файлу. */
@@ -124,7 +125,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
                 // пролог: объявление XML, комментарии, пробелы
             }
             if (!"model".equals(xml.getLocalName()) || !ModelDocument.NAMESPACE.equals(xml.getNamespaceURI())) {
-                throw new CorruptDocumentException(List.of(DocumentDefect.at(DocumentDefect.NOT_ARCHIMATE_MODEL,
+                throw new CorruptDocumentException(List.of(DocumentDefect.at(InterchangeCodes.NOT_ARCHIMATE_MODEL,
                         Message.of(InterchangeMessages.NOT_ARCHIMATE_ROOT, qname(), ModelDocument.NAMESPACE),
                         null, line())));
             }
@@ -132,10 +133,11 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             Attributes attributes = attributes();
             Optional<String> id = attributes.get("id");
             if (id.isEmpty()) {
-                defect(DocumentDefect.MISSING_ATTRIBUTE, Message.of(InterchangeMessages.MODEL_WITHOUT_ID), null, line);
-            } else if (!ArchiId.isValid(id.get())) {
-                defect(DocumentDefect.INVALID_ID, Message.of(InterchangeMessages.MODEL_ID_INVALID, id.get()), id.get(),
+                defect(InterchangeCodes.MISSING_ATTRIBUTE, Message.of(InterchangeMessages.MODEL_WITHOUT_ID), null,
                         line);
+            } else if (!ArchiId.isValid(id.get())) {
+                defect(InterchangeCodes.INVALID_ID, Message.of(InterchangeMessages.MODEL_ID_INVALID, id.get()),
+                        id.get(), line);
             } else {
                 register(id.get(), line);
             }
@@ -168,7 +170,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
                     }
                     case CHARACTERS, CDATA, SPACE -> {
                         if (!xml.getText().isBlank()) {
-                            defect(DocumentDefect.UNEXPECTED_TEXT,
+                            defect(InterchangeCodes.UNEXPECTED_TEXT,
                                     Message.of(InterchangeMessages.TEXT_OUTSIDE_VALUE, xml.getText().strip()),
                                     parent == null ? null : parent.value(), line());
                         }
@@ -195,7 +197,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
 
         private DocumentNode node(String tag, DocumentOrder order) throws XMLStreamException {
             if (depth == MAX_DEPTH) {
-                throw new CorruptDocumentException(List.of(DocumentDefect.at(DocumentDefect.NESTING_TOO_DEEP,
+                throw new CorruptDocumentException(List.of(DocumentDefect.at(InterchangeCodes.NESTING_TOO_DEEP,
                         Message.of(InterchangeMessages.NESTING_TOO_DEEP, MAX_DEPTH), null, line())));
             }
             depth++;
@@ -212,10 +214,10 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             Optional<String> id = attributes.get("id");
             if (id.isEmpty() || !ArchiId.isValid(id.get())) {
                 if (id.isEmpty()) {
-                    defect(DocumentDefect.MISSING_ATTRIBUTE, Message.of(InterchangeMessages.NODE_WITHOUT_ID, tag),
+                    defect(InterchangeCodes.MISSING_ATTRIBUTE, Message.of(InterchangeMessages.NODE_WITHOUT_ID, tag),
                             null, line);
                 } else {
-                    defect(DocumentDefect.INVALID_ID, Message.of(InterchangeMessages.ID_INVALID, id.get()),
+                    defect(InterchangeCodes.INVALID_ID, Message.of(InterchangeMessages.ID_INVALID, id.get()),
                             id.get(), line);
                 }
                 skipRest();
@@ -233,7 +235,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             }
             Optional<String> type = attributes.get("xsi:type");
             if (type.isEmpty()) {
-                defect(DocumentDefect.MISSING_ATTRIBUTE, Message.of(InterchangeMessages.NODE_WITHOUT_TYPE, tag),
+                defect(InterchangeCodes.MISSING_ATTRIBUTE, Message.of(InterchangeMessages.NODE_WITHOUT_TYPE, tag),
                         id, line);
             }
             switch (tag) {
@@ -265,7 +267,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
 
         private void end(String id, Attributes attributes, String attribute, int line) {
             if (attributes.get(attribute).filter(v -> !v.isBlank()).isEmpty()) {
-                defect(DocumentDefect.MISSING_END,
+                defect(InterchangeCodes.MISSING_END,
                         Message.of(InterchangeMessages.RELATIONSHIP_WITHOUT_END, attribute), id, line);
             } else {
                 reference(id, attributes, attribute, line);
@@ -410,7 +412,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         private void register(String id, int line) {
             Integer previous = ids.putIfAbsent(id, line);
             if (previous != null) {
-                defect(DocumentDefect.DUPLICATE_ID, Message.of(InterchangeMessages.ID_REPEATED, id, previous),
+                defect(InterchangeCodes.DUPLICATE_ID, Message.of(InterchangeMessages.ID_REPEATED, id, previous),
                         id, line);
             }
         }
@@ -418,7 +420,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         private void resolveReferences() {
             for (Reference reference : references) {
                 if (!ids.containsKey(reference.target())) {
-                    defect(DocumentDefect.DANGLING_REFERENCE,
+                    defect(InterchangeCodes.DANGLING_REFERENCE,
                             Message.of(InterchangeMessages.DANGLING_REFERENCE, reference.attribute(),
                                     reference.target()),
                             reference.owner(), reference.line());
@@ -434,14 +436,14 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             listedTargetConnections.forEach((owner, listed) -> {
                 Set<String> expected = new HashSet<>(connectionsByTarget.getOrDefault(owner, List.of()));
                 if (!expected.equals(new HashSet<>(listed.tokens()))) {
-                    defect(DocumentDefect.TARGET_CONNECTIONS_MISMATCH,
+                    defect(InterchangeCodes.TARGET_CONNECTIONS_MISMATCH,
                             Message.of(InterchangeMessages.TARGET_CONNECTIONS_DIFFER, listed.tokens(), expected),
                             owner, listed.line());
                 }
             });
             connectionsByTarget.forEach((target, connections) -> {
                 if (!listedTargetConnections.containsKey(target) && ids.containsKey(target)) {
-                    defect(DocumentDefect.TARGET_CONNECTIONS_MISMATCH,
+                    defect(InterchangeCodes.TARGET_CONNECTIONS_MISMATCH,
                             Message.of(InterchangeMessages.TARGET_CONNECTIONS_MISSING, connections), target,
                             ids.get(target));
                 }
