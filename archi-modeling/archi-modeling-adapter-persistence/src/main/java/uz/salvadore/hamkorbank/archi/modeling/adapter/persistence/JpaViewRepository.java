@@ -140,6 +140,7 @@ public class JpaViewRepository implements ViewRepository {
                 (d, e) -> EntityMapper.apply(d, modelId, viewId, e));
         AggregateWrites.sync(em, view.edges(), ViewEdgeEntity.class, ViewEdgeEntity::new,
                 (d, e) -> EntityMapper.apply(d, modelId, viewId, e));
+        view.markPersisted();
         AggregateWrites.flush(em, Message.of(ModelingMessages.VIEW, view.id()));
     }
 

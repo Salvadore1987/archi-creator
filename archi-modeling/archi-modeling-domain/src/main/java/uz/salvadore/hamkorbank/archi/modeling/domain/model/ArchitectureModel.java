@@ -25,6 +25,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedEntities;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedMap;
 import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelDeleted;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
@@ -693,18 +694,25 @@ public final class ArchitectureModel {
     }
 
     /** Папки с учётом изменений. */
-    public TrackedMap<FolderId, ModelFolder> folders() {
+    public TrackedEntities<FolderId, ModelFolder> folders() {
         return folders;
     }
 
     /** Элементы с учётом изменений. */
-    public TrackedMap<ElementId, Element> elements() {
+    public TrackedEntities<ElementId, Element> elements() {
         return elements;
     }
 
     /** Связи с учётом изменений. */
-    public TrackedMap<RelationshipId, Relationship> relationships() {
+    public TrackedEntities<RelationshipId, Relationship> relationships() {
         return relationships;
+    }
+
+    /** Хранилище записало папки, элементы и связи: всё текущее теперь сохранено. */
+    public void markPersisted() {
+        folders.markPersisted();
+        elements.markPersisted();
+        relationships.markPersisted();
     }
 
     /** Места представлений в дереве модели, копией. */

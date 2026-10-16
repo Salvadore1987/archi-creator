@@ -19,6 +19,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedEntities;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedMap;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel.Created;
@@ -541,17 +542,23 @@ public final class View {
     }
 
     /** Узлы с учётом изменений. */
-    public TrackedMap<ViewNodeId, ViewNode> nodes() {
+    public TrackedEntities<ViewNodeId, ViewNode> nodes() {
         return nodes;
     }
 
     /** Рёбра с учётом изменений. */
-    public TrackedMap<ViewEdgeId, ViewEdge> edges() {
+    public TrackedEntities<ViewEdgeId, ViewEdge> edges() {
         return edges;
     }
 
     /** Есть ли что записать: заголовок, узлы или рёбра. */
     public boolean changed() {
         return headerChanged() || nodes.changed() || edges.changed();
+    }
+
+    /** Хранилище записало узлы и рёбра: всё текущее теперь сохранено. */
+    public void markPersisted() {
+        nodes.markPersisted();
+        edges.markPersisted();
     }
 }

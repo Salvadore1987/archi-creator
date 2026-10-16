@@ -35,6 +35,11 @@ class CodingRulesTest {
 
     private static final String ROOT = "uz.salvadore.hamkorbank.archi";
     private static final String JPA = "jakarta.persistence.";
+    private static final String TRACKED_MAP = ROOT + ".modeling.domain.common.TrackedMap";
+    /** Агрегаты, которые держат свои сущности в {@code TrackedMap}, и сам класс. */
+    private static final Set<String> TRACKED_OWNERS = Set.of(TRACKED_MAP,
+            ROOT + ".modeling.domain.model.ArchitectureModel", ROOT + ".modeling.domain.view.View");
+    private static final Set<String> TRACKED_MUTATORS = Set.of("put", "remove", "load", "markPersisted");
     /** Связи, у которых JPA по умолчанию загружает сразу: им нужен явный LAZY. */
     private static final Set<String> EAGER_BY_DEFAULT = Set.of(JPA + "ManyToOne", JPA + "OneToOne");
     private static final Set<String> FETCHING = Set.of(JPA + "ManyToOne", JPA + "OneToOne", JPA + "OneToMany",
@@ -97,6 +102,32 @@ class CodingRulesTest {
                         events.add(SimpleConditionEvent.violated(field,
                                 field.getFullName() + " is fetched eagerly by @"
                                         + annotation.getRawType().getSimpleName()));
+                    }
+                }
+            }
+        };
+    }
+
+    @Test
+    @DisplayName("Сущности агрегата modeling меняет только сам агрегат")
+    void trackedEntitiesChangeOnlyInsideAggregate() {
+        codeUnits().should(notChangeTrackedEntitiesOutsideAggregate())
+                .because("вставка и удаление мимо агрегата обходят его проверки")
+                .check(classes);
+    }
+
+    private static ArchCondition<JavaCodeUnit> notChangeTrackedEntitiesOutsideAggregate() {
+        return new ArchCondition<>("not change tracked entities outside the aggregate") {
+            @Override
+            public void check(JavaCodeUnit unit, ConditionEvents events) {
+                if (TRACKED_OWNERS.contains(unit.getOwner().getName())) {
+                    return;
+                }
+                for (JavaMethodCall call : unit.getMethodCallsFromSelf()) {
+                    if (call.getTargetOwner().getName().equals(TRACKED_MAP)
+                            && TRACKED_MUTATORS.contains(call.getName())) {
+                        events.add(SimpleConditionEvent.violated(unit, unit.getFullName() + " calls "
+                                + call.getTarget().getFullName()));
                     }
                 }
             }

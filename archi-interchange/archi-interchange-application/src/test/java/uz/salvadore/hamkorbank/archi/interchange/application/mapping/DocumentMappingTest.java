@@ -34,8 +34,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.DiagramType;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.StyleOverride;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
@@ -107,9 +105,7 @@ class DocumentMappingTest {
         assertTrue(group.rawXml().orElseThrow().value().indexOf("Каналы") < 0, "подписи группы нет в остатке");
 
         View view = styled.views().stream().filter(v -> v.nodes().contains(note.id())).findFirst().orElseThrow();
-        view.nodes().put(note.id(), new ViewNode(note.id(), note.parentId(), note.archiId(), note.archiType(),
-                note.elementId(), note.bounds(), note.style(), note.label(), Optional.of("Первая\r\nвторая"),
-                note.sortOrder(), note.rawXml()));
+        view.editNode(note.id(), Optional.empty(), Optional.of("Первая\r\nвторая"), Optional.empty());
         String xml = new String(write(new DocumentAssembler().assemble(styled)), StandardCharsets.UTF_8);
         assertTrue(xml.contains("<content>Первая&#xD;\nвторая</content>"), "столбец сильнее остатка, CR не теряется");
         ModelContent again = decompose(read(xml.getBytes(StandardCharsets.UTF_8)));
@@ -125,14 +121,10 @@ class DocumentMappingTest {
                 ROOT.resolve("archi-bootstrap/src/test/resources/fixtures/styled_objects.archimate"))));
         View view = content.views().getFirst();
         ArchiIdGenerator archiIds = new ArchiIdGenerator();
-        ViewNode group = new ViewNode(ViewNodeId.of(IDS.generate()), Optional.empty(), archiIds.next(),
-                DiagramType.of("archimate:Group"), Optional.empty(), new Bounds(0, 0, 400, 300), StyleOverride.NONE,
-                Optional.of("Каналы"), Optional.empty(), SortOrder.of(900_000), Optional.empty());
-        ViewNode note = new ViewNode(ViewNodeId.of(IDS.generate()), Optional.empty(), archiIds.next(),
-                DiagramType.of("archimate:Note"), Optional.empty(), new Bounds(10, 10, 185, 80), StyleOverride.NONE,
-                Optional.empty(), Optional.of("строка 1\nстрока 2"), SortOrder.of(901_000), Optional.empty());
-        view.nodes().put(group.id(), group);
-        view.nodes().put(note.id(), note);
+        ViewNode group = view.placeAnnotation(ViewNodeKind.GROUP, Optional.of("Каналы"), Optional.empty(),
+                new Bounds(0, 0, 400, 300), Optional.empty(), ViewNodeId.of(IDS.generate()), archiIds.next());
+        ViewNode note = view.placeAnnotation(ViewNodeKind.NOTE, Optional.empty(), Optional.of("строка 1\nстрока 2"),
+                new Bounds(10, 10, 185, 80), Optional.empty(), ViewNodeId.of(IDS.generate()), archiIds.next());
 
         String xml = new String(write(new DocumentAssembler().assemble(content)), StandardCharsets.UTF_8);
 

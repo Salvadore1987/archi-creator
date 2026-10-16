@@ -110,6 +110,7 @@ public class JpaModelRepository implements ModelRepository {
                 (d, e) -> EntityMapper.apply(d, modelId, e));
         AggregateWrites.sync(em, model.relationships(), RelationshipEntity.class, RelationshipEntity::new,
                 (d, e) -> EntityMapper.apply(d, modelId, e));
+        model.markPersisted();
         AggregateWrites.flush(em, Message.of(ModelingMessages.MODEL, model.id()));
     }
 
@@ -137,9 +138,7 @@ public class JpaModelRepository implements ModelRepository {
                 .forEach(x -> persist(new ElementEntity(), e -> EntityMapper.apply(x, modelId, e)));
         content.model().relationships().values()
                 .forEach(x -> persist(new RelationshipEntity(), e -> EntityMapper.apply(x, modelId, e)));
-        content.model().folders().markPersisted();
-        content.model().elements().markPersisted();
-        content.model().relationships().markPersisted();
+        content.model().markPersisted();
         content.views().forEach(views::save);
         AggregateWrites.flush(em, Message.of(ModelingMessages.MODEL, id));
     }

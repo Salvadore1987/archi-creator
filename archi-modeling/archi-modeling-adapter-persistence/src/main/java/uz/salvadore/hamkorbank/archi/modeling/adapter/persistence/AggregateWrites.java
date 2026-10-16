@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentModificationException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedMap;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedEntities;
 
 /** Запись тронутых частей агрегата в строки — общая для модели и представлений. */
 final class AggregateWrites {
@@ -22,8 +22,11 @@ final class AggregateWrites {
         void apply(V domain, E entity);
     }
 
-    /** Тронутые сущности агрегата — в строки: новые вставляются, загруженные правятся, удалённые уходят. */
-    static <K extends Record, V, E> void sync(EntityManager em, TrackedMap<K, V> tracked, Class<E> type,
+    /**
+     * Тронутые сущности агрегата — в строки: новые вставляются, загруженные правятся, удалённые уходят.
+     * Отметку «записано» ставит агрегат: вызывающий зовёт его {@code markPersisted()} после всех таблиц.
+     */
+    static <K extends Record, V, E> void sync(EntityManager em, TrackedEntities<K, V> tracked, Class<E> type,
                                               Supplier<E> factory, Mapping<V, E> mapping) {
         for (K key : tracked.removals()) {
             E entity = em.find(type, idOf(key));
@@ -41,7 +44,6 @@ final class AggregateWrites {
                 mapping.apply(change.getValue(), entity);
             }
         }
-        tracked.markPersisted();
     }
 
     /**
