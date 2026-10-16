@@ -119,8 +119,7 @@ public final class ImportService {
         try {
             return new ImportIntake(sessions, uuids, clock).receive(request);
         } catch (IdempotencyConflictException conflict) {
-            throw new InterchangeException(IdempotencyConflictException.INVARIANT, Failure.CONFLICT,
-                    Message.of(InterchangeMessages.IMPORT_KEY_REUSED),
+            throw new InterchangeException(conflict.code(), Failure.CONFLICT, conflict.reason(),
                     Map.of("importSessionId", conflict.existing().id().toString()));
         }
     }

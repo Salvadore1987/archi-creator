@@ -27,8 +27,6 @@ public final class InterchangeCodes {
     public static final String ACCESS_DENIED = "IXC_ACCESS_DENIED";
     /** Запрос не разобран: поле не задано или значение не того вида. */
     public static final String INVALID_REQUEST = "IXC_INVALID_REQUEST";
-    /** Ключ идемпотентности уже использован для другого файла. */
-    public static final String IDEMPOTENCY_CONFLICT = "IXC_IDEMPOTENCY_CONFLICT";
     /** В рабочее пространство уже идёт импорт: импорты в одно пространство последовательны. */
     public static final String IMPORT_BUSY = "IXC_IMPORT_BUSY";
     /** Файл или состояние модели в коммите повреждены и не собираются — отказ при любом режиме. */

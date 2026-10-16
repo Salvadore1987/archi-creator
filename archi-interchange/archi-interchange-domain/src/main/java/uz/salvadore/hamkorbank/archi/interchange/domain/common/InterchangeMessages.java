@@ -250,8 +250,6 @@ public final class InterchangeMessages {
     public static final String FINDING_WITHOUT_CODE = "interchange.import.finding-without-code";
     /** Ключ идемпотентности пуст или слишком длинный. */
     public static final String IDEMPOTENCY_KEY_INVALID = "interchange.import.idempotency-key-invalid";
-    /** Ключ идемпотентности уже использован для другого файла; в тексте — оба отпечатка. */
-    public static final String IDEMPOTENCY_KEY_REUSED = "interchange.import.idempotency-key-reused";
     /** Импорт с тем же ключом идемпотентности уже выполняется. */
     public static final String IMPORT_IN_PROGRESS = "interchange.import.in-progress";
     /** Ключ идемпотентности уже использован для другого файла. */
