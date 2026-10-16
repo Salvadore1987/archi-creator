@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.validation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
@@ -9,6 +10,8 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
@@ -91,5 +94,19 @@ class ModelValidatorTest {
                     && f.code().equals(ModelValidator.OPAQUE_CODE) && f.severity() == Severity.INFO),
                     () -> target + " " + findings);
         }
+    }
+
+    @Test
+    @DisplayName("INV-MDL-001: папка импортированной модели не берёт archi_id самой модели")
+    void importedFolderCannotReuseModelArchiId() {
+        ArchiId modelArchiId = Models.archiId();
+        List<ModelFolder> roots = List.of(FolderTreeInitializer.root(FolderType.APPLICATION, FolderId.next(UUIDS),
+                modelArchiId, SortOrder.ofPosition(0)));
+        ModelHeader header = new ModelHeader(ModelId.next(UUIDS), WorkspaceId.next(UUIDS), modelArchiId, "Файл",
+                Optional.empty(), "5.0.0", ModelStatus.ACTIVE, List.of(), Optional.empty(), "a", NOW, NOW, 0);
+
+        ModelingException rejected = assertThrows(ModelingException.class, () -> ArchitectureModel.imported(header,
+                roots, List.of(), List.of(), List.of(), () -> FolderId.next(UUIDS), Models::archiId));
+        assertEquals("INV-MDL-001", rejected.code());
     }
 }

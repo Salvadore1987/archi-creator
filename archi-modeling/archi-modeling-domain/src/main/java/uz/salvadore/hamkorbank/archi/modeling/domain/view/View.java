@@ -111,6 +111,7 @@ public final class View {
             throw integrity(Message.of(ModelingMessages.VIEW_OF_OTHER_MODEL, archiId));
         }
         Set<ArchiId> seen = new HashSet<>();
+        seen.add(archiId);
         for (ViewNode node : nodes.values()) {
             if (!seen.add(node.archiId())) {
                 throw new ModelingException(ModelingCodes.ARCHI_ID_UNIQUE, Failure.UNPROCESSABLE,

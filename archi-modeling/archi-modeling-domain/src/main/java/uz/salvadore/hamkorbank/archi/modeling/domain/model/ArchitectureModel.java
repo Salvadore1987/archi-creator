@@ -152,6 +152,7 @@ public final class ArchitectureModel {
     /** Уникальность {@code archiId}, концы связей и дерево папок — над всем содержимым разом. */
     private void verifyStructure() {
         Set<ArchiId> seen = new HashSet<>();
+        seen.add(archiId);
         Stream.of(folders.values().stream().map(ModelFolder::archiId),
                         elements.values().stream().map(Element::archiId),
                         relationships.values().stream().map(Relationship::archiId),

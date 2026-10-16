@@ -108,6 +108,19 @@ class ViewIntegrityTest {
         assertEquals(1, view.requireEdge(edge.id()).bendpoints().size());
     }
 
+    @Test
+    @DisplayName("INV-MDL-001: узел импортированного представления не берёт archi_id самого представления")
+    void importedNodeCannotReuseViewArchiId() {
+        ArchitectureModel model = Models.empty();
+        View view = newView(model);
+        ViewNode group = new ViewNode(ViewNodeId.next(UUIDS), Optional.empty(), view.archiId(), DiagramType.GROUP,
+                Optional.empty(), BOX, StyleOverride.NONE, SortOrder.ofPosition(0), Optional.empty());
+
+        ModelingException rejected = assertThrows(ModelingException.class,
+                () -> View.imported(view.header(), List.of(group), List.of(), model));
+        assertEquals("INV-MDL-001", rejected.code());
+    }
+
     private static View newView(ArchitectureModel model) {
         return View.create(model.id(), model.placeNewView(ViewId.next(UUIDS), DiagramType.DIAGRAM_MODEL, "Контекст",
                 Models.root(model, FolderType.DIAGRAMS), Models.archiId(), NOW));
