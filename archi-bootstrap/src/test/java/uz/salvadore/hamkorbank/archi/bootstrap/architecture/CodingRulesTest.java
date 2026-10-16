@@ -49,7 +49,7 @@ class CodingRulesTest {
     /** Контексты, ключи сущностей которых уже наследуют BaseId. */
     private static final List<String> BASE_ID_CONTEXTS = List.of("modeling", "interchange", "advisor");
     /** Контексты, корни агрегатов которых уже сведены к AggregateRoot. */
-    private static final List<String> AGGREGATE_ROOT_CONTEXTS = List.of("modeling", "interchange");
+    private static final List<String> AGGREGATE_ROOT_CONTEXTS = List.of("modeling", "interchange", "advisor");
     private static final Path SPEC = Path.of("../spec");
     private static final String TRACKED_MAP = ROOT + ".modeling.domain.common.TrackedMap";
     /** Агрегаты, которые держат свои сущности в {@code TrackedMap}, и сам класс. */

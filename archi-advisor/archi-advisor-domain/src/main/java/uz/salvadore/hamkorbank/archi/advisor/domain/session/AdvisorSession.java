@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AdvisorSessionId;
@@ -28,12 +29,11 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
  * <p>Результат — находки, план, ответ: текст, ссылки и предложения. Ни одно поле
  * не выражает изменения модели, и метода применить результат здесь нет.
  */
-public final class AdvisorSession {
+public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
 
     /** Наибольшая длина ключа идемпотентности. */
     public static final int IDEMPOTENCY_KEY_MAX = 64;
 
-    private final AdvisorSessionId id;
     private final WorkspaceId workspaceId;
     private final ModelId modelId;
     private final AdvisorFunction function;
@@ -64,7 +64,7 @@ public final class AdvisorSession {
                            List<Finding> findings, Optional<ModelPlan> plan, Optional<AdvisorAnswer> answer,
                            Optional<RejectionReason> rejectionReason, Optional<Instant> firstTokenAt,
                            Optional<Instant> finishedAt, Optional<AuditEntry> auditEntry) {
-        this.id = Objects.requireNonNull(id, "id");
+        super(id);
         this.workspaceId = Objects.requireNonNull(workspaceId, "workspaceId");
         this.modelId = Objects.requireNonNull(modelId, "modelId");
         this.function = Objects.requireNonNull(function, "function");
@@ -177,7 +177,7 @@ public final class AdvisorSession {
         this.finishedAt = Optional.of(now);
         this.auditEntry = Optional.of(new AuditEntry(auditId, requestedBy, function, usage, outcome,
                 rejectionReason, now));
-        events.add(new AdvisorSessionCompletedEvent(id, workspaceId, modelId, function, outcome, rejectionReason,
+        events.add(new AdvisorSessionCompletedEvent(id(), workspaceId, modelId, function, outcome, rejectionReason,
                 usage.promptTokens(), usage.completionTokens(), contextTruncated, findings.size(),
                 Duration.between(requestedAt, now).toMillis(), requestedBy, now));
     }
@@ -200,10 +200,6 @@ public final class AdvisorSession {
         return fingerprint.equals(request.fingerprint());
     }
 
-    /** Ключ сессии. */
-    public AdvisorSessionId id() {
-        return id;
-    }
 
     /** Пространство, в бюджет которого идёт расход. */
     public WorkspaceId workspaceId() {

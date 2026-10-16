@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.TokenBudgetId;
@@ -22,12 +23,11 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
  * {@code EXHAUSTED} выводит только повышение лимита администратором. Порог
  * предупреждения работу не останавливает.
  */
-public final class TokenBudget {
+public final class TokenBudget extends AggregateRoot<TokenBudgetId> {
 
     /** Порог предупреждения по умолчанию, процент израсходованного лимита. */
     public static final int DEFAULT_WARNING_PERCENT = 80;
 
-    private final TokenBudgetId id;
     private final WorkspaceId workspaceId;
     private final BudgetPeriod period;
     private long limitTokens;
@@ -40,7 +40,7 @@ public final class TokenBudget {
 
     private TokenBudget(TokenBudgetId id, WorkspaceId workspaceId, BudgetPeriod period, long limitTokens,
                         long consumedTokens, int warningThresholdPercent, boolean advisorEnabled, long version) {
-        this.id = Objects.requireNonNull(id, "id");
+        super(id);
         this.workspaceId = Objects.requireNonNull(workspaceId, "workspaceId");
         this.period = Objects.requireNonNull(period, "period");
         requirePositive(limitTokens);
@@ -144,10 +144,6 @@ public final class TokenBudget {
         return (double) consumedTokens / limitTokens;
     }
 
-    /** Ключ бюджета. */
-    public TokenBudgetId id() {
-        return id;
-    }
 
     /** Пространство, чей это бюджет. */
     public WorkspaceId workspaceId() {
