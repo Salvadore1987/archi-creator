@@ -52,6 +52,10 @@ public final class AdvisorMessages {
     public static final String COMMAND_FAIL = "advisor.command.fail";
     /** Функция плана завершилась без плана. */
     public static final String PLAN_REQUIRED = "advisor.session.plan-required";
+    /** Подсказка или документация завершены без ответа. */
+    public static final String ANSWER_REQUIRED = "advisor.session.answer-required";
+    /** Результат передан функции, которой он не принадлежит: план не плану, ответ ревью. */
+    public static final String RESULT_NOT_FOR_FUNCTION = "advisor.session.result-not-for-function";
     /** У автора обращения нет идентификатора. */
     public static final String REQUESTER_WITHOUT_SUBJECT = "advisor.requester.without-subject";
     /** Идентификатор объекта модели недопустим. */

@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.DomainEvent;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
 
 class AdvisorSessionTest {
 
@@ -70,5 +72,32 @@ class AdvisorSessionTest {
         session.firstToken(Sessions.NOW.plusSeconds(5));
 
         assertEquals(Sessions.NOW, session.firstTokenAt());
+    }
+
+    @Test
+    @DisplayName("результат — своей функции: ответ обязателен подсказке, чужой план или ответ — отказ")
+    void resultBelongsToFunction() {
+        AdvisorAnswer answer = new AdvisorAnswer("ответ", List.of());
+        ModelPlan plan = new ModelPlan(List.of(), List.of(), null);
+
+        AdvisorSession explain = streaming(AdvisorRequest.explain(Sessions.MODEL, "id-e1"));
+        assertThrows(InvalidValueException.class,
+                () -> explain.complete(TokenUsage.NONE, null, null, Sessions.audit(), Sessions.NOW));
+        assertThrows(InvalidValueException.class,
+                () -> explain.complete(TokenUsage.NONE, plan, answer, Sessions.audit(), Sessions.NOW));
+
+        AdvisorSession review = streaming(AdvisorRequest.review(Sessions.MODEL, null));
+        assertThrows(InvalidValueException.class,
+                () -> review.complete(TokenUsage.NONE, null, answer, Sessions.audit(), Sessions.NOW));
+        assertEquals(SessionStatus.STREAMING, review.status(), "отказ ничего не меняет");
+
+        explain.complete(TokenUsage.NONE, null, answer, Sessions.audit(), Sessions.NOW);
+        assertEquals(answer, explain.answer());
+    }
+
+    private static AdvisorSession streaming(AdvisorRequest request) {
+        AdvisorSession session = Sessions.requested(request);
+        session.startStreaming(10, false);
+        return session;
     }
 }

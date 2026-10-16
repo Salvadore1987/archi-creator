@@ -148,17 +148,27 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
         findings.add(Objects.requireNonNull(finding, "finding"));
     }
 
-    /** Ответ получен целиком. План обязателен у функции плана, ответ — у подсказки и документации. */
+    /**
+     * Ответ получен целиком. План обязателен у функции плана, ответ — у подсказки и документации;
+     * у ревью нет ни того ни другого — его результат в находках. Результат чужой функции — отказ.
+     */
     public void complete(TokenUsage usage, ModelPlan plan, AdvisorAnswer answer,
                          AuditEntryId auditId, Instant now) {
         require(SessionStatus.STREAMING, AdvisorMessages.COMMAND_COMPLETE);
-        if (function == AdvisorFunction.PLAN && plan == null) {
+        boolean plans = function == AdvisorFunction.PLAN;
+        boolean answers = function == AdvisorFunction.EXPLAIN || function == AdvisorFunction.DOCUMENT;
+        if (plans && plan == null) {
             throw new InvalidValueException(AdvisorMessages.PLAN_REQUIRED);
         }
+        if (answers && answer == null) {
+            throw new InvalidValueException(AdvisorMessages.ANSWER_REQUIRED);
+        }
+        if (!plans && plan != null || !answers && answer != null) {
+            throw new InvalidValueException(AdvisorMessages.RESULT_NOT_FOR_FUNCTION);
+        }
         this.usage = Objects.requireNonNull(usage, "usage");
-        this.plan = function == AdvisorFunction.PLAN ? plan : null;
-        this.answer = function == AdvisorFunction.EXPLAIN || function == AdvisorFunction.DOCUMENT
-                ? answer : null;
+        this.plan = plan;
+        this.answer = answer;
         finish(SessionStatus.COMPLETED, auditId, now);
     }
 
