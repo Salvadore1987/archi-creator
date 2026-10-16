@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 
 import java.time.Instant;
+import java.util.Objects;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AdvisorSessionId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
@@ -18,4 +19,14 @@ public record AdvisorSessionCompletedEvent(AdvisorSessionId sessionId, Workspace
                                       long completionTokens, boolean contextTruncated, int findingCount,
                                       long durationMs, String actor, Instant occurredAt)
         implements AdvisorSessionEvent {
+
+    public AdvisorSessionCompletedEvent {
+        Objects.requireNonNull(sessionId, "sessionId");
+        Objects.requireNonNull(workspaceId, "workspaceId");
+        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(function, "function");
+        Objects.requireNonNull(outcome, "outcome");
+        Objects.requireNonNull(actor, "actor");
+        Objects.requireNonNull(occurredAt, "occurredAt");
+    }
 }
