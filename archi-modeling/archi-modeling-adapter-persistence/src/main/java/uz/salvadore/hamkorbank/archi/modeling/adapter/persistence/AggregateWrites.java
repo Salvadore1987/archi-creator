@@ -7,8 +7,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentModificationException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.BaseId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.TrackedEntities;
 
 /** Запись тронутых частей агрегата в строки — общая для модели и представлений. */
@@ -26,16 +26,16 @@ final class AggregateWrites {
      * Тронутые сущности агрегата — в строки: новые вставляются, загруженные правятся, удалённые уходят.
      * Отметку «записано» ставит агрегат: вызывающий зовёт его {@code markPersisted()} после всех таблиц.
      */
-    static <K extends Record, V, E> void sync(EntityManager em, TrackedEntities<K, V> tracked, Class<E> type,
+    static <K extends BaseId<UUID>, V, E> void sync(EntityManager em, TrackedEntities<K, V> tracked, Class<E> type,
                                               Supplier<E> factory, Mapping<V, E> mapping) {
         for (K key : tracked.removals()) {
-            E entity = em.find(type, idOf(key));
+            E entity = em.find(type, key.value());
             if (entity != null) {
                 em.remove(entity);
             }
         }
         for (Map.Entry<K, V> change : tracked.upserts().entrySet()) {
-            E entity = tracked.isPersisted(change.getKey()) ? em.find(type, idOf(change.getKey())) : null;
+            E entity = tracked.isPersisted(change.getKey()) ? em.find(type, change.getKey().value()) : null;
             if (entity == null) {
                 E created = factory.get();
                 mapping.apply(change.getValue(), created);
@@ -60,14 +60,6 @@ final class AggregateWrites {
                 throw new ConcurrentModificationException(what);
             }
             throw e;
-        }
-    }
-
-    private static UUID idOf(Record key) {
-        try {
-            return (UUID) key.getClass().getRecordComponents()[0].getAccessor().invoke(key);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException(Message.of(ModelingMessages.AGGREGATE_KEY_NOT_UUID, key).toString(), e);
         }
     }
 }

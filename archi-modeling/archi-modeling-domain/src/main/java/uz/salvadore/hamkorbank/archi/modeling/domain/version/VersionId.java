@@ -1,15 +1,16 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.version;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
-import java.util.Objects;
 import java.util.UUID;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.BaseId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
 
 /** Внутренний ключ версии модели. */
-public record VersionId(UUID value) {
+public final class VersionId extends BaseId<UUID> {
 
-    public VersionId {
-        Objects.requireNonNull(value, "VersionId");
+    /** Ключ над значением UUID. */
+    public VersionId(UUID value) {
+        super(value);
     }
 
     /** Ключ из готового значения. */
@@ -25,10 +26,5 @@ public record VersionId(UUID value) {
     /** Новый ключ от генератора приложения. */
     public static VersionId next(UuidV7 uuids) {
         return new VersionId(uuids.next());
-    }
-
-    @Override
-    public String toString() {
-        return value.toString();
     }
 }

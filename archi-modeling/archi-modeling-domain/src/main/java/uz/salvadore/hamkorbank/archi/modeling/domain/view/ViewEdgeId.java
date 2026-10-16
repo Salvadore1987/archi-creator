@@ -1,15 +1,16 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
-import java.util.Objects;
 import java.util.UUID;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.BaseId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
 
 /** Внутренний ключ ребра представления. Ребро бывает концом другого ребра. */
-public record ViewEdgeId(UUID value) implements ViewEndpoint {
+public final class ViewEdgeId extends BaseId<UUID> implements ViewEndpoint {
 
-    public ViewEdgeId {
-        Objects.requireNonNull(value, "ViewEdgeId");
+    /** Ключ над значением UUID. */
+    public ViewEdgeId(UUID value) {
+        super(value);
     }
 
     /** Ключ из готового значения. */
@@ -25,10 +26,5 @@ public record ViewEdgeId(UUID value) implements ViewEndpoint {
     /** Новый ключ от генератора приложения. */
     public static ViewEdgeId next(UuidV7 uuids) {
         return new ViewEdgeId(uuids.next());
-    }
-
-    @Override
-    public String toString() {
-        return value.toString();
     }
 }

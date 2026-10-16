@@ -61,8 +61,8 @@
 
 | № | Задача | Проверка | Статус |
 |---|---|---|---|
-| B1 | `BaseId`, `BaseEntity`, `AggregateRoot`, `{Ctx}DomainException` в `common` трёх доменов | — | ⬜ |
-| B2 | Идентификаторы → `BaseId<UUID>`: modeling | ArchUnit: `*Id` домена наследуют `BaseId` | ⬜ |
+| B1 | `BaseId`, `BaseEntity`, `AggregateRoot`, `{Ctx}DomainException` в `common` трёх доменов — вводятся вместе с задачами, которым нужны (B2–B4, B6) | — | ✅ |
+| B2 | Идентификаторы → `BaseId<UUID>`: modeling | ArchUnit: `*Id` домена наследуют `BaseId` | ✅ |
 | B3 | То же: interchange, advisor | то же правило без исключений | ⬜ |
 | B4 | Корни агрегатов → `AggregateRoot`, создание фабрикой (record-агрегаты `ModelLock`, `ModelVersion`, `ModelAccessList` — в классы с `restore`) | ArchUnit: корни наследуют `AggregateRoot`, публичных конструкторов нет | ⬜ |
 | B5 | События → `{Aggregate}{Action}Event`, базовый `{Aggregate}Event` | ArchUnit: реализации `DomainEvent` оканчиваются на `Event` | ✅ |
@@ -140,6 +140,10 @@
   потребовал бы wildcard в параметре, который запрещает задача 5 этапа 1. `GitSnapshotCommittedEvent`
   создаёт сервис публикации, а не агрегат (смешанный способ из ADR-0023) — отнесён к агрегату
   привязки `GitBindingEvent`. Тип на проводе (`outbox_event.event_type`, AsyncAPI) не изменился.
+- **B2.** `ArchiId` под `BaseId` не переводится: это значение-атрибут из файла Archi
+  (столбец `archi_id`), а не ключ сущности; правило ArchUnit его исключает явно.
+  `AggregateWrites` доставал UUID ключа отражением компонента record — теперь `BaseId.value()`;
+  ключ сообщения об ошибке отражения удалён.
 
 ## Отменённые варианты
 

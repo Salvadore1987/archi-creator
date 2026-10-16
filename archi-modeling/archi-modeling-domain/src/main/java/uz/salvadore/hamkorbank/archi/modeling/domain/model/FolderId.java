@@ -1,15 +1,16 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
-import java.util.Objects;
 import java.util.UUID;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.BaseId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
 
 /** Внутренний ключ папки модели. */
-public record FolderId(UUID value) {
+public final class FolderId extends BaseId<UUID> {
 
-    public FolderId {
-        Objects.requireNonNull(value, "FolderId");
+    /** Ключ над значением UUID. */
+    public FolderId(UUID value) {
+        super(value);
     }
 
     /** Ключ из готового значения. */
@@ -25,10 +26,5 @@ public record FolderId(UUID value) {
     /** Новый ключ от генератора приложения. */
     public static FolderId next(UuidV7 uuids) {
         return new FolderId(uuids.next());
-    }
-
-    @Override
-    public String toString() {
-        return value.toString();
     }
 }

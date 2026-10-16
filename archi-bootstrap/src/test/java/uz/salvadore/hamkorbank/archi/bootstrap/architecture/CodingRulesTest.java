@@ -40,6 +40,8 @@ class CodingRulesTest {
     private static final String JPA = "jakarta.persistence.";
     /** Контексты, исключения домена которых уже сведены под общий корень. */
     private static final List<String> DOMAIN_EXCEPTION_ROOTS = List.of("modeling", "interchange", "advisor");
+    /** Контексты, ключи сущностей которых уже наследуют BaseId. */
+    private static final List<String> BASE_ID_CONTEXTS = List.of("modeling");
     private static final String TRACKED_MAP = ROOT + ".modeling.domain.common.TrackedMap";
     /** Агрегаты, которые держат свои сущности в {@code TrackedMap}, и сам класс. */
     private static final Set<String> TRACKED_OWNERS = Set.of(TRACKED_MAP,
@@ -179,6 +181,19 @@ class CodingRulesTest {
                 }
             }
         };
+    }
+
+    @Test
+    @DisplayName("Ключ сущности домена — BaseId своего контекста")
+    void identifiersExtendBaseId() {
+        for (String context : BASE_ID_CONTEXTS) {
+            classes().that().resideInAPackage(ROOT + "." + context + ".domain..")
+                    .and().haveSimpleNameEndingWith("Id")
+                    .and().doNotHaveSimpleName("ArchiId")
+                    .should().beAssignableTo(ROOT + "." + context + ".domain.common.BaseId")
+                    .because("равенство и вывод ключа — в одном месте; ArchiId — значение из файла, не ключ")
+                    .check(classes);
+        }
     }
 
     @Test

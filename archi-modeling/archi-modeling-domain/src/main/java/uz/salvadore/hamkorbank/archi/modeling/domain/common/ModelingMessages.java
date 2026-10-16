@@ -58,8 +58,6 @@ public final class ModelingMessages {
     public static final String IDEMPOTENCY_KEY_INVALID = "modeling.idempotency.key-invalid";
     /** Ключ идемпотентности уже использован для запроса с другим содержимым. */
     public static final String IDEMPOTENCY_KEY_REUSED = "modeling.idempotency.key-reused";
-    /** Внутренняя ошибка: ключ агрегата не record с полем UUID. */
-    public static final String AGGREGATE_KEY_NOT_UUID = "modeling.internal.aggregate-key-not-uuid";
     /** Внутренняя ошибка: тип объявлен в каталоге метамодели дважды. */
     public static final String CATALOG_DUPLICATE = "modeling.internal.catalog-duplicate";
     /** Внутренняя ошибка: алгоритм хеширования недоступен в JDK. */
