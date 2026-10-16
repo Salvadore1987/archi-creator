@@ -6,6 +6,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.BaseId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
@@ -61,11 +63,20 @@ public final class IdempotentCommand {
      * Отпечаток тела команды: SHA-256 от канонической записи её полей. Поле — длина,
      * двоеточие и текст; отсутствующее значение ({@code null}, пустой {@code Optional}) —
      * длина {@code -1}, которой у текста не бывает, поэтому оно не совпадёт со строкой {@code "null"}.
+     *
+     * <p>Поля — простые значения: текст, число, логическое, перечисление, UUID, ключ сущности.
+     * Составное значение передаётся по полям: его {@code toString} изменится с новым полем,
+     * и ключи, записанные раньше, перестанут совпадать.
+     *
+     * @throws IllegalArgumentException поле — составное значение; это ошибка вызывающего кода
      */
     public static String fingerprint(Object... fields) {
         StringBuilder canonical = new StringBuilder();
         for (Object field : fields) {
             Object present = field instanceof Optional<?> o ? o.orElse(null) : field;
+            if (present != null && !plain(present)) {
+                throw new IllegalArgumentException(present.getClass().getName());
+            }
             if (present == null) {
                 canonical.append(ABSENT).append('|');
             } else {
@@ -79,6 +90,11 @@ public final class IdempotentCommand {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(Message.of(ModelingMessages.DIGEST_UNAVAILABLE, DIGEST).toString(), e);
         }
+    }
+
+    private static boolean plain(Object value) {
+        return value instanceof CharSequence || value instanceof Number || value instanceof Boolean
+                || value instanceof Enum<?> || value instanceof UUID || value instanceof BaseId<?>;
     }
 
     /** Проверка ключа идемпотентности: не пустой и не длиннее предела. */

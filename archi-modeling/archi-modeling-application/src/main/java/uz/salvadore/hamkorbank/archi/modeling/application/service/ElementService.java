@@ -46,7 +46,8 @@ public final class ElementService {
                           FolderId folderId, RequestedIds ids, String idempotencyKey) {
         return kernel.run(Operation.CREATE_ELEMENT, actor, () -> kernel.unitOfWork.write(() ->
                 kernel.idempotent("CreateElement", actor, idempotencyKey,
-                        IdempotentCommand.fingerprint(modelId, archiType, name, folderId, ids.id(), ids.archiId()),
+                        IdempotentCommand.fingerprint(modelId, archiType.value(), name, folderId, ids.id(),
+                                ids.archiId()),
                         () -> {
                             ArchitectureModel model = kernel.writableModel(modelId, actor);
                             FolderId folder = folderId != null ? folderId : defaultFolder(model, archiType);

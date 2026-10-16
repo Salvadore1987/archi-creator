@@ -106,7 +106,7 @@ public final class RelationshipService {
             boolean[] created = {false};
             ViewEdgeId[] edge = {null};
             Relationship relationship = kernel.idempotent("CreateRelationship", actor, idempotencyKey,
-                    IdempotentCommand.fingerprint(modelId, archiType, sourceId, targetId, details, placement),
+                    fingerprint(modelId, archiType, sourceId, targetId, details, placement),
                     () -> {
                         ArchitectureModel model = kernel.writableModel(modelId, actor);
                         ConceptRef source = concept(model, sourceId);
@@ -125,6 +125,18 @@ public final class RelationshipService {
                     ref -> kernel.models.load(modelId).orElseThrow().requireRelationship(RelationshipId.of(ref)));
             return new Result(relationship, created[0], edge[0]);
         }));
+    }
+
+    /** Отпечаток команды по полям, без {@code toString} её частей: новое поле не сдвинет старые ключи. */
+    private static String fingerprint(ModelId modelId, ArchiType archiType, UUID sourceId, UUID targetId,
+                                      Details details, EdgePlacement placement) {
+        return IdempotentCommand.fingerprint(modelId, archiType.value(), sourceId, targetId, details.name(),
+                details.folderId(), details.accessType(), details.directed(), details.ids().id(),
+                details.ids().archiId(), placement == null ? null : placement.viewId(),
+                placement == null ? null : placement.sourceEndpoint(),
+                placement == null ? null : placement.targetEndpoint(),
+                placement == null ? null : placement.edgeIds().id(),
+                placement == null ? null : placement.edgeIds().archiId());
     }
 
     private ViewEdgeId drawEdge(ArchitectureModel model, Relationship relationship, EdgePlacement placement) {

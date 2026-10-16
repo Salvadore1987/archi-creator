@@ -70,4 +70,16 @@ class IdempotentCommandTest {
         assertNotEquals(text, IdempotentCommand.fingerprint("a", (Object) null));
         assertEquals(absent, IdempotentCommand.fingerprint("a", (Object) null));
     }
+
+    /** Составное значение команды: его {@code toString} — не контракт отпечатка. */
+    private record Composite(String name, int size) {
+    }
+
+    @Test
+    @DisplayName("INV-MDL-003: отпечаток — из простых значений, составное значение — ошибка программиста")
+    void fingerprintTakesPlainValuesOnly() {
+        assertThrows(IllegalArgumentException.class, () -> IdempotentCommand.fingerprint("a", new Composite("x", 1)));
+        assertEquals(IdempotentCommand.fingerprint("a", 1, true, null),
+                IdempotentCommand.fingerprint("a", 1, true, null));
+    }
 }
