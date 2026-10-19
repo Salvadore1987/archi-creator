@@ -28,15 +28,15 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportIntake;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiIdGenerator;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationViolation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 
 /**
  * Импорт файла {@code .archimate} новой моделью.
@@ -50,7 +50,7 @@ public final class ImportService {
 
     private final ImportSessionRepository sessions;
     private final ImportPolicy policy;
-    private final ModelImportService models;
+    private final ModelExchangeApplicationService models;
     private final ArchiDocumentReader reader;
     private final UnitOfWork unitOfWork;
     private final InterchangeEvents events;
@@ -61,9 +61,9 @@ public final class ImportService {
     private final ImportGate gate;
     private final MethodologyCheck methodology = new MethodologyCheck();
 
-    public ImportService(ImportSessionRepository sessions, ImportPolicy policy, ModelImportService models,
-                         ArchiDocumentReader reader, UnitOfWork unitOfWork, InterchangeEvents events,
-                         InterchangeMetrics metrics, TextCatalog texts, Clock clock,
+    public ImportService(ImportSessionRepository sessions, ImportPolicy policy,
+                         ModelExchangeApplicationService models, ArchiDocumentReader reader, UnitOfWork unitOfWork,
+                         InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts, Clock clock,
                          int maxParallelImportsPerWorkspace) {
         this.texts = texts;
         this.sessions = sessions;
@@ -142,7 +142,7 @@ public final class ImportService {
         ModelContent model = new DocumentDecomposer(uuids::next, archiIds::next).decompose(document,
                 new DocumentDecomposer.Identity(modelId, uz.salvadore.hamkorbank.archi.modeling.domain.workspace
                         .WorkspaceId.of(session.workspaceId().value()), actor.subject(), now, now, 0));
-        ModelVersion version = models.store(model, actor,
+        VersionResponse version = models.importModel(actor, model,
                 texts.text(Message.of(InterchangeMessages.COMMENT_IMPORTED, session.sourceName())));
         int opaque = (int) (model.model().elements().values().stream().filter(e -> !e.supported()).count()
                 + model.model().relationships().values().stream().filter(r -> !r.supported()).count());

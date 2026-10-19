@@ -41,6 +41,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelCreateCom
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelDeleteCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelEditCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelImportCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelListQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelPurgeCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelRestoreCommandHandler;
@@ -109,7 +110,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.service.LockApplicatio
 import uz.salvadore.hamkorbank.archi.modeling.application.service.MetamodelApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelExchangeApplicationServiceImpl;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipApplicationServiceImpl;
@@ -200,8 +200,11 @@ public class ModelingConfiguration {
     /** Вход для выгрузки и Git: роль у каждой их операции своя, её проверяет вызывающий. */
     @Bean
     ModelExchangeApplicationService modelExchangeApplicationService(ModelingKernel kernel,
+                                                                    WorkspaceRepository workspaces,
+                                                                    VersionCommitter committer,
                                                                     VersionContents contents) {
-        return new ModelExchangeApplicationServiceImpl(new VersionSnapshotGetQueryHandler(kernel, contents),
+        return new ModelExchangeApplicationServiceImpl(new ModelImportCommandHandler(kernel, workspaces, committer),
+                new VersionSnapshotGetQueryHandler(kernel, contents),
                 new ModelSummaryGetQueryHandler(kernel), new ModelContentGetQueryHandler(kernel, contents),
                 new ModelContentReplaceCommandHandler(kernel, contents), new CommittedVersionGetQueryHandler(kernel),
                 new PublishedVersionGetQueryHandler(kernel), new VersionGitShaRecordCommandHandler(kernel, contents));
@@ -288,12 +291,6 @@ public class ModelingConfiguration {
     AccessListApplicationService accessListApplicationService(ModelingKernel kernel) {
         return new AccessListApplicationServiceImpl(new AccessListGetQueryHandler(kernel),
                 new AccessListReplaceCommandHandler(kernel));
-    }
-
-    @Bean
-    ModelImportService modelImportService(ModelingKernel kernel, WorkspaceRepository workspaces,
-                                          VersionCommitter committer) {
-        return new ModelImportService(kernel, workspaces, committer);
     }
 
     @Bean

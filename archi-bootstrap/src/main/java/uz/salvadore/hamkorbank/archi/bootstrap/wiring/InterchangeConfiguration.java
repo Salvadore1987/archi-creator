@@ -27,7 +27,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentR
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
 
 /** Сценарии interchange — бинами. Транзакция — общая с modeling. */
 @Configuration
@@ -45,9 +44,10 @@ public class InterchangeConfiguration {
     }
 
     @Bean
-    ImportService importService(ImportSessionRepository sessions, ImportPolicy policy, ModelImportService models,
-                                UnitOfWork unitOfWork, InterchangeEvents events, InterchangeMetrics metrics,
-                                TextCatalog texts, Clock clock, InterchangeSettings settings) {
+    ImportService importService(ImportSessionRepository sessions, ImportPolicy policy,
+                                ModelExchangeApplicationService models, UnitOfWork unitOfWork,
+                                InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts, Clock clock,
+                                InterchangeSettings settings) {
         return new ImportService(sessions, policy, models, new StaxArchiDocumentReader(), unitOfWork, events, metrics,
                 texts, clock, settings.maxParallelImportsPerWorkspace());
     }

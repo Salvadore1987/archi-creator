@@ -17,16 +17,19 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionSnap
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.CommittedVersionGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelContentGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelContentReplaceCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelImportCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelSummaryGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.PublishedVersionGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionGitShaRecordCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionSnapshotGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 
 /** Вход для других контекстов: делегирует в handler'ы сценариев. */
 public final class ModelExchangeApplicationServiceImpl implements ModelExchangeApplicationService {
 
+    private final ModelImportCommandHandler importModel;
     private final VersionSnapshotGetQueryHandler snapshot;
     private final ModelSummaryGetQueryHandler summary;
     private final ModelContentGetQueryHandler content;
@@ -35,13 +38,15 @@ public final class ModelExchangeApplicationServiceImpl implements ModelExchangeA
     private final PublishedVersionGetQueryHandler published;
     private final VersionGitShaRecordCommandHandler gitSha;
 
-    public ModelExchangeApplicationServiceImpl(VersionSnapshotGetQueryHandler snapshot,
+    public ModelExchangeApplicationServiceImpl(ModelImportCommandHandler importModel,
+                                               VersionSnapshotGetQueryHandler snapshot,
                                                ModelSummaryGetQueryHandler summary,
                                                ModelContentGetQueryHandler content,
                                                ModelContentReplaceCommandHandler replace,
                                                CommittedVersionGetQueryHandler committed,
                                                PublishedVersionGetQueryHandler published,
                                                VersionGitShaRecordCommandHandler gitSha) {
+        this.importModel = importModel;
         this.snapshot = snapshot;
         this.summary = summary;
         this.content = content;
@@ -49,6 +54,11 @@ public final class ModelExchangeApplicationServiceImpl implements ModelExchangeA
         this.committed = committed;
         this.published = published;
         this.gitSha = gitSha;
+    }
+
+    @Override
+    public VersionResponse importModel(EditorIdentity actor, ModelContent content, String comment) {
+        return importModel.handle(actor, content, comment);
     }
 
     @Override

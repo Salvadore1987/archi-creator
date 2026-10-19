@@ -39,9 +39,14 @@ class ApplicationLayerTest {
     private static final String DOMAIN = ROOT + ".modeling.domain";
     /** Личность вызывающего — параметр входного порта рядом с командой, а не её данные. */
     private static final String ACTOR = DOMAIN + ".common.EditorIdentity";
+    /**
+     * Вход импорта interchange несёт агрегаты, разложенные из документа на его стороне: перевод
+     * этого входа в DTO идёт вместе с раскладкой документа при переводе interchange.
+     */
+    private static final Set<String> INTERCHANGE_INPUT = Set.of(APPLICATION + ".port.ModelContent");
     /** Сервисы, которые адаптеры ещё зовут напрямую. */
     private static final Set<String> NOT_YET_MIGRATED = Set.of(
-            "ModelImportService", "ModelingKernel", "RequestedIds");
+            "ModelingKernel", "RequestedIds");
 
     private static JavaClasses classes;
 
@@ -53,7 +58,7 @@ class ApplicationLayerTest {
     }
 
     @Test
-    @DisplayName("Входной порт modeling не принимает и не отдаёт доменных типов, кроме личности вызывающего")
+    @DisplayName("Входной порт modeling не принимает и не отдаёт доменных типов и типов выходных портов")
     void inputPortsExposeNoDomainTypes() {
         methods().that().areDeclaredInClassesThat().resideInAPackage(APPLICATION + ".port.in..")
                 .should(new ArchCondition<>("not expose domain types") {
@@ -62,7 +67,7 @@ class ApplicationLayerTest {
                         List<JavaType> types = new ArrayList<>(method.getParameterTypes());
                         types.add(method.getReturnType());
                         types.stream().flatMap(ApplicationLayerTest::mentioned)
-                                .filter(ApplicationLayerTest::domain).distinct()
+                                .filter(type -> domain(type) || outputPort(type)).distinct()
                                 .forEach(type -> events.add(SimpleConditionEvent.violated(method,
                                         method.getFullName() + " exposes " + type.getName())));
                     }
@@ -135,6 +140,12 @@ class ApplicationLayerTest {
                     .flatMap(ApplicationLayerTest::mentioned);
         }
         return self;
+    }
+
+    /** Тип выходного порта: за ним хранение и агрегаты, сценарий наружу его не отдаёт и не принимает. */
+    private static boolean outputPort(JavaClass type) {
+        JavaClass base = type.isArray() ? type.getBaseComponentType() : type;
+        return base.getPackageName().equals(APPLICATION + ".port") && !INTERCHANGE_INPUT.contains(base.getName());
     }
 
     private static boolean domain(JavaClass type) {

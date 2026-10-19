@@ -14,6 +14,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelSummar
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ReplaceModelContentResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionSnapshotResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 
 /**
@@ -23,6 +24,12 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
  * фоновый обработчик.
  */
 public interface ModelExchangeApplicationService {
+
+    /**
+     * Импортированный документ становится новой моделью с версией 1. Содержимое приходит
+     * агрегатами, разложенными из документа на стороне вызывающего.
+     */
+    VersionResponse importModel(EditorIdentity actor, ModelContent content, String comment);
 
     /** Снимок версии для выгрузки: указанной или последней. */
     VersionSnapshotResponse getVersionSnapshot(EditorIdentity actor, GetVersionSnapshotQuery query);
