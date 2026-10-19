@@ -47,11 +47,12 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.UuidV7;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ViewId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetVersionSnapshotQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetViewQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionSnapshotResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionSnapshot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
@@ -85,7 +86,7 @@ public final class ViewImageService {
     private static final long FIXED_ENTRY_TIME = 0L;
 
     private final ViewQueryApplicationService queries;
-    private final VersionService versions;
+    private final ModelExchangeApplicationService versions;
     private final Notation notation;
     private final Typesetter typesetter;
     private final Rasterizer rasterizer;
@@ -95,8 +96,8 @@ public final class ViewImageService {
     private final Clock clock;
     private final UuidV7 uuids;
 
-    public ViewImageService(ViewQueryApplicationService queries, VersionService versions, Notation notation,
-                            Typesetter typesetter, Rasterizer rasterizer, InterchangeEvents events,
+    public ViewImageService(ViewQueryApplicationService queries, ModelExchangeApplicationService versions,
+                            Notation notation, Typesetter typesetter, Rasterizer rasterizer, InterchangeEvents events,
                             InterchangeMetrics metrics, TextCatalog texts, Clock clock) {
         this.queries = queries;
         this.versions = versions;
@@ -140,9 +141,8 @@ public final class ViewImageService {
             operation.require(actor);
             Settings settings = settings(request);
             ViewResponse view = queries.getView(actor, new GetViewQuery(viewId));
-            VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(view.modelId()),
-                    request.versionNo());
+            VersionSnapshotResponse snapshot = versions.getVersionSnapshot(actor,
+                    new GetVersionSnapshotQuery(view.modelId(), request.versionNo()));
             ModelDocument document = read(snapshot);
             DocumentNode node = document.find(ArchiId.of(view.archiId()))
                     .filter(n -> n.tag().equals("element"))
@@ -169,9 +169,8 @@ public final class ViewImageService {
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
             Settings settings = settings(request);
-            VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId),
-                    request.versionNo());
+            VersionSnapshotResponse snapshot = versions.getVersionSnapshot(actor,
+                    new GetVersionSnapshotQuery(modelId, request.versionNo()));
             ModelDocument document = read(snapshot);
             List<LossEntry> all = new ArrayList<>();
             StringBuilder report = new StringBuilder("{\"format\":\"").append(settings.format().name())
@@ -264,10 +263,10 @@ public final class ViewImageService {
     }
 
     /** Задание выгрузки доставлено; {@code viewId} — {@code null} у пакета всех представлений. */
-    private void deliver(EditorIdentity actor, VersionSnapshot snapshot, ViewId viewId, Settings settings,
+    private void deliver(EditorIdentity actor, VersionSnapshotResponse snapshot, ViewId viewId, Settings settings,
                          Artifact artifact, LossReport report) {
         ExportJob job = ExportJob.request(ExportJobId.next(uuids),
-                new WorkspaceId(snapshot.model().workspaceId().value()), new ModelId(snapshot.model().id().value()),
+                new WorkspaceId(snapshot.model().workspaceId()), new ModelId(snapshot.model().id()),
                 viewId, settings.format(), settings.options(), snapshot.versionNo(), actor.subject(), clock.instant());
         job.render(snapshot.versionNo(), artifact, report);
         job.deliver(clock.instant());
@@ -275,7 +274,7 @@ public final class ViewImageService {
         metrics.exportLosses(settings.format().name(), report.entries().size());
     }
 
-    private static ModelDocument read(VersionSnapshot snapshot) {
+    private static ModelDocument read(VersionSnapshotResponse snapshot) {
         return new StaxArchiDocumentReader().read(new ByteArrayInputStream(snapshot.xml()));
     }
 

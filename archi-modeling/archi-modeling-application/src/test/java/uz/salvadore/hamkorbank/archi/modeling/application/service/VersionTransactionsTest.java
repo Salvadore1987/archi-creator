@@ -10,6 +10,12 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.RestoreVersionCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetVersionSnapshotQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.SnapshotPurgeCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionContents;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionRestoreCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionSnapshotGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
@@ -24,18 +30,17 @@ class VersionTransactionsTest {
     private final InMemoryPorts ports = new InMemoryPorts();
     /** Был ли каждый внешний вызов сделан внутри транзакции. */
     private final List<Boolean> externalCallsInTransaction = new ArrayList<>();
-    private final VersionService versions = new VersionService(ports.kernel, ports.snapshotWriter,
+    private final VersionContents contents = ports.versionContents(
             (xml, current, now) -> new ModelContent(ports.modelRepository.load(current.id()).orElseThrow(), List.of()),
-            workspaceId -> external(true),
-            (model, version) -> external(Optional.of("restored".getBytes(StandardCharsets.UTF_8))),
-            ZoneOffset.UTC, true);
+            (model, version) -> external(Optional.of("restored".getBytes(StandardCharsets.UTF_8))));
 
     @Test
     @DisplayName("выгрузка очищенного снимка обращается к Git вне транзакции")
     void snapshotFetchesOutsideTransaction() {
         ModelId model = purgedModel();
 
-        versions.snapshot(ALICE, model, 1L);
+        new VersionSnapshotGetQueryHandler(ports.kernel, contents).handle(ALICE,
+                new GetVersionSnapshotQuery(model.value(), 1L));
 
         assertEquals(List.of(false), externalCallsInTransaction);
     }
@@ -46,7 +51,8 @@ class VersionTransactionsTest {
         ModelId model = purgedModel();
         ports.lock(ALICE, model);
 
-        versions.rollback(ALICE, model, 1, null);
+        new VersionRestoreCommandHandler(ports.kernel, contents).handle(ALICE,
+                new RestoreVersionCommand(model.value(), 1, null));
 
         assertEquals(List.of(false), externalCallsInTransaction);
     }
@@ -58,7 +64,7 @@ class VersionTransactionsTest {
         ModelVersion first = ports.versions.removeFirst();
         ports.versions.add(first.publishedAs(SHA));
 
-        versions.purgeSnapshots();
+        new SnapshotPurgeCommandHandler(ports.kernel, workspaceId -> external(true), ZoneOffset.UTC, true).handle();
 
         assertFalse(externalCallsInTransaction.isEmpty());
         assertFalse(externalCallsInTransaction.contains(true));

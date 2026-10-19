@@ -58,6 +58,11 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemRename
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemsDeleteCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemsMoveCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionCommitter;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionContents;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionLabelCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionListQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionRestoreCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionSaveCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewCreateCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewEdgeEditCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewEdgePlaceCommandHandler;
@@ -72,7 +77,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewNodePlaceC
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewNodeRemoveCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceResolveQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.DomainEventPublisher;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.GitBinding;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.IdempotencyRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelAccessListRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
@@ -80,6 +84,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelLockReposito
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelVersionRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotArchive;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotReader;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotWriter;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
@@ -94,6 +99,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicati
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.RelationshipApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.TreeApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.VersionApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.ModelAccessList;
@@ -391,19 +397,24 @@ final class InMemoryPorts {
             .getBytes(StandardCharsets.UTF_8);
 
     final DomainEventPublisher events = published::addAll;
-    final GitBinding noGit = workspaceId -> false;
 
     final ModelingKernel kernel = new ModelingKernel(modelRepository, viewRepository, lockRepository,
             versionRepository, aclRepository, idempotencyRepository, unitOfWork, events, UseCaseMetrics.NONE,
             Message::toString, clock, Duration.ofMinutes(30));
-    final VersionService versionService = new VersionService(kernel, snapshotWriter, (xml, current, now) -> {
-        throw new UnsupportedOperationException();
-    }, noGit, SnapshotArchive.NONE, ZoneOffset.UTC, false);
+    final VersionCommitter committer = new VersionCommitter(kernel, snapshotWriter);
+    private final VersionContents withoutArchive = new VersionContents(kernel, committer, snapshotWriter,
+            (xml, current, now) -> {
+                throw new UnsupportedOperationException();
+            }, SnapshotArchive.NONE);
+    final VersionApplicationService versionService = new VersionApplicationServiceImpl(
+            new VersionSaveCommandHandler(kernel, committer), new VersionListQueryHandler(kernel),
+            new VersionLabelCommandHandler(kernel, withoutArchive),
+            new VersionRestoreCommandHandler(kernel, withoutArchive));
     final WorkspaceResolveQueryHandler resolveWorkspace = new WorkspaceResolveQueryHandler(workspaceRepository,
             unitOfWork);
     final ModelApplicationService lifecycle = new ModelApplicationServiceImpl(
             new ModelCreateCommandHandler(kernel, workspaceRepository, resolveWorkspace,
-                    new VersionCommitter(kernel, snapshotWriter)),
+                    committer),
             new ModelEditCommandHandler(kernel), new ModelDeleteCommandHandler(kernel),
             new ModelRestoreCommandHandler(kernel), new ModelPurgeCommandHandler(kernel));
     final ModelQueryApplicationService queries = new ModelQueryApplicationServiceImpl(
@@ -433,6 +444,11 @@ final class InMemoryPorts {
             new ElementTypeListQueryHandler(), new RelationTypeSuggestQueryHandler());
     final AccessListApplicationService accessLists = new AccessListApplicationServiceImpl(
             new AccessListGetQueryHandler(kernel), new AccessListReplaceCommandHandler(kernel));
+
+    /** Содержимое версий с заданными чтением снимка и архивом — для сценариев отката и выгрузки. */
+    VersionContents versionContents(SnapshotReader reader, SnapshotArchive archive) {
+        return new VersionContents(kernel, committer, snapshotWriter, reader, archive);
+    }
 
     /** Новая модель в пространстве теста — короткий путь для сценариев, которым она нужна. */
     ModelId createModel(EditorIdentity actor, String name) {

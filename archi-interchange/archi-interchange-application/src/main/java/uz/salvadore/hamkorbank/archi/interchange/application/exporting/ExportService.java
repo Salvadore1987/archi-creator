@@ -39,8 +39,9 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.LossEntryId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.UuidV7;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionSnapshot;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetVersionSnapshotQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionSnapshotResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
@@ -72,7 +73,7 @@ public final class ExportService {
             FORMAT_CSV, ExportFormat.CSV_CATALOG,
             FORMAT_OEF, ExportFormat.OPEN_EXCHANGE);
 
-    private final VersionService versions;
+    private final ModelExchangeApplicationService versions;
     private final InterchangeEvents events;
     private final InterchangeMetrics metrics;
     private final Clock clock;
@@ -85,7 +86,7 @@ public final class ExportService {
      * @param notation  размеры фигур по умолчанию — те же, что у канвы и картинок
      * @param oefSchema официальная схема OEF; одна на приложение, компилируется при старте
      */
-    public ExportService(VersionService versions, InterchangeEvents events, InterchangeMetrics metrics,
+    public ExportService(ModelExchangeApplicationService versions, InterchangeEvents events, InterchangeMetrics metrics,
                          TextCatalog texts, Notation notation, OefSchema oefSchema, Clock clock) {
         this.texts = texts;
         this.notation = notation;
@@ -126,8 +127,8 @@ public final class ExportService {
         InterchangeOperation operation = InterchangeOperation.EXPORT_ARCHIMATE;
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
-            VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
+            VersionSnapshotResponse snapshot = versions.getVersionSnapshot(actor,
+                    new GetVersionSnapshotQuery(modelId, versionNo));
             return deliver(actor, snapshot, ExportFormat.ARCHIMATE, ExportOptions.none(),
                     Artifact.of(snapshot.xml(), ARCHIMATE_MEDIA_TYPE, fileName(snapshot, "archimate")));
         });
@@ -142,8 +143,8 @@ public final class ExportService {
         InterchangeOperation operation = InterchangeOperation.EXPORT_CATALOG_CSV;
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
-            VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
+            VersionSnapshotResponse snapshot = versions.getVersionSnapshot(actor,
+                    new GetVersionSnapshotQuery(modelId, versionNo));
             byte[] zip = new CatalogCsvWriter(texts).write(snapshot.xml(), options);
             ExportOptions exportOptions = new ExportOptions(null, null, null, String.valueOf(options.separator()),
                     options.folderArchiId());
@@ -164,8 +165,8 @@ public final class ExportService {
         InterchangeOperation operation = InterchangeOperation.EXPORT_OPEN_EXCHANGE;
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
-            VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
+            VersionSnapshotResponse snapshot = versions.getVersionSnapshot(actor,
+                    new GetVersionSnapshotQuery(modelId, versionNo));
             OefWriter.Written written = new OefWriter(notation)
                     .write(new StaxArchiDocumentReader().read(new ByteArrayInputStream(snapshot.xml())));
             ExportJob job = job(actor, snapshot, ExportFormat.OPEN_EXCHANGE, ExportOptions.none());
@@ -184,12 +185,12 @@ public final class ExportService {
         });
     }
 
-    private Export deliver(EditorIdentity actor, VersionSnapshot snapshot, ExportFormat format, ExportOptions options,
-                           Artifact artifact) {
+    private Export deliver(EditorIdentity actor, VersionSnapshotResponse snapshot, ExportFormat format,
+                           ExportOptions options, Artifact artifact) {
         return deliver(job(actor, snapshot, format, options), snapshot, artifact, LossReport.lossless());
     }
 
-    private Export deliver(ExportJob job, VersionSnapshot snapshot, Artifact artifact, LossReport report) {
+    private Export deliver(ExportJob job, VersionSnapshotResponse snapshot, Artifact artifact, LossReport report) {
         job.render(snapshot.versionNo(), artifact, report);
         job.deliver(clock.instant());
         events.publish(job.pullEvents());
@@ -197,9 +198,10 @@ public final class ExportService {
         return new Export(artifact, snapshot.versionNo(), report.entries().size());
     }
 
-    private ExportJob job(EditorIdentity actor, VersionSnapshot snapshot, ExportFormat format, ExportOptions options) {
-        return ExportJob.request(ExportJobId.next(uuids), new WorkspaceId(snapshot.model().workspaceId().value()),
-                new ModelId(snapshot.model().id().value()), null, format, options, snapshot.versionNo(),
+    private ExportJob job(EditorIdentity actor, VersionSnapshotResponse snapshot, ExportFormat format,
+                          ExportOptions options) {
+        return ExportJob.request(ExportJobId.next(uuids), new WorkspaceId(snapshot.model().workspaceId()),
+                new ModelId(snapshot.model().id()), null, format, options, snapshot.versionNo(),
                 actor.subject(), clock.instant());
     }
 
@@ -226,7 +228,7 @@ public final class ExportService {
         return out.toByteArray();
     }
 
-    private static String fileName(VersionSnapshot snapshot, String extension) {
+    private static String fileName(VersionSnapshotResponse snapshot, String extension) {
         return safeFileName(snapshot.model().name(), "model") + "-v" + snapshot.versionNo() + "." + extension;
     }
 

@@ -30,8 +30,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.PublishedVersi
 import uz.salvadore.hamkorbank.archi.interchange.application.port.SecretResolver;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 
 /** Git: адаптеры портов, публикация с проходом очереди по расписанию и импорт по ссылке. */
 @Configuration
@@ -53,8 +52,8 @@ public class GitConfiguration {
     }
 
     @Bean
-    PublishedVersions publishedVersions(VersionService versions) {
-        return new ModelingPublishedVersions(versions);
+    PublishedVersions publishedVersions(ModelExchangeApplicationService models) {
+        return new ModelingPublishedVersions(models);
     }
 
     @Bean
@@ -71,7 +70,7 @@ public class GitConfiguration {
     }
 
     @Bean
-    ModelStates modelStates(ModelImportService models) {
+    ModelStates modelStates(ModelExchangeApplicationService models) {
         return new ModelingModelStates(models);
     }
 

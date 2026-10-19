@@ -25,9 +25,9 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
 
 /** Сценарии interchange — бинами. Транзакция — общая с modeling. */
 @Configuration
@@ -53,8 +53,9 @@ public class InterchangeConfiguration {
     }
 
     @Bean
-    ExportService exportService(VersionService versions, InterchangeEvents events, InterchangeMetrics metrics,
-                                TextCatalog texts, Notation notation, OefSchema oefSchema, Clock clock) {
+    ExportService exportService(ModelExchangeApplicationService versions, InterchangeEvents events,
+                                InterchangeMetrics metrics, TextCatalog texts, Notation notation, OefSchema oefSchema,
+                                Clock clock) {
         return new ExportService(versions, events, metrics, texts, notation, oefSchema, clock);
     }
 
@@ -87,9 +88,10 @@ public class InterchangeConfiguration {
     }
 
     @Bean
-    ViewImageService viewImageService(ViewQueryApplicationService queries, VersionService versions, Notation notation,
-                                      Typesetter typesetter, Rasterizer rasterizer, InterchangeEvents events,
-                                      InterchangeMetrics metrics, TextCatalog texts, Clock clock) {
+    ViewImageService viewImageService(ViewQueryApplicationService queries, ModelExchangeApplicationService versions,
+                                      Notation notation, Typesetter typesetter, Rasterizer rasterizer,
+                                      InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts,
+                                      Clock clock) {
         return new ViewImageService(queries, versions, notation, typesetter, rasterizer, events, metrics, texts,
                 clock);
     }

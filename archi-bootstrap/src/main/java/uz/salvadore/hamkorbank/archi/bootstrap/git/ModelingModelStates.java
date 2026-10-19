@@ -3,32 +3,33 @@ package uz.salvadore.hamkorbank.archi.bootstrap.git;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ModelStates;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceModelContentCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelContentQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelContentResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ReplaceModelContentResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 
 /** Содержимое модели для импорта состояния: перевод идентификаторов двух контекстов и ничего больше. */
 public final class ModelingModelStates implements ModelStates {
 
-    private final ModelImportService models;
+    private final ModelExchangeApplicationService models;
 
-    public ModelingModelStates(ModelImportService models) {
+    public ModelingModelStates(ModelExchangeApplicationService models) {
         this.models = models;
     }
 
     @Override
     public Current current(EditorIdentity actor, ModelId model) {
-        ModelImportService.CurrentContent current = models.current(actor, modeling(model));
-        return new Current(new WorkspaceId(current.header().workspaceId().value()), current.header().name(),
+        ModelContentResponse current = models.getModelContent(actor, new GetModelContentQuery(model.value()));
+        return new Current(new WorkspaceId(current.model().workspaceId()), current.model().name(),
                 current.versionNo(), current.xml());
     }
 
     @Override
     public Replaced replace(EditorIdentity actor, ModelId model, byte[] xml, String comment) {
-        ModelImportService.Replaced replaced = models.replace(actor, modeling(model), xml, comment);
-        return new Replaced(replaced.version().versionNo(), replaced.created(), replaced.opaqueObjects());
-    }
-
-    private static uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId modeling(ModelId model) {
-        return uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(model.value());
+        ReplaceModelContentResponse replaced = models.replaceModelContent(actor,
+                new ReplaceModelContentCommand(model.value(), xml, comment));
+        return new Replaced(replaced.versionNo(), replaced.created(), replaced.opaqueObjects());
     }
 }

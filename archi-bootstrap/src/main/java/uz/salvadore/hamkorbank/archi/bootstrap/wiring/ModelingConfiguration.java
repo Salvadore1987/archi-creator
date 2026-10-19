@@ -25,6 +25,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentR
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EnsureDefaultWorkspaceCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListReplaceCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.CommittedVersionGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementCreateCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementDeleteCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementEditCommandHandler;
@@ -33,6 +34,8 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.FolderCreateCo
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockAcquireCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockReleaseCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelContentGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelContentReplaceCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelContents;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelCreateCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelDeleteCommandHandler;
@@ -41,15 +44,25 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelGetQueryH
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelListQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelPurgeCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelRestoreCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelSummaryGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelValidateQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.PublishedVersionGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationTypeSuggestQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipCreateCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipDeleteCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.SnapshotPurgeCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemRenameCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemsDeleteCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemsMoveCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionCommitter;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionContents;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionGitShaRecordCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionLabelCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionListQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionRestoreCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionSaveCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionSnapshotGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewCreateCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewEdgeEditCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewEdgePlaceCommandHandler;
@@ -81,9 +94,12 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ElementApplica
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.MetamodelApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.RelationshipApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.SnapshotRetentionApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.TreeApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.VersionApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
@@ -92,12 +108,14 @@ import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementApplica
 import uz.salvadore.hamkorbank.archi.modeling.application.service.LockApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.MetamodelApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelExchangeApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.SnapshotRetentionApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.TreeApplicationServiceImpl;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewQueryApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceApplicationServiceImpl;
@@ -161,18 +179,48 @@ public class ModelingConfiguration {
     }
 
     @Bean
-    VersionService versionService(ModelingKernel kernel, ArchimateSnapshots snapshots, GitSnapshotArchive git,
-                                  ModelingSettings settings) {
-        return new VersionService(kernel, snapshots, snapshots, git, git, ZoneId.systemDefault(),
-                settings.retentionEnabled());
+    VersionCommitter versionCommitter(ModelingKernel kernel, ArchimateSnapshots snapshots) {
+        return new VersionCommitter(kernel, snapshots);
+    }
+
+    @Bean
+    VersionContents versionContents(ModelingKernel kernel, VersionCommitter committer, ArchimateSnapshots snapshots,
+                                    GitSnapshotArchive git) {
+        return new VersionContents(kernel, committer, snapshots, snapshots, git);
+    }
+
+    @Bean
+    VersionApplicationService versionApplicationService(ModelingKernel kernel, VersionCommitter committer,
+                                                        VersionContents contents) {
+        return new VersionApplicationServiceImpl(new VersionSaveCommandHandler(kernel, committer),
+                new VersionListQueryHandler(kernel), new VersionLabelCommandHandler(kernel, contents),
+                new VersionRestoreCommandHandler(kernel, contents));
+    }
+
+    /** Вход для выгрузки и Git: роль у каждой их операции своя, её проверяет вызывающий. */
+    @Bean
+    ModelExchangeApplicationService modelExchangeApplicationService(ModelingKernel kernel,
+                                                                    VersionContents contents) {
+        return new ModelExchangeApplicationServiceImpl(new VersionSnapshotGetQueryHandler(kernel, contents),
+                new ModelSummaryGetQueryHandler(kernel), new ModelContentGetQueryHandler(kernel, contents),
+                new ModelContentReplaceCommandHandler(kernel, contents), new CommittedVersionGetQueryHandler(kernel),
+                new PublishedVersionGetQueryHandler(kernel), new VersionGitShaRecordCommandHandler(kernel, contents));
+    }
+
+    @Bean
+    SnapshotRetentionApplicationService snapshotRetentionApplicationService(ModelingKernel kernel,
+                                                                            GitSnapshotArchive git,
+                                                                            ModelingSettings settings) {
+        return new SnapshotRetentionApplicationServiceImpl(new SnapshotPurgeCommandHandler(kernel, git,
+                ZoneId.systemDefault(), settings.retentionEnabled()));
     }
 
     @Bean
     ModelApplicationService modelApplicationService(ModelingKernel kernel, WorkspaceRepository workspaces,
-                                                    ArchimateSnapshots snapshots) {
+                                                    VersionCommitter committer) {
         return new ModelApplicationServiceImpl(new ModelCreateCommandHandler(kernel, workspaces,
-                new WorkspaceResolveQueryHandler(workspaces, kernel.unitOfWork()),
-                new VersionCommitter(kernel, snapshots)), new ModelEditCommandHandler(kernel),
+                new WorkspaceResolveQueryHandler(workspaces, kernel.unitOfWork()), committer),
+                new ModelEditCommandHandler(kernel),
                 new ModelDeleteCommandHandler(kernel), new ModelRestoreCommandHandler(kernel),
                 new ModelPurgeCommandHandler(kernel));
     }
@@ -244,8 +292,8 @@ public class ModelingConfiguration {
 
     @Bean
     ModelImportService modelImportService(ModelingKernel kernel, WorkspaceRepository workspaces,
-                                          VersionService versions) {
-        return new ModelImportService(kernel, workspaces, versions);
+                                          VersionCommitter committer) {
+        return new ModelImportService(kernel, workspaces, committer);
     }
 
     @Bean
@@ -278,7 +326,8 @@ public class ModelingConfiguration {
 
     /** Очистка снимков по расписанию; выключенная настройкой — пустой проход. */
     @Bean
-    SchedulingConfigurer snapshotRetention(VersionService versions, ModelingSettings settings) {
-        return registrar -> registrar.addCronTask(versions::purgeSnapshots, settings.retentionCron());
+    SchedulingConfigurer snapshotRetention(SnapshotRetentionApplicationService retention,
+                                           ModelingSettings settings) {
+        return registrar -> registrar.addCronTask(retention::purgeSnapshots, settings.retentionCron());
     }
 }

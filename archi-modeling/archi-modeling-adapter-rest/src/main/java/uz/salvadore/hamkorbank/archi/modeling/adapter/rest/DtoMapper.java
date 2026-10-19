@@ -35,11 +35,11 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PropertyRes
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationTypeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationshipResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ValidationFindingResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewEdgeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewNodeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
-import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 
 /** Агрегаты — в DTO. Списки — в порядке {@code sort_order}: клиенту не нужно сортировать заново. */
 public final class DtoMapper {
@@ -114,9 +114,9 @@ public final class DtoMapper {
     }
 
     /** Версия модели без снимка; есть ли снимок — отдельным флагом. */
-    public static VersionInfo version(ModelVersion v) {
-        return new VersionInfo(v.versionNo(), v.author(), v.comment(), v.label(),
-                v.createdAt(), v.hasSnapshot(), v.gitSha());
+    public static VersionInfo version(VersionResponse v) {
+        return new VersionInfo(v.versionNo(), v.author(), v.comment(), v.label(), v.createdAt(),
+                v.snapshotAvailable(), v.gitSha());
     }
 
     /** Блокировка модели: владелец и срок. */

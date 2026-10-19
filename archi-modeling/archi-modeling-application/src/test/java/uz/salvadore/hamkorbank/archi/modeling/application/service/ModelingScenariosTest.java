@@ -15,8 +15,10 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.DeleteElem
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.DeleteTreeItemsCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewNodeCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceAccessListCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.SaveVersionCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ListModelsQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ListVersionsQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ProposeViewLayoutQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.SuggestRelationTypesQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.AccessListResponse;
@@ -26,6 +28,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelTreeRe
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PlacementResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationTypeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationshipResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.SaveVersionResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
@@ -57,7 +60,7 @@ class ModelingScenariosTest {
 
         assertEquals(first.id(), replay.id());
         assertEquals(1, ports.models.size());
-        assertEquals(1, ports.versionService.list(ALICE, ModelId.of(first.id())).size());
+        assertEquals(1, ports.versionService.listVersions(ALICE, new ListVersionsQuery(first.id())).size());
         assertEquals(9, ports.models.get(ModelId.of(first.id())).roots().size());
         ModelingDomainException other = assertThrows(ModelingDomainException.class,
                 () -> create(ALICE, "Другая", "k-1"));
@@ -131,16 +134,16 @@ class ModelingScenariosTest {
         ModelId model = ports.createModel(ALICE, "Ландшафт");
         ports.lock(ALICE, model);
 
-        VersionService.SaveResult unchanged = ports.versionService.save(ALICE, model, "пусто",
-                null);
+        SaveVersionResponse unchanged = ports.versionService.saveVersion(ALICE,
+                new SaveVersionCommand(model.value(), "пусто", null));
         assertFalse(unchanged.created());
         assertEquals(1, unchanged.version().versionNo());
 
         ports.element(ALICE, model, COMPONENT, "АБС");
-        VersionService.SaveResult saved = ports.versionService.save(ALICE, model, "АБС",
-                "save-1");
-        VersionService.SaveResult replay = ports.versionService.save(ALICE, model, "АБС",
-                "save-1");
+        SaveVersionResponse saved = ports.versionService.saveVersion(ALICE,
+                new SaveVersionCommand(model.value(), "АБС", "save-1"));
+        SaveVersionResponse replay = ports.versionService.saveVersion(ALICE,
+                new SaveVersionCommand(model.value(), "АБС", "save-1"));
 
         assertTrue(saved.created());
         assertEquals(2, saved.version().versionNo());
