@@ -12,12 +12,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
@@ -32,7 +33,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 class PlacementsIT extends IntegrationTest {
 
     @Autowired
-    ModelLifecycleService lifecycle;
+    ModelApplicationService lifecycle;
     @Autowired
     LockApplicationService locks;
     @Autowired
@@ -49,7 +50,8 @@ class PlacementsIT extends IntegrationTest {
     @Test
     @DisplayName("FR-31: размещения — элементы с узлом и связи с ребром по представлениям, без повторов")
     void placementsPerView() {
-        ModelId model = lifecycle.create(ARCHITECT, workspace(), "Размещения", null).id();
+        ModelId model = ModelId.of(lifecycle.createModel(ARCHITECT,
+                new CreateModelCommand(workspace().value(), "Размещения", null)).id());
         locks.acquireLock(ARCHITECT, new AcquireLockCommand(model.value()));
         Element component = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "АБС",
                 null, null);

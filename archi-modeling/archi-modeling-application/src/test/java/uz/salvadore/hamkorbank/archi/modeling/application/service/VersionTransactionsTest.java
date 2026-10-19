@@ -54,7 +54,7 @@ class VersionTransactionsTest {
     @Test
     @DisplayName("FR-47: очистка снимков проверяет доступность Git вне транзакции")
     void purgeChecksGitOutsideTransaction() {
-        ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null);
+        ports.createModel(ALICE, "Ландшафт");
         ModelVersion first = ports.versions.removeFirst();
         ports.versions.add(first.publishedAs(SHA));
 
@@ -65,7 +65,7 @@ class VersionTransactionsTest {
     }
 
     private ModelId purgedModel() {
-        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null).id();
+        ModelId model = ports.createModel(ALICE, "Ландшафт");
         ModelVersion first = ports.versions.removeFirst();
         ports.versions.add(first.publishedAs(SHA).snapshotPurged(true));
         return model;

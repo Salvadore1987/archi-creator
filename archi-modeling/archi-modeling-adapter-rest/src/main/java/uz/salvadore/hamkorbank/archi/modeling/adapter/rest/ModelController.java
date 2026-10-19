@@ -24,21 +24,25 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelSummary
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelTree;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.WorkspaceDto;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.DeleteModelCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EditModelCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PurgeModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReleaseLockCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceAccessListCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.RestoreModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetAccessListQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetLockQuery;
-import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ResolveWorkspaceQuery;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ListModelsQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ValidateModelQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.AccessListApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
  * Модели: список, дерево, жизненный цикл, блокировка, отчёт валидации, список доступа.
@@ -47,17 +51,15 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 @RequestMapping("/api/v1")
 public class ModelController {
 
-    private final ModelQueryService queries;
-    private final ModelLifecycleService lifecycle;
+    private final ModelQueryApplicationService queries;
+    private final ModelApplicationService lifecycle;
     private final LockApplicationService locks;
     private final AccessListApplicationService accessLists;
     private final WorkspaceApplicationService workspaces;
-    private final TextCatalog text;
 
-    public ModelController(ModelQueryService queries, ModelLifecycleService lifecycle, LockApplicationService locks,
-                           AccessListApplicationService accessLists, WorkspaceApplicationService workspaces,
-                           TextCatalog text) {
-        this.text = text;
+    public ModelController(ModelQueryApplicationService queries, ModelApplicationService lifecycle,
+                           LockApplicationService locks, AccessListApplicationService accessLists,
+                           WorkspaceApplicationService workspaces) {
         this.queries = queries;
         this.lifecycle = lifecycle;
         this.locks = locks;
@@ -74,49 +76,48 @@ public class ModelController {
     /** Без {@code workspaceId} — первое пространство: до мультиарендности оно одно. */
     @GetMapping("/models")
     public List<ModelSummary> list(EditorIdentity actor, @RequestParam(required = false) UUID workspaceId) {
-        return queries.list(actor, workspace(workspaceId)).stream().map(DtoMapper::summary).toList();
+        return queries.listModels(actor, new ListModelsQuery(workspaceId)).stream().map(DtoMapper::summary).toList();
     }
 
     /** Создаёт модель — {@code 201} с адресом; без {@code workspaceId} — в первом пространстве. */
     @PostMapping("/models")
     public ResponseEntity<ModelSummary> create(EditorIdentity actor, @RequestBody CreateModelRequest request,
                                                @RequestHeader(value = "Idempotency-Key", required = false) String key) {
-        ArchitectureModel model = lifecycle.create(actor, workspace(request.workspaceId()),
-                request.name(), key);
-        return ResponseEntity.created(URI.create("/api/v1/models/" + model.id()))
-                .body(DtoMapper.summary(model.header()));
+        ModelSummaryResponse model = lifecycle.createModel(actor,
+                new CreateModelCommand(request.workspaceId(), request.name(), key));
+        return ResponseEntity.created(URI.create("/api/v1/models/" + model.id())).body(DtoMapper.summary(model));
     }
 
     /** Открывает модель: дерево, элементы, связи и размещения на представлениях. */
     @GetMapping("/models/{id}")
     public ModelTree open(EditorIdentity actor, @PathVariable UUID id) {
-        return DtoMapper.tree(queries.openWithPlacements(actor, ModelId.of(id)));
+        return DtoMapper.tree(queries.getModel(actor, new GetModelQuery(id)));
     }
 
     /** Правит имя и описание модели; не переданное поле не меняется. */
     @PatchMapping("/models/{id}")
     public ModelSummary edit(EditorIdentity actor, @PathVariable UUID id, @RequestBody ModelPatch patch) {
-        return DtoMapper.summary(lifecycle.edit(actor, ModelId.of(id), patch.name(),
-                patch.documentation()).header());
+        return DtoMapper.summary(lifecycle.editModel(actor, new EditModelCommand(id, patch.name(),
+                patch.documentation())));
     }
 
     /** Мягко удаляет модель: данные и история остаются. */
     @DeleteMapping("/models/{id}")
     public ResponseEntity<Void> delete(EditorIdentity actor, @PathVariable UUID id) {
-        lifecycle.delete(actor, ModelId.of(id));
+        lifecycle.deleteModel(actor, new DeleteModelCommand(id));
         return ResponseEntity.noContent().build();
     }
 
     /** Возвращает мягко удалённую модель в работу. */
     @PostMapping("/models/{id}/restore")
     public ModelSummary restore(EditorIdentity actor, @PathVariable UUID id) {
-        return DtoMapper.summary(lifecycle.restore(actor, ModelId.of(id)).header());
+        return DtoMapper.summary(lifecycle.restoreModel(actor, new RestoreModelCommand(id)));
     }
 
     /** Физически уничтожает удалённую модель. */
     @PostMapping("/models/{id}/purge")
     public ResponseEntity<Void> purge(EditorIdentity actor, @PathVariable UUID id) {
-        lifecycle.purge(actor, ModelId.of(id));
+        lifecycle.purgeModel(actor, new PurgeModelCommand(id));
         return ResponseEntity.noContent().build();
     }
 
@@ -147,7 +148,7 @@ public class ModelController {
     /** Находки проверки модели. */
     @GetMapping("/models/{id}/validate")
     public List<Finding> validate(EditorIdentity actor, @PathVariable UUID id) {
-        return queries.validate(actor, ModelId.of(id)).stream().map(f -> DtoMapper.finding(f, text)).toList();
+        return queries.validateModel(actor, new ValidateModelQuery(id)).stream().map(DtoMapper::finding).toList();
     }
 
     /** Список доступа модели. */
@@ -165,10 +166,5 @@ public class ModelController {
                         .map(e -> new ReplaceAccessListCommand.Entry(e.principalType(), e.principal(), e.access()))
                         .toList()))
                 .entries().stream().map(e -> new AclEntryDto(e.principalType(), e.principal(), e.access())).toList();
-    }
-
-
-    private WorkspaceId workspace(UUID requested) {
-        return WorkspaceId.of(workspaces.resolveWorkspace(new ResolveWorkspaceQuery(requested)).workspaceId());
     }
 }

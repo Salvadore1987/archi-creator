@@ -28,6 +28,15 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListRepl
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockAcquireCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockReleaseCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelCreateCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelDeleteCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelListQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelPurgeCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelRestoreCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelValidateQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionCommitter;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceEnsureDefaultCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceListQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceResolveQueryHandler;
@@ -44,12 +53,15 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.AccessListApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.AccessListApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.LockApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
@@ -124,9 +136,21 @@ public class ModelingConfiguration {
     }
 
     @Bean
-    ModelLifecycleService modelLifecycleService(ModelingKernel kernel, WorkspaceRepository workspaces,
-                                                VersionService versions) {
-        return new ModelLifecycleService(kernel, workspaces, versions);
+    ModelApplicationService modelApplicationService(ModelingKernel kernel, WorkspaceRepository workspaces,
+                                                    ArchimateSnapshots snapshots) {
+        return new ModelApplicationServiceImpl(new ModelCreateCommandHandler(kernel, workspaces,
+                new WorkspaceResolveQueryHandler(workspaces, kernel.unitOfWork()),
+                new VersionCommitter(kernel, snapshots)), new ModelEditCommandHandler(kernel),
+                new ModelDeleteCommandHandler(kernel), new ModelRestoreCommandHandler(kernel),
+                new ModelPurgeCommandHandler(kernel));
+    }
+
+    @Bean
+    ModelQueryApplicationService modelQueryApplicationService(ModelingKernel kernel,
+                                                              WorkspaceRepository workspaces) {
+        return new ModelQueryApplicationServiceImpl(new ModelListQueryHandler(kernel,
+                new WorkspaceResolveQueryHandler(workspaces, kernel.unitOfWork())), new ModelGetQueryHandler(kernel),
+                new ModelValidateQueryHandler(kernel));
     }
 
     @Bean

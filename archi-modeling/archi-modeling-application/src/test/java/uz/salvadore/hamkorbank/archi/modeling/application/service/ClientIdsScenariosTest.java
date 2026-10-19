@@ -47,7 +47,7 @@ class ClientIdsScenariosTest {
 
     @BeforeEach
     void lockedModel() {
-        model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null).id();
+        model = ports.createModel(ALICE, "Ландшафт");
         ports.lock(ALICE, model);
     }
 

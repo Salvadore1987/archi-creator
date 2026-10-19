@@ -1,12 +1,13 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.service;
 
-import java.time.Instant;
 import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.Snapshots;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionCommitter;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.GitBinding;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotArchive;
@@ -24,7 +25,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.SnapshotRetention;
-import uz.salvadore.hamkorbank.archi.modeling.domain.version.VersionId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
@@ -35,6 +35,7 @@ public final class VersionService {
 
     private final ModelingKernel kernel;
     private final SnapshotWriter snapshotWriter;
+    private final VersionCommitter committer;
     private final SnapshotReader snapshotReader;
     private final GitBinding gitBinding;
     private final SnapshotArchive archive;
@@ -45,6 +46,7 @@ public final class VersionService {
                           GitBinding gitBinding, SnapshotArchive archive, ZoneId zone, boolean retentionEnabled) {
         this.kernel = kernel;
         this.snapshotWriter = snapshotWriter;
+        this.committer = new VersionCommitter(kernel, snapshotWriter);
         this.snapshotReader = snapshotReader;
         this.gitBinding = gitBinding;
         this.archive = archive;
@@ -79,28 +81,9 @@ public final class VersionService {
         }));
     }
 
-    /**
-     * Версия из текущего содержимого базы. Тот же отпечаток, что у последней версии, —
-     * новая не пишется и возвращается последняя. Снимок собирается из базы, а не из
-     * того, что держит вызывающий: так он проверяет и хранение. {@code null} — без комментария.
-     */
+    /** Версия из текущего содержимого базы — как {@link VersionCommitter#commit}. */
     ModelVersion commit(ArchitectureModel model, EditorIdentity actor, String comment) {
-        ModelContent content = new ModelContent(kernel.models.load(model.id()).orElseThrow(),
-                kernel.views.loadAll(model.id()));
-        byte[] xml = snapshotWriter.write(content);
-        String hash = Snapshots.sha256(xml);
-        Optional<ModelVersion> last = kernel.versions.last(model.id());
-        if (last.isPresent() && last.get().contentHash().equals(hash)) {
-            return last.get();
-        }
-        Instant now = kernel.now();
-        ModelVersion.Committed committed = ModelVersion.commit(last.orElse(null), VersionId.next(kernel.uuids),
-                model.id(), model.workspaceId(), actor.subject(), comment, now, Snapshots.gzip(xml), hash,
-                new ModelVersion.ModelSize(content.model().elements().size(),
-                        content.model().relationships().size()));
-        kernel.versions.save(committed.version());
-        kernel.events.publish(List.of(committed.event()));
-        return committed.version();
+        return committer.commit(model, actor, comment);
     }
 
     /** История версий модели, от новых к старым, без снимков. */

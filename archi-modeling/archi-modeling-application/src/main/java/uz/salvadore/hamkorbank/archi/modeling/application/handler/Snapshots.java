@@ -1,4 +1,4 @@
-package uz.salvadore.hamkorbank.archi.modeling.application.service;
+package uz.salvadore.hamkorbank.archi.modeling.application.handler;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -16,14 +16,15 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainExcept
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /** Сжатие снимка (gzip, хранится в {@code bytea}) и его отпечаток. */
-final class Snapshots {
+public final class Snapshots {
 
     private static final String DIGEST = "SHA-256";
 
     private Snapshots() {
     }
 
-    static byte[] gzip(byte[] xml) {
+    /** Снимок, сжатый gzip. */
+    public static byte[] gzip(byte[] xml) {
         ByteArrayOutputStream out = new ByteArrayOutputStream(xml.length / 8);
         try (GZIPOutputStream gzip = new GZIPOutputStream(out)) {
             gzip.write(xml);
@@ -33,7 +34,8 @@ final class Snapshots {
         return out.toByteArray();
     }
 
-    static byte[] gunzip(byte[] compressed) {
+    /** Снимок из gzip; повреждённый — отказ «дефект сервера» с кодом. */
+    public static byte[] gunzip(byte[] compressed) {
         try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(compressed))) {
             return gzip.readAllBytes();
         } catch (IOException e) {
@@ -44,7 +46,8 @@ final class Snapshots {
         }
     }
 
-    static String sha256(byte[] content) {
+    /** Отпечаток содержимого: SHA-256 в шестнадцатеричной записи. */
+    public static String sha256(byte[] content) {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance(DIGEST).digest(content));
         } catch (NoSuchAlgorithmException e) {

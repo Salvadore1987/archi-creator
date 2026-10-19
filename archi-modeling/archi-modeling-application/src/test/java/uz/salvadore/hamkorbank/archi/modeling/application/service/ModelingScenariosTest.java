@@ -10,8 +10,14 @@ import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceAccessListCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ListModelsQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.AccessListResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelSummaryResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelTreeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PlacementResponse;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
@@ -20,7 +26,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommittedEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
@@ -40,34 +45,34 @@ class ModelingScenariosTest {
     @Test
     @DisplayName("UC-MDL-001: модель создаётся с версией 1, повтор ключа — та же модель")
     void createModelIsIdempotentAndStartsHistory() {
-        ArchitectureModel first = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", "k-1");
-        ArchitectureModel replay = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", "k-1");
+        ModelSummaryResponse first = create(ALICE, "Ландшафт", "k-1");
+        ModelSummaryResponse replay = create(ALICE, "Ландшафт", "k-1");
 
         assertEquals(first.id(), replay.id());
         assertEquals(1, ports.models.size());
-        assertEquals(1, ports.versionService.list(ALICE, first.id()).size());
-        assertEquals(9, ports.models.get(first.id()).roots().size());
+        assertEquals(1, ports.versionService.list(ALICE, ModelId.of(first.id())).size());
+        assertEquals(9, ports.models.get(ModelId.of(first.id())).roots().size());
         ModelingDomainException other = assertThrows(ModelingDomainException.class,
-                () -> ports.lifecycle.create(ALICE, ports.workspace.id(), "Другая", "k-1"));
+                () -> create(ALICE, "Другая", "k-1"));
         assertEquals("INV-MDL-003", other.code());
     }
 
     @Test
     @DisplayName("FR-28: VIEWER не создаёт модель и не правит, но читает")
     void viewerReadsButDoesNotWrite() {
-        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null).id();
+        ModelId model = ports.createModel(ALICE, "Ландшафт");
 
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
-                () -> ports.lifecycle.create(READER, ports.workspace.id(), "x", null)).failure());
+                () -> create(READER, "x", null)).failure());
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> ports.lock(READER, model)).failure());
-        assertEquals("Ландшафт", ports.queries.open(READER, model).name());
+        assertEquals("Ландшафт", open(READER, model).model().name());
     }
 
     @Test
     @DisplayName("FR-28: роль проверяется раньше разбора ввода — читатель получает 403, а не 422")
     void roleIsCheckedBeforeInput() {
-        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null).id();
+        ModelId model = ports.createModel(ALICE, "Ландшафт");
         ports.lock(ALICE, model);
         View view = ports.viewService.create(ALICE, model, "Контекст", null, null);
         ViewService.NewNode noElement = new ViewService.NewNode(ViewNodeKind.DIAGRAM_OBJECT, null, null, null,
@@ -84,7 +89,7 @@ class ModelingScenariosTest {
     @DisplayName("FR-28: отказ роли называет операцию сообщением, а не именем сценария и списком ролей")
     void roleDenialNamesOperationByKey() {
         ModelingDomainException denied = assertThrows(ModelingDomainException.class,
-                () -> ports.lifecycle.create(READER, ports.workspace.id(), "x", null));
+                () -> create(READER, "x", null));
 
         assertEquals(List.of(Message.of(ModelingMessages.OPERATION_CREATE_MODEL)), denied.reason().args());
     }
@@ -92,7 +97,7 @@ class ModelingScenariosTest {
     @Test
     @DisplayName("INV-MDL-006: правка без блокировки — 409, второй редактор — 409 с владельцем")
     void writesRequireOwnLock() {
-        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null).id();
+        ModelId model = ports.createModel(ALICE, "Ландшафт");
 
         ModelingDomainException noLock = assertThrows(ModelingDomainException.class,
                 () -> ports.elements.create(ALICE, model,
@@ -116,7 +121,7 @@ class ModelingScenariosTest {
     @Test
     @DisplayName("UC-MDL-004: изменений нет — версия не создаётся; есть — номер растёт")
     void saveCreatesVersionOnlyOnChanges() {
-        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null).id();
+        ModelId model = ports.createModel(ALICE, "Ландшафт");
         ports.lock(ALICE, model);
 
         VersionService.SaveResult unchanged = ports.versionService.save(ALICE, model, "пусто",
@@ -140,14 +145,14 @@ class ModelingScenariosTest {
     @Test
     @DisplayName("INV-MDL-011: модель со списком скрыта от чужих — её нет в списке, прямой запрос 404")
     void accessListHidesModel() {
-        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Секретная", null).id();
+        ModelId model = ports.createModel(ALICE, "Секретная");
         ports.accessLists.replaceAccessList(ALICE, new ReplaceAccessListCommand(model.value(),
                 List.of(acl("USER", "alice", "WRITE"))));
 
-        assertEquals(List.of(), ports.queries.list(BOB, ports.workspace.id()));
+        assertEquals(List.of(), list(BOB));
         assertEquals(Failure.NOT_FOUND, assertThrows(ModelingDomainException.class,
-                () -> ports.queries.open(BOB, model)).failure());
-        assertEquals(1, ports.queries.list(ALICE, ports.workspace.id()).size());
+                () -> open(BOB, model)).failure());
+        assertEquals(1, list(ALICE).size());
         assertEquals(Failure.NOT_FOUND, assertThrows(ModelingDomainException.class,
                 () -> clearAccess(BOB, model)).failure(),
                 "скрытая модель отвечает 404 раньше, чем выдала бы себя отказом 403");
@@ -155,7 +160,7 @@ class ModelingScenariosTest {
         ports.accessLists.replaceAccessList(ALICE, new ReplaceAccessListCommand(model.value(),
                 List.of(acl("USER", "alice", "WRITE"), acl("GROUP", "audit", "READ"))));
         EditorIdentity auditor = new EditorIdentity("carol", Set.of(Role.ARCHITECT), Set.of("audit"));
-        assertEquals("Секретная", ports.queries.open(auditor, model).name());
+        assertEquals("Секретная", open(auditor, model).model().name());
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> clearAccess(auditor, model)).failure(), "список меняют автор и ADMIN");
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
@@ -165,24 +170,25 @@ class ModelingScenariosTest {
     @Test
     @DisplayName("FR-31: дерево модели с размещениями — запись на каждое представление, пустое тоже")
     void treeWithPlacementsCoversEveryView() {
-        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null).id();
+        ModelId model = ports.createModel(ALICE, "Ландшафт");
         ports.lock(ALICE, model);
         Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", null, null);
         View placed = ports.viewService.create(ALICE, model, "Контекст", null, null);
         View empty = ports.viewService.create(ALICE, model, "Пустое", null, null);
         ports.viewService.place(ALICE, placed.id(), component.id(), new Bounds(10, 10, 120, 55), null);
 
-        ModelQueryService.OpenedModel opened = ports.queries.openWithPlacements(READER, model);
+        ModelTreeResponse opened = open(READER, model);
 
-        assertEquals(List.of(placed.id(), empty.id()), opened.placements().stream().map(p -> p.viewId()).toList());
-        assertEquals(List.of(component.id()), opened.placements().getFirst().elementIds());
+        assertEquals(List.of(placed.id().value(), empty.id().value()),
+                opened.placements().stream().map(PlacementResponse::viewId).toList());
+        assertEquals(List.of(component.id().value()), opened.placements().getFirst().elementIds());
         assertTrue(opened.placements().getLast().elementIds().isEmpty());
     }
 
     @Test
     @DisplayName("INV-MDL-004: удаление элемента со связью — 409; групповое вместе со связью проходит")
     void deleteWithRelationshipsTogether() {
-        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", null).id();
+        ModelId model = ports.createModel(ALICE, "Ландшафт");
         ports.lock(ALICE, model);
         Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", null, null);
         Element actor = ports.elements.create(ALICE, model, ArchiType.ofSimpleName("BusinessActor"), "Клиент",
@@ -224,6 +230,18 @@ class ModelingScenariosTest {
                 RelationshipService.suggestions(COMPONENT, ArchiType.ofSimpleName("BusinessProcess"));
         assertFalse(componentInProcess.stream().anyMatch(RelationshipService.Suggestion::nesting),
                 "вложенность связи не подразумевает");
+    }
+
+    private ModelSummaryResponse create(EditorIdentity actor, String name, String key) {
+        return ports.lifecycle.createModel(actor, new CreateModelCommand(ports.workspace.id().value(), name, key));
+    }
+
+    private ModelTreeResponse open(EditorIdentity actor, ModelId model) {
+        return ports.queries.getModel(actor, new GetModelQuery(model.value()));
+    }
+
+    private List<ModelSummaryResponse> list(EditorIdentity actor) {
+        return ports.queries.listModels(actor, new ListModelsQuery(ports.workspace.id().value()));
     }
 
     private static ReplaceAccessListCommand.Entry acl(String principalType, String principal, String access) {

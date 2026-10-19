@@ -92,6 +92,36 @@ public final class ModelingKernel {
         return unitOfWork;
     }
 
+    /** Хранилище агрегатов модели. */
+    public ModelRepository models() {
+        return models;
+    }
+
+    /** Хранилище представлений. */
+    public ViewRepository views() {
+        return views;
+    }
+
+    /** История версий. */
+    public ModelVersionRepository versions() {
+        return versions;
+    }
+
+    /** Тексты на языке запроса — для того, что сервер сохраняет как данные. */
+    public TextCatalog texts() {
+        return texts;
+    }
+
+    /** Генератор ключей версии 7 по часам приложения. */
+    public UuidV7 uuids() {
+        return uuids;
+    }
+
+    /** Генератор идентификаторов Archi. */
+    public ArchiIdGenerator archiIds() {
+        return archiIds;
+    }
+
     /** Хранилище блокировок. */
     public ModelLockRepository locks() {
         return locks;
@@ -133,7 +163,8 @@ public final class ModelingKernel {
         return header;
     }
 
-    ArchitectureModel visibleModel(ModelId modelId, EditorIdentity actor, AclAccess access) {
+    /** Модель целиком, видимая автору с данным уровнем доступа. */
+    public ArchitectureModel visibleModel(ModelId modelId, EditorIdentity actor, AclAccess access) {
         visibleHeader(modelId, actor, access);
         return models.load(modelId)
                 .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.MODEL, modelId)));
@@ -143,14 +174,15 @@ public final class ModelingKernel {
      * Модель для записи содержимого: видима на запись, активна,
      * заблокирована автором команды.
      */
-    ArchitectureModel writableModel(ModelId modelId, EditorIdentity actor) {
+    public ArchitectureModel writableModel(ModelId modelId, EditorIdentity actor) {
         ArchitectureModel model = visibleModel(modelId, actor, AclAccess.WRITE);
         model.requireActive();
         ModelLock.requireWriteAccess(modelId, locks.find(modelId).orElse(null), actor.subject(), now());
         return model;
     }
 
-    void save(ArchitectureModel model) {
+    /** Запись модели и публикация её событий. */
+    public void save(ArchitectureModel model) {
         models.save(model);
         events.publish(model.pullEvents());
     }
@@ -211,7 +243,7 @@ public final class ModelingKernel {
      * @param execute выполнить и вернуть ссылку на результат
      * @param reload  результат по ссылке
      */
-    <R> R idempotent(String scope, EditorIdentity actor, String key, String fingerprint,
+    public <R> R idempotent(String scope, EditorIdentity actor, String key, String fingerprint,
                      Supplier<String> execute, Function<String, R> reload) {
         if (key == null) {
             return reload.apply(execute.get());

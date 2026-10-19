@@ -26,8 +26,8 @@ import uz.salvadore.hamkorbank.archi.advisor.application.service.AdvisorService;
 import uz.salvadore.hamkorbank.archi.advisor.application.service.RateLimiter;
 import uz.salvadore.hamkorbank.archi.bootstrap.wiring.AfterCommitEventPublisher;
 import uz.salvadore.hamkorbank.archi.bootstrap.wiring.TransactionalUnitOfWork;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
 
 /**
  * Сценарии помощника — бинами. Мост к modeling — только чтение: сценарий запросов
@@ -50,7 +50,7 @@ public class AdvisorConfiguration {
     }
 
     @Bean
-    ModelContextReader modelContextReader(ModelQueryService models) {
+    ModelContextReader modelContextReader(ModelQueryApplicationService models) {
         return new ModelingContextReader(models);
     }
 

@@ -10,10 +10,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
 import uz.salvadore.hamkorbank.archi.interchange.application.mapping.ArchimateSnapshots;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotArchive;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
@@ -26,7 +27,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 class SnapshotRetentionIT extends IntegrationTest {
 
     @Autowired
-    ModelLifecycleService lifecycle;
+    ModelApplicationService lifecycle;
     @Autowired
     LockApplicationService locks;
     @Autowired
@@ -41,7 +42,8 @@ class SnapshotRetentionIT extends IntegrationTest {
     @Test
     @DisplayName("INV-MDL-010: без привязки к Git очистка снимков не трогает ни одного")
     void purgeIsDisabledWithoutGitBinding() {
-        ModelId model = lifecycle.create(ARCHITECT, workspace(), "Ретеншен", null).id();
+        ModelId model = ModelId.of(lifecycle.createModel(ARCHITECT,
+                new CreateModelCommand(workspace().value(), "Ретеншен", null)).id());
         locks.acquireLock(ARCHITECT, new AcquireLockCommand(model.value()));
         for (int i = 0; i < 3; i++) {
             elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "Система " + i,

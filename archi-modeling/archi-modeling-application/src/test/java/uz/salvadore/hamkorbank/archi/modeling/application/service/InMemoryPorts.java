@@ -21,12 +21,23 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.LockResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListReplaceCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockAcquireCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockReleaseCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelCreateCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelDeleteCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelListQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelPurgeCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelRestoreCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelValidateQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionCommitter;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceResolveQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.DomainEventPublisher;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.GitBinding;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.IdempotencyRepository;
@@ -44,6 +55,8 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.AccessListApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.ModelAccessList;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.DomainEvent;
@@ -345,8 +358,16 @@ final class InMemoryPorts {
     final VersionService versionService = new VersionService(kernel, snapshotWriter, (xml, current, now) -> {
         throw new UnsupportedOperationException();
     }, noGit, SnapshotArchive.NONE, ZoneOffset.UTC, false);
-    final ModelLifecycleService lifecycle = new ModelLifecycleService(kernel, workspaceRepository, versionService);
-    final ModelQueryService queries = new ModelQueryService(kernel);
+    final WorkspaceResolveQueryHandler resolveWorkspace = new WorkspaceResolveQueryHandler(workspaceRepository,
+            unitOfWork);
+    final ModelApplicationService lifecycle = new ModelApplicationServiceImpl(
+            new ModelCreateCommandHandler(kernel, workspaceRepository, resolveWorkspace,
+                    new VersionCommitter(kernel, snapshotWriter)),
+            new ModelEditCommandHandler(kernel), new ModelDeleteCommandHandler(kernel),
+            new ModelRestoreCommandHandler(kernel), new ModelPurgeCommandHandler(kernel));
+    final ModelQueryApplicationService queries = new ModelQueryApplicationServiceImpl(
+            new ModelListQueryHandler(kernel, resolveWorkspace), new ModelGetQueryHandler(kernel),
+            new ModelValidateQueryHandler(kernel));
     final LockApplicationService lockService = new LockApplicationServiceImpl(new LockAcquireCommandHandler(kernel),
             new LockReleaseCommandHandler(kernel), new LockGetQueryHandler(kernel));
     final ElementService elements = new ElementService(kernel);
@@ -355,6 +376,12 @@ final class InMemoryPorts {
     final TreeService tree = new TreeService(kernel, elements, relationships);
     final AccessListApplicationService accessLists = new AccessListApplicationServiceImpl(
             new AccessListGetQueryHandler(kernel), new AccessListReplaceCommandHandler(kernel));
+
+    /** Новая модель в пространстве теста — короткий путь для сценариев, которым она нужна. */
+    ModelId createModel(EditorIdentity actor, String name) {
+        return ModelId.of(lifecycle.createModel(actor, new CreateModelCommand(workspace.id().value(), name, null))
+                .id());
+    }
 
     /** Блокировка модели автором — короткий путь для сценариев, которым нужна запись. */
     LockResponse lock(EditorIdentity actor, ModelId model) {

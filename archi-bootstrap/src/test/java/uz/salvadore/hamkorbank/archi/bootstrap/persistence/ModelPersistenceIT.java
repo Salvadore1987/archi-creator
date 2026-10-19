@@ -16,14 +16,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelTreeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bendpoint;
@@ -37,7 +41,7 @@ class ModelPersistenceIT extends IntegrationTest {
     private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
 
     @Autowired
-    ModelLifecycleService lifecycle;
+    ModelApplicationService lifecycle;
     @Autowired
     LockApplicationService locks;
     @Autowired
@@ -47,12 +51,15 @@ class ModelPersistenceIT extends IntegrationTest {
     @Autowired
     ViewService views;
     @Autowired
-    ModelQueryService queries;
+    ModelQueryApplicationService queries;
+    @Autowired
+    ModelQueryService viewQueries;
 
     @Test
     @DisplayName("INV-MDL-001: дубль archi_id в модели отклоняет база — UNIQUE (model_id, archi_id)")
     void duplicateArchiIdViolatesUniqueConstraint() {
-        ModelId model = lifecycle.create(ARCHITECT, workspace(), "Уникальность", null).id();
+        ModelId model = ModelId.of(lifecycle.createModel(ARCHITECT,
+                new CreateModelCommand(workspace().value(), "Уникальность", null)).id());
         locks.acquireLock(ARCHITECT, new AcquireLockCommand(model.value()));
         Element element = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "АБС",
                 null, null);
@@ -68,7 +75,8 @@ class ModelPersistenceIT extends IntegrationTest {
     @Test
     @DisplayName("§4.3: дерево и представление переживают запись и чтение — поля, порядок, геометрия")
     void modelAndViewSurviveStorage() {
-        ModelId model = lifecycle.create(ARCHITECT, workspace(), "Хранение", "persist-1").id();
+        ModelId model = ModelId.of(lifecycle.createModel(ARCHITECT,
+                new CreateModelCommand(workspace().value(), "Хранение", "persist-1")).id());
         locks.acquireLock(ARCHITECT, new AcquireLockCommand(model.value()));
         Element component = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "АБС",
                 null, null);
@@ -88,18 +96,20 @@ class ModelPersistenceIT extends IntegrationTest {
         views.saveLayout(ARCHITECT, view.id(), Map.of(a.id(), new Bounds(320, 80, 150, 60)),
                 Map.of(Optional.ofNullable(serving.edge()).orElseThrow(), List.of(new Bendpoint(0, 40, -50, 0))));
 
-        ArchitectureModel loaded = queries.open(VIEWER, model);
-        View loadedView = queries.openView(VIEWER, view.id());
+        ModelTreeResponse loaded = queries.getModel(VIEWER, new GetModelQuery(model.value()));
+        View loadedView = viewQueries.openView(VIEWER, view.id());
 
-        Element reloaded = loaded.requireElement(component.id());
+        ElementResponse reloaded = loaded.elements().stream()
+                .filter(e -> e.id().equals(component.id().value())).findFirst().orElseThrow();
         assertEquals("Ядро банка", reloaded.documentation());
         assertEquals(List.of("owner", "criticality"), reloaded.properties().stream().map(p -> p.key()).toList());
-        assertEquals(1000, reloaded.sortOrder().value());
+        assertEquals(1000, reloaded.sortOrder());
         assertEquals(1, loaded.relationships().size());
-        assertEquals(9, loaded.roots().size());
+        assertEquals(9, loaded.folders().stream().filter(folder -> folder.parentId() == null).count());
         assertEquals(new Bounds(320, 80, 150, 60), loadedView.requireNode(a.id()).bounds());
         assertEquals(List.of(new Bendpoint(0, 40, -50, 0)),
                 loadedView.requireEdge(Optional.ofNullable(serving.edge()).orElseThrow()).bendpoints());
-        assertTrue(loaded.view(view.id()).isPresent(), "дерево знает о представлении");
+        assertTrue(loaded.views().stream().anyMatch(v -> v.id().equals(view.id().value())),
+                "дерево знает о представлении");
     }
 }

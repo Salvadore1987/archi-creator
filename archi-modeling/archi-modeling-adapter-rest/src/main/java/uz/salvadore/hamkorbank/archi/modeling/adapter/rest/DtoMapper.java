@@ -24,17 +24,15 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewNodeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewPayload;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewSummary;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.LockResponse;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelSummaryResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelTreeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PropertyResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ValidationFindingResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelFolder;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Relationship;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ViewRef;
-import uz.salvadore.hamkorbank.archi.modeling.domain.validation.ValidationFinding;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.StyleOverride;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
@@ -50,26 +48,30 @@ public final class DtoMapper {
     }
 
     /** Заголовок модели для списка и ответов на правку. */
-    public static ModelSummary summary(ModelHeader h) {
-        return new ModelSummary(h.id().value(), h.workspaceId().value(), h.archiId().value(), h.name(),
-                h.documentation(), h.status().name(), h.archiVersion(), h.createdBy(), h.createdAt(),
-                h.updatedAt());
+    public static ModelSummary summary(ModelSummaryResponse h) {
+        return new ModelSummary(h.id(), h.workspaceId(), h.archiId(), h.name(), h.documentation(), h.status(),
+                h.archiVersion(), h.createdBy(), h.createdAt(), h.updatedAt());
     }
 
     /** Открытая модель целиком: заголовок, папки, элементы, связи, представления и их размещения. */
-    public static ModelTree tree(ModelQueryService.OpenedModel opened) {
-        ArchitectureModel model = opened.model();
-        return new ModelTree(summary(model.header()),
-                model.folders().values().stream().sorted(Comparator.comparing(ModelFolder::sortOrder))
-                        .map(DtoMapper::folder).toList(),
-                model.elements().values().stream().sorted(Comparator.comparing(Element::sortOrder))
-                        .map(DtoMapper::element).toList(),
-                model.relationships().values().stream().sorted(Comparator.comparing(Relationship::sortOrder))
-                        .map(r -> relationship(r, null)).toList(),
-                model.views().stream().sorted(Comparator.comparing(ViewRef::sortOrder)).map(DtoMapper::view).toList(),
-                opened.placements().stream().map(p -> new PlacementDto(p.viewId().value(),
-                        p.elementIds().stream().map(e -> e.value()).toList(),
-                        p.relationshipIds().stream().map(r -> r.value()).toList())).toList());
+    public static ModelTree tree(ModelTreeResponse tree) {
+        return new ModelTree(summary(tree.model()),
+                tree.folders().stream().map(f -> new FolderDto(f.id(), f.parentId(), f.archiId(), f.name(),
+                        f.folderType(), f.sortOrder())).toList(),
+                tree.elements().stream().map(e -> new ElementDto(e.id(), e.folderId(), e.archiId(), e.archiType(),
+                        e.layer(), e.name(), e.documentation(), propertyDtos(e.properties()), e.supported(),
+                        e.sortOrder())).toList(),
+                tree.relationships().stream().map(r -> new RelationshipDto(r.id(), r.folderId(), r.archiId(),
+                        r.archiType(), r.sourceId(), r.targetId(), r.name(), r.documentation(), r.accessType(),
+                        r.directed(), propertyDtos(r.properties()), r.supported(), r.sortOrder(), null)).toList(),
+                tree.views().stream().map(v -> new ViewSummary(v.id(), v.folderId(), v.archiId(), v.archiType(),
+                        v.name(), v.sortOrder())).toList(),
+                tree.placements().stream().map(p -> new PlacementDto(p.viewId(), p.elementIds(),
+                        p.relationshipIds())).toList());
+    }
+
+    private static List<PropertyDto> propertyDtos(List<PropertyResponse> properties) {
+        return properties.stream().map(p -> new PropertyDto(p.key(), p.value())).toList();
     }
 
     /** Папка дерева; у корневой — тип, у вложенной — родитель. */
@@ -91,12 +93,6 @@ public final class DtoMapper {
                 r.source().value(), r.target().value(), r.name(), r.documentation(),
                 r.accessType() == null ? null : r.accessType().name(), r.directed(), properties(r.properties()),
                 r.supported(), r.sortOrder().value(), edgeId);
-    }
-
-    /** Представление из дерева модели — без узлов и рёбер. */
-    public static ViewSummary view(ViewRef v) {
-        return new ViewSummary(v.id().value(), v.folderId().value(), v.archiId().value(), v.archiType().value(),
-                v.name(), v.sortOrder().value());
     }
 
     /** Заголовок загруженного представления — без узлов и рёбер. */
@@ -145,10 +141,9 @@ public final class DtoMapper {
         return new LockInfo(l.modelId(), l.owner(), l.acquiredAt(), l.expiresAt());
     }
 
-    /** Находка с текстом на языке запроса: сообщение и подсказка хранятся ключами. */
-    public static Finding finding(ValidationFinding f, TextCatalog text) {
-        return new Finding(f.severity().name(), f.code(), text.text(f.message()), f.targetKind(), f.targetId(),
-                f.suggestion() == null ? null : text.text(f.suggestion()));
+    /** Находка проверки модели: текст уже на языке запроса. */
+    public static Finding finding(ValidationFindingResponse f) {
+        return new Finding(f.severity(), f.code(), f.message(), f.targetKind(), f.targetId(), f.suggestion());
     }
 
     private static StyleDto style(StyleOverride s) {

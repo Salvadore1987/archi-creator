@@ -42,7 +42,7 @@ class ApplicationLayerTest {
     /** Сервисы, которые адаптеры ещё зовут напрямую. */
     private static final Set<String> NOT_YET_MIGRATED = Set.of(
             "CommittedVersion", "ElementService", "ModelImportService",
-            "ModelLifecycleService", "ModelQueryService", "ModelingKernel", "RelationshipService", "RequestedIds",
+            "ModelQueryService", "ModelingKernel", "RelationshipService", "RequestedIds",
             "TreeService", "VersionService", "VersionSnapshot", "ViewService");
 
     private static JavaClasses classes;
