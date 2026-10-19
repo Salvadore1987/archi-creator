@@ -1,9 +1,9 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.architecture;
 
 import static com.tngtech.archunit.core.domain.JavaAccess.Predicates.target;
-import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
-import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.type;
+import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
+import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
@@ -17,7 +17,6 @@ import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import java.util.List;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,6 +24,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 
 /**
  * Устройство REST-слоя: контроллер принимает запрос и вызывает сценарий,
@@ -59,8 +59,9 @@ class RestLayerConventionsTest {
 
     /** Порт сценария, кроме каталога текстов: перевод сообщения — работа адаптера. */
     private static final DescribedPredicate<JavaClass> PORT_BUT_TEXTS = DescribedPredicate.describe(
-            "порт application-слоя, кроме TextCatalog",
-            c -> c.getPackageName().contains(".application.port") && !c.getSimpleName().equals("TextCatalog"));
+            "выходной порт application-слоя, кроме TextCatalog; входной порт port.in — сам сценарий",
+            c -> c.getPackageName().contains(".application.port") && !c.getPackageName().contains(".port.in")
+                    && !c.getSimpleName().equals("TextCatalog"));
 
     private static JavaClasses classes;
 
@@ -107,7 +108,7 @@ class RestLayerConventionsTest {
                 .should().callConstructorWhere(target(owner(CONTEXT_FAILURE)))
                 .because("какой формат поддержан, что недоступно, какое правило нарушено — решения сценария; "
                         + "контроллер разбирает запрос и вызывает один сценарий. Для неразборчивого ввода "
-                        + "есть ModelingException.invalid(...)");
+                        + "есть ModelingDomainException.invalid(...)");
 
         rule.check(classes);
     }
@@ -116,7 +117,7 @@ class RestLayerConventionsTest {
     @DisplayName("контроллер не ищет объекты сам: «не найдено» отвечает сценарий")
     void controllersDoNotResolveObjects() {
         ArchRule rule = noClasses().that(CONTROLLER)
-                .should().callMethodWhere(target(owner(type(ModelingException.class)))
+                .should().callMethodWhere(target(owner(type(ModelingDomainException.class)))
                         .and(target(name("notFound"))))
                 .because("выбор объекта по умолчанию и отказ «не найдено» — решение сценария, "
                         + "а не HTTP-адаптера");

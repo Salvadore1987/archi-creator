@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.validation;
 
 import java.util.Objects;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 
 /**
@@ -10,9 +9,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
  *
  * @param targetKind {@code ELEMENT}, {@code RELATIONSHIP}
  * @param targetId   {@code archi_id} объекта: по нему находка сверяется с файлом и деревом
+ * @param suggestion подсказка; {@code null} — подсказки нет
  */
 public record ValidationFinding(Severity severity, String code, Message message, String targetKind, String targetId,
-                                Optional<Message> suggestion) {
+                                Message suggestion) {
 
     public ValidationFinding {
         Objects.requireNonNull(severity, "severity");
@@ -20,6 +20,5 @@ public record ValidationFinding(Severity severity, String code, Message message,
         Objects.requireNonNull(message, "message");
         Objects.requireNonNull(targetKind, "targetKind");
         Objects.requireNonNull(targetId, "targetId");
-        Objects.requireNonNull(suggestion, "suggestion");
     }
 }

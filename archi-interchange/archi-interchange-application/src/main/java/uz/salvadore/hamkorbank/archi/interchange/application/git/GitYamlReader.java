@@ -1,6 +1,48 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.git;
 
-import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.*;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.ARCHIMATE_PREFIX;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_ID;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_NAME;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_SOURCE;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_TARGET;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_TYPE;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.CONTENT_ORDER;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.EXTENSION;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.FOLDERS_FILE;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.FORMAT_VERSION;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_ATTRIBUTES;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_ATTRIBUTE_ORDER;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_CONTENT_ORDER;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_FOLDER;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_FOLDERS;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_FORMAT_VERSION;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_ID;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_ITEMS;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_KEY;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_NAME;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_PARENT;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_POSITION;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_SOURCE;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_TAG;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_TARGET;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_TEXT;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_TYPE;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_VALUE;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.K_XSI_TYPE;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.MODEL_FILE;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.TAG_BENDPOINT;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.TAG_BOUNDS;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.TAG_CHILD;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.TAG_CONNECTION;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.TAG_CONTENT;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.TAG_DOCUMENTATION;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.TAG_ELEMENT;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.TAG_FOLDER;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.TAG_PROPERTY;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.TAG_PURPOSE;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.canonicalOrder;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.nested;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.promoted;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
@@ -13,6 +55,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.IntFunction;
@@ -89,7 +132,7 @@ public final class GitYamlReader {
             rootId = rootAttributes.get(A_ID)
                     .orElseThrow(() -> new InvalidValueException(InterchangeMessages.GIT_FIELD_MISSING,
                             MODEL_FILE, K_ID));
-            items(root, rootId, Optional.empty());
+            items(root, rootId, null);
             root.done();
 
             Map<String, Object> folderFile = load(files, FOLDERS_FILE).orElse(Map.of());
@@ -136,7 +179,7 @@ public final class GitYamlReader {
             Optional<String> parent = fields.optional(K_PARENT);
             long position = fields.position();
             Attributes attributes = fields.attributes(false);
-            items(fields, id, Optional.of(id));
+            items(fields, id, id);
             fields.done();
             if (!folderIds.add(id)) {
                 throw new InvalidValueException(InterchangeMessages.GIT_ID_REPEATED, FOLDERS_FILE, id);
@@ -149,8 +192,11 @@ public final class GitYamlReader {
                     order -> new DocumentNode(TAG_FOLDER, DocumentOrder.of(order), attributes, build(id))));
         }
 
-        /** Записи корня или папки без идентификатора: позиция и одно из четырёх значений. */
-        private void items(Fields owner, String container, Optional<String> parentId) {
+        /**
+         * Записи корня или папки без идентификатора: позиция и одно из четырёх значений.
+         * {@code parentId} — папка, {@code null} — корень модели.
+         */
+        private void items(Fields owner, String container, String parentId) {
             Map<Kind, Integer> ordinals = new EnumMap<>(Kind.class);
             for (Map<String, Object> raw : owner.maps(K_ITEMS)) {
                 Fields item = new Fields(owner.file, raw);
@@ -175,12 +221,13 @@ public final class GitYamlReader {
                             Fields property = item.map(candidate.token());
                             Attributes attributes = propertyAttributes(property);
                             yield order -> new DocumentValue(TAG_PROPERTY, DocumentOrder.of(order), attributes,
-                                    Optional.empty());
+                                    null);
                         }
                         case VALUE -> genericValue(item.map(candidate.token()));
                         default -> {
                             String xml = item.required(candidate.token());
-                            yield order -> new RawXmlFragment(xml, parentId.map(ArchiId::of), DocumentOrder.of(order));
+                            ArchiId parent = parentId == null ? null : ArchiId.of(parentId);
+                            yield order -> new RawXmlFragment(xml, parent, DocumentOrder.of(order));
                         }
                     };
                 }
@@ -215,61 +262,12 @@ public final class GitYamlReader {
                 .orElseThrow(() -> new InvalidValueException(InterchangeMessages.GIT_FIELD_MISSING, fields.file, K_ID));
         Map<Kind, Deque<IntFunction<DocumentContent>>> byKind = new EnumMap<>(Kind.class);
         for (Kind kind : CONTENT_ORDER) {
-            if (!fields.has(kind.key)) {
-                continue;
-            }
-            Deque<IntFunction<DocumentContent>> queue = new ArrayDeque<>();
-            if (kind.single()) {
-                String text = kind == Kind.BOUNDS ? null : fields.required(kind.key);
-                queue.add(switch (kind) {
-                    case BOUNDS -> points(TAG_BOUNDS, fields.map(kind.key));
-                    case TEXT -> order -> textValue(TAG_CONTENT, order, text);
-                    case PURPOSE -> order -> textValue(TAG_PURPOSE, order, text);
-                    default -> order -> textValue(TAG_DOCUMENTATION, order, text);
-                });
-            } else if (kind == Kind.RAW) {
-                for (String xml : fields.strings(kind.key)) {
-                    queue.add(order -> new RawXmlFragment(xml, Optional.of(ArchiId.of(id)), DocumentOrder.of(order)));
-                }
-            } else {
-                for (Map<String, Object> raw : fields.maps(kind.key)) {
-                    Fields item = new Fields(fields.file, raw);
-                    queue.add(switch (kind) {
-                        case PROPERTY -> {
-                            Attributes property = propertyAttributes(item);
-                            yield order -> new DocumentValue(TAG_PROPERTY, DocumentOrder.of(order), property,
-                                    Optional.empty());
-                        }
-                        case BENDPOINT -> points(TAG_BENDPOINT, item);
-                        case CHILD -> node(item, TAG_CHILD);
-                        case CONNECTION -> node(item, TAG_CONNECTION);
-                        case NODE -> node(item, "");
-                        default -> genericValue(item);
-                    });
-                    item.done();
-                }
-            }
-            byKind.put(kind, queue);
-        }
-        List<Kind> sequence = new ArrayList<>();
-        Optional<List<String>> explicit = fields.optionalStrings(K_CONTENT_ORDER);
-        if (explicit.isPresent()) {
-            for (String token : explicit.get()) {
-                Kind kind = Kind.ofToken(token);
-                if (kind == null) {
-                    throw fields.invalid(K_CONTENT_ORDER);
-                }
-                sequence.add(kind);
-            }
-        } else {
-            for (Kind kind : CONTENT_ORDER) {
-                for (int i = 0; i < byKind.getOrDefault(kind, new ArrayDeque<>()).size(); i++) {
-                    sequence.add(kind);
-                }
+            if (fields.has(kind.key)) {
+                byKind.put(kind, contentOf(fields, kind, id));
             }
         }
         List<IntFunction<DocumentContent>> content = new ArrayList<>();
-        for (Kind kind : sequence) {
+        for (Kind kind : sequence(fields, byKind)) {
             Deque<IntFunction<DocumentContent>> queue = byKind.get(kind);
             if (queue == null || queue.isEmpty()) {
                 throw fields.invalid(K_CONTENT_ORDER);
@@ -291,8 +289,81 @@ public final class GitYamlReader {
         };
     }
 
+    /** Содержимое узла одного вида в порядке записи в файле. */
+    private static Deque<IntFunction<DocumentContent>> contentOf(Fields fields, Kind kind, String id) {
+        Deque<IntFunction<DocumentContent>> queue = new ArrayDeque<>();
+        if (kind.single()) {
+            queue.add(single(fields, kind));
+        } else if (kind == Kind.RAW) {
+            for (String xml : fields.strings(kind.key)) {
+                queue.add(order -> new RawXmlFragment(xml, ArchiId.of(id), DocumentOrder.of(order)));
+            }
+        } else {
+            for (Map<String, Object> raw : fields.maps(kind.key)) {
+                Fields item = new Fields(fields.file, raw);
+                queue.add(repeated(item, kind));
+                item.done();
+            }
+        }
+        return queue;
+    }
+
+    /** Вид, который встречается в узле не больше одного раза: рамка или текст. */
+    private static IntFunction<DocumentContent> single(Fields fields, Kind kind) {
+        if (kind == Kind.BOUNDS) {
+            return points(TAG_BOUNDS, fields.map(kind.key));
+        }
+        String text = fields.required(kind.key);
+        String tag = switch (kind) {
+            case TEXT -> TAG_CONTENT;
+            case PURPOSE -> TAG_PURPOSE;
+            default -> TAG_DOCUMENTATION;
+        };
+        return order -> textValue(tag, order, text);
+    }
+
+    /** Один элемент списка повторяющегося вида: свойство, точка перегиба, вложенный узел, значение. */
+    private static IntFunction<DocumentContent> repeated(Fields item, Kind kind) {
+        return switch (kind) {
+            case PROPERTY -> {
+                Attributes property = propertyAttributes(item);
+                yield order -> new DocumentValue(TAG_PROPERTY, DocumentOrder.of(order), property, null);
+            }
+            case BENDPOINT -> points(TAG_BENDPOINT, item);
+            case CHILD -> node(item, TAG_CHILD);
+            case CONNECTION -> node(item, TAG_CONNECTION);
+            case NODE -> node(item, "");
+            default -> genericValue(item);
+        };
+    }
+
+    /**
+     * Порядок видов содержимого: явный {@code content_order}, если записан, иначе канонический —
+     * все записи каждого вида подряд.
+     */
+    private static List<Kind> sequence(Fields fields, Map<Kind, Deque<IntFunction<DocumentContent>>> byKind) {
+        List<Kind> sequence = new ArrayList<>();
+        Optional<List<String>> explicit = fields.optionalStrings(K_CONTENT_ORDER);
+        if (explicit.isPresent()) {
+            for (String token : explicit.get()) {
+                Kind kind = Kind.ofToken(token);
+                if (kind == null) {
+                    throw fields.invalid(K_CONTENT_ORDER);
+                }
+                sequence.add(kind);
+            }
+            return sequence;
+        }
+        for (Kind kind : CONTENT_ORDER) {
+            for (int i = 0; i < byKind.getOrDefault(kind, new ArrayDeque<>()).size(); i++) {
+                sequence.add(kind);
+            }
+        }
+        return sequence;
+    }
+
     private static DocumentValue textValue(String tag, int order, String text) {
-        return new DocumentValue(tag, DocumentOrder.of(order), new Attributes(List.of()), Optional.of(text));
+        return new DocumentValue(tag, DocumentOrder.of(order), new Attributes(List.of()), Objects.requireNonNull(text));
     }
 
     private static Attributes propertyAttributes(Fields property) {
@@ -309,14 +380,14 @@ public final class GitYamlReader {
     private static IntFunction<DocumentContent> points(String tag, Fields fields) {
         Attributes attributes = new Attributes(fields.rest().entrySet().stream()
                 .map(e -> new Attribute(e.getKey(), fields.string(e.getKey(), e.getValue()))).toList());
-        return order -> new DocumentValue(tag, DocumentOrder.of(order), attributes, Optional.empty());
+        return order -> new DocumentValue(tag, DocumentOrder.of(order), attributes, null);
     }
 
     private static IntFunction<DocumentContent> genericValue(Fields fields) {
         String tag = fields.required(K_TAG);
         Attributes attributes = new Attributes(fields.optionalMap(K_ATTRIBUTES).map(a -> a.rest().entrySet().stream()
                 .map(e -> new Attribute(e.getKey(), a.string(e.getKey(), e.getValue()))).toList()).orElse(List.of()));
-        Optional<String> text = fields.optional(K_TEXT);
+        String text = fields.optional(K_TEXT).orElse(null);
         fields.done();
         return order -> new DocumentValue(tag, DocumentOrder.of(order), attributes, text);
     }

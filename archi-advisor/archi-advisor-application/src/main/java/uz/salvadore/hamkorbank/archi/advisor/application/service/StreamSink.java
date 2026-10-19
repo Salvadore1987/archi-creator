@@ -11,12 +11,16 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.ModelPlan;
  */
 public interface StreamSink {
 
+    /** Очередной кусок текста ответа. */
     void token(String delta);
 
+    /** Замечание ревью, как только оно разобрано. */
     void finding(Finding finding);
 
+    /** План целиком — у функции плана. */
     void plan(ModelPlan plan);
 
+    /** Ответ подсказки или документации целиком. */
     void answer(AdvisorAnswer answer);
 
     /** Последний кадр — итог сессии и её стоимость. */

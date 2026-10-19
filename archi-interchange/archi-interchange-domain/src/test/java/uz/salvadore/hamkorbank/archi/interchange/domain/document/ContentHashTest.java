@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 class ContentHashTest {
 
@@ -19,6 +20,6 @@ class ContentHashTest {
     @Test
     @DisplayName("строка не в формате SHA-256 отклоняется")
     void rejectsMalformedHash() {
-        assertThrows(IllegalArgumentException.class, () -> new ContentHash("ABC"));
+        assertThrows(InvalidValueException.class, () -> new ContentHash("ABC"));
     }
 }

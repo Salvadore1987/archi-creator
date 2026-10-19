@@ -6,5 +6,6 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.common.DomainEvent;
 /** Публикация доменных событий помощника — после коммита, в процессе. */
 public interface AdvisorEvents {
 
-    void publish(Collection<? extends DomainEvent> events);
+    /** Отдать события подписчикам; вызывается после коммита транзакции. */
+    void publish(Collection<DomainEvent> events);
 }

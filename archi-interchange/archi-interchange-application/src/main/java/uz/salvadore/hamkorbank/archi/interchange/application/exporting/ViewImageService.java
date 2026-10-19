@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -34,7 +35,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
-import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportCompleted;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportFormat;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportJob;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportOptions;
@@ -47,12 +47,14 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.UuidV7;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ViewId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionSnapshot;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetVersionSnapshotQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetViewQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionSnapshotResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 
 /**
  * Картинки представлений в SVG и PNG из зафиксированной версии.
@@ -64,10 +66,15 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
  */
 public final class ViewImageService {
 
+    /** Картинка в SVG. */
     public static final String FORMAT_SVG = "svg";
+    /** Картинка в PNG, растеризованная из SVG. */
     public static final String FORMAT_PNG = "png";
+    /** Фон цвета бумаги, как на холсте. */
     public static final String BACKGROUND_PAPER = "paper";
+    /** Прозрачный фон. */
     public static final String BACKGROUND_TRANSPARENT = "transparent";
+    /** Имя файла отчёта о потерях внутри архива картинок. */
     public static final String LOSS_REPORT_FILE = "loss-report.json";
 
     private static final Map<String, ExportFormat> FORMATS = Map.of(FORMAT_SVG, ExportFormat.SVG,
@@ -78,8 +85,8 @@ public final class ViewImageService {
     public static final int MAX_PNG_SIDE = 16_000;
     private static final long FIXED_ENTRY_TIME = 0L;
 
-    private final ModelQueryService queries;
-    private final VersionService versions;
+    private final ViewQueryApplicationService queries;
+    private final ModelExchangeApplicationService versions;
     private final Notation notation;
     private final Typesetter typesetter;
     private final Rasterizer rasterizer;
@@ -89,8 +96,8 @@ public final class ViewImageService {
     private final Clock clock;
     private final UuidV7 uuids;
 
-    public ViewImageService(ModelQueryService queries, VersionService versions, Notation notation,
-                            Typesetter typesetter, Rasterizer rasterizer, InterchangeEvents events,
+    public ViewImageService(ViewQueryApplicationService queries, ModelExchangeApplicationService versions,
+                            Notation notation, Typesetter typesetter, Rasterizer rasterizer, InterchangeEvents events,
                             InterchangeMetrics metrics, TextCatalog texts, Clock clock) {
         this.queries = queries;
         this.versions = versions;
@@ -116,9 +123,8 @@ public final class ViewImageService {
         }
 
         ExportOptions options() {
-            return new ExportOptions(Optional.of(BigDecimal.valueOf(scale)), Optional.of(outline),
-                    Optional.of(transparent ? BACKGROUND_TRANSPARENT : BACKGROUND_PAPER), Optional.empty(),
-                    Optional.empty());
+            return new ExportOptions(BigDecimal.valueOf(scale), outline,
+                    transparent ? BACKGROUND_TRANSPARENT : BACKGROUND_PAPER, null, null);
         }
     }
 
@@ -134,10 +140,11 @@ public final class ViewImageService {
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
             Settings settings = settings(request);
-            View view = queries.openView(actor, uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId.of(viewId));
-            VersionSnapshot snapshot = versions.snapshot(actor, view.modelId(), request.versionNo());
+            ViewResponse view = queries.getView(actor, new GetViewQuery(viewId));
+            VersionSnapshotResponse snapshot = versions.getVersionSnapshot(actor,
+                    new GetVersionSnapshotQuery(view.modelId(), request.versionNo()));
             ModelDocument document = read(snapshot);
-            DocumentNode node = document.find(ArchiId.of(view.archiId().value()))
+            DocumentNode node = document.find(ArchiId.of(view.archiId()))
                     .filter(n -> n.tag().equals("element"))
                     .orElseThrow(() -> new InterchangeException(InterchangeCodes.VIEW_NOT_IN_VERSION,
                             Failure.NOT_FOUND,
@@ -148,7 +155,7 @@ public final class ViewImageService {
             Artifact artifact = Artifact.of(picture.bytes(), mediaType(settings),
                     ExportService.safeFileName(name, "view") + "." + settings.extension());
             LossReport report = new LossReport(entries(picture.losses()), true);
-            deliver(actor, snapshot, Optional.of(new ViewId(viewId)), settings, artifact, report);
+            deliver(actor, snapshot, new ViewId(viewId), settings, artifact, report);
             return new ImageExport(artifact, snapshot.versionNo(), report.entries().size());
         });
     }
@@ -162,8 +169,8 @@ public final class ViewImageService {
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
             Settings settings = settings(request);
-            VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), request.versionNo());
+            VersionSnapshotResponse snapshot = versions.getVersionSnapshot(actor,
+                    new GetVersionSnapshotQuery(modelId, request.versionNo()));
             ModelDocument document = read(snapshot);
             List<LossEntry> all = new ArrayList<>();
             StringBuilder report = new StringBuilder("{\"format\":\"").append(settings.format().name())
@@ -196,7 +203,7 @@ public final class ViewImageService {
                     ExportService.safeFileName(snapshot.model().name(), "model") + "-v" + snapshot.versionNo()
                             + "-" + settings.extension() + ".zip");
             LossReport lossReport = new LossReport(all, true);
-            deliver(actor, snapshot, Optional.empty(), settings, artifact, lossReport);
+            deliver(actor, snapshot, null, settings, artifact, lossReport);
             return new ImageExport(artifact, snapshot.versionNo(), all.size());
         });
     }
@@ -206,19 +213,20 @@ public final class ViewImageService {
      * {@code IXC_INVALID_EXPORT_OPTION}.
      */
     private static Settings settings(ImageRequest request) {
-        String formatName = request.format().orElse(FORMAT_SVG);
+        String formatName = Objects.requireNonNullElse(request.format(), FORMAT_SVG);
         ExportFormat format = Optional.ofNullable(FORMATS.get(formatName))
                 .orElseThrow(() -> new InterchangeException(InterchangeCodes.UNKNOWN_FORMAT, Failure.UNPROCESSABLE,
                         Message.of(InterchangeMessages.UNKNOWN_FORMAT, formatName), Map.of("format", formatName)));
-        int scale = request.scale().orElse(1);
+        int scale = Objects.requireNonNullElse(request.scale(), 1);
         if (!SCALES.contains(scale)) {
             throw invalidOption("scale", String.valueOf(scale));
         }
-        String background = request.background().orElse(BACKGROUND_PAPER);
+        String background = Objects.requireNonNullElse(request.background(), BACKGROUND_PAPER);
         if (!background.equals(BACKGROUND_PAPER) && !background.equals(BACKGROUND_TRANSPARENT)) {
             throw invalidOption("background", background);
         }
-        return new Settings(format, scale, request.outline().orElse(false), background.equals(BACKGROUND_TRANSPARENT));
+        return new Settings(format, scale, Objects.requireNonNullElse(request.outline(), false),
+                background.equals(BACKGROUND_TRANSPARENT));
     }
 
     private static InterchangeException invalidOption(String parameter, String value) {
@@ -254,18 +262,19 @@ public final class ViewImageService {
                 l.objectKind(), l.aspect(), texts.text(l.reason()))).toList();
     }
 
-    private void deliver(EditorIdentity actor, VersionSnapshot snapshot, Optional<ViewId> viewId, Settings settings,
+    /** Задание выгрузки доставлено; {@code viewId} — {@code null} у пакета всех представлений. */
+    private void deliver(EditorIdentity actor, VersionSnapshotResponse snapshot, ViewId viewId, Settings settings,
                          Artifact artifact, LossReport report) {
         ExportJob job = ExportJob.request(ExportJobId.next(uuids),
-                new WorkspaceId(snapshot.model().workspaceId().value()), new ModelId(snapshot.model().id().value()),
+                new WorkspaceId(snapshot.model().workspaceId()), new ModelId(snapshot.model().id()),
                 viewId, settings.format(), settings.options(), snapshot.versionNo(), actor.subject(), clock.instant());
         job.render(snapshot.versionNo(), artifact, report);
-        job.deliver();
-        events.publish(List.of(ExportCompleted.of(job, clock.instant())));
+        job.deliver(clock.instant());
+        events.publish(job.pullEvents());
         metrics.exportLosses(settings.format().name(), report.entries().size());
     }
 
-    private static ModelDocument read(VersionSnapshot snapshot) {
+    private static ModelDocument read(VersionSnapshotResponse snapshot) {
         return new StaxArchiDocumentReader().read(new ByteArrayInputStream(snapshot.xml()));
     }
 

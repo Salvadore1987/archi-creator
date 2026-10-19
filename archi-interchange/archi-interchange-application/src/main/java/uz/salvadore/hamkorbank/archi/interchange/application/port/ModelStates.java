@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.port;
 
 import java.util.Arrays;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
@@ -21,10 +20,10 @@ public interface ModelStates {
     Replaced replace(EditorIdentity actor, ModelId model, byte[] xml, String comment);
 
     /**
-     * @param versionNo последняя версия; у модели без версий пусто
+     * @param versionNo последняя версия; у модели без версий {@code null}
      * @param xml       текущее содержимое тем же снимком, который соберёт сохранение
      */
-    record Current(WorkspaceId workspace, String modelName, Optional<Long> versionNo, byte[] xml) {
+    record Current(WorkspaceId workspace, String modelName, Long versionNo, byte[] xml) {
 
         public Current {
             xml = Arrays.copyOf(xml, xml.length);
@@ -35,6 +34,7 @@ public interface ModelStates {
             return Arrays.copyOf(xml, xml.length);
         }
 
+        /** Отпечаток содержимого в шестнадцатеричном виде. */
         public String hash() {
             return ContentHash.of(xml).value();
         }

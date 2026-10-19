@@ -16,6 +16,7 @@ public record Message(String key, List<Object> args) {
         args = List.copyOf(args.stream().map(a -> a == null ? "" : a).toList());
     }
 
+    /** Сообщение по ключу ресурса; {@code null} среди аргументов становится пустой строкой. */
     public static Message of(String key, Object... args) {
         return new Message(key, Arrays.asList(args));
     }

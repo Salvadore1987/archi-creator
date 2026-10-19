@@ -1,17 +1,13 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.identity;
 
-import java.util.Objects;
 import java.util.UUID;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.BaseId;
 
 /** Внешний идентификатор modeling: здесь только принимается и передаётся. */
-public record WorkspaceId(UUID value) {
+public final class WorkspaceId extends BaseId<UUID> {
 
-    public WorkspaceId {
-        Objects.requireNonNull(value, "WorkspaceId");
-    }
-
-    @Override
-    public String toString() {
-        return value.toString();
+    /** Ключ над значением UUID. */
+    public WorkspaceId(UUID value) {
+        super(value);
     }
 }

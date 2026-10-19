@@ -18,6 +18,7 @@ import java.util.Map;
  */
 public final class SnapshotRetention {
 
+    /** Сколько дней снимки хранятся без исключений. */
     public static final Duration RECENT = Duration.ofDays(30);
 
     private final ZoneId zone;
@@ -38,9 +39,9 @@ public final class SnapshotRetention {
         }
         Instant horizon = now.minus(RECENT);
         return versions.stream()
-                .filter(v -> v.snapshot().isPresent())
-                .filter(v -> v.gitSha().isPresent())
-                .filter(v -> v.label().isEmpty())
+                .filter(ModelVersion::hasSnapshot)
+                .filter(v -> v.gitSha() != null)
+                .filter(v -> v.label() == null)
                 .filter(v -> v.createdAt().isBefore(horizon))
                 .filter(v -> !lastOfMonth.get(YearMonth.from(v.createdAt().atZone(zone))).equals(v))
                 .sorted(Comparator.comparingLong(ModelVersion::versionNo))

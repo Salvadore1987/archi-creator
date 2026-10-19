@@ -4,7 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 
-/** Порт записи {@code .archimate}. */
+/** Писатель {@code .archimate}: документ — в файл. */
 public interface ArchiDocumentWriter {
 
     /**
@@ -13,6 +13,7 @@ public interface ArchiDocumentWriter {
      */
     void write(ModelDocument document, OutputStream out);
 
+    /** Документ в байтах {@code .archimate}. */
     default byte[] write(ModelDocument document) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         write(document, out);

@@ -4,9 +4,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -40,9 +40,9 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ResolveWorkspaceQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
-import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
  * Импорт и экспорт {@code .archimate}, строгость импорта пространства.
@@ -57,11 +57,11 @@ public class InterchangeController {
     private final ImportService imports;
     private final ExportService exports;
     private final ViewImageService images;
-    private final WorkspaceService workspaces;
+    private final WorkspaceApplicationService workspaces;
     private final TextCatalog text;
 
     public InterchangeController(ImportService imports, ExportService exports, ViewImageService images,
-                                 WorkspaceService workspaces, TextCatalog text) {
+                                 WorkspaceApplicationService workspaces, TextCatalog text) {
         this.text = text;
         this.images = images;
         this.imports = imports;
@@ -76,11 +76,11 @@ public class InterchangeController {
      */
     @PostMapping(value = "/models/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> importFile(EditorIdentity actor, @RequestPart("file") MultipartFile file,
-                                        @RequestParam Optional<UUID> workspaceId,
-                                        @RequestHeader("Idempotency-Key") Optional<String> key,
+                                        @RequestParam(required = false) UUID workspaceId,
+                                        @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                         HttpServletRequest request) {
         ImportReport report = imports.importFile(actor, workspace(workspaceId),
-                ImportRequest.sourceNameOrDefault(Optional.ofNullable(file.getOriginalFilename())),
+                ImportRequest.sourceNameOrDefault(file.getOriginalFilename()),
                 bytes(file), key);
         ImportResult body = result(report, text);
         if (report.status() == ImportStatus.APPLIED) {
@@ -106,9 +106,9 @@ public class InterchangeController {
     @GetMapping("/models/{id}/export")
     public ResponseEntity<byte[]> export(EditorIdentity actor, @PathVariable UUID id,
                                          @RequestParam(defaultValue = ExportService.FORMAT_ARCHIMATE) String fmt,
-                                         @RequestParam Optional<Long> version,
-                                         @RequestParam Optional<String> folder,
-                                         @RequestParam Optional<String> sep) {
+                                         @RequestParam(required = false) Long version,
+                                         @RequestParam(required = false) String folder,
+                                         @RequestParam(required = false) String sep) {
         ExportService.Export export = exports.export(actor, id, new ExportRequest(fmt, version, sep, folder));
         return artifact(export.artifact(), export.versionNo())
                 .header(LOSS_COUNT, String.valueOf(export.lossCount()))
@@ -123,30 +123,32 @@ public class InterchangeController {
      */
     @GetMapping("/views/{id}/export")
     public ResponseEntity<byte[]> exportView(EditorIdentity actor, @PathVariable UUID id,
-                                             @RequestParam Optional<String> fmt,
-                                             @RequestParam Optional<Integer> scale,
-                                             @RequestParam Optional<Boolean> outline,
-                                             @RequestParam Optional<String> background,
-                                             @RequestParam Optional<Long> version) {
+                                             @RequestParam(required = false) String fmt,
+                                             @RequestParam(required = false) Integer scale,
+                                             @RequestParam(required = false) Boolean outline,
+                                             @RequestParam(required = false) String background,
+                                             @RequestParam(required = false) Long version) {
         return image(images.viewImage(actor, id, new ImageRequest(fmt, scale, outline, background, version)));
     }
 
     /** Все представления модели одним архивом из одной версии. */
     @GetMapping("/models/{id}/views/export")
     public ResponseEntity<byte[]> exportAllViews(EditorIdentity actor, @PathVariable UUID id,
-                                                 @RequestParam Optional<String> fmt,
-                                                 @RequestParam Optional<Integer> scale,
-                                                 @RequestParam Optional<Boolean> outline,
-                                                 @RequestParam Optional<String> background,
-                                                 @RequestParam Optional<Long> version) {
+                                                 @RequestParam(required = false) String fmt,
+                                                 @RequestParam(required = false) Integer scale,
+                                                 @RequestParam(required = false) Boolean outline,
+                                                 @RequestParam(required = false) String background,
+                                                 @RequestParam(required = false) Long version) {
         return image(images.allViewImages(actor, id, new ImageRequest(fmt, scale, outline, background, version)));
     }
 
+    /** Настройка импорта рабочего пространства: включён ли строгий режим. */
     @GetMapping("/workspaces/{id}/import-settings")
     public ImportSettings importSettings(@PathVariable UUID id) {
         return new ImportSettings(imports.strictImport(id));
     }
 
+    /** Включает или выключает строгий режим импорта пространства и отдаёт итоговую настройку. */
     @PutMapping("/workspaces/{id}/import-settings")
     public ImportSettings configure(EditorIdentity actor, @PathVariable UUID id, @RequestBody ImportSettings settings) {
         imports.configureStrictImport(actor, id, settings.strictImport());
@@ -163,14 +165,14 @@ public class InterchangeController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(artifact.mediaType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                        .filename(artifact.fileName(), java.nio.charset.StandardCharsets.UTF_8).build().toString())
+                        .filename(artifact.fileName(), StandardCharsets.UTF_8).build().toString())
                 .header("X-Archi-Version-No", String.valueOf(versionNo))
                 .eTag("\"" + artifact.hash().value() + "\"")
                 .lastModified(Instant.EPOCH);
     }
 
-    private UUID workspace(Optional<UUID> requested) {
-        return workspaces.resolve(requested.map(WorkspaceId::of)).value();
+    private UUID workspace(UUID requested) {
+        return workspaces.resolveWorkspace(new ResolveWorkspaceQuery(requested)).workspaceId();
     }
 
     private static byte[] bytes(MultipartFile file) {
@@ -182,7 +184,7 @@ public class InterchangeController {
     }
 
     private static ImportResult result(ImportReport report, TextCatalog text) {
-        return new ImportResult(report.sessionId().value(), report.status().name(), report.modelId().orElse(null),
+        return new ImportResult(report.sessionId().value(), report.status().name(), report.modelId(),
                 report.versionNo() > 0 ? report.versionNo() : null, report.replayed(),
                 FindingMapper.findings(report.findings(), text));
     }

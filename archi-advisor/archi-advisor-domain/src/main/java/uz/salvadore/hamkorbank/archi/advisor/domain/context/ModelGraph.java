@@ -83,10 +83,12 @@ public record ModelGraph(List<ContextElement> elements, List<ContextRelation> re
                 List.of(), List.of());
     }
 
+    /** Элемент по {@code archiId}; нет — пусто. */
     public Optional<ContextElement> element(String archiId) {
         return elements.stream().filter(e -> e.archiId().equals(archiId)).findFirst();
     }
 
+    /** Представление по ключу; нет — пусто. */
     public Optional<GraphView> view(ViewId viewId) {
         return views.stream().filter(v -> v.id().equals(viewId)).findFirst();
     }

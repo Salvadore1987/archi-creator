@@ -8,14 +8,17 @@ import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationNotPermittedException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.DiagramType;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 
 class ArchitectureModelTest {
 
@@ -25,7 +28,7 @@ class ArchitectureModelTest {
         ArchitectureModel model = Models.empty();
         Element first = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
 
-        ModelingException taken = assertThrows(ModelingException.class, () -> model.addElement(
+        ModelingDomainException taken = assertThrows(ModelingDomainException.class, () -> model.addElement(
                 ArchiType.ofSimpleName("ApplicationComponent"), "Двойник", Models.root(model, FolderType.APPLICATION),
                 ElementId.next(UUIDS), first.archiId(), NOW));
 
@@ -52,7 +55,7 @@ class ArchitectureModelTest {
     void elementOutsideItsLayerFolderIsRejected() {
         ArchitectureModel model = Models.empty();
 
-        ModelingException wrongFolder = assertThrows(ModelingException.class,
+        ModelingDomainException wrongFolder = assertThrows(ModelingDomainException.class,
                 () -> Models.element(model, "BusinessActor", FolderType.APPLICATION, "Клиент"));
 
         assertEquals("INV-MDL-009", wrongFolder.code());
@@ -63,7 +66,7 @@ class ArchitectureModelTest {
     void phaseThreeTypeIsNotCreatable() {
         ArchitectureModel model = Models.empty();
 
-        ModelingException phase3 = assertThrows(ModelingException.class,
+        ModelingDomainException phase3 = assertThrows(ModelingDomainException.class,
                 () -> Models.element(model, "WorkPackage", FolderType.IMPLEMENTATION_MIGRATION, "Внедрение СМП"));
 
         assertEquals(ModelingCodes.TYPE_NOT_EDITABLE, phase3.code());
@@ -78,7 +81,7 @@ class ArchitectureModelTest {
         Element goal = Models.element(model, "Goal", FolderType.MOTIVATION, "Платёж за 10 секунд");
         Element component = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
 
-        Element renamed = model.updateElement(capability.id(), "Мгновенные платежи", Optional.of("Уровень 1"),
+        Element renamed = model.updateElement(capability.id(), "Мгновенные платежи", "Уровень 1",
                 List.of(), NOW);
         Relationship realizes = Models.relate(model, "RealizationRelationship", component.id(), capability.id());
         Models.relate(model, "RealizationRelationship", capability.id(), goal.id());
@@ -99,7 +102,7 @@ class ArchitectureModelTest {
 
         Relationship serving = Models.relate(model, "ServingRelationship", component.id(), actor.id());
         ArchitectureModel.Created<Relationship> again = model.addRelationship(
-                ArchiType.ofSimpleName("ServingRelationship"), component.id(), actor.id(), Optional.empty(),
+                ArchiType.ofSimpleName("ServingRelationship"), component.id(), actor.id(), null,
                 RelationshipId.next(UUIDS), Models.archiId(), NOW);
 
         assertFalse(again.created());
@@ -121,8 +124,48 @@ class ArchitectureModelTest {
         Relationship association = Models.relate(model, "AssociationRelationship", component.id(), serving.id());
 
         assertEquals(serving.id(), association.target());
-        ModelingException blocked = assertThrows(ModelingException.class,
+        ModelingDomainException blocked = assertThrows(ModelingDomainException.class,
                 () -> model.removeRelationship(serving.id(), NOW));
         assertEquals("INV-MDL-004", blocked.code());
+    }
+
+    @Test
+    @DisplayName("Переименование представления — правила модели: длина имени, активная модель")
+    void renamingViewFollowsModelRules() {
+        ArchitectureModel model = Models.empty();
+        ViewRef view = model.placeNewView(ViewId.next(UUIDS), DiagramType.DIAGRAM_MODEL, "Контекст",
+                Models.root(model, FolderType.DIAGRAMS), Models.archiId(), NOW);
+
+        assertThrows(ModelingDomainException.class, () -> model.renameView(view.id(), "x".repeat(Names.MAX + 1), NOW));
+        assertThrows(ModelingDomainException.class, () -> new ViewRef(view.id(), view.folderId(), view.archiId(),
+                view.archiType(), "x".repeat(Names.MAX + 1), view.sortOrder()));
+
+        model.renameView(view.id(), "Ландшафт", NOW);
+        assertEquals("Ландшафт", model.view(view.id()).orElseThrow().name());
+
+        model.delete(Models.ARCHITECT, NOW);
+        assertThrows(ModelingDomainException.class, () -> model.renameView(view.id(), "Другое", NOW));
+    }
+
+    @Test
+    @DisplayName("Текст, которого не может быть в файле Archi, отклоняется на входе — выгрузка не ломается")
+    void textOutsideXmlIsRejected() {
+        ArchitectureModel model = Models.empty();
+        FolderId application = Models.root(model, FolderType.APPLICATION);
+        Element element = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
+
+        assertThrows(ModelingDomainException.class, () -> model.addElement(
+                ArchiType.ofSimpleName("ApplicationComponent"), "а\u0001б", application, ElementId.next(UUIDS),
+                Models.archiId(), NOW));
+        assertThrows(ModelingDomainException.class, () -> model.updateElement(element.id(), "АБС", "текст\uD800",
+                List.of(), NOW));
+        assertThrows(ModelingDomainException.class, () -> model.updateElement(element.id(), "АБС", null,
+                List.of(new PropertyEntry("ключ", "\uFFFE", SortOrder.ofPosition(0))), NOW));
+        assertThrows(ModelingDomainException.class, () -> model.createFolder(application, "\u0007",
+                     FolderId.next(UUIDS), 
+                Models.archiId(), NOW));
+
+        Element kept = model.updateElement(element.id(), "АБС\tтаб", "строка\nстрока", List.of(), NOW);
+        assertEquals("АБС\tтаб", kept.name());
     }
 }

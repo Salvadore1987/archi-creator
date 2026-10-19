@@ -1,21 +1,18 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.identity;
 
-import java.util.Objects;
 import java.util.UUID;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.BaseId;
 
 /** Идентификатор на UUIDv7, генерируется приложением. */
-public record FindingId(UUID value) {
+public final class FindingId extends BaseId<UUID> {
 
-    public FindingId {
-        Objects.requireNonNull(value, "FindingId");
+    /** Ключ над значением UUID. */
+    public FindingId(UUID value) {
+        super(value);
     }
 
+    /** Новый идентификатор находки. */
     public static FindingId next(UuidV7 uuids) {
         return new FindingId(uuids.next());
-    }
-
-    @Override
-    public String toString() {
-        return value.toString();
     }
 }

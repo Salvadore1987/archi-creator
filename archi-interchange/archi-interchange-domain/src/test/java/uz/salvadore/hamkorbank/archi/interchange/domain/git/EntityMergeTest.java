@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.git;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -83,9 +84,9 @@ class EntityMergeTest {
         assertEquals("id-app:name", conflict.id());
         assertEquals(Kind.ELEMENT, conflict.kind());
         assertEquals("name", conflict.field());
-        assertEquals(Optional.of("АБС"), conflict.base());
-        assertEquals(Optional.of("АБС ours"), conflict.ours());
-        assertEquals(Optional.of("АБС theirs"), conflict.theirs());
+        assertEquals("АБС", conflict.base());
+        assertEquals("АБС ours", conflict.ours());
+        assertEquals("АБС theirs", conflict.theirs());
         assertFalse(result.resolved());
         assertEquals(Optional.of("АБС ours"), node(result.document(), "id-app").attribute("name"));
 
@@ -124,8 +125,8 @@ class EntityMergeTest {
 
         Conflict conflict = single(result.conflicts());
         assertEquals("id-crm:" + EntityMerge.REMOVAL, conflict.id());
-        assertEquals(Optional.empty(), conflict.ours());
-        assertEquals(Optional.of("name"), conflict.theirs());
+        assertNull(conflict.ours());
+        assertEquals("name", conflict.theirs());
         assertTrue(result.document().find(ArchiId.of("id-crm")).isEmpty(), "без выбора — «наше»: удалено");
 
         Result kept = EntityMerge.merge(base, ours, theirs, Map.of(conflict.id(), Side.THEIRS));
@@ -144,7 +145,7 @@ class EntityMergeTest {
         assertEquals(List.of(), result.conflicts());
         assertTrue(result.document().find(ArchiId.of("id-rel")).isEmpty());
         assertEquals(List.of(new Cascade(CascadeKind.RELATIONSHIP, ArchiId.of("id-rel"), "",
-                Reason.RELATION_ENDPOINT_REMOVED, Optional.empty())), result.cascade());
+                Reason.RELATION_ENDPOINT_REMOVED, null)), result.cascade());
     }
 
     @Test
@@ -174,7 +175,7 @@ class EntityMergeTest {
         assertEquals(Optional.empty(), app.attribute("targetConnections"));
         assertTrue(result.cascade().stream().anyMatch(c -> c.kind() == CascadeKind.VIEW_NODE
                 && c.archiId().equals(ArchiId.of("id-node-crm"))
-                && c.view().equals(Optional.of(ArchiId.of("id-view")))));
+                && ArchiId.of("id-view").equals(c.view())));
         assertTrue(result.cascade().stream().anyMatch(c -> c.archiId().equals(ArchiId.of("id-rel2"))));
     }
 
@@ -189,7 +190,7 @@ class EntityMergeTest {
 
         Conflict conflict = single(result.conflicts());
         assertEquals("id-view:" + ModelChanges.DIAGRAM, conflict.id());
-        assertEquals(Optional.of("2"), conflict.ours());
+        assertEquals("2", conflict.ours());
 
         Result chosen = EntityMerge.merge(base, ours, theirs, Map.of(conflict.id(), Side.THEIRS));
         assertEquals(Optional.of("12"), node(chosen.document(), "id-node-app").values("bounds").getFirst()
@@ -296,6 +297,24 @@ class EntityMergeTest {
         Result result = EntityMerge.merge(reference, reference, theirs, Map.of());
 
         assertEquals(renamed, new String(new ArchiXmlWriter().write(result.document()), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("атрибут type развилки и тип ArchiMate — разные поля с разными адресами конфликта")
+    void junctionKindIsNotArchimateType() {
+        String junction = "<element xsi:type=\"archimate:Junction\" name=\"J\" id=\"id-j\" type=\"or\"/>";
+        ModelDocument base = model(junction, "", "");
+        ModelDocument ours = model(junction.replace("archimate:Junction", "archimate:OursJunction")
+                .replace("type=\"or\"", "type=\"and\""), "", "");
+        ModelDocument theirs = model(junction.replace("archimate:Junction", "archimate:TheirsJunction")
+                .replace("type=\"or\"", "type=\"xor\""), "", "");
+
+        Result result = EntityMerge.merge(base, ours, theirs, Map.of("id-j:@type", Side.THEIRS));
+
+        assertEquals(List.of("id-j:@type", "id-j:type"),
+                result.conflicts().stream().map(Conflict::id).sorted().toList());
+        assertEquals(Optional.of("xor"), node(result.document(), "id-j").attribute("type"));
+        assertEquals(Optional.of("archimate:OursJunction"), node(result.document(), "id-j").attribute("xsi:type"));
     }
 
     private static Conflict single(List<Conflict> conflicts) {

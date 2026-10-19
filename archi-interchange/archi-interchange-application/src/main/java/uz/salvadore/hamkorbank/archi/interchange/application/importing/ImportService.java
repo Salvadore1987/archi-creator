@@ -3,9 +3,8 @@ package uz.salvadore.hamkorbank.archi.interchange.application.importing;
 import java.io.ByteArrayInputStream;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeOperation;
@@ -25,20 +24,19 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.UuidV7;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.IdempotencyConflictException;
-import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportApplied;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportIntake;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiIdGenerator;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationViolation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 
 /**
  * Импорт файла {@code .archimate} новой моделью.
@@ -52,7 +50,7 @@ public final class ImportService {
 
     private final ImportSessionRepository sessions;
     private final ImportPolicy policy;
-    private final ModelImportService models;
+    private final ModelExchangeApplicationService models;
     private final ArchiDocumentReader reader;
     private final UnitOfWork unitOfWork;
     private final InterchangeEvents events;
@@ -63,9 +61,9 @@ public final class ImportService {
     private final ImportGate gate;
     private final MethodologyCheck methodology = new MethodologyCheck();
 
-    public ImportService(ImportSessionRepository sessions, ImportPolicy policy, ModelImportService models,
-                         ArchiDocumentReader reader, UnitOfWork unitOfWork, InterchangeEvents events,
-                         InterchangeMetrics metrics, TextCatalog texts, Clock clock,
+    public ImportService(ImportSessionRepository sessions, ImportPolicy policy,
+                         ModelExchangeApplicationService models, ArchiDocumentReader reader, UnitOfWork unitOfWork,
+                         InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts, Clock clock,
                          int maxParallelImportsPerWorkspace) {
         this.texts = texts;
         this.sessions = sessions;
@@ -80,13 +78,17 @@ public final class ImportService {
         this.gate = new ImportGate(maxParallelImportsPerWorkspace);
     }
 
+    /**
+     * Импортирует файл {@code .archimate} новой моделью пространства; повтор с тем же ключом
+     * идемпотентности возвращает прежний итог. Ключ не задан ({@code null} или пустой) — свой на каждую попытку.
+     */
     public ImportReport importFile(EditorIdentity actor, UUID workspaceId, String fileName, byte[] content,
-                                   Optional<String> idempotencyKey) {
+                                   String idempotencyKey) {
         InterchangeOperation operation = InterchangeOperation.IMPORT_ARCHIMATE_FILE;
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
             WorkspaceId workspace = new WorkspaceId(workspaceId);
-            String key = idempotencyKey.filter(k -> !k.isBlank()).orElseGet(() -> uuids.next().toString());
+            String key = idempotencyKey == null || idempotencyKey.isBlank() ? uuids.next().toString() : idempotencyKey;
             ImportRequest request = request(workspace, fileName, content, key, actor);
             return gate.through(workspace, () -> unitOfWork.write(() -> {
                 ImportIntake.Intake intake = intake(request);
@@ -108,6 +110,7 @@ public final class ImportService {
         });
     }
 
+    /** Включён ли строгий режим импорта пространства. */
     public boolean strictImport(UUID workspaceId) {
         return unitOfWork.read(() -> policy.strictImport(new WorkspaceId(workspaceId)));
     }
@@ -116,8 +119,7 @@ public final class ImportService {
         try {
             return new ImportIntake(sessions, uuids, clock).receive(request);
         } catch (IdempotencyConflictException conflict) {
-            throw new InterchangeException(IdempotencyConflictException.INVARIANT, Failure.CONFLICT,
-                    Message.of(InterchangeMessages.IMPORT_KEY_REUSED),
+            throw new InterchangeException(conflict.code(), Failure.CONFLICT, conflict.reason(),
                     Map.of("importSessionId", conflict.existing().id().toString()));
         }
     }
@@ -128,7 +130,7 @@ public final class ImportService {
             sessions.save(session);
             return finished(session);
         }
-        ModelDocument document = session.document().orElseThrow();
+        ModelDocument document = Objects.requireNonNull(session.document());
         session.validate(methodology.check(document, this::findingId), clock.instant());
         if (session.status() == ImportStatus.REJECTED) {
             sessions.save(session);
@@ -136,19 +138,19 @@ public final class ImportService {
         }
         Instant now = clock.instant();
         ModelId modelId = ModelId.of(uuids.next());
-        ArchiIdGenerator archiIds = new ArchiIdGenerator();
+        ArchiIdGenerator archiIds = new ArchiIdGenerator(uuids::next);
         ModelContent model = new DocumentDecomposer(uuids::next, archiIds::next).decompose(document,
                 new DocumentDecomposer.Identity(modelId, uz.salvadore.hamkorbank.archi.modeling.domain.workspace
                         .WorkspaceId.of(session.workspaceId().value()), actor.subject(), now, now, 0));
-        ModelVersion version = models.store(model, actor,
+        VersionResponse version = models.importModel(actor, model,
                 texts.text(Message.of(InterchangeMessages.COMMENT_IMPORTED, session.sourceName())));
         int opaque = (int) (model.model().elements().values().stream().filter(e -> !e.supported()).count()
                 + model.model().relationships().values().stream().filter(r -> !r.supported()).count());
-        ImportApplied applied = session.apply(
+        session.apply(
                 new uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId(modelId.value()),
                 version.versionNo(), opaque, now);
         sessions.save(session);
-        events.publish(List.of(applied));
+        events.publish(session.pullEvents());
         metrics.opaqueObjects(modelId.value(), opaque);
         return finished(session);
     }
@@ -156,13 +158,14 @@ public final class ImportService {
     private ImportRequest request(WorkspaceId workspace, String fileName, byte[] content, String key,
                                   EditorIdentity actor) {
         try {
-            return ImportRequest.of(workspace, Optional.empty(), fileName, content, key,
+            return ImportRequest.of(workspace, null, fileName, content, key,
                     policy.strictImport(workspace), actor.subject());
+        } catch (InvalidValueException invalid) {
+            throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE, invalid.reason(),
+                    Map.of());
         } catch (IllegalArgumentException invalid) {
             throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE,
-                    invalid instanceof InvalidValueException value ? value.reason()
-                            : Message.of(InterchangeMessages.INVALID_REQUEST),
-                    Map.of());
+                    Message.of(InterchangeMessages.INVALID_REQUEST), Map.of());
         }
     }
 
@@ -175,11 +178,11 @@ public final class ImportService {
     }
 
     private static ImportReport report(ImportSession session, boolean replayed) {
-        boolean corrupt = session.status() == ImportStatus.REJECTED && session.document().isEmpty()
+        boolean corrupt = session.status() == ImportStatus.REJECTED && session.document() == null
                 && session.findings().stream().noneMatch(f -> f.code().equals(RelationViolation.CODE));
         return new ImportReport(session.id(), session.status(),
-                session.appliedModelId().map(m -> m.value()), session.appliedVersionNo(), session.findings(),
-                replayed, corrupt);
+                session.appliedModelId() == null ? null : session.appliedModelId().value(), session.appliedVersionNo(),
+                session.findings(), replayed, corrupt);
     }
 
     private FindingId findingId() {

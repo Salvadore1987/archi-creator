@@ -37,6 +37,7 @@ public enum FolderType {
         return defaultName;
     }
 
+    /** Тип корневой папки по атрибуту {@code type} из файла; пусто — значение незнакомо. */
     public static Optional<FolderType> fromFileValue(String value) {
         return Arrays.stream(values()).filter(t -> t.fileValue.equals(value)).findFirst();
     }

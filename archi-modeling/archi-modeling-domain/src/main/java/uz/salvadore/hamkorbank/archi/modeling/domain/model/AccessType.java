@@ -19,10 +19,12 @@ public enum AccessType {
         this.fileValue = fileValue;
     }
 
+    /** Число, которым вид доступа записан в атрибуте {@code accessType}. */
     public int fileValue() {
         return fileValue;
     }
 
+    /** Вид доступа по значению атрибута из файла; пусто — значение незнакомо. */
     public static Optional<AccessType> fromFileValue(String value) {
         return Arrays.stream(values()).filter(t -> String.valueOf(t.fileValue).equals(value)).findFirst();
     }

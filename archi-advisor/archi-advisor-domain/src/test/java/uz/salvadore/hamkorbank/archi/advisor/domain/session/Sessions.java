@@ -3,7 +3,6 @@ package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.UuidV7;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AdvisorSessionId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AuditEntryId;
@@ -27,7 +26,7 @@ final class Sessions {
     }
 
     static AdvisorSession review() {
-        return requested(AdvisorRequest.review(MODEL, Optional.empty()));
+        return requested(AdvisorRequest.review(MODEL, null));
     }
 
     static AuditEntryId audit() {
@@ -36,6 +35,6 @@ final class Sessions {
 
     static Finding finding(String archiId) {
         return new Finding(FindingId.next(UUIDS), Severity.WARNING, "ORPHAN_ELEMENT", "message", TargetKind.ELEMENT,
-                ElementRef.of(archiId, "CRM"), Optional.of("fix"));
+                ElementRef.of(archiId, "CRM"), "fix");
     }
 }

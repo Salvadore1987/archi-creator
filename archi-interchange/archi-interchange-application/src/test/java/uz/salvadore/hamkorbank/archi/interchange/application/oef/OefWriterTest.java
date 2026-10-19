@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation;
@@ -33,8 +34,7 @@ class OefWriterTest {
     /** Размеры по умолчанию — как в {@code shapes.json}; силуэты писателю не нужны. */
     private static final Notation NOTATION = new Notation(new Size(120, 55),
             Map.of("archimate:Group", new Size(400, 140), "archimate:Note", new Size(185, 80)), Map.of(),
-            new ShapeEntry("stub", Optional.empty(), Optional.empty(), "node_radius", Optional.empty(),
-                    Optional.empty()), Map.of(), Map.of(), Map.of(), "Inter");
+            new ShapeEntry("stub", null, null, "node_radius", null, null), Map.of(), Map.of(), Map.of(), "Inter");
 
     private static final OefWriter WRITER = new OefWriter(NOTATION);
 
@@ -60,7 +60,8 @@ class OefWriterTest {
     void rawFragmentsAreListedAsLosses() throws IOException {
         OefWriter.Written written = WRITER.write(read(fixture("unknown_extension.archimate")));
         String xml = text(written);
-        Set<String> losses = written.losses().stream().map(l -> l.archiId() + " " + l.objectKind() + " " + l.aspect())
+        Set<String> losses = written.losses().stream()
+                .map(l -> l.archiId() + " " + l.objectKind().value() + " " + l.aspect())
                 .collect(Collectors.toSet());
 
         assertEquals(Optional.empty(), SCHEMA.violation(written.xml()));
@@ -172,7 +173,7 @@ class OefWriterTest {
     @Test
     @DisplayName("FR-43: каждая фикстура даёт файл, валидный по XSD")
     void everyFixtureIsSchemaValid() throws IOException {
-        try (var files = Files.list(FIXTURES)) {
+        try (Stream<Path> files = Files.list(FIXTURES)) {
             for (Path file : files.filter(f -> f.toString().endsWith(".archimate")).sorted().toList()) {
                 assertEquals(Optional.empty(), SCHEMA.violation(WRITER.write(read(Files.readAllBytes(file))).xml()),
                         file.getFileName().toString());

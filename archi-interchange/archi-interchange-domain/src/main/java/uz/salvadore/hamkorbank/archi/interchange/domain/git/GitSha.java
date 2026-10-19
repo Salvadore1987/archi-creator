@@ -17,6 +17,7 @@ public record GitSha(String value) {
         }
     }
 
+    /** Идентификатор коммита из строки. */
     public static GitSha of(String value) {
         return new GitSha(value);
     }

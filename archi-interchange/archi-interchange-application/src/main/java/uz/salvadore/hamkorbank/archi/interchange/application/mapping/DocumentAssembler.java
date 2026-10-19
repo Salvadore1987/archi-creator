@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -53,6 +54,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
  */
 public final class DocumentAssembler {
 
+    /** Собирает документ {@code .archimate} из строк модели и остатка XML. */
     public ModelDocument assemble(ModelContent content) {
         return new Run(content).assemble();
     }
@@ -91,11 +93,12 @@ public final class DocumentAssembler {
                     : attributes(residue, typed, Set.of("name"));
             Content content = new Content(residue);
             // У корня Archi пишет описание и свойства после папок, а не перед ними.
-            content.single("purpose", header.documentation().map(d -> text("purpose", d)), XmlSchema.AFTER_ALL - 1);
+            content.single("purpose", textOrNull("purpose", header.documentation()),
+                    XmlSchema.AFTER_ALL - 1);
             content.properties(header.properties(), XmlSchema.AFTER_ALL);
             model.folders().values().stream().filter(ModelFolder::root)
                     .forEach(f -> content.child(f.sortOrder().value(), folder(f)));
-            return new ModelDocument(new Attributes(attributes), content.build(Optional.empty()));
+            return new ModelDocument(new Attributes(attributes), content.build(null));
         }
 
         // ── Дерево модели ───────────────────────────────────────────
@@ -105,10 +108,10 @@ public final class DocumentAssembler {
             Map<String, Optional<String>> typed = new LinkedHashMap<>();
             typed.put("name", Optional.of(folder.name()));
             typed.put("id", Optional.of(folder.archiId().value()));
-            typed.put("type", folder.folderType().map(t -> t.fileValue()));
+            typed.put("type", Optional.ofNullable(folder.folderType()).map(t -> t.fileValue()));
             Content content = new Content(residue);
             FolderId id = folder.id();
-            model.folders().values().stream().filter(f -> f.parentId().equals(Optional.of(id)))
+            model.folders().values().stream().filter(f -> id.equals(f.parentId()))
                     .forEach(f -> content.child(f.sortOrder().value(), folder(f)));
             model.elements().values().stream().filter(e -> e.folderId().equals(id))
                     .forEach(e -> content.child(e.sortOrder().value(), element(e)));
@@ -127,7 +130,7 @@ public final class DocumentAssembler {
             typed.put("name", Optional.of(element.name()));
             typed.put("id", Optional.of(element.archiId().value()));
             Content content = new Content(residue);
-            content.single("documentation", element.documentation().map(d -> text("documentation", d)),
+            content.single("documentation", textOrNull("documentation", element.documentation()),
                     XmlSchema.DOCUMENTATION_FIRST);
             content.properties(element.properties(), XmlSchema.PROPERTIES_FIRST);
             return node("element", element.archiId(),
@@ -138,14 +141,15 @@ public final class DocumentAssembler {
             NodeResidue residue = residue(relationship.rawXml());
             Map<String, Optional<String>> typed = new LinkedHashMap<>();
             typed.put(XmlSchema.XSI_TYPE, Optional.of(relationship.archiType().value()));
-            typed.put("name", relationship.name());
+            typed.put("name", Optional.ofNullable(relationship.name()));
             typed.put("id", Optional.of(relationship.archiId().value()));
             typed.put("source", Optional.of(archiId(relationship.source())));
             typed.put("target", Optional.of(archiId(relationship.target())));
-            typed.put("accessType", relationship.accessType().map(a -> String.valueOf(a.fileValue())));
-            typed.put("directed", relationship.directed().map(String::valueOf));
+            typed.put("accessType",
+                    Optional.ofNullable(relationship.accessType()).map(a -> String.valueOf(a.fileValue())));
+            typed.put("directed", Optional.ofNullable(relationship.directed()).map(String::valueOf));
             Content content = new Content(residue);
-            content.single("documentation", relationship.documentation().map(d -> text("documentation", d)),
+            content.single("documentation", textOrNull("documentation", relationship.documentation()),
                     XmlSchema.DOCUMENTATION_FIRST);
             content.properties(relationship.properties(), XmlSchema.PROPERTIES_FIRST);
             return node("element", relationship.archiId(),
@@ -161,12 +165,12 @@ public final class DocumentAssembler {
             typed.put(XmlSchema.XSI_TYPE, Optional.of(header.archiType().value()));
             typed.put("name", Optional.of(header.name()));
             typed.put("id", Optional.of(header.archiId().value()));
-            typed.put("viewpoint", header.viewpoint());
+            typed.put("viewpoint", Optional.ofNullable(header.viewpoint()));
             Content content = new Content(residue);
-            content.single("documentation", header.documentation().map(d -> text("documentation", d)),
+            content.single("documentation", textOrNull("documentation", header.documentation()),
                     XmlSchema.DOCUMENTATION_FIRST);
             content.properties(header.properties(), XmlSchema.PROPERTIES_FIRST);
-            view.nodes().values().stream().filter(n -> n.parentId().isEmpty())
+            view.nodes().values().stream().filter(n -> n.parentId() == null)
                     .forEach(n -> content.child(n.sortOrder().value(), viewNode(view, n)));
             return node("element", header.archiId(), attributes(residue, typed, XmlSchema.VIEW_ORDER, Set.of("name")),
                     content);
@@ -178,14 +182,16 @@ public final class DocumentAssembler {
             typed.put(XmlSchema.XSI_TYPE, Optional.of(node.archiType().value()));
             typed.put("id", Optional.of(node.archiId().value()));
             typed.put(XmlSchema.TARGET_CONNECTIONS, targetConnections(node.id().value(), residue));
-            typed.put("name", node.label());
+            typed.put("name", Optional.ofNullable(node.label()));
             style(typed, node.style());
-            typed.put("archimateElement", node.elementId().map(e -> archiIds.get(e.value()).value()));
+            typed.put("archimateElement",
+                    Optional.ofNullable(node.elementId()).map(e -> archiIds.get(e.value()).value()));
             Content content = new Content(residue);
             content.single("bounds", bounds(node.bounds(), residue), XmlSchema.BOUNDS_FIRST);
-            content.single("content", node.content().map(c -> text("content", c)), XmlSchema.CONTENT_AFTER_BOUNDS);
+            content.single("content", textOrNull("content", node.content()),
+                    XmlSchema.CONTENT_AFTER_BOUNDS);
             ViewNodeId id = node.id();
-            view.nodes().values().stream().filter(n -> n.parentId().equals(Optional.of(id)))
+            view.nodes().values().stream().filter(n -> id.equals(n.parentId()))
                     .forEach(n -> content.child(n.sortOrder().value(), viewNode(view, n)));
             view.edges().values().stream().filter(e -> e.source().equals(id))
                     .forEach(e -> content.child(e.sortOrder().value(), viewEdge(view, e)));
@@ -201,13 +207,14 @@ public final class DocumentAssembler {
             style(typed, edge.style());
             typed.put("source", Optional.of(archiIds.get(edge.source().value()).value()));
             typed.put("target", Optional.of(archiIds.get(edge.target().value()).value()));
-            typed.put("archimateRelationship", edge.relationshipId().map(r -> archiIds.get(r.value()).value()));
+            typed.put("archimateRelationship",
+                    Optional.ofNullable(edge.relationshipId()).map(r -> archiIds.get(r.value()).value()));
             Content content = new Content(residue);
             List<ResidueItem.Slot> slots = residue.slots("bendpoint");
             List<Bendpoint> points = edge.bendpoints();
             for (int i = 0; i < points.size(); i++) {
-                Optional<ResidueItem.Slot> slot = i < slots.size() ? Optional.of(slots.get(i)) : Optional.empty();
-                content.typed(slot.map(ResidueItem.Slot::order).orElse(lastOrder(slots, XmlSchema.BOUNDS_FIRST)),
+                ResidueItem.Slot slot = i < slots.size() ? slots.get(i) : null;
+                content.typed(slot != null ? slot.order() : lastOrder(slots, XmlSchema.BOUNDS_FIRST),
                         bendpoint(points.get(i), slot));
             }
             ViewEdgeId id = edge.id();
@@ -230,7 +237,7 @@ public final class DocumentAssembler {
             edges.stream().sorted(Comparator.comparingInt(e -> edgeRank.get(e.id().value())))
                     .forEach(e -> present.add(e.archiId().value()));
             List<String> ordered = new ArrayList<>();
-            residue.attribute(XmlSchema.TARGET_CONNECTIONS).flatMap(ResidueAttribute::value).ifPresent(stored -> {
+            residue.attribute(XmlSchema.TARGET_CONNECTIONS).map(ResidueAttribute::value).ifPresent(stored -> {
                 for (String id : stored.trim().split("\\s+")) {
                     if (present.contains(id) && !ordered.contains(id)) {
                         ordered.add(id);
@@ -244,14 +251,14 @@ public final class DocumentAssembler {
         /** Порядок рёбер в файле: обход представления — узлы, затем рёбра узла, в порядке содержимого. */
         private void rankEdges(View view) {
             int[] rank = {edgeRank.size()};
-            walk(view, view.nodes().values().stream().filter(n -> n.parentId().isEmpty())
+            walk(view, view.nodes().values().stream().filter(n -> n.parentId() == null)
                     .sorted(Comparator.comparing(ViewNode::sortOrder)).toList(), rank);
         }
 
         private void walk(View view, List<ViewNode> nodes, int[] rank) {
             for (ViewNode node : nodes) {
                 List<Object> content = new ArrayList<>();
-                view.nodes().values().stream().filter(n -> n.parentId().equals(Optional.of(node.id())))
+                view.nodes().values().stream().filter(n -> node.id().equals(n.parentId()))
                         .forEach(content::add);
                 view.edges().values().stream().filter(e -> e.source().equals(node.id())).forEach(content::add);
                 content.sort(Comparator.comparingLong(o -> o instanceof ViewNode n ? n.sortOrder().value()
@@ -274,38 +281,41 @@ public final class DocumentAssembler {
 
         // ── Значения ────────────────────────────────────────────────
 
-        private Optional<DocumentValue> bounds(Bounds bounds, NodeResidue residue) {
+        /** Геометрия узла; {@code null} — без метки в остатке и вся по умолчанию: Archi её не пишет. */
+        private DocumentValue bounds(Bounds bounds, NodeResidue residue) {
             Map<String, Integer> values = Map.of("x", bounds.x(), "y", bounds.y(), "width", bounds.width(),
                     "height", bounds.height());
-            Optional<ResidueItem.Slot> slot = residue.slots("bounds").stream().findFirst();
+            ResidueItem.Slot slot = residue.slots("bounds").stream().findFirst().orElse(null);
             List<Attribute> attributes = numbers(values, XmlSchema.BOUNDS, XmlSchema.BOUNDS_DEFAULT, slot);
-            if (slot.isEmpty() && attributes.isEmpty()) {
-                return Optional.empty();
+            if (slot == null && attributes.isEmpty()) {
+                return null;
             }
-            return Optional.of(new DocumentValue("bounds", DocumentOrder.of(0), new Attributes(attributes),
-                    Optional.empty()));
+            return new DocumentValue("bounds", DocumentOrder.of(0), new Attributes(attributes), null);
         }
 
-        private static DocumentValue bendpoint(Bendpoint point, Optional<ResidueItem.Slot> slot) {
+        /** Точка перегиба; {@code slot} — её метка в остатке, {@code null} — метки нет. */
+        private static DocumentValue bendpoint(Bendpoint point, ResidueItem.Slot slot) {
             Map<String, Integer> values = Map.of("startX", point.startX(), "startY", point.startY(),
                     "endX", point.endX(), "endY", point.endY());
             Map<String, Integer> defaults = Map.of("startX", 0, "startY", 0, "endX", 0, "endY", 0);
             return new DocumentValue("bendpoint", DocumentOrder.of(0),
-                    new Attributes(numbers(values, XmlSchema.BENDPOINT, defaults, slot)), Optional.empty());
+                    new Attributes(numbers(values, XmlSchema.BENDPOINT, defaults, slot)), null);
         }
 
         /**
          * Атрибуты числового значения: размеченные в остатке — всегда, в своём порядке;
-         * прочие — только отличные от умолчания, которого Archi не пишет.
+         * прочие — только отличные от умолчания, которого Archi не пишет. Метки нет — {@code slot} {@code null}.
          */
         private static List<Attribute> numbers(Map<String, Integer> values, List<String> canonical,
-                                               Map<String, Integer> defaults, Optional<ResidueItem.Slot> slot) {
+                                               Map<String, Integer> defaults, ResidueItem.Slot slot) {
             List<Attribute> attributes = new ArrayList<>();
             Set<String> placed = new LinkedHashSet<>();
-            slot.ifPresent(s -> s.attributes().forEach(a -> {
-                attributes.add(new Attribute(a.name(), String.valueOf(values.get(a.name()))));
-                placed.add(a.name());
-            }));
+            if (slot != null) {
+                slot.attributes().forEach(a -> {
+                    attributes.add(new Attribute(a.name(), String.valueOf(values.get(a.name()))));
+                    placed.add(a.name());
+                });
+            }
             for (String name : canonical) {
                 if (!placed.contains(name) && !values.get(name).equals(defaults.get(name))) {
                     attributes.add(new Attribute(name, String.valueOf(values.get(name))));
@@ -315,21 +325,26 @@ public final class DocumentAssembler {
         }
 
         private static void style(Map<String, Optional<String>> typed, StyleOverride style) {
-            typed.put("fillColor", style.fillColor());
-            typed.put("font", style.font());
-            typed.put("fontColor", style.fontColor());
-            typed.put("lineColor", style.lineColor());
-            typed.put("textAlignment", style.textAlignment().map(String::valueOf));
+            typed.put("fillColor", Optional.ofNullable(style.fillColor()));
+            typed.put("font", Optional.ofNullable(style.font()));
+            typed.put("fontColor", Optional.ofNullable(style.fontColor()));
+            typed.put("lineColor", Optional.ofNullable(style.lineColor()));
+            typed.put("textAlignment", Optional.ofNullable(style.textAlignment()).map(String::valueOf));
         }
 
         private String archiId(ConceptRef concept) {
             return archiIds.get(concept.value()).value();
         }
 
-        /** Пустая документация — элемент без текста: так её отдаёт читатель, и так она уходит. */
-        private static DocumentValue text(String tag, String text) {
-            return new DocumentValue(tag, DocumentOrder.of(0), new Attributes(List.of()),
-                    Optional.of(text).filter(t -> !t.isEmpty()));
+        /**
+         * Пустая документация — элемент без текста: так её отдаёт читатель, и так она уходит.
+         * Текста нет вовсе ({@code null}) — нет и значения.
+         */
+        private static DocumentValue textOrNull(String tag, String text) {
+            if (text == null) {
+                return null;
+            }
+            return new DocumentValue(tag, DocumentOrder.of(0), new Attributes(List.of()), text.isEmpty() ? null : text);
         }
     }
 
@@ -364,8 +379,8 @@ public final class DocumentAssembler {
             if (typed.containsKey(attribute.name()) && (attribute.typed()
                     || attribute.name().equals(XmlSchema.TARGET_CONNECTIONS))) {
                 typed.get(attribute.name()).ifPresent(v -> attributes.add(new Attribute(attribute.name(), v)));
-            } else if (attribute.value().isPresent()) {
-                attributes.add(new Attribute(attribute.name(), attribute.value().get()));
+            } else if (attribute.value() != null) {
+                attributes.add(new Attribute(attribute.name(), attribute.value()));
             }
         }
         typed.forEach((name, value) -> {
@@ -416,10 +431,11 @@ public final class DocumentAssembler {
             }
         }
 
-        /** Одиночное значение (документация, геометрия): на место метки или в начало. */
-        void single(String tag, Optional<DocumentValue> value, long fallback) {
-            value.ifPresent(v -> typed(residue.slots(tag).stream().findFirst().map(ResidueItem.Slot::order)
-                    .orElse(fallback), v));
+        /** Одиночное значение (документация, геометрия): на место метки или в начало; {@code null} — нет значения. */
+        void single(String tag, DocumentValue value, long fallback) {
+            if (value != null) {
+                typed(residue.slots(tag).stream().findFirst().map(ResidueItem.Slot::order).orElse(fallback), value);
+            }
         }
 
         /** Свойства — на свои места по очереди; лишние — вслед за последним. */
@@ -428,9 +444,8 @@ public final class DocumentAssembler {
             List<PropertyEntry> ordered = properties.stream().sorted(Comparator.comparing(PropertyEntry::sortOrder))
                     .toList();
             for (int i = 0; i < ordered.size(); i++) {
-                Optional<ResidueItem.Slot> slot = i < slots.size() ? Optional.of(slots.get(i)) : Optional.empty();
-                typed(slot.map(ResidueItem.Slot::order).orElse(lastOrder(slots, fallback)),
-                        property(ordered.get(i), slot));
+                ResidueItem.Slot slot = i < slots.size() ? slots.get(i) : null;
+                typed(slot != null ? slot.order() : lastOrder(slots, fallback), property(ordered.get(i), slot));
             }
         }
 
@@ -442,8 +457,8 @@ public final class DocumentAssembler {
             entries.add(new Entry(order, sequence++, parent -> node));
         }
 
-        List<DocumentContent> build(
-                Optional<uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId> parent) {
+        /** Содержимое узла {@code parent}; {@code null} — корня модели. */
+        List<DocumentContent> build(uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId parent) {
             entries.sort(Comparator.comparingLong(Entry::order).thenComparingInt(Entry::sequence));
             List<DocumentContent> content = new ArrayList<>();
             for (int i = 0; i < entries.size(); i++) {
@@ -452,25 +467,28 @@ public final class DocumentAssembler {
             return content;
         }
 
-        private static DocumentValue property(PropertyEntry property, Optional<ResidueItem.Slot> slot) {
+        /** Свойство на месте метки {@code slot}; {@code null} — метки нет. */
+        private static DocumentValue property(PropertyEntry property, ResidueItem.Slot slot) {
             Map<String, String> values = Map.of("key", property.key(), "value", property.value());
             List<Attribute> attributes = new ArrayList<>();
             Set<String> placed = new LinkedHashSet<>();
-            slot.ifPresent(s -> s.attributes().forEach(a -> {
-                attributes.add(new Attribute(a.name(), values.get(a.name())));
-                placed.add(a.name());
-            }));
+            if (slot != null) {
+                slot.attributes().forEach(a -> {
+                    attributes.add(new Attribute(a.name(), values.get(a.name())));
+                    placed.add(a.name());
+                });
+            }
             for (String name : XmlSchema.PROPERTY) {
-                if (!placed.contains(name) && (slot.isEmpty() || !values.get(name).isEmpty())) {
+                if (!placed.contains(name) && (slot == null || !values.get(name).isEmpty())) {
                     attributes.add(new Attribute(name, values.get(name)));
                 }
             }
-            return new DocumentValue("property", DocumentOrder.of(0), new Attributes(attributes), Optional.empty());
+            return new DocumentValue("property", DocumentOrder.of(0), new Attributes(attributes), null);
         }
 
         private static Attributes literal(List<ResidueAttribute> attributes) {
             return new Attributes(attributes.stream()
-                    .map(a -> new Attribute(a.name(), a.value().orElseThrow())).toList());
+                    .map(a -> new Attribute(a.name(), Objects.requireNonNull(a.value()))).toList());
         }
 
         private static DocumentContent reorder(DocumentContent item, int position) {
@@ -483,22 +501,24 @@ public final class DocumentAssembler {
         }
 
         private record Entry(long order, int sequence,
-                             Function<Optional<uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId>,
+                             Function<uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId,
                                      DocumentContent> build) {
         }
     }
 
     private static DocumentNode node(String tag, ArchiId archiId, List<Attribute> attributes, Content content) {
-        var id = uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId.of(archiId.value());
-        return new DocumentNode(tag, DocumentOrder.of(0), new Attributes(attributes), content.build(Optional.of(id)));
+        uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId id =
+                uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId.of(archiId.value());
+        return new DocumentNode(tag, DocumentOrder.of(0), new Attributes(attributes), content.build(id));
     }
 
     private static long lastOrder(List<ResidueItem.Slot> slots, long fallback) {
         return slots.isEmpty() ? fallback : slots.getLast().order();
     }
 
-    private static NodeResidue residue(Optional<RawXml> raw) {
-        return raw.map(r -> NodeResidue.decode(r.value())).orElse(NodeResidue.EMPTY);
+    /** Остаток узла; {@code null} — остатка нет. */
+    private static NodeResidue residue(RawXml raw) {
+        return raw == null ? NodeResidue.EMPTY : NodeResidue.decode(raw.value());
     }
 
 }

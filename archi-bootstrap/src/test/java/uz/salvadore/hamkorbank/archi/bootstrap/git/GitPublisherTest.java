@@ -5,12 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -28,6 +30,7 @@ import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.transport.RefSpec;
+import org.eclipse.jgit.treewalk.TreeWalk;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,8 +39,8 @@ import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPositions;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService.ModelGitStatus;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort;
@@ -49,9 +52,9 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentR
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitAuthor;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBinding;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBindingSnapshotCommittedEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBindingStatus;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
-import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSnapshotCommitted;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.SecretRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
@@ -117,7 +120,7 @@ class GitPublisherTest {
                 events::addAll, InterchangeMetrics.NONE, message -> message.key() + message.args(), clock,
                 new GitPublishingService.Settings("Archi Creator", "archi@test", "users.test", Duration.ofSeconds(5),
                         Duration.ofMinutes(10)));
-        bindings.save(GitBinding.configure(workspace, remote.toUri().toString(), Optional.empty(),
+        bindings.save(GitBinding.configure(workspace, remote.toUri().toString(), null,
                 SecretRef.of("env:ARCHI_GIT_TOKEN"),
                 List.of(new GitAuthor("architect-git", "Архитектор Тестов", "architect@bank.uz"))));
     }
@@ -136,8 +139,8 @@ class GitPublisherTest {
         assertThat(versions.sha(2)).contains(history.get(0).name());
 
         GitRepositoryPort.Remote target = new GitRepositoryPort.Remote(workspace, remote.toUri().toString(), "main",
-                Optional.empty());
-        GitRepositoryPort.PushResult stale = repository.push(target, Optional.of(GitSha.of(history.get(1).name())),
+                null);
+        GitRepositoryPort.PushResult stale = repository.push(target, GitSha.of(history.get(1).name()),
                 new GitRepositoryPort.CommitRequest("models/x", new TreeMap<>(Map.of("a.yaml", bytes("a: 1\n"))),
                         new TreeMap<>(), "stale", person(), person()));
 
@@ -163,7 +166,7 @@ class GitPublisherTest {
         assertThat(new String(tree.get(".gitattributes"), StandardCharsets.UTF_8)).contains("models/** -merge");
         assertThat(tree.keySet())
                 .anyMatch(p -> p.matches("models/neizvestnye-uzly-i-atributy\\.[0-9a-f]{8}/model\\.yaml"));
-        assertThat(events).singleElement().isInstanceOf(GitSnapshotCommitted.class);
+        assertThat(events).singleElement().isInstanceOf(GitBindingSnapshotCommittedEvent.class);
     }
 
     @Test
@@ -199,7 +202,7 @@ class GitPublisherTest {
         assertThat(versions.sha(2)).isEmpty();
         ModelGitStatus status = publishing.status(model);
         assertThat(status.state()).isEqualTo(ModelGitStatus.State.DIVERGED);
-        assertThat(status.divergedVersionNo()).contains(2L);
+        assertThat(status.divergedVersionNo()).isEqualTo(2L);
         assertThat(status.pending()).isEqualTo(2);
     }
 
@@ -266,10 +269,10 @@ class GitPublisherTest {
         String directory = modelDirectory();
         byte[] second = renamed("Клиент", "Клиент банка");
         ObjectId foreign = externalTree(directory, new GitYamlWriter().write(
-                new StaxArchiDocumentReader().read(new java.io.ByteArrayInputStream(second)), GitPositions.none()));
+                new StaxArchiDocumentReader().read(new ByteArrayInputStream(second)), GitPositions.none()));
 
         versions.add(new PublishedVersions.Version(workspace, "Неизвестные узлы и атрибуты", 2, "architect-git",
-                Optional.of("Вторая"), clock.instant(), canonicalHash(second), second));
+                "Вторая", clock.instant(), canonicalHash(second), second));
         outbox.enqueue(workspace, model, 2, clock.instant());
         publishing.publishPending();
 
@@ -331,7 +334,7 @@ class GitPublisherTest {
             + "после восстановления — публикуется")
     void unreachableRepositoryDefersPublication() throws Exception {
         Path missing = temp.resolve("later.git");
-        bindings.save(GitBinding.configure(workspace, missing.toUri().toString(), Optional.empty(),
+        bindings.save(GitBinding.configure(workspace, missing.toUri().toString(), null,
                 SecretRef.of("env:ARCHI_GIT_TOKEN"), List.of()));
         commitVersion(1, Fixtures.fixture("unknown_extension"), "Первая");
 
@@ -350,7 +353,7 @@ class GitPublisherTest {
 
     private void commitVersion(long versionNo, byte[] xml, String comment) {
         versions.add(new PublishedVersions.Version(workspace, "Неизвестные узлы и атрибуты", versionNo,
-                "architect-git", Optional.of(comment), clock.instant(), "0".repeat(64), xml));
+                "architect-git", comment, clock.instant(), "0".repeat(64), xml));
         outbox.enqueue(workspace, model, versionNo, clock.instant());
     }
 
@@ -366,7 +369,7 @@ class GitPublisherTest {
 
     private static String canonicalHash(byte[] xml) {
         return ContentHash.of(new ArchiXmlWriter().write(new StaxArchiDocumentReader()
-                .read(new java.io.ByteArrayInputStream(xml)))).value();
+                .read(new ByteArrayInputStream(xml)))).value();
     }
 
     /** Каталог модели целиком заменяется файлами — чужим коммитом с другими позициями. */
@@ -437,7 +440,7 @@ class GitPublisherTest {
     private SortedMap<String, byte[]> tree(RevCommit commit) throws Exception {
         SortedMap<String, byte[]> files = new TreeMap<>();
         try (Git git = Git.open(remote.toFile()); RevWalk walk = new RevWalk(git.getRepository());
-             org.eclipse.jgit.treewalk.TreeWalk tree = new org.eclipse.jgit.treewalk.TreeWalk(git.getRepository())) {
+             TreeWalk tree = new TreeWalk(git.getRepository())) {
             tree.addTree(walk.parseCommit(commit).getTree());
             tree.setRecursive(true);
             while (tree.next()) {
@@ -473,7 +476,7 @@ class GitPublisherTest {
         }
 
         @Override
-        public Clock withZone(java.time.ZoneId zone) {
+        public Clock withZone(ZoneId zone) {
             return this;
         }
 
@@ -564,7 +567,7 @@ class GitPublisherTest {
 
         private static Entry entry(Row r) {
             return new Entry(r.id, r.workspace, r.model, r.versionNo, Status.valueOf(r.status), r.attempts,
-                    Optional.ofNullable(r.next));
+                    r.next);
         }
     }
 

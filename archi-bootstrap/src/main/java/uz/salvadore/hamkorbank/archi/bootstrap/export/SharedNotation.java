@@ -40,6 +40,10 @@ public final class SharedNotation {
     private SharedNotation() {
     }
 
+    /**
+     * Собирает нотацию из общих с фронтендом файлов classpath: размеры и силуэты фигур, токены стиля и иконки; подписи
+     * набираются семейством {@code family}.
+     */
     public static Notation load(String family) {
         JsonNode shapes = JsonMapper.builder().build().readTree(text(SHAPES));
         Map<String, Size> sizes = new HashMap<>();
@@ -80,12 +84,12 @@ public final class SharedNotation {
         JsonNode label = node.get("label_box");
         return new ShapeEntry(node.get("outline").asString(),
                 present(icon).map(i -> new CornerIcon(i.get("sprite_id").asString(), i.get("x").asDouble(),
-                        i.get("y").asDouble(), i.get("size").asDouble())),
+                        i.get("y").asDouble(), i.get("size").asDouble())).orElse(null),
                 present(label).map(b -> new Box(b.get("x").asDouble(), b.get("y").asDouble(),
-                        b.get("width").asDouble(), b.get("height").asDouble())),
+                        b.get("width").asDouble(), b.get("height").asDouble())).orElse(null),
                 node.get("radius_token").asString(),
-                present(node.get("layer")).map(JsonNode::asString),
-                present(node.get("dash")).map(JsonNode::asString));
+                present(node.get("layer")).map(JsonNode::asString).orElse(null),
+                present(node.get("dash")).map(JsonNode::asString).orElse(null));
     }
 
     private static Optional<JsonNode> present(JsonNode node) {

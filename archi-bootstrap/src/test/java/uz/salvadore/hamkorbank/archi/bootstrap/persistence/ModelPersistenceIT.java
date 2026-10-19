@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -15,20 +14,33 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.LockService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewService;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.BendpointValue;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.PropertyValue;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateElementCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateRelationshipCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateViewCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EditElementCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewNodeCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.SaveViewLayoutCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetViewQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.CreateRelationshipResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelTreeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewNodeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ElementApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.RelationshipApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bendpoint;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 
 class ModelPersistenceIT extends IntegrationTest {
 
@@ -36,68 +48,82 @@ class ModelPersistenceIT extends IntegrationTest {
     private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
 
     @Autowired
-    ModelLifecycleService lifecycle;
+    ModelApplicationService lifecycle;
     @Autowired
-    LockService locks;
+    LockApplicationService locks;
     @Autowired
-    ElementService elements;
+    ElementApplicationService elements;
     @Autowired
-    RelationshipService relationships;
+    RelationshipApplicationService relationships;
     @Autowired
-    ViewService views;
+    ViewApplicationService views;
     @Autowired
-    ModelQueryService queries;
+    ModelQueryApplicationService queries;
+    @Autowired
+    ViewQueryApplicationService viewQueries;
 
     @Test
     @DisplayName("INV-MDL-001: дубль archi_id в модели отклоняет база — UNIQUE (model_id, archi_id)")
     void duplicateArchiIdViolatesUniqueConstraint() {
-        ModelId model = lifecycle.create(ARCHITECT, workspace(), "Уникальность", Optional.empty()).id();
-        locks.acquire(ARCHITECT, model);
-        Element element = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "АБС",
-                Optional.empty(), Optional.empty());
-        UUID folder = jdbc.queryForObject("select folder_id from element where id = ?", UUID.class,
-                element.id().value());
+        ModelId model = ModelId.of(lifecycle.createModel(ARCHITECT,
+                new CreateModelCommand(workspace().value(), "Уникальность", null)).id());
+        locks.acquireLock(ARCHITECT, new AcquireLockCommand(model.value()));
+        ElementResponse element = elements.createElement(ARCHITECT, new CreateElementCommand(model.value(),
+                ArchiType.ofSimpleName("ApplicationComponent").value(), "АБС", null, null, null, null));
+        UUID folder = jdbc.queryForObject("select folder_id from element where id = ?", UUID.class, element.id());
 
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update("""
                 insert into element (id, model_id, folder_id, archi_id, archi_type, layer, name, sort_order, supported)
                 values (?, ?, ?, ?, 'archimate:ApplicationComponent', 'APPLICATION', 'Двойник', 9000, true)
-                """, IDS.generate(), model.value(), folder, element.archiId().value()));
+                """, IDS.generate(), model.value(), folder, element.archiId()));
     }
 
     @Test
     @DisplayName("§4.3: дерево и представление переживают запись и чтение — поля, порядок, геометрия")
     void modelAndViewSurviveStorage() {
-        ModelId model = lifecycle.create(ARCHITECT, workspace(), "Хранение", Optional.of("persist-1")).id();
-        locks.acquire(ARCHITECT, model);
-        Element component = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "АБС",
-                Optional.empty(), Optional.empty());
-        Element actor = elements.create(ARCHITECT, model, ArchiType.ofSimpleName("BusinessActor"), "Клиент",
-                Optional.empty(), Optional.empty());
-        elements.update(ARCHITECT, component.id(), Optional.empty(), Optional.of("Ядро банка"),
-                Optional.of(List.of(new ElementService.PropertyValue("owner", "ИТ"),
-                        new ElementService.PropertyValue("criticality", "high"))));
-        View view = views.create(ARCHITECT, model, "Контекст", Optional.empty(), Optional.empty());
-        ViewNode c = views.place(ARCHITECT, view.id(), component.id(), new Bounds(20, 60, 150, 60), Optional.empty());
-        ViewNode a = views.place(ARCHITECT, view.id(), actor.id(), new Bounds(300, 60, 150, 60), Optional.empty());
-        var serving = relationships.create(ARCHITECT, model, ArchiType.ofSimpleName("ServingRelationship"),
-                component.id().value(), actor.id().value(), Optional.of("обслуживает"),
-                Optional.of(new RelationshipService.EdgePlacement(view.id(), c.id().value(), a.id().value())),
-                Optional.empty());
-        views.saveLayout(ARCHITECT, view.id(), Map.of(a.id(), new Bounds(320, 80, 150, 60)),
-                Map.of(serving.edge().orElseThrow(), List.of(new Bendpoint(0, 40, -50, 0))));
+        ModelId model = ModelId.of(lifecycle.createModel(ARCHITECT,
+                new CreateModelCommand(workspace().value(), "Хранение", "persist-1")).id());
+        locks.acquireLock(ARCHITECT, new AcquireLockCommand(model.value()));
+        ElementResponse component = elements.createElement(ARCHITECT, new CreateElementCommand(model.value(),
+                ArchiType.ofSimpleName("ApplicationComponent").value(), "АБС", null, null, null, null));
+        ElementResponse actor = elements.createElement(ARCHITECT, new CreateElementCommand(model.value(),
+                ArchiType.ofSimpleName("BusinessActor").value(), "Клиент", null, null, null, null));
+        elements.editElement(ARCHITECT, new EditElementCommand(component.id(), null, "Ядро банка",
+                List.of(new PropertyValue("owner", "ИТ"), new PropertyValue("criticality", "high"))));
+        ViewSummaryResponse view = views.createView(ARCHITECT,
+                new CreateViewCommand(model.value(), "Контекст", null, null, null, null));
+        ViewNodeResponse c = views.placeNode(ARCHITECT,
+                new PlaceViewNodeCommand(view.id(), null, component.id(), null, null, 20, 60, 150, 60, null, null,
+                        null)).node();
+        ViewNodeResponse a = views.placeNode(ARCHITECT,
+                new PlaceViewNodeCommand(view.id(), null, actor.id(), null, null, 300, 60, 150, 60, null, null,
+                        null)).node();
+        CreateRelationshipResponse serving = relationships.createRelationship(ARCHITECT,
+                new CreateRelationshipCommand(model.value(), ArchiType.ofSimpleName("ServingRelationship").value(),
+                        component.id(), actor.id(), "обслуживает", null, null, null, null, null,
+                        new CreateRelationshipCommand.Edge(view.id(), c.id(), a.id(), null, null),
+                        null));
+        views.saveLayout(ARCHITECT, new SaveViewLayoutCommand(view.id(),
+                List.of(new SaveViewLayoutCommand.NodeBounds(a.id(), 320, 80, 150, 60)),
+                List.of(new SaveViewLayoutCommand.EdgeBendpoints(Optional.ofNullable(serving.edgeId()).orElseThrow(),
+                        List.of(new BendpointValue(0, 40, -50, 0))))));
 
-        ArchitectureModel loaded = queries.open(VIEWER, model);
-        View loadedView = queries.openView(VIEWER, view.id());
+        ModelTreeResponse loaded = queries.getModel(VIEWER, new GetModelQuery(model.value()));
+        ViewResponse loadedView = viewQueries.getView(VIEWER, new GetViewQuery(view.id()));
 
-        Element reloaded = loaded.requireElement(component.id());
-        assertEquals(Optional.of("Ядро банка"), reloaded.documentation());
+        ElementResponse reloaded = loaded.elements().stream()
+                .filter(e -> e.id().equals(component.id())).findFirst().orElseThrow();
+        assertEquals("Ядро банка", reloaded.documentation());
         assertEquals(List.of("owner", "criticality"), reloaded.properties().stream().map(p -> p.key()).toList());
-        assertEquals(1000, reloaded.sortOrder().value());
+        assertEquals(1000, reloaded.sortOrder());
         assertEquals(1, loaded.relationships().size());
-        assertEquals(9, loaded.roots().size());
-        assertEquals(new Bounds(320, 80, 150, 60), loadedView.requireNode(a.id()).bounds());
-        assertEquals(List.of(new Bendpoint(0, 40, -50, 0)),
-                loadedView.requireEdge(serving.edge().orElseThrow()).bendpoints());
-        assertTrue(loaded.view(view.id()).isPresent(), "дерево знает о представлении");
+        assertEquals(9, loaded.folders().stream().filter(folder -> folder.parentId() == null).count());
+        ViewNodeResponse moved = loadedView.nodes().stream().filter(n -> n.id().equals(a.id())).findFirst()
+                .orElseThrow();
+        assertEquals(List.of(320, 80, 150, 60), List.of(moved.x(), moved.y(), moved.width(), moved.height()));
+        assertEquals(List.of(new BendpointValue(0, 40, -50, 0)), loadedView.edges().stream()
+                .filter(e -> e.id().equals(serving.edgeId())).findFirst().orElseThrow().bendpoints());
+        assertTrue(loaded.views().stream().anyMatch(v -> v.id().equals(view.id())),
+                "дерево знает о представлении");
     }
 }

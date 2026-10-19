@@ -160,7 +160,8 @@ paths:
             X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
           description: |
             Только oef: результат не прошёл официальную XSD — `IXC_OEF_SCHEMA_VIOLATION`.
-            Файл не отдаётся, это ошибка сервера, а не запроса (FR-43).
+            Файл не отдаётся, это ошибка сервера, а не запроса (FR-43). Любой формат: снимок версии
+            в хранилище повреждён и не распаковывается — `MDL_SNAPSHOT_CORRUPTED`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 
@@ -715,7 +716,14 @@ components:
       type: object
       required: [repoUrl, tokenRef]
       properties:
-        repoUrl:  { type: string, maxLength: 1000, examples: ["https://gitlab.bank.uz/ea/landscape.git"] }
+        repoUrl:
+          type: string
+          maxLength: 1000
+          examples: ["https://gitlab.bank.uz/ea/landscape.git"]
+          description: |
+            Сетевой адрес: `https://`, `ssh://`, `git://` или `user@host:path`. Адрес `file://`
+            (каталог файловой системы сервера) отклоняется `422 IXC_INVALID_REQUEST`, если его
+            не разрешает настройка `archi.git.allow-local-repositories` — она для тестов.
         branch:   { type: string, maxLength: 200, default: main }
         tokenRef:
           type: string
@@ -825,10 +833,14 @@ components:
         name:     { type: string, description: "Имя после изменения, у удалённого — до." }
         fields:
           type: array
-          description: Изменённые поля; у добавленных и удалённых пусто.
+          description: |
+            Изменённые поля; у добавленных и удалённых пусто. `type` — тип ArchiMate (`xsi:type`);
+            атрибут — своим именем, а если оно совпадает с полем отчёта, — с `@`: вид развилки
+            или папки (атрибут `type`) — `@type`.
           items:
             type: string
-            examples: [name, type, documentation, properties, folder, source, target, diagram, order, raw_xml]
+            examples: [name, type, "@type", documentation, properties, folder, source, target, diagram, order,
+                       raw_xml]
 
     GitPullResult:
       type: object
@@ -924,10 +936,18 @@ components:
         archiId:    { type: string }
         type:       { type: string, description: "Тип ArchiMate; у папок и модели нет." }
         name:       { type: string }
-        field:      { type: string, description: "Поле; `*` — удаление в одной ветви против правки в другой." }
-        base:       { type: string, description: "Значение в общем предке; нет — поля нет." }
-        ours:       { type: string, description: "«Наше»; удалено — поля нет." }
-        theirs:     { type: string, description: "«Их»; удалено — поля нет." }
+        field:
+          type: string
+          description: |
+            Поле по тем же правилам, что `GitChange.fields` (`type` и `@type` — разные поля);
+            `*` — удаление в одной ветви против правки в другой.
+        base:       { type: string, description: "Значение в общем предке; нет — поля нет. У `*` — имя объекта в предке." }
+        ours:
+          type: string
+          description: "«Наше»; удалено — поля нет. У `*` — изменённые «нашей» ветвью поля через запятую."
+        theirs:
+          type: string
+          description: "«Их»; удалено — поля нет. У `*` — изменённые «их» ветвью поля через запятую."
         resolution: { $ref: '#/components/schemas/GitMergeResolution' }
 
     GitMergeCascade:

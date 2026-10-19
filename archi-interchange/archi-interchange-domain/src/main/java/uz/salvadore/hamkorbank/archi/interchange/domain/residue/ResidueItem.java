@@ -2,9 +2,9 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.residue;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.XmlText;
 
 /**
  * Единица содержимого узла без собственного идентификатора — с позицией {@code order}
@@ -12,6 +12,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueExcep
  */
 public sealed interface ResidueItem permits ResidueItem.Slot, ResidueItem.Value, ResidueItem.Fragment {
 
+    /** Позиция среди содержимого узла. */
     long order();
 
     /**
@@ -27,13 +28,16 @@ public sealed interface ResidueItem permits ResidueItem.Slot, ResidueItem.Value,
         }
     }
 
-    /** Значение, которого столбцы не знают, — целиком: тег, атрибуты, текст. */
-    record Value(long order, String tag, List<ResidueAttribute> attributes, Optional<String> text)
+    /**
+     * Значение, которого столбцы не знают, — целиком: тег, атрибуты, текст.
+     *
+     * @param text текст элемента; {@code null} — элемент без текста
+     */
+    record Value(long order, String tag, List<ResidueAttribute> attributes, String text)
             implements ResidueItem {
 
         public Value {
             Objects.requireNonNull(tag, "tag");
-            Objects.requireNonNull(text, "text");
             attributes = List.copyOf(attributes);
             if (attributes.stream().anyMatch(ResidueAttribute::typed)) {
                 throw new InvalidValueException(InterchangeMessages.UNTYPED_VALUE_LITERAL);
@@ -46,6 +50,9 @@ public sealed interface ResidueItem permits ResidueItem.Slot, ResidueItem.Value,
 
         public Fragment {
             Objects.requireNonNull(xml, "xml");
+            if (!XmlText.isElement(xml)) {
+                throw new InvalidValueException(InterchangeMessages.FRAGMENT_NOT_ELEMENT);
+            }
         }
     }
 }

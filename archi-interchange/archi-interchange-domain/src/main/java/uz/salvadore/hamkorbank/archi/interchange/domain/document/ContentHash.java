@@ -23,6 +23,7 @@ public record ContentHash(String value) {
         }
     }
 
+    /** Отпечаток содержимого. */
     public static ContentHash of(byte[] content) {
         try {
             return new ContentHash(HexFormat.of().formatHex(MessageDigest.getInstance(DIGEST).digest(content)));

@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -14,8 +13,11 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 @Repository
 public class JpaModelMerges implements ModelMerges {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public JpaModelMerges(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public void record(ModelId model, GitSha sha, Instant at) {

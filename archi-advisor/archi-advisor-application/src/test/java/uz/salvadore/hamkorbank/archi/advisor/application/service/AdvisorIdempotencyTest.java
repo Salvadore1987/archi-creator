@@ -5,10 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorRequest;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
 
@@ -26,7 +25,7 @@ class AdvisorIdempotencyTest {
                     "targetKind", "ELEMENT", "targetArchiId", "svc", "suggestion", "s"));
         };
         AdvisorService service = fixture.service();
-        AdvisorRequest review = AdvisorRequest.review(Fixture.MODEL, Optional.empty());
+        AdvisorRequest review = AdvisorRequest.review(Fixture.MODEL, null);
         Fixture.Recorded first = new Fixture.Recorded();
         service.ask(Fixture.ALICE, review, "same-key", RU).run(first);
 
@@ -44,10 +43,10 @@ class AdvisorIdempotencyTest {
     void sameKeyDifferentRequestConflicts() {
         Fixture fixture = new Fixture();
         AdvisorService service = fixture.service();
-        service.ask(Fixture.ALICE, AdvisorRequest.review(Fixture.MODEL, Optional.empty()), "k", RU)
+        service.ask(Fixture.ALICE, AdvisorRequest.review(Fixture.MODEL, null), "k", RU)
                 .run(new Fixture.Recorded());
 
-        AdvisorException conflict = assertThrows(AdvisorException.class,
+        AdvisorDomainException conflict = assertThrows(AdvisorDomainException.class,
                 () -> service.ask(Fixture.ALICE, AdvisorRequest.explain(Fixture.MODEL, "crm"), "k", RU));
 
         assertEquals("INV-ADV-003", conflict.code());
@@ -58,7 +57,7 @@ class AdvisorIdempotencyTest {
     void keysAreScopedByRequester() {
         Fixture fixture = new Fixture();
         AdvisorService service = fixture.service();
-        AdvisorRequest review = AdvisorRequest.review(Fixture.MODEL, Optional.empty());
+        AdvisorRequest review = AdvisorRequest.review(Fixture.MODEL, null);
         service.ask(Fixture.ALICE, review, "k", RU).run(new Fixture.Recorded());
         service.ask(Fixture.VIEWER, review, "k", RU).run(new Fixture.Recorded());
 

@@ -1,6 +1,5 @@
 package uz.salvadore.hamkorbank.archi.interchange.adapter.rest;
 
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -57,7 +56,7 @@ public class GitController {
     @PostMapping("/models/{id}/git/pull/preview")
     public GitPullPreviewDto previewPull(EditorIdentity actor, @PathVariable UUID id,
                                          @RequestBody GitPullPreviewRequestDto body) {
-        return GitDtoMapper.preview(imports.preview(actor, new ModelId(id), Optional.ofNullable(body.ref())), text);
+        return GitDtoMapper.preview(imports.preview(actor, new ModelId(id), body.ref()), text);
     }
 
     /** Применить коммит из отчёта новой версией модели. */
@@ -70,7 +69,7 @@ public class GitController {
     @PostMapping("/models/{id}/git/merge/preview")
     public GitMergePreviewDto previewMerge(EditorIdentity actor, @PathVariable UUID id,
                                            @RequestBody GitMergePreviewRequestDto body) {
-        return GitDtoMapper.mergePreview(merging.preview(actor, new ModelId(id), Optional.ofNullable(body.ref()),
+        return GitDtoMapper.mergePreview(merging.preview(actor, new ModelId(id), body.ref(),
                 GitDtoMapper.resolutions(body.resolutions())), text);
     }
 
@@ -86,17 +85,20 @@ public class GitController {
         return GitDtoMapper.status(publishing.push(actor, new ModelId(id)));
     }
 
+    /** Текущая привязка рабочего пространства к репозиторию. */
     @GetMapping("/workspaces/{id}/git-binding")
     public GitBindingDto binding(EditorIdentity actor, @PathVariable UUID id) {
         return GitDtoMapper.binding(bindings.binding(actor, id));
     }
 
+    /** Задаёт привязку пространства заново: адрес, ветку, ссылку на токен и авторов. */
     @PutMapping("/workspaces/{id}/git-binding")
     public GitBindingDto configure(EditorIdentity actor, @PathVariable UUID id,
                                    @RequestBody GitBindingSettingsDto settings) {
         return GitDtoMapper.binding(bindings.configure(actor, id, GitDtoMapper.settings(settings)));
     }
 
+    /** Снимает привязку пространства к репозиторию; ответ без тела. */
     @DeleteMapping("/workspaces/{id}/git-binding")
     public ResponseEntity<Void> disable(EditorIdentity actor, @PathVariable UUID id) {
         bindings.disable(actor, id);

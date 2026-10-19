@@ -2,19 +2,20 @@ package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
-import jakarta.persistence.PersistenceContext;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ViewEdgeEntity;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ViewEntity;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ViewNodeEntity;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentModificationException;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentUpdateException;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
@@ -38,8 +39,11 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 @Repository
 public class JpaViewRepository implements ViewRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public JpaViewRepository(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public Optional<View> load(ViewId id) {
@@ -47,9 +51,11 @@ public class JpaViewRepository implements ViewRepository {
         if (view == null) {
             return Optional.empty();
         }
-        var nodes = em.createQuery("select n from ViewNodeEntity n where n.viewId = :v", ViewNodeEntity.class)
+        List<ViewNodeEntity> nodes = em.createQuery(
+                        "select n from ViewNodeEntity n where n.viewId = :v", ViewNodeEntity.class)
                 .setParameter("v", id.value()).getResultList();
-        var edges = em.createQuery("select x from ViewEdgeEntity x where x.viewId = :v", ViewEdgeEntity.class)
+        List<ViewEdgeEntity> edges = em.createQuery(
+                        "select x from ViewEdgeEntity x where x.viewId = :v", ViewEdgeEntity.class)
                 .setParameter("v", id.value()).getResultList();
         return Optional.of(View.restore(EntityMapper.toViewHeader(view),
                 nodes.stream().map(EntityMapper::toNode).toList(), edges.stream().map(EntityMapper::toEdge).toList()));
@@ -58,7 +64,7 @@ public class JpaViewRepository implements ViewRepository {
     /** Все представления модели тремя запросами — для снимка версии. */
     @Override
     public List<View> loadAll(ModelId modelId) {
-        var views = em.createQuery(
+        List<ViewEntity> views = em.createQuery(
                         "select distinct v from ViewEntity v left join fetch v.properties where v.modelId = :m",
                         ViewEntity.class)
                 .setParameter("m", modelId.value()).getResultList();
@@ -106,7 +112,7 @@ public class JpaViewRepository implements ViewRepository {
                 .setParameter("m", modelId.value()).getResultList()
                 .forEach(row -> relationships.computeIfAbsent((UUID) row[0], k -> new ArrayList<>())
                         .add(RelationshipId.of((UUID) row[1])));
-        java.util.Set<UUID> viewIds = new java.util.LinkedHashSet<>(elements.keySet());
+        Set<UUID> viewIds = new LinkedHashSet<>(elements.keySet());
         viewIds.addAll(relationships.keySet());
         return viewIds.stream().map(v -> new ViewPlacements(ViewId.of(v), elements.getOrDefault(v, List.of()),
                 relationships.getOrDefault(v, List.of()))).toList();
@@ -123,7 +129,7 @@ public class JpaViewRepository implements ViewRepository {
         } else {
             ViewEntity entity = em.find(ViewEntity.class, viewId);
             if (entity == null) {
-                throw new ConcurrentModificationException(Message.of(ModelingMessages.VIEW, view.id()));
+                throw new ConcurrentUpdateException(Message.of(ModelingMessages.VIEW, view.id()));
             }
             if (view.headerChanged()) {
                 EntityMapper.apply(view.header(), entity);
@@ -136,6 +142,7 @@ public class JpaViewRepository implements ViewRepository {
                 (d, e) -> EntityMapper.apply(d, modelId, viewId, e));
         AggregateWrites.sync(em, view.edges(), ViewEdgeEntity.class, ViewEdgeEntity::new,
                 (d, e) -> EntityMapper.apply(d, modelId, viewId, e));
+        view.markPersisted();
         AggregateWrites.flush(em, Message.of(ModelingMessages.VIEW, view.id()));
     }
 

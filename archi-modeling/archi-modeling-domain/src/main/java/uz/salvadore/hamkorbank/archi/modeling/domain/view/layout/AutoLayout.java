@@ -11,10 +11,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEndpoint;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 
 /**
  * Авторазметка представления. Раскладываются узлы верхнего уровня: контейнер
@@ -46,18 +48,19 @@ public final class AutoLayout {
     private final LayoutGraph graph;
     private final LayoutStrategy strategy;
     private final ArchiTypeRegistry registry = ArchiTypeRegistry.archimate32();
-    private final Map<UUID, LayoutGraph.Node> nodes = new LinkedHashMap<>();
-    private final Map<UUID, LayoutGraph.Edge> edges = new LinkedHashMap<>();
-    private final List<UUID> roots = new ArrayList<>();
+    private final Map<ViewNodeId, LayoutGraph.Node> nodes = new LinkedHashMap<>();
+    private final Map<ViewEdgeId, LayoutGraph.Edge> edges = new LinkedHashMap<>();
+    private final List<ViewNodeId> roots = new ArrayList<>();
     /** Связи между узлами верхнего уровня, источник → цели, в порядке графа. */
-    private final Map<UUID, List<UUID>> outgoing = new LinkedHashMap<>();
-    private final Map<UUID, List<UUID>> neighbours = new LinkedHashMap<>();
+    private final Map<ViewNodeId, List<ViewNodeId>> outgoing = new LinkedHashMap<>();
+    private final Map<ViewNodeId, List<ViewNodeId>> neighbours = new LinkedHashMap<>();
 
     private AutoLayout(LayoutGraph graph, LayoutStrategy strategy) {
         this.graph = graph;
         this.strategy = strategy;
     }
 
+    /** Новая геометрия узлов верхнего уровня по графу и стратегии; сам граф не меняется. */
     public static LayoutProposal propose(LayoutGraph graph, LayoutStrategy strategy) {
         return new AutoLayout(graph, strategy).run();
     }
@@ -66,14 +69,14 @@ public final class AutoLayout {
         graph.nodes().forEach(n -> nodes.putIfAbsent(n.id(), n));
         graph.edges().forEach(e -> edges.putIfAbsent(e.id(), e));
         for (LayoutGraph.Node node : nodes.values()) {
-            if (node.parentId().filter(nodes::containsKey).isEmpty()) {
+            if (node.parentId() == null || !nodes.containsKey(node.parentId())) {
                 roots.add(node.id());
                 outgoing.put(node.id(), new ArrayList<>());
                 neighbours.put(node.id(), new ArrayList<>());
             }
         }
         connectRoots();
-        List<List<UUID>> bands = order(bands());
+        List<List<ViewNodeId>> bands = order(bands());
         return new LayoutProposal(place(bands), List.copyOf(edges.keySet()));
     }
 
@@ -81,8 +84,8 @@ public final class AutoLayout {
 
     private void connectRoots() {
         for (LayoutGraph.Edge edge : edges.values()) {
-            Optional<UUID> source = endpointNode(edge.sourceId(), 0).map(this::rootOf);
-            Optional<UUID> target = endpointNode(edge.targetId(), 0).map(this::rootOf);
+            Optional<ViewNodeId> source = endpointNode(edge.source(), 0).map(this::rootOf);
+            Optional<ViewNodeId> target = endpointNode(edge.target(), 0).map(this::rootOf);
             if (source.isEmpty() || target.isEmpty() || source.equals(target)) {
                 continue;
             }
@@ -93,38 +96,40 @@ public final class AutoLayout {
     }
 
     /** Узел, к которому примыкает конец: ребро-конец ведёт к узлу своего источника. */
-    private Optional<UUID> endpointNode(UUID endpoint, int depth) {
-        if (nodes.containsKey(endpoint)) {
-            return Optional.of(endpoint);
-        }
-        LayoutGraph.Edge edge = edges.get(endpoint);
-        return edge == null || depth > edges.size() ? Optional.empty() : endpointNode(edge.sourceId(), depth + 1);
+    private Optional<ViewNodeId> endpointNode(ViewEndpoint endpoint, int depth) {
+        return switch (endpoint) {
+            case ViewNodeId node -> nodes.containsKey(node) ? Optional.of(node) : Optional.empty();
+            case ViewEdgeId edgeId -> {
+                LayoutGraph.Edge edge = edges.get(edgeId);
+                yield edge == null || depth > edges.size() ? Optional.empty() : endpointNode(edge.source(), depth + 1);
+            }
+        };
     }
 
-    private UUID rootOf(UUID nodeId) {
-        UUID current = nodeId;
-        Set<UUID> visited = new HashSet<>();
+    private ViewNodeId rootOf(ViewNodeId nodeId) {
+        ViewNodeId current = nodeId;
+        Set<ViewNodeId> visited = new HashSet<>();
         while (visited.add(current)) {
-            Optional<UUID> parent = nodes.get(current).parentId().filter(nodes::containsKey);
-            if (parent.isEmpty()) {
+            ViewNodeId parent = nodes.get(current).parentId();
+            if (parent == null || !nodes.containsKey(parent)) {
                 return current;
             }
-            current = parent.get();
+            current = parent;
         }
         return current;
     }
 
     // ── Полосы ──────────────────────────────────────────────────────
 
-    private List<List<UUID>> bands() {
-        Map<UUID, Integer> bandOf = strategy == LayoutStrategy.HIERARCHY ? ranks() : layerBands();
-        TreeMap<Integer, List<UUID>> bands = new TreeMap<>();
+    private List<List<ViewNodeId>> bands() {
+        Map<ViewNodeId, Integer> bandOf = strategy == LayoutStrategy.HIERARCHY ? ranks() : layerBands();
+        TreeMap<Integer, List<ViewNodeId>> bands = new TreeMap<>();
         roots.forEach(id -> bands.computeIfAbsent(bandOf.get(id), k -> new ArrayList<>()).add(id));
         return new ArrayList<>(bands.values());
     }
 
-    private Map<UUID, Integer> layerBands() {
-        Map<UUID, Integer> bandOf = new HashMap<>();
+    private Map<ViewNodeId, Integer> layerBands() {
+        Map<ViewNodeId, Integer> bandOf = new HashMap<>();
         roots.forEach(id -> bandOf.put(id, BAND_OF_LAYER.get(layerOf(id))));
         return bandOf;
     }
@@ -133,15 +138,15 @@ public final class AutoLayout {
      * Слой узла — по его типу; у группы и иного узла без элемента — слой, которого больше
      * всего среди вложенных, при равенстве верхний.
      */
-    private Layer layerOf(UUID rootId) {
+    private Layer layerOf(ViewNodeId rootId) {
         LayoutGraph.Node root = nodes.get(rootId);
-        if (root.conceptType().isPresent()) {
-            return registry.layerOf(root.conceptType().get());
+        if (root.conceptType() != null) {
+            return registry.layerOf(root.conceptType());
         }
         Map<Layer, Integer> counts = new EnumMap<>(Layer.class);
         for (LayoutGraph.Node node : nodes.values()) {
-            if (!node.id().equals(rootId) && node.conceptType().isPresent() && rootOf(node.id()).equals(rootId)) {
-                counts.merge(registry.layerOf(node.conceptType().get()), 1, Integer::sum);
+            if (!node.id().equals(rootId) && node.conceptType() != null && rootOf(node.id()).equals(rootId)) {
+                counts.merge(registry.layerOf(node.conceptType()), 1, Integer::sum);
             }
         }
         return counts.entrySet().stream()
@@ -154,33 +159,33 @@ public final class AutoLayout {
      * Ярус — длина самого длинного пути от истока. Обратные рёбра циклов отбрасываются
      * обходом в глубину в порядке графа.
      */
-    private Map<UUID, Integer> ranks() {
-        Map<UUID, List<UUID>> acyclic = new LinkedHashMap<>();
+    private Map<ViewNodeId, Integer> ranks() {
+        Map<ViewNodeId, List<ViewNodeId>> acyclic = new LinkedHashMap<>();
         roots.forEach(id -> acyclic.put(id, new ArrayList<>()));
-        Set<UUID> done = new HashSet<>();
-        Set<UUID> onPath = new HashSet<>();
-        List<UUID> finished = new ArrayList<>();
-        for (UUID root : roots) {
+        Set<ViewNodeId> done = new HashSet<>();
+        Set<ViewNodeId> onPath = new HashSet<>();
+        List<ViewNodeId> finished = new ArrayList<>();
+        for (ViewNodeId root : roots) {
             depthFirst(root, done, onPath, acyclic, finished);
         }
-        Map<UUID, Integer> rank = new HashMap<>();
+        Map<ViewNodeId, Integer> rank = new HashMap<>();
         roots.forEach(id -> rank.put(id, 0));
         for (int i = finished.size() - 1; i >= 0; i--) {
-            UUID source = finished.get(i);
-            for (UUID target : acyclic.get(source)) {
+            ViewNodeId source = finished.get(i);
+            for (ViewNodeId target : acyclic.get(source)) {
                 rank.merge(target, rank.get(source) + 1, Math::max);
             }
         }
         return rank;
     }
 
-    private void depthFirst(UUID node, Set<UUID> done, Set<UUID> onPath, Map<UUID, List<UUID>> acyclic,
-                            List<UUID> finished) {
+    private void depthFirst(ViewNodeId node, Set<ViewNodeId> done, Set<ViewNodeId> onPath,
+                            Map<ViewNodeId, List<ViewNodeId>> acyclic, List<ViewNodeId> finished) {
         if (done.contains(node)) {
             return;
         }
         onPath.add(node);
-        for (UUID target : outgoing.get(node)) {
+        for (ViewNodeId target : outgoing.get(node)) {
             if (!onPath.contains(target)) {
                 acyclic.get(node).add(target);
                 depthFirst(target, done, onPath, acyclic, finished);
@@ -193,15 +198,17 @@ public final class AutoLayout {
 
     // ── Порядок в полосе ────────────────────────────────────────────
 
-    private List<List<UUID>> order(List<List<UUID>> bands) {
-        Map<UUID, Integer> bandIndex = new HashMap<>();
+    private List<List<ViewNodeId>> order(List<List<ViewNodeId>> bands) {
+        Map<ViewNodeId, Integer> bandIndex = new HashMap<>();
         for (int b = 0; b < bands.size(); b++) {
-            for (UUID id : bands.get(b)) {
+            for (ViewNodeId id : bands.get(b)) {
                 bandIndex.put(id, b);
             }
         }
-        List<List<UUID>> current = new ArrayList<>(bands.stream().map(band -> (List<UUID>) new ArrayList<>(band))
-                .toList());
+        List<List<ViewNodeId>> current = new ArrayList<>();
+        for (List<ViewNodeId> band : bands) {
+            current.add(new ArrayList<>(band));
+        }
         for (int sweep = 0; sweep < SWEEPS; sweep++) {
             for (int b = 1; b < current.size(); b++) {
                 reorder(current, b, bandIndex, true);
@@ -217,19 +224,19 @@ public final class AutoLayout {
      * Полоса сортируется по среднему относительному положению соседей в полосах выше
      * (проход вниз) или ниже (проход вверх). Узел без таких соседей держит своё место.
      */
-    private void reorder(List<List<UUID>> bands, int b, Map<UUID, Integer> bandIndex, boolean fromAbove) {
-        Map<UUID, Double> position = new HashMap<>();
-        for (List<UUID> band : bands) {
+    private void reorder(List<List<ViewNodeId>> bands, int b, Map<ViewNodeId, Integer> bandIndex, boolean fromAbove) {
+        Map<ViewNodeId, Double> position = new HashMap<>();
+        for (List<ViewNodeId> band : bands) {
             for (int i = 0; i < band.size(); i++) {
                 position.put(band.get(i), (i + 0.5) / band.size());
             }
         }
-        List<UUID> band = bands.get(b);
-        Map<UUID, Double> barycenter = new HashMap<>();
-        for (UUID id : band) {
+        List<ViewNodeId> band = bands.get(b);
+        Map<ViewNodeId, Double> barycenter = new HashMap<>();
+        for (ViewNodeId id : band) {
             double sum = 0;
             int count = 0;
-            for (UUID other : neighbours.get(id)) {
+            for (ViewNodeId other : neighbours.get(id)) {
                 int otherBand = bandIndex.get(other);
                 if (fromAbove ? otherBand < b : otherBand > b) {
                     sum += position.get(other);
@@ -238,18 +245,18 @@ public final class AutoLayout {
             }
             barycenter.put(id, count == 0 ? position.get(id) : sum / count);
         }
-        List<UUID> sorted = new ArrayList<>(band);
-        Map<UUID, Integer> before = new HashMap<>();
+        List<ViewNodeId> sorted = new ArrayList<>(band);
+        Map<ViewNodeId, Integer> before = new HashMap<>();
         for (int i = 0; i < band.size(); i++) {
             before.put(band.get(i), i);
         }
-        sorted.sort(Comparator.<UUID>comparingDouble(barycenter::get).thenComparingInt(before::get));
+        sorted.sort(Comparator.<ViewNodeId>comparingDouble(barycenter::get).thenComparingInt(before::get));
         bands.set(b, sorted);
     }
 
     // ── Размещение ──────────────────────────────────────────────────
 
-    private Map<UUID, Bounds> place(List<List<UUID>> bands) {
+    private Map<ViewNodeId, Bounds> place(List<List<ViewNodeId>> bands) {
         Spacing spacing = Spacing.of(strategy);
         int widest = roots.stream().mapToInt(this::width).max().orElse(DEFAULT_WIDTH);
         long area = roots.stream().mapToLong(id -> (long) (width(id) + spacing.column()) * (height(id) + spacing.row()))
@@ -257,23 +264,23 @@ public final class AutoLayout {
         int limit = Math.max(widest, Math.max(spacing.minRowWidth(), (int) Math.round(Math.sqrt(area)
                 * spacing.aspect())));
 
-        List<List<List<UUID>>> rowsOfBands = new ArrayList<>();
+        List<List<List<ViewNodeId>>> rowsOfBands = new ArrayList<>();
         int overall = 0;
-        for (List<UUID> band : bands) {
-            List<List<UUID>> rows = wrap(band, limit, spacing);
+        for (List<ViewNodeId> band : bands) {
+            List<List<ViewNodeId>> rows = wrap(band, limit, spacing);
             rowsOfBands.add(rows);
-            for (List<UUID> row : rows) {
+            for (List<ViewNodeId> row : rows) {
                 overall = Math.max(overall, rowWidth(row, spacing));
             }
         }
 
-        Map<UUID, Bounds> placed = new HashMap<>();
+        Map<ViewNodeId, Bounds> placed = new HashMap<>();
         int y = ORIGIN;
-        for (List<List<UUID>> rows : rowsOfBands) {
-            for (List<UUID> row : rows) {
+        for (List<List<ViewNodeId>> rows : rowsOfBands) {
+            for (List<ViewNodeId> row : rows) {
                 int x = ORIGIN + (spacing.centered() ? (overall - rowWidth(row, spacing)) / 2 : 0);
                 int rowHeight = 0;
-                for (UUID id : row) {
+                for (ViewNodeId id : row) {
                     LayoutGraph.Node node = nodes.get(id);
                     placed.put(id, new Bounds(x, y, node.bounds().width(), node.bounds().height()));
                     x += width(id) + spacing.column();
@@ -283,16 +290,16 @@ public final class AutoLayout {
             }
             y += spacing.band() - spacing.row();
         }
-        Map<UUID, Bounds> ordered = new LinkedHashMap<>();
+        Map<ViewNodeId, Bounds> ordered = new LinkedHashMap<>();
         roots.forEach(id -> ordered.put(id, placed.get(id)));
         return ordered;
     }
 
-    private List<List<UUID>> wrap(List<UUID> band, int limit, Spacing spacing) {
-        List<List<UUID>> rows = new ArrayList<>();
-        List<UUID> row = new ArrayList<>();
+    private List<List<ViewNodeId>> wrap(List<ViewNodeId> band, int limit, Spacing spacing) {
+        List<List<ViewNodeId>> rows = new ArrayList<>();
+        List<ViewNodeId> row = new ArrayList<>();
         int used = 0;
-        for (UUID id : band) {
+        for (ViewNodeId id : band) {
             int needed = (row.isEmpty() ? 0 : spacing.column()) + width(id);
             if (!row.isEmpty() && used + needed > limit) {
                 rows.add(row);
@@ -309,16 +316,16 @@ public final class AutoLayout {
         return rows;
     }
 
-    private int rowWidth(List<UUID> row, Spacing spacing) {
+    private int rowWidth(List<ViewNodeId> row, Spacing spacing) {
         return row.stream().mapToInt(this::width).sum() + spacing.column() * (row.size() - 1);
     }
 
-    private int width(UUID id) {
+    private int width(ViewNodeId id) {
         int width = nodes.get(id).bounds().width();
         return width > 0 ? width : DEFAULT_WIDTH;
     }
 
-    private int height(UUID id) {
+    private int height(ViewNodeId id) {
         int height = nodes.get(id).bounds().height();
         return height > 0 ? height : DEFAULT_HEIGHT;
     }

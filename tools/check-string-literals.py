@@ -11,6 +11,10 @@
     ``UI-004``, ``ADR-0017``, номер раздела ``§10``. Коды ошибок — контракт API
     и остаются, но только константами в классах ``*Codes``: в тексте сообщения
     ссылка на документ разработки уходила бы пользователю;
+  - код ошибки вне классов ``*Codes``: литерал с префиксом контекста
+    (``"IXC_MALFORMED_XML"``, ``"MDL_…"``, ``"ADV_…"``) или строковая константа
+    со значением вида ``КОД_ОШИБКИ``. Коды — контракт API, и клиент должен найти
+    их все в одном месте;
   - исключение, построенное из строки-литерала: ``new …Exception("…")``,
     ``ModelingException.invalid("…")``. Причина отказа — ключ сообщения
     (``Message.of(…)``), иначе её не перевести;
@@ -60,6 +64,9 @@ EXCEPTION_FROM_LITERAL = re.compile(
     r"new\s+[\w.]*(?:Exception|Error)\s*\(\s*\"\""
     r"|\.(?:invalid|notFound)\s*\(\s*\"\""
 )
+
+CODE_LITERAL = re.compile(r"(?:IXC|MDL|ADV)_[A-Z0-9_]+")
+CODE_CONSTANT = re.compile(r"static\s+final\s+String\s+\w+\s*=\s*\"([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\"")
 
 CONTROLLER = re.compile(r"@(?:RestController|Controller)\b")
 STRING_CASE = re.compile(r"\bcase\s+\"\"")
@@ -134,6 +141,15 @@ def check_java(rel: str) -> list[str]:
             found.append(f"{rel}:{line}: русский текст в строке — ключ сообщения и текст в i18n: \"{literal.strip()[:70]}\"")
         if not codes_class and ANCHOR.search(literal):
             found.append(f"{rel}:{line}: якорь спецификации в строке — код ошибки только константой в *Codes: \"{literal.strip()[:70]}\"")
+        if not codes_class and CODE_LITERAL.fullmatch(literal):
+            found.append(f"{rel}:{line}: код ошибки вне *Codes — константа в классе кодов контекста: \"{literal}\"")
+    if not codes_class:
+        for match in CODE_CONSTANT.finditer(text):
+            if CODE_LITERAL.fullmatch(match.group(1)):
+                continue
+            line = text.count("\n", 0, match.start()) + 1
+            found.append(f"{rel}:{line}: константа вида кода ошибки вне *Codes — в классе кодов контекста: "
+                         f"\"{match.group(1)}\"")
     for match in EXCEPTION_FROM_LITERAL.finditer(code):
         line = code.count("\n", 0, match.start()) + 1
         found.append(f"{rel}:{line}: исключение из строки-литерала — причина ключом: Message.of(…)")

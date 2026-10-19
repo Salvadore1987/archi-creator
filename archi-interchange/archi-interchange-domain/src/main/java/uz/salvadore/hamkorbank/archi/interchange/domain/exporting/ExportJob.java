@@ -1,8 +1,11 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.AggregateRoot;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
@@ -23,15 +26,11 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
  *       артефакт другой версии не принимается.</li>
  * </ul>
  */
-public final class ExportJob {
+public final class ExportJob extends AggregateRoot<ExportJobId> {
 
-    /** Имя команды сбоя — в сообщении о недопустимом переходе. */
-    private static final String FAIL = "fail";
-
-    private final ExportJobId id;
     private final WorkspaceId workspaceId;
     private final ModelId modelId;
-    private final Optional<ViewId> viewId;
+    private final ViewId viewId;
     private final ExportFormat format;
     private final ExportOptions options;
     private final long sourceVersionNo;
@@ -42,14 +41,15 @@ public final class ExportJob {
     private Artifact artifact;
     private LossReport lossReport;
     private String failureReason;
+    private final List<DomainEvent> events = new ArrayList<>();
 
-    private ExportJob(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, Optional<ViewId> viewId,
+    private ExportJob(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, ViewId viewId,
                       ExportFormat format, ExportOptions options, long sourceVersionNo, String requestedBy,
                       Instant requestedAt) {
-        this.id = Objects.requireNonNull(id, "id");
+        super(id);
         this.workspaceId = Objects.requireNonNull(workspaceId, "workspaceId");
         this.modelId = Objects.requireNonNull(modelId, "modelId");
-        this.viewId = Objects.requireNonNull(viewId, "viewId");
+        this.viewId = viewId;
         this.format = Objects.requireNonNull(format, "format");
         this.options = Objects.requireNonNull(options, "options");
         this.requestedBy = Objects.requireNonNull(requestedBy, "requestedBy");
@@ -60,8 +60,8 @@ public final class ExportJob {
         this.sourceVersionNo = sourceVersionNo;
     }
 
-    /** Версия фиксируется здесь, при запросе, а не при рендере. */
-    public static ExportJob request(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, Optional<ViewId> viewId,
+    /** Версия фиксируется здесь, при запросе, а не при рендере; {@code viewId} — {@code null} у выгрузки модели. */
+    public static ExportJob request(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, ViewId viewId,
                                     ExportFormat format, ExportOptions options, long sourceVersionNo,
                                     String requestedBy, Instant requestedAt) {
         return new ExportJob(id, workspaceId, modelId, viewId, format, options, sourceVersionNo, requestedBy,
@@ -76,7 +76,7 @@ public final class ExportJob {
      *         или непустой отчёт у формата без потерь
      */
     public void render(long renderedFromVersionNo, Artifact artifact, LossReport lossReport) {
-        require(ExportStatus.REQUESTED, "render");
+        require(ExportStatus.REQUESTED, Message.of(InterchangeMessages.COMMAND_RENDER_EXPORT));
         Objects.requireNonNull(artifact, "artifact");
         if (renderedFromVersionNo != sourceVersionNo) {
             throw new ExportRuleViolationException(InterchangeCodes.EXPORT_VERSION,
@@ -88,83 +88,103 @@ public final class ExportJob {
         }
         if (format.lossless() && !lossReport.empty()) {
             throw new ExportRuleViolationException(InterchangeCodes.LOSS_REPORT,
-                    Message.of(InterchangeMessages.EXPORT_LOSSLESS_WITH_LOSSES, format, lossReport.entries().size()));
+                    Message.of(InterchangeMessages.EXPORT_LOSSLESS_WITH_LOSSES, format.label(),
+                               lossReport.entries().size()));
         }
         this.artifact = artifact;
         this.lossReport = lossReport;
         this.status = ExportStatus.RENDERED;
     }
 
-    /** {@code RENDERED → DELIVERED}. */
-    public void deliver() {
-        require(ExportStatus.RENDERED, "deliver");
+    /** {@code RENDERED → DELIVERED}: выгрузка отдана, событие о ней — в {@link #pullEvents()}. */
+    public void deliver(Instant now) {
+        require(ExportStatus.RENDERED, Message.of(InterchangeMessages.COMMAND_DELIVER_EXPORT));
         status = ExportStatus.DELIVERED;
+        events.add(new ExportJobCompletedEvent(id(), workspaceId, modelId, viewId, format, sourceVersionNo,
+                artifact.hash(), artifact.size(), lossReport.entries().size(), now));
+    }
+
+    /** События, накопленные с последнего вызова; публикует их слой приложения после коммита. */
+    public List<DomainEvent> pullEvents() {
+        List<DomainEvent> pulled = List.copyOf(events);
+        events.clear();
+        return pulled;
     }
 
     /** Сбой из любого нетерминального состояния. */
     public void fail(String reason) {
         if (status == ExportStatus.DELIVERED || status == ExportStatus.FAILED) {
-            throw new IllegalStateException(Message.of(InterchangeMessages.EXPORT_TRANSITION, FAIL, status).toString());
+            throw new IllegalExportTransitionException(Message.of(InterchangeMessages.EXPORT_TRANSITION,
+                    Message.of(InterchangeMessages.COMMAND_FAIL_EXPORT), status.label()));
         }
         failureReason = Objects.requireNonNull(reason, "reason");
         status = ExportStatus.FAILED;
     }
 
-    private void require(ExportStatus expected, String command) {
+    private void require(ExportStatus expected, Message command) {
         if (status != expected) {
-            throw new IllegalStateException(
-                    Message.of(InterchangeMessages.EXPORT_TRANSITION, command, status).toString());
+            throw new IllegalExportTransitionException(
+                    Message.of(InterchangeMessages.EXPORT_TRANSITION, command, status.label()));
         }
     }
 
-    public ExportJobId id() {
-        return id;
-    }
 
+    /** Пространство, в котором лежит модель. */
     public WorkspaceId workspaceId() {
         return workspaceId;
     }
 
+    /** Выгружаемая модель. */
     public ModelId modelId() {
         return modelId;
     }
 
-    public Optional<ViewId> viewId() {
+    /** Представление — у выгрузки картинки; у выгрузки модели {@code null}. */
+    public ViewId viewId() {
         return viewId;
     }
 
+    /** Формат выгрузки. */
     public ExportFormat format() {
         return format;
     }
 
+    /** Параметры выгрузки. */
     public ExportOptions options() {
         return options;
     }
 
+    /** Номер версии, по которой строится результат; фиксируется при запросе. */
     public long sourceVersionNo() {
         return sourceVersionNo;
     }
 
+    /** Состояние выгрузки. */
     public ExportStatus status() {
         return status;
     }
 
-    public Optional<Artifact> artifact() {
-        return Optional.ofNullable(artifact);
+    /** Готовый файл; {@code null} — ещё не построен. */
+    public Artifact artifact() {
+        return artifact;
     }
 
-    public Optional<LossReport> lossReport() {
-        return Optional.ofNullable(lossReport);
+    /** Отчёт о потерях; {@code null} — ещё не построен. */
+    public LossReport lossReport() {
+        return lossReport;
     }
 
-    public Optional<String> failureReason() {
-        return Optional.ofNullable(failureReason);
+    /** Причина сбоя; {@code null} — выгрузка не падала. */
+    public String failureReason() {
+        return failureReason;
     }
 
+    /** Кто запросил выгрузку. */
     public String requestedBy() {
         return requestedBy;
     }
 
+    /** Когда выгрузка запрошена. */
     public Instant requestedAt() {
         return requestedAt;
     }

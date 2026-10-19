@@ -33,6 +33,7 @@ import org.xml.sax.SAXParseException;
  */
 public final class OefSchema {
 
+    /** Пространство имён документа Open Exchange Format. */
     public static final String NAMESPACE = "http://www.opengroup.org/xsd/archimate/3.0/";
     /** Адрес схемы в {@code xsi:schemaLocation} — так её объявляет Archi. */
     public static final String LOCATION = "http://www.opengroup.org/xsd/archimate/3.1/archimate3_Diagram.xsd";
@@ -51,6 +52,7 @@ public final class OefSchema {
         return new OefSchema(schema);
     }
 
+    /** Загружает схему из classpath; внешние ссылки схемы разрешаются локально, без сети. */
     public static OefSchema load() {
         SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
         try {

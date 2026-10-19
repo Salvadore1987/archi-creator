@@ -14,6 +14,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 
@@ -26,7 +27,7 @@ class ObservabilityIT extends ApiTest {
     @DisplayName("§8.4: метрики use case'ов и импорта — в Prometheus, код инварианта — в error_code")
     void useCaseMetricsReachPrometheus() throws Exception {
         UUID model = lockedModel(architect(), "Наблюдаемость");
-        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+        mvc.perform(MockMvcRequestBuilders
                 .post("/api/v1/models/" + model + "/lock").with(as("intruder", "ARCHITECT")))
                 .andExpect(status().isConflict());
         mvc.perform(multipart("/api/v1/models/import")

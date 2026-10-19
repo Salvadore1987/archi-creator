@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Optional;
 import java.util.TreeMap;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.Constants;
@@ -65,7 +64,7 @@ class GitMergeParentsTest {
         }
         repository = new JGitRepository(temp.resolve("cache"), "oauth2", Duration.ofSeconds(10));
         remote = new Remote(new WorkspaceId(Generators.timeBasedEpochGenerator().generate()), bare.toUri().toString(),
-                "main", Optional.empty());
+                "main", null);
     }
 
     @Test
@@ -82,9 +81,9 @@ class GitMergeParentsTest {
     @Test
     @DisplayName("FR-39, INV-IXC-009: слитый коммит — второй родитель; ветка предложения становится предком")
     void mergedCommitBecomesSecondParent() throws Exception {
-        Optional<GitSha> head = repository.fetch(remote);
+        GitSha head = repository.fetch(remote).orElse(null);
 
-        Pushed pushed = (Pushed) repository.push(remote, head, request("merged", Optional.of(sha(proposal))));
+        Pushed pushed = (Pushed) repository.push(remote, head, request("merged", sha(proposal)));
 
         RevCommit commit = parse(pushed.sha());
         assertThat(commit.getParents()).extracting(ObjectId::name).containsExactly(second.name(), proposal.name());
@@ -94,28 +93,27 @@ class GitMergeParentsTest {
     @Test
     @DisplayName("FR-39: слитый коммит уже в истории — второго родителя нет; без правок дерева коммита нет")
     void mergedAncestorAddsNoParent() throws Exception {
-        Optional<GitSha> head = repository.fetch(remote);
+        GitSha head = repository.fetch(remote).orElse(null);
 
-        Pushed pushed = (Pushed) repository.push(remote, head, request("x", Optional.of(sha(first))));
+        Pushed pushed = (Pushed) repository.push(remote, head, request("x", sha(first)));
         assertThat(parse(pushed.sha()).getParents()).extracting(ObjectId::name).containsExactly(second.name());
 
-        assertThat(repository.push(remote, Optional.of(pushed.sha()), request("x", Optional.of(sha(first)))))
+        assertThat(repository.push(remote, pushed.sha(), request("x", sha(first))))
                 .isInstanceOf(GitRepositoryPort.Unchanged.class);
     }
 
     @Test
     @DisplayName("FR-39: принятие слиянием без правок дерева — всё равно коммит, чтобы ветка предложения вошла")
     void mergeWithoutTreeChangeStillCommits() throws Exception {
-        Optional<GitSha> head = repository.fetch(remote);
-        Pushed base = (Pushed) repository.push(remote, head, request("same", Optional.empty()));
+        GitSha head = repository.fetch(remote).orElse(null);
+        Pushed base = (Pushed) repository.push(remote, head, request("same", null));
 
-        Pushed merged = (Pushed) repository.push(remote, Optional.of(base.sha()),
-                request("same", Optional.of(sha(proposal))));
+        Pushed merged = (Pushed) repository.push(remote, base.sha(), request("same", sha(proposal)));
 
         assertThat(parse(merged.sha()).getParents()).hasSize(2);
     }
 
-    private CommitRequest request(String content, Optional<GitSha> merged) {
+    private CommitRequest request(String content, GitSha merged) {
         Person person = new Person("t", "t@t", Instant.parse("2026-10-14T10:00:00Z"));
         return new CommitRequest("models/x", new TreeMap<>(Map.of("a.yaml", content.getBytes(StandardCharsets.UTF_8))),
                 new TreeMap<>(), "msg", person, person, merged);

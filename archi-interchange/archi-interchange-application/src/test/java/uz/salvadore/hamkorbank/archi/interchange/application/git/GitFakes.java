@@ -3,13 +3,17 @@ package uz.salvadore.hamkorbank.archi.interchange.application.git;
 import com.fasterxml.uuid.Generators;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -37,7 +41,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
@@ -137,13 +141,13 @@ final class GitFakes {
 
         @Override
         public Current current(EditorIdentity actor, ModelId m) {
-            return new Current(workspace, "Ландшафт", Optional.of(state.lastVersionNo()), state.xml());
+            return new Current(workspace, "Ландшафт", state.lastVersionNo(), state.xml());
         }
 
         @Override
         public Replaced replace(EditorIdentity actor, ModelId m, byte[] xml, String comment) {
             if (!state.locked()) {
-                throw new ModelingException(ModelingCodes.LOCK_REQUIRED, Failure.CONFLICT,
+                throw new ModelingDomainException(ModelingCodes.LOCK_REQUIRED, Failure.CONFLICT,
                         Message.of(ModelingMessages.LOCK_NOT_HELD, m.value()));
             }
             if (Arrays.equals(state.xml(), xml)) {
@@ -233,9 +237,9 @@ final class GitFakes {
         public Optional<Entry> head(ModelId model) {
             return rows.stream().filter(r -> r.model().equals(model))
                     .filter(r -> statuses.get(r.id()).equals("PENDING") || statuses.get(r.id()).equals("DIVERGED"))
-                    .min(java.util.Comparator.comparingLong(Row::versionNo))
+                    .min(Comparator.comparingLong(Row::versionNo))
                     .map(r -> new Entry(r.id(), r.workspace(), r.model(), r.versionNo(),
-                            Status.valueOf(statuses.get(r.id())), 0, Optional.empty()));
+                            Status.valueOf(statuses.get(r.id())), 0, null));
         }
 
         /** Голова очереди модели встала на расхождении. */
@@ -444,14 +448,14 @@ final class GitFakes {
 
         @Override
         public Optional<GitSha> mergeBase(Remote remote, GitSha first, GitSha second) {
-            java.util.Set<GitSha> common = ancestors(second);
+            Set<GitSha> common = ancestors(second);
             return ancestors(first).stream().filter(common::contains).findFirst();
         }
 
         /** Коммит и его предки, ближние первыми. */
-        private java.util.LinkedHashSet<GitSha> ancestors(GitSha commit) {
-            java.util.LinkedHashSet<GitSha> seen = new java.util.LinkedHashSet<>();
-            java.util.ArrayDeque<GitSha> queue = new java.util.ArrayDeque<>(List.of(commit));
+        private LinkedHashSet<GitSha> ancestors(GitSha commit) {
+            LinkedHashSet<GitSha> seen = new LinkedHashSet<>();
+            ArrayDeque<GitSha> queue = new ArrayDeque<>(List.of(commit));
             while (!queue.isEmpty()) {
                 GitSha next = queue.poll();
                 if (seen.add(next)) {
@@ -472,7 +476,7 @@ final class GitFakes {
         }
 
         @Override
-        public PushResult push(Remote remote, Optional<GitSha> parent, CommitRequest request) {
+        public PushResult push(Remote remote, GitSha parent, CommitRequest request) {
             throw new UnsupportedOperationException();
         }
     }

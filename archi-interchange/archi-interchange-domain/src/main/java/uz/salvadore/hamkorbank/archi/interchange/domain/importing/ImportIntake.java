@@ -33,7 +33,7 @@ public final class ImportIntake {
                 sessions.findByIdempotencyKey(request.workspaceId(), request.idempotencyKey());
         if (existing.isPresent()) {
             if (!existing.get().sourceHash().equals(request.sourceHash())) {
-                throw new IdempotencyConflictException(existing.get(), request.sourceHash());
+                throw new IdempotencyConflictException(existing.get());
             }
             return new Intake(existing.get(), true);
         }

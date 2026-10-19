@@ -2,7 +2,7 @@ package uz.salvadore.hamkorbank.archi.interchange.adapter.persistence;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -18,7 +18,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
 /**
  * Очередь публикации в Git поверх {@code outbox_event}: события
- * {@code ModelVersionCommitted}, ключ — модель, порядок — номер версии.
+ * {@code ModelVersionCommittedEvent}, ключ — модель, порядок — номер версии.
  * Нагрузка — JSON с пространством, моделью и номером версии.
  */
 @Repository
@@ -29,12 +29,12 @@ public class JpaGitOutbox implements GitOutbox {
     private static final String COLUMNS = "id, payload ->> 'workspaceId', payload ->> 'modelId', "
             + "(payload ->> 'versionNo')::bigint, status, attempts, next_attempt_at";
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
 
     private final UuidV7 ids;
 
-    public JpaGitOutbox(Clock clock) {
+    public JpaGitOutbox(EntityManager em, Clock clock) {
+        this.em = em;
         this.ids = new UuidV7(clock);
     }
 
@@ -118,7 +118,7 @@ public class JpaGitOutbox implements GitOutbox {
         Object[] r = (Object[]) row;
         return new Entry((UUID) r[0], new WorkspaceId(uuid(r[1])), new ModelId(uuid(r[2])),
                 ((Number) r[3]).longValue(), Status.valueOf((String) r[4]), ((Number) r[5]).intValue(),
-                Optional.ofNullable(r[6]).map(JpaGitOutbox::instant));
+                r[6] == null ? null : instant(r[6]));
     }
 
     private static UUID uuid(Object value) {
@@ -129,7 +129,7 @@ public class JpaGitOutbox implements GitOutbox {
         return switch (value) {
             case Instant i -> i;
             case OffsetDateTime o -> o.toInstant();
-            case java.sql.Timestamp t -> t.toInstant();
+            case Timestamp t -> t.toInstant();
             default -> OffsetDateTime.parse(value.toString()).withOffsetSameInstant(ZoneOffset.UTC).toInstant();
         };
     }

@@ -20,6 +20,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueExcep
  */
 public record ModelDocument(Attributes attributes, List<DocumentContent> content) {
 
+    /** Пространство имён корня файла {@code .archimate}. */
     public static final String NAMESPACE = "http://www.archimatetool.com/archimate";
 
     public ModelDocument {
@@ -29,20 +30,23 @@ public record ModelDocument(Attributes attributes, List<DocumentContent> content
                 .orElseThrow(() -> new InvalidValueException(InterchangeMessages.MODEL_WITHOUT_ID)));
         ContentOrder.requireDense(content);
         for (DocumentContent item : content) {
-            if (item instanceof RawXmlFragment raw && raw.parentArchiId().isPresent()) {
+            if (item instanceof RawXmlFragment raw && raw.parentArchiId() != null) {
                 throw new InvalidValueException(InterchangeMessages.FRAGMENT_ROOT_MISADDRESSED, raw.parentArchiId());
             }
         }
     }
 
+    /** Идентификатор модели из атрибута {@code id} корня. */
     public ArchiId archiId() {
         return ArchiId.of(attributes.get("id").orElseThrow());
     }
 
+    /** Имя модели; пустое, если в файле его нет. */
     public String name() {
         return attributes.get("name").orElse("");
     }
 
+    /** Версия Archi, сохранившего файл; пустая, если в файле её нет. */
     public String archiVersion() {
         return attributes.get("version").orElse("");
     }
@@ -52,7 +56,7 @@ public record ModelDocument(Attributes attributes, List<DocumentContent> content
         return ContentOrder.only(content, DocumentValue.class).stream()
                 .filter(v -> v.tag().equals("purpose"))
                 .findFirst()
-                .flatMap(DocumentValue::text);
+                .map(DocumentValue::text);
     }
 
     /** Папки верхнего уровня; вложенные — внутри них. */
@@ -87,6 +91,7 @@ public record ModelDocument(Attributes attributes, List<DocumentContent> content
         return ContentOrder.only(content, RawXmlFragment.class);
     }
 
+    /** Узел документа с данным идентификатором на любой глубине. */
     public Optional<DocumentNode> find(ArchiId id) {
         return allNodes().stream().filter(n -> n.archiId().equals(id)).findFirst();
     }

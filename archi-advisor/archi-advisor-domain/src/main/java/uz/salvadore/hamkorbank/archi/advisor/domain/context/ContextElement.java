@@ -1,21 +1,26 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.context;
 
 import java.util.Objects;
-import java.util.Optional;
 
-/** Элемент модели в контексте: тип, имя, документация — без папок, свойств и стиля. */
-public record ContextElement(String archiId, String archiType, String name, Optional<String> documentation,
+/**
+ * Элемент модели в контексте: тип, имя, документация — без папок, свойств и стиля.
+ *
+ * @param documentation документация; {@code null} — нет, пустая приводится к {@code null}
+ */
+public record ContextElement(String archiId, String archiType, String name, String documentation,
                              ContextLayer layer) {
 
     public ContextElement {
         Objects.requireNonNull(archiId, "archiId");
         Objects.requireNonNull(archiType, "archiType");
         Objects.requireNonNull(name, "name");
-        documentation = Objects.requireNonNullElse(documentation, Optional.<String>empty()).filter(d -> !d.isBlank());
+        if (documentation != null && documentation.isBlank()) {
+            documentation = null;
+        }
         Objects.requireNonNull(layer, "layer");
     }
 
     ContextElement withoutDocumentation() {
-        return new ContextElement(archiId, archiType, name, Optional.empty(), layer);
+        return new ContextElement(archiId, archiType, name, null, layer);
     }
 }

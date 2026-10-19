@@ -13,6 +13,7 @@ import static uz.salvadore.hamkorbank.archi.bootstrap.roundtrip.XmlEquivalence.a
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -21,7 +22,7 @@ import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 
 /**
- * Выход этапа 2: «импорт файла → сохранение в БД → экспорт через API» даёт
+ * Круг «импорт файла → сохранение в БД → экспорт через API» даёт
  * исходный файл, {@code assertXmlEquivalent} зелёный.
  */
 class RoundTripApiIT extends ApiTest {
@@ -61,7 +62,7 @@ class RoundTripApiIT extends ApiTest {
                         .with(architect()))
                 .andExpect(status().isCreated()).andReturn(), "$.modelId");
         mvc.perform(post("/api/v1/models/" + modelId + "/lock").with(architect())).andExpect(status().isOk());
-        java.util.List<String> ids = read(mvc.perform(get("/api/v1/models/" + modelId).with(architect())).andReturn(),
+        List<String> ids = read(mvc.perform(get("/api/v1/models/" + modelId).with(architect())).andReturn(),
                 "$.elements[?(@.name == 'АБС')].id");
         String element = ids.getFirst();
         mvc.perform(patch("/api/v1/elements/" + element).with(architect()).contentType(MediaType.APPLICATION_JSON)

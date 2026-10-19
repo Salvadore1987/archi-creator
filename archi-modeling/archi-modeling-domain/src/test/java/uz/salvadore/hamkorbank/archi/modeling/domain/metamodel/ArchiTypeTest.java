@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 
 class ArchiTypeTest {
 
@@ -30,6 +31,6 @@ class ArchiTypeTest {
             "xsi:ApplicationComponent", "archimate:Component1"})
     @DisplayName("строка не в нотации archimate:<Имя> отклоняется")
     void malformedTypeIsRejected(String value) {
-        assertThrows(IllegalArgumentException.class, () -> ArchiType.of(value));
+        assertThrows(InvalidValueException.class, () -> ArchiType.of(value));
     }
 }

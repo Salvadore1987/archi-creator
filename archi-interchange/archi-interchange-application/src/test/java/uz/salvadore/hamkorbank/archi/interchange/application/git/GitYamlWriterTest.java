@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -83,7 +85,7 @@ class GitYamlWriterTest {
         if (Boolean.getBoolean("git.fixtures.update")) {
             if (Files.exists(expected)) {
                 try (Stream<Path> old = Files.walk(expected)) {
-                    old.sorted(java.util.Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+                    old.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
                 }
             }
             for (Map.Entry<String, byte[]> file : files.entrySet()) {
@@ -181,7 +183,7 @@ class GitYamlWriterTest {
         Set<String> paths = new TreeSet<>(before.keySet());
         paths.addAll(after.keySet());
         return paths.stream().filter(p -> !before.containsKey(p) || !after.containsKey(p)
-                || !java.util.Arrays.equals(before.get(p), after.get(p)))
+                || !Arrays.equals(before.get(p), after.get(p)))
                 .collect(Collectors.toCollection(TreeSet::new));
     }
 

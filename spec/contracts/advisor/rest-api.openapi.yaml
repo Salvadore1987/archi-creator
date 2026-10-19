@@ -85,7 +85,7 @@ paths:
               required: [modelId, elementId]
               properties:
                 modelId:   { type: string, format: uuid }
-                elementId: { type: string, description: "archiId элемента." }
+                elementId: { type: string, maxLength: 255, pattern: "^[A-Za-z0-9_][A-Za-z0-9_.-]*$", description: "archiId элемента." }
       responses:
         '200': { $ref: '#/components/responses/Stream200' }
         '403': { $ref: '#/components/responses/Forbidden403' }
@@ -141,7 +141,7 @@ paths:
               properties:
                 modelId:   { type: string, format: uuid }
                 viewId:    { type: string, format: uuid, description: "Описание представления." }
-                elementId: { type: string, description: "archiId: анализ влияния при отказе элемента." }
+                elementId: { type: string, maxLength: 255, pattern: "^[A-Za-z0-9_][A-Za-z0-9_.-]*$", description: "archiId: анализ влияния при отказе элемента." }
       responses:
         '200': { $ref: '#/components/responses/Stream200' }
         '403': { $ref: '#/components/responses/Forbidden403' }

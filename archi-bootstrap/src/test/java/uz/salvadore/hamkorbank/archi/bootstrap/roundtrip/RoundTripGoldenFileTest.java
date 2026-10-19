@@ -36,7 +36,8 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
  * а второй цикл — тот же документ и те же байты.
  * Падение блокирует сборку: в CI этот класс — отдельный шаг.
  *
- * <p>На этапе 1 цикл идёт через кодек; на этапе 2 тот же тест пойдёт через БД.
+ * <p>Цикл идёт через кодек; через базу тот же круг проверяют {@code ModelImportIT}
+ * и {@code RoundTripApiIT}.
  */
 public class RoundTripGoldenFileTest {
 

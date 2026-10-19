@@ -316,6 +316,12 @@ paths:
             application/json: { schema: { $ref: '#/components/schemas/VersionInfo' } }
         '409': { $ref: '#/components/responses/Conflict409' }
         '410': { $ref: '#/components/responses/Gone410' }
+        '500':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
+          description: Снимок версии в хранилище повреждён и не распаковывается — `MDL_SNAPSHOT_CORRUPTED`.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
 
   /models/{id}/versions/{no}/label:
     parameters:

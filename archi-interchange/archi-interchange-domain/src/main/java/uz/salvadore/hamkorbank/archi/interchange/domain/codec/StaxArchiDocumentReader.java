@@ -7,12 +7,14 @@ import static javax.xml.stream.XMLStreamConstants.END_ELEMENT;
 import static javax.xml.stream.XMLStreamConstants.PROCESSING_INSTRUCTION;
 import static javax.xml.stream.XMLStreamConstants.SPACE;
 import static javax.xml.stream.XMLStreamConstants.START_ELEMENT;
+
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -22,6 +24,7 @@ import javax.xml.stream.Location;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
@@ -51,32 +54,48 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
  * <p>Повреждённые данные собираются все за один проход и бросаются
  * {@link CorruptDocumentException}: невалидный XML, узел без {@code id} или
  * {@code xsi:type}, дубль идентификатора, ссылка в пустоту, связь без конца,
- * {@code targetConnections}, не совпадающий с соединениями узла.
+ * {@code targetConnections}, не совпадающий с соединениями узла. Если разбор
+ * обрывается — XML ломается, корень не тот, вложенность глубже предела, — отказ
+ * несёт дефекты, найденные до места обрыва, и сам обрыв; ссылки дальше обрыва
+ * не проверить.
  *
- * <p>DTD и внешние сущности выключены: файл приходит от пользователя.
+ * <p>Комментарии и инструкции обработки между узлами и внутри значения (описания,
+ * свойства) отбрасываются: Archi их не пишет, а круг без потерь обещает равенство
+ * модели, а не байтов. Внутри непрозрачного фрагмента они сохраняются дословно.
+ *
+ * <p>Объявление {@code DOCTYPE} не отклоняется, а пропускается: DTD не читается,
+ * внешние сущности не загружаются — файл приходит от пользователя.
  */
 public final class StaxArchiDocumentReader implements ArchiDocumentReader {
 
-    /** После этой метки парсер StAX пишет суть ошибки, до неё — служебное место. */
-    private static final String PARSER_MESSAGE_MARKER = "Message: ";
+    /**
+     * Предел вложенности узлов модели: в файлах Archi глубина — десятки уровней, а без предела
+     * рекурсивный разбор упирается в стек. Ниже умолчания JDK, чтобы отказ был дефектом файла,
+     * а не сообщением парсера.
+     */
+    static final int MAX_DEPTH = 64;
 
     @Override
     public ModelDocument read(InputStream in) {
         Objects.requireNonNull(in, "in");
+        Parse parse = null;
         try {
             XMLStreamReader xml = factory().createXMLStreamReader(in);
             try {
-                return new Parse(xml).document();
+                parse = new Parse(xml);
+                return parse.document();
             } finally {
                 xml.close();
             }
         } catch (XMLStreamException e) {
-            throw new CorruptDocumentException(List.of(malformed(e)));
+            List<DocumentDefect> defects = parse == null ? new ArrayList<>() : new ArrayList<>(parse.defects);
+            defects.add(malformed(e));
+            throw new CorruptDocumentException(defects);
         }
     }
 
     private static XMLInputFactory factory() {
-        XMLInputFactory factory = XMLInputFactory.newFactory();
+        XMLInputFactory factory = XMLInputFactory.newDefaultFactory();
         factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
         factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
         factory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, true);
@@ -84,19 +103,16 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         return factory;
     }
 
+    /**
+     * Дефект испорченного XML — с местом ошибки, но без текста парсера: тот на языке JVM сервера
+     * и говорит об устройстве разбора, а не о файле.
+     */
     private static DocumentDefect malformed(XMLStreamException e) {
         Location location = e.getLocation();
-        Optional<String> parserText = Optional.ofNullable(e.getMessage()).map(text -> {
-            int marker = text.indexOf(PARSER_MESSAGE_MARKER);
-            return marker >= 0 ? text.substring(marker + PARSER_MESSAGE_MARKER.length()) : text;
-        }).map(String::strip);
-        Message message = parserText.map(text -> Message.of(InterchangeMessages.XML_UNREADABLE, text))
-                .orElseGet(() -> Message.of(InterchangeMessages.XML_UNREADABLE_NO_DETAIL));
-        Optional<Integer> line = location == null || location.getLineNumber() < 0
-                ? Optional.empty() : Optional.of(location.getLineNumber());
-        Optional<Integer> column = location == null || location.getColumnNumber() < 0
-                ? Optional.empty() : Optional.of(location.getColumnNumber());
-        return new DocumentDefect(DocumentDefect.MALFORMED_XML, message, Optional.empty(), line, column);
+        Message message = Message.of(InterchangeMessages.XML_UNREADABLE_NO_DETAIL);
+        Integer line = location == null || location.getLineNumber() < 0 ? null : location.getLineNumber();
+        Integer column = location == null || location.getColumnNumber() < 0 ? null : location.getColumnNumber();
+        return new DocumentDefect(InterchangeCodes.MALFORMED_XML, message, null, line, column);
     }
 
     /** Состояние одного прохода по файлу. */
@@ -111,6 +127,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         private final Map<String, List<String>> connectionsByTarget = new LinkedHashMap<>();
         /** Узел → его {@code targetConnections} как записано. */
         private final Map<String, Listed> listedTargetConnections = new LinkedHashMap<>();
+        private int depth;
 
         Parse(XMLStreamReader xml) {
             this.xml = xml;
@@ -121,22 +138,23 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
                 // пролог: объявление XML, комментарии, пробелы
             }
             if (!"model".equals(xml.getLocalName()) || !ModelDocument.NAMESPACE.equals(xml.getNamespaceURI())) {
-                throw new CorruptDocumentException(List.of(DocumentDefect.at(DocumentDefect.NOT_ARCHIMATE_MODEL,
+                throw broken(DocumentDefect.at(InterchangeCodes.NOT_ARCHIMATE_MODEL,
                         Message.of(InterchangeMessages.NOT_ARCHIMATE_ROOT, qname(), ModelDocument.NAMESPACE),
-                        null, line())));
+                        null, line()));
             }
             int line = line();
             Attributes attributes = attributes();
             Optional<String> id = attributes.get("id");
             if (id.isEmpty()) {
-                defect(DocumentDefect.MISSING_ATTRIBUTE, Message.of(InterchangeMessages.MODEL_WITHOUT_ID), null, line);
-            } else if (!ArchiId.isValid(id.get())) {
-                defect(DocumentDefect.INVALID_ID, Message.of(InterchangeMessages.MODEL_ID_INVALID, id.get()), id.get(),
+                defect(InterchangeCodes.MISSING_ATTRIBUTE, Message.of(InterchangeMessages.MODEL_WITHOUT_ID), null,
                         line);
+            } else if (!ArchiId.isValid(id.get())) {
+                defect(InterchangeCodes.INVALID_ID, Message.of(InterchangeMessages.MODEL_ID_INVALID, id.get()),
+                        id.get(), line);
             } else {
                 register(id.get(), line);
             }
-            List<DocumentContent> content = content(Optional.empty());
+            List<DocumentContent> content = content(null);
             while (xml.hasNext()) {
                 xml.next();
             }
@@ -148,8 +166,14 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             return new ModelDocument(attributes, content);
         }
 
+        /** Разбор оборван: отказ с дефектами, найденными до обрыва, и самим обрывом. */
+        private CorruptDocumentException broken(DocumentDefect defect) {
+            defects.add(defect);
+            return new CorruptDocumentException(defects);
+        }
+
         /** Содержимое текущего элемента до его закрывающего тега. */
-        private List<DocumentContent> content(Optional<ArchiId> parent) throws XMLStreamException {
+        private List<DocumentContent> content(ArchiId parent) throws XMLStreamException {
             List<DocumentContent> content = new ArrayList<>();
             while (true) {
                 switch (xml.next()) {
@@ -165,9 +189,9 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
                     }
                     case CHARACTERS, CDATA, SPACE -> {
                         if (!xml.getText().isBlank()) {
-                            defect(DocumentDefect.UNEXPECTED_TEXT,
+                            defect(InterchangeCodes.UNEXPECTED_TEXT,
                                     Message.of(InterchangeMessages.TEXT_OUTSIDE_VALUE, xml.getText().strip()),
-                                    parent.map(ArchiId::value).orElse(null), line());
+                                    parent == null ? null : parent.value(), line());
                         }
                     }
                     default -> {
@@ -177,7 +201,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             }
         }
 
-        private DocumentContent item(Optional<ArchiId> parent, DocumentOrder order) throws XMLStreamException {
+        private DocumentContent item(ArchiId parent, DocumentOrder order) throws XMLStreamException {
             String prefix = xml.getPrefix();
             boolean unprefixed = prefix == null || prefix.isEmpty();
             String tag = xml.getLocalName();
@@ -191,15 +215,28 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         }
 
         private DocumentNode node(String tag, DocumentOrder order) throws XMLStreamException {
+            if (depth == MAX_DEPTH) {
+                throw broken(DocumentDefect.at(InterchangeCodes.NESTING_TOO_DEEP,
+                        Message.of(InterchangeMessages.NESTING_TOO_DEEP, MAX_DEPTH), null, line()));
+            }
+            depth++;
+            try {
+                return parsedNode(tag, order);
+            } finally {
+                depth--;
+            }
+        }
+
+        private DocumentNode parsedNode(String tag, DocumentOrder order) throws XMLStreamException {
             int line = line();
             Attributes attributes = attributes();
             Optional<String> id = attributes.get("id");
             if (id.isEmpty() || !ArchiId.isValid(id.get())) {
                 if (id.isEmpty()) {
-                    defect(DocumentDefect.MISSING_ATTRIBUTE, Message.of(InterchangeMessages.NODE_WITHOUT_ID, tag),
+                    defect(InterchangeCodes.MISSING_ATTRIBUTE, Message.of(InterchangeMessages.NODE_WITHOUT_ID, tag),
                             null, line);
                 } else {
-                    defect(DocumentDefect.INVALID_ID, Message.of(InterchangeMessages.ID_INVALID, id.get()),
+                    defect(InterchangeCodes.INVALID_ID, Message.of(InterchangeMessages.ID_INVALID, id.get()),
                             id.get(), line);
                 }
                 skipRest();
@@ -207,7 +244,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             }
             register(id.get(), line);
             inspect(tag, id.get(), attributes, line);
-            return new DocumentNode(tag, order, attributes, content(Optional.of(ArchiId.of(id.get()))));
+            return new DocumentNode(tag, order, attributes, content(ArchiId.of(id.get())));
         }
 
         /** Обязательные атрибуты и ссылки узла — по тегу. */
@@ -217,7 +254,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             }
             Optional<String> type = attributes.get("xsi:type");
             if (type.isEmpty()) {
-                defect(DocumentDefect.MISSING_ATTRIBUTE, Message.of(InterchangeMessages.NODE_WITHOUT_TYPE, tag),
+                defect(InterchangeCodes.MISSING_ATTRIBUTE, Message.of(InterchangeMessages.NODE_WITHOUT_TYPE, tag),
                         id, line);
             }
             switch (tag) {
@@ -249,7 +286,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
 
         private void end(String id, Attributes attributes, String attribute, int line) {
             if (attributes.get(attribute).filter(v -> !v.isBlank()).isEmpty()) {
-                defect(DocumentDefect.MISSING_END,
+                defect(InterchangeCodes.MISSING_END,
                         Message.of(InterchangeMessages.RELATIONSHIP_WITHOUT_END, attribute), id, line);
             } else {
                 reference(id, attributes, attribute, line);
@@ -260,7 +297,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             attributes.get(attribute).ifPresent(target -> references.add(new Reference(id, attribute, target, line)));
         }
 
-        private DocumentContent value(String tag, Optional<ArchiId> parent, DocumentOrder order)
+        private DocumentContent value(String tag, ArchiId parent, DocumentOrder order)
                 throws XMLStreamException {
             Attributes attributes = attributes();
             StringBuilder text = null;
@@ -283,8 +320,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
                         return new RawXmlFragment(out.toString(), parent, order);
                     }
                     case END_ELEMENT -> {
-                        return new DocumentValue(tag, order, attributes,
-                                Optional.ofNullable(text).map(StringBuilder::toString));
+                        return new DocumentValue(tag, order, attributes, text == null ? null : text.toString());
                     }
                     default -> {
                         // комментарий внутри значения
@@ -395,7 +431,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         private void register(String id, int line) {
             Integer previous = ids.putIfAbsent(id, line);
             if (previous != null) {
-                defect(DocumentDefect.DUPLICATE_ID, Message.of(InterchangeMessages.ID_REPEATED, id, previous),
+                defect(InterchangeCodes.DUPLICATE_ID, Message.of(InterchangeMessages.ID_REPEATED, id, previous),
                         id, line);
             }
         }
@@ -403,7 +439,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         private void resolveReferences() {
             for (Reference reference : references) {
                 if (!ids.containsKey(reference.target())) {
-                    defect(DocumentDefect.DANGLING_REFERENCE,
+                    defect(InterchangeCodes.DANGLING_REFERENCE,
                             Message.of(InterchangeMessages.DANGLING_REFERENCE, reference.attribute(),
                                     reference.target()),
                             reference.owner(), reference.line());
@@ -417,16 +453,16 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
          */
         private void checkTargetConnections() {
             listedTargetConnections.forEach((owner, listed) -> {
-                Set<String> expected = new HashSet<>(connectionsByTarget.getOrDefault(owner, List.of()));
+                Set<String> expected = new LinkedHashSet<>(connectionsByTarget.getOrDefault(owner, List.of()));
                 if (!expected.equals(new HashSet<>(listed.tokens()))) {
-                    defect(DocumentDefect.TARGET_CONNECTIONS_MISMATCH,
+                    defect(InterchangeCodes.TARGET_CONNECTIONS_MISMATCH,
                             Message.of(InterchangeMessages.TARGET_CONNECTIONS_DIFFER, listed.tokens(), expected),
                             owner, listed.line());
                 }
             });
             connectionsByTarget.forEach((target, connections) -> {
                 if (!listedTargetConnections.containsKey(target) && ids.containsKey(target)) {
-                    defect(DocumentDefect.TARGET_CONNECTIONS_MISMATCH,
+                    defect(InterchangeCodes.TARGET_CONNECTIONS_MISMATCH,
                             Message.of(InterchangeMessages.TARGET_CONNECTIONS_MISSING, connections), target,
                             ids.get(target));
                 }

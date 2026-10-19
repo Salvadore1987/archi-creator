@@ -6,17 +6,20 @@ import com.anthropic.core.JsonValue;
 import com.anthropic.core.http.StreamResponse;
 import com.anthropic.errors.AnthropicException;
 import com.anthropic.models.messages.MessageCreateParams;
+import com.anthropic.models.messages.MessageDeltaUsage;
 import com.anthropic.models.messages.OutputConfig;
+import com.anthropic.models.messages.RawContentBlockDelta;
 import com.anthropic.models.messages.RawContentBlockStartEvent;
 import com.anthropic.models.messages.RawMessageStreamEvent;
 import com.anthropic.models.messages.Tool;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.LlmListener;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.LlmPort;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.LlmRequest;
@@ -37,7 +40,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
  */
 public final class AnthropicLlmClient implements LlmPort {
 
-    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final TypeReference<Map<String, Object>> MAP = new TypeReference<>() {
     };
 
@@ -125,7 +128,7 @@ public final class AnthropicLlmClient implements LlmPort {
                         });
                     } else if (event.isContentBlockDelta()) {
                         long index = event.asContentBlockDelta().index();
-                        var delta = event.asContentBlockDelta().delta();
+                        RawContentBlockDelta delta = event.asContentBlockDelta().delta();
                         delta.text().ifPresent(text -> listener.text(text.text()));
                         delta.inputJson().ifPresent(json -> toolInputs
                                 .computeIfAbsent(index, k -> new StringBuilder()).append(json.partialJson()));
@@ -137,7 +140,7 @@ public final class AnthropicLlmClient implements LlmPort {
                             listener.toolCall(name, parse(json));
                         }
                     } else if (event.isMessageDelta()) {
-                        var usage = event.asMessageDelta().usage();
+                        MessageDeltaUsage usage = event.asMessageDelta().usage();
                         input = usage.inputTokens().orElse(input);
                         output = usage.outputTokens();
                         listener.usage(new TokenUsage(input, output));
@@ -156,7 +159,7 @@ public final class AnthropicLlmClient implements LlmPort {
         private static Map<String, Object> parse(StringBuilder json) {
             try {
                 return json == null || json.isEmpty() ? Map.of() : JSON.readValue(json.toString(), MAP);
-            } catch (com.fasterxml.jackson.core.JsonProcessingException unreadable) {
+            } catch (JacksonException unreadable) {
                 // Вход не разобрался — вызов пропускается: разбор результата отбросит пустую находку.
                 return Map.of();
             }

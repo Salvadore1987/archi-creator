@@ -61,6 +61,11 @@ jobs:
       - name: Строки кода без текста и якорей
         run: tools/check-string-literals.py
 
+      # Тип называется простым именем через импорт: полное имя посреди кода
+      # прячет зависимость файла от чужого пакета.
+      - name: Импорты вместо полных имён
+        run: tools/check-qualified-names.py
+
       # Числа требований записаны в application.yaml числом: правка одной
       # стороны без другой разводит спеку и конфигурацию молча.
       - name: Конфигурация совпадает с spec/nfr
@@ -143,8 +148,13 @@ jobs:
       # Профиль frontend включён по умолчанию: jar обязан уехать
       # со статикой внутри, и выключать его в CI нельзя.
       # Интеграционные уже прошли шагом выше — здесь не повторяются.
+      # Без clean: данные покрытия интеграционных тестов (jacoco-it.exec)
+      # остаются в target/ и входят в общий отчёт JaCoCo.
       - name: mvn verify
-        run: ./mvnw -B --no-transfer-progress clean verify -DskipITs
+        run: ./mvnw -B --no-transfer-progress verify -DskipITs
+
+      - name: Покрытие тестами
+        run: tools/check-coverage.py
 
       - name: Собранный jar
         uses: actions/upload-artifact@v4
@@ -234,7 +244,7 @@ jobs:
         run: docker build -t archi-creator:${{ github.sha }} .
 
       # Проверяется не «собрался», а «поднимается»: образ с базой должен
-      # дойти до UP. Это тот же критерий готовности этапа 0, только без
+      # дойти до UP. Это тот же критерий, что у ручного запуска состава, только без
       # Keycloak: вход сервера проверяют KeycloakIT и SessionIT, а сценарии
       # Playwright идут на подменённом API и Keycloak не касаются.
       - name: Образ поднимается и отвечает UP

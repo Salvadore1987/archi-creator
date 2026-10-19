@@ -9,11 +9,13 @@ import static uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ConceptKin
 import static uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.MetamodelPhase.PHASE_1;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.MetamodelPhase.PHASE_2;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.MetamodelPhase.PHASE_3;
+
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
@@ -40,10 +42,12 @@ public final class ArchiTypeRegistry {
         this.concepts = Collections.unmodifiableMap(concepts);
     }
 
+    /** Каталог ArchiMate 3.2, общий для всего приложения. */
     public static ArchiTypeRegistry archimate32() {
         return ARCHIMATE_32;
     }
 
+    /** Определение типа в каталоге; пусто — тип каталогу не известен. */
     public Optional<ConceptDefinition> find(ArchiType type) {
         return Optional.ofNullable(concepts.get(type));
     }
@@ -52,11 +56,12 @@ public final class ArchiTypeRegistry {
     public Optional<ConceptDefinition> findByXsiType(String xsiType) {
         try {
             return find(ArchiType.of(xsiType));
-        } catch (IllegalArgumentException notArchiNotation) {
+        } catch (InvalidValueException notArchiNotation) {
             return Optional.empty();
         }
     }
 
+    /** Слой типа; у типа вне каталога — {@link Layer#OTHER}. */
     public Layer layerOf(ArchiType type) {
         return find(type).map(ConceptDefinition::layer).orElse(Layer.OTHER);
     }
@@ -72,7 +77,7 @@ public final class ArchiTypeRegistry {
     }
 
     private static Map<ArchiType, ConceptDefinition> catalog() {
-        var catalog = new Catalog();
+        Catalog catalog = new Catalog();
 
         catalog.elements(Layer.BUSINESS, PHASE_1,
                 "BusinessActor", "BusinessRole", "BusinessCollaboration", "BusinessInterface",
@@ -125,7 +130,7 @@ public final class ArchiTypeRegistry {
         void add(String name, ConceptKind kind, Layer layer, MetamodelPhase phase) {
             ArchiType type = ArchiType.ofSimpleName(name);
             ConceptDefinition previous = concepts.put(type,
-                    new ConceptDefinition(type, kind, layer, Optional.ofNullable(phase)));
+                    new ConceptDefinition(type, kind, layer, phase));
             if (previous != null) {
                 throw new IllegalStateException(Message.of(ModelingMessages.CATALOG_DUPLICATE, type).toString());
             }

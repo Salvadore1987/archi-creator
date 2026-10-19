@@ -5,6 +5,7 @@ import java.util.Objects;
 /** Свойство {@code key/value} объекта модели в порядке файла. */
 public record PropertyEntry(String key, String value, SortOrder sortOrder) {
 
+    /** Предел длины ключа свойства. */
     public static final int KEY_MAX = 200;
 
     public PropertyEntry {

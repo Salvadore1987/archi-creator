@@ -9,6 +9,7 @@ import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;
 
+/** Запись списка доступа модели: субъект (пользователь или группа), уровень доступа и порядок в списке. */
 @Entity
 @Table(name = "model_access_entry")
 @IdClass(AccessEntryEntity.Key.class)
@@ -31,6 +32,7 @@ public class AccessEntryEntity {
     @Column(name = "sort_order", nullable = false)
     public int sortOrder;
 
+    /** Составной ключ записи: модель, тип субъекта и сам субъект. */
     public static class Key implements Serializable {
         public UUID modelId;
         public String principalType;

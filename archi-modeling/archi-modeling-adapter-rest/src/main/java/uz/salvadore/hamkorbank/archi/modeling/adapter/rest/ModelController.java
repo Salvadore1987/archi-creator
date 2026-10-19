@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.modeling.adapter.rest;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,21 +23,26 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelPatch;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelSummary;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ModelTree;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.WorkspaceDto;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.TextCatalog;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.AccessListService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.LockService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
-import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
-import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclEntry;
-import uz.salvadore.hamkorbank.archi.modeling.domain.access.PrincipalType;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.DeleteModelCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EditModelCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PurgeModelCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReleaseLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceAccessListCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.RestoreModelCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetAccessListQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetLockQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ListModelsQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ValidateModelQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelSummaryResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.AccessListApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
  * Модели: список, дерево, жизненный цикл, блокировка, отчёт валидации, список доступа.
@@ -47,16 +51,15 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 @RequestMapping("/api/v1")
 public class ModelController {
 
-    private final ModelQueryService queries;
-    private final ModelLifecycleService lifecycle;
-    private final LockService locks;
-    private final AccessListService accessLists;
-    private final WorkspaceService workspaces;
-    private final TextCatalog text;
+    private final ModelQueryApplicationService queries;
+    private final ModelApplicationService lifecycle;
+    private final LockApplicationService locks;
+    private final AccessListApplicationService accessLists;
+    private final WorkspaceApplicationService workspaces;
 
-    public ModelController(ModelQueryService queries, ModelLifecycleService lifecycle, LockService locks,
-                           AccessListService accessLists, WorkspaceService workspaces, TextCatalog text) {
-        this.text = text;
+    public ModelController(ModelQueryApplicationService queries, ModelApplicationService lifecycle,
+                           LockApplicationService locks, AccessListApplicationService accessLists,
+                           WorkspaceApplicationService workspaces) {
         this.queries = queries;
         this.lifecycle = lifecycle;
         this.locks = locks;
@@ -64,103 +67,104 @@ public class ModelController {
         this.workspaces = workspaces;
     }
 
+    /** Рабочие пространства. */
     @GetMapping("/workspaces")
     public List<WorkspaceDto> workspaces() {
-        return workspaces.list().stream().map(w -> new WorkspaceDto(w.id().value(), w.name())).toList();
+        return workspaces.listWorkspaces().stream().map(w -> new WorkspaceDto(w.id(), w.name())).toList();
     }
 
     /** Без {@code workspaceId} — первое пространство: до мультиарендности оно одно. */
     @GetMapping("/models")
-    public List<ModelSummary> list(EditorIdentity actor, @RequestParam Optional<UUID> workspaceId) {
-        return queries.list(actor, workspace(workspaceId)).stream().map(DtoMapper::summary).toList();
+    public List<ModelSummary> list(EditorIdentity actor, @RequestParam(required = false) UUID workspaceId) {
+        return queries.listModels(actor, new ListModelsQuery(workspaceId)).stream().map(DtoMapper::summary).toList();
     }
 
+    /** Создаёт модель — {@code 201} с адресом; без {@code workspaceId} — в первом пространстве. */
     @PostMapping("/models")
     public ResponseEntity<ModelSummary> create(EditorIdentity actor, @RequestBody CreateModelRequest request,
-                                               @RequestHeader("Idempotency-Key") Optional<String> key) {
-        var model = lifecycle.create(actor, workspace(Optional.ofNullable(request.workspaceId())), request.name(), key);
-        return ResponseEntity.created(URI.create("/api/v1/models/" + model.id()))
-                .body(DtoMapper.summary(model.header()));
+                                               @RequestHeader(value = "Idempotency-Key", required = false) String key) {
+        ModelSummaryResponse model = lifecycle.createModel(actor,
+                new CreateModelCommand(request.workspaceId(), request.name(), key));
+        return ResponseEntity.created(URI.create("/api/v1/models/" + model.id())).body(DtoMapper.summary(model));
     }
 
+    /** Открывает модель: дерево, элементы, связи и размещения на представлениях. */
     @GetMapping("/models/{id}")
     public ModelTree open(EditorIdentity actor, @PathVariable UUID id) {
-        return DtoMapper.tree(queries.openWithPlacements(actor, ModelId.of(id)));
+        return DtoMapper.tree(queries.getModel(actor, new GetModelQuery(id)));
     }
 
+    /** Правит имя и описание модели; не переданное поле не меняется. */
     @PatchMapping("/models/{id}")
     public ModelSummary edit(EditorIdentity actor, @PathVariable UUID id, @RequestBody ModelPatch patch) {
-        return DtoMapper.summary(lifecycle.edit(actor, ModelId.of(id), Optional.ofNullable(patch.name()),
-                Optional.ofNullable(patch.documentation())).header());
+        return DtoMapper.summary(lifecycle.editModel(actor, new EditModelCommand(id, patch.name(),
+                patch.documentation())));
     }
 
+    /** Мягко удаляет модель: данные и история остаются. */
     @DeleteMapping("/models/{id}")
     public ResponseEntity<Void> delete(EditorIdentity actor, @PathVariable UUID id) {
-        lifecycle.delete(actor, ModelId.of(id));
+        lifecycle.deleteModel(actor, new DeleteModelCommand(id));
         return ResponseEntity.noContent().build();
     }
 
+    /** Возвращает мягко удалённую модель в работу. */
     @PostMapping("/models/{id}/restore")
     public ModelSummary restore(EditorIdentity actor, @PathVariable UUID id) {
-        return DtoMapper.summary(lifecycle.restore(actor, ModelId.of(id)).header());
+        return DtoMapper.summary(lifecycle.restoreModel(actor, new RestoreModelCommand(id)));
     }
 
+    /** Физически уничтожает удалённую модель. */
     @PostMapping("/models/{id}/purge")
     public ResponseEntity<Void> purge(EditorIdentity actor, @PathVariable UUID id) {
-        lifecycle.purge(actor, ModelId.of(id));
+        lifecycle.purgeModel(actor, new PurgeModelCommand(id));
         return ResponseEntity.noContent().build();
     }
 
     // ── Блокировка ──────────────────────────────────────────────────
 
+    /** Текущая блокировка модели; нет блокировки — {@code 204}. */
     @GetMapping("/models/{id}/lock")
     public ResponseEntity<LockInfo> lock(EditorIdentity actor, @PathVariable UUID id) {
-        return queries.lock(actor, ModelId.of(id)).map(l -> ResponseEntity.ok(DtoMapper.lock(l)))
+        return locks.getLock(actor, new GetLockQuery(id)).map(l -> ResponseEntity.ok(DtoMapper.lock(l)))
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
+    /** Захватывает или продлевает блокировку модели на запись. */
     @PostMapping("/models/{id}/lock")
     public LockInfo acquire(EditorIdentity actor, @PathVariable UUID id) {
-        return DtoMapper.lock(locks.acquire(actor, ModelId.of(id)));
+        return DtoMapper.lock(locks.acquireLock(actor, new AcquireLockCommand(id)));
     }
 
+    /** Снимает блокировку модели. */
     @DeleteMapping("/models/{id}/lock")
     public ResponseEntity<Void> release(EditorIdentity actor, @PathVariable UUID id) {
-        locks.release(actor, ModelId.of(id));
+        locks.releaseLock(actor, new ReleaseLockCommand(id));
         return ResponseEntity.noContent().build();
     }
 
     // ── Валидация и доступ ──────────────────────────────────────────
 
+    /** Находки проверки модели. */
     @GetMapping("/models/{id}/validate")
     public List<Finding> validate(EditorIdentity actor, @PathVariable UUID id) {
-        return queries.validate(actor, ModelId.of(id)).stream().map(f -> DtoMapper.finding(f, text)).toList();
+        return queries.validateModel(actor, new ValidateModelQuery(id)).stream().map(DtoMapper::finding).toList();
     }
 
+    /** Список доступа модели. */
     @GetMapping("/models/{id}/acl")
     public List<AclEntryDto> acl(EditorIdentity actor, @PathVariable UUID id) {
-        return accessLists.get(actor, ModelId.of(id)).entries().stream()
-                .map(e -> new AclEntryDto(e.principalType().name(), e.principal(), e.access().name())).toList();
+        return accessLists.getAccessList(actor, new GetAccessListQuery(id)).entries().stream()
+                .map(e -> new AclEntryDto(e.principalType(), e.principal(), e.access())).toList();
     }
 
+    /** Заменяет список доступа модели целиком и возвращает итог. */
     @PutMapping("/models/{id}/acl")
     public List<AclEntryDto> replaceAcl(EditorIdentity actor, @PathVariable UUID id,
                                         @RequestBody List<AclEntryDto> entries) {
-        List<AclEntry> domain = entries.stream().map(ModelController::entry).toList();
-        return accessLists.replace(actor, ModelId.of(id), domain).entries().stream()
-                .map(e -> new AclEntryDto(e.principalType().name(), e.principal(), e.access().name())).toList();
-    }
-
-    private static AclEntry entry(AclEntryDto dto) {
-        try {
-            return new AclEntry(PrincipalType.valueOf(dto.principalType()), dto.principal(),
-                    AclAccess.valueOf(dto.access()));
-        } catch (IllegalArgumentException | NullPointerException invalid) {
-            throw ModelingException.invalid(Message.of(ModelingMessages.ACL_ENTRY_FORMAT));
-        }
-    }
-
-    private WorkspaceId workspace(Optional<UUID> requested) {
-        return workspaces.resolve(requested.map(WorkspaceId::of));
+        return accessLists.replaceAccessList(actor, new ReplaceAccessListCommand(id, entries.stream()
+                        .map(e -> new ReplaceAccessListCommand.Entry(e.principalType(), e.principal(), e.access()))
+                        .toList()))
+                .entries().stream().map(e -> new AclEntryDto(e.principalType(), e.principal(), e.access())).toList();
     }
 }

@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
@@ -9,7 +8,7 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.Idempot
 import uz.salvadore.hamkorbank.archi.modeling.application.port.IdempotencyRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotencyRecord;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
@@ -18,8 +17,11 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentComma
 @Repository
 public class JpaIdempotencyRepository implements IdempotencyRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public JpaIdempotencyRepository(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public Optional<IdempotencyRecord> find(String scope, String actor, String key) {
@@ -28,7 +30,7 @@ public class JpaIdempotencyRepository implements IdempotencyRepository {
         id.actor = actor;
         id.key = key;
         return Optional.ofNullable(em.find(IdempotencyEntity.class, id))
-                .map(e -> new IdempotencyRecord(e.scope, e.actor, e.key, e.fingerprint, e.resultRef, e.createdAt));
+                .map(e -> IdempotencyRecord.restore(e.scope, e.actor, e.key, e.fingerprint, e.resultRef, e.createdAt));
     }
 
     @Override
@@ -44,7 +46,7 @@ public class JpaIdempotencyRepository implements IdempotencyRepository {
             em.persist(entity);
             em.flush();
         } catch (PersistenceException e) {
-            throw new ModelingException(IdempotentCommand.INVARIANT, Failure.CONFLICT,
+            throw new ModelingDomainException(IdempotentCommand.INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.IDEMPOTENT_IN_PROGRESS));
         }
     }

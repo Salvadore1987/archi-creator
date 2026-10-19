@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import uz.salvadore.hamkorbank.archi.interchange.application.ExportDefectException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
-import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 
@@ -39,6 +38,7 @@ public class InterchangeProblemHandler {
             case FORBIDDEN -> HttpStatus.FORBIDDEN;
             case GONE -> HttpStatus.GONE;
             case UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+            case DEFECT -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
         return problem(status, e.code(), text.text(e.reason()), e.details(), request, text);
     }

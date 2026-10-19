@@ -6,12 +6,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.MetamodelCatalog;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.context.ContextElement;
 import uz.salvadore.hamkorbank.archi.advisor.domain.context.ModelContext;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.FindingId;
@@ -44,11 +46,15 @@ final class ResultReader {
         this.findingIds = findingIds;
     }
 
-    /** Находка из вызова инструмента. Пусто — вход не разобрался или цель не в контексте. */
-    Optional<Finding> finding(Map<String, Object> input, ModelContext context) {
+    /**
+     * Находка из вызова инструмента. Пусто — вход не разобрался или цель не в контексте.
+     *
+     * @param names объекты контекста с именами — {@link ModelContext#names()}, построенные один раз на сессию
+     */
+    Optional<Finding> finding(Map<String, Object> input, Map<String, String> names) {
         try {
             String target = text(input, "targetArchiId");
-            if (!context.contains(target)) {
+            if (!names.containsKey(target)) {
                 return Optional.empty();
             }
             String code = CODE.matcher(text(input, "code").strip().toUpperCase(Locale.ROOT)).replaceAll("_");
@@ -57,9 +63,10 @@ final class ResultReader {
                     clip(code, Finding.CODE_MAX),
                     clip(text(input, "message").strip(), Finding.TEXT_MAX),
                     TargetKind.valueOf(text(input, "targetKind")),
-                    ElementRef.of(target, context.nameOf(target).orElse(target)),
-                    Optional.of(clip(text(input, "suggestion").strip(), Finding.TEXT_MAX))));
-        } catch (IllegalArgumentException | ClassCastException | NullPointerException unreadable) {
+                    ElementRef.of(target, names.get(target)),
+                    clip(text(input, "suggestion").strip(), Finding.TEXT_MAX)));
+        } catch (InvalidValueException | IllegalArgumentException | ClassCastException
+                 | NullPointerException unreadable) {
             return Optional.empty();
         }
     }
@@ -78,9 +85,10 @@ final class ResultReader {
             if (!phaseOne.contains(type) || name.isEmpty() || planned.containsKey(key(name))) {
                 continue;
             }
-            Optional<ElementRef> ref = Optional.ofNullable(existing.get(key(name)))
+            ElementRef ref = Optional.ofNullable(existing.get(key(name)))
                     .filter(e -> e.archiType().equals(type))
-                    .map(e -> ElementRef.of(e.archiId(), e.name()));
+                    .map(e -> ElementRef.of(e.archiId(), e.name()))
+                    .orElse(null);
             planned.put(key(name), new PlannedElement(type, name, ref));
         }
         List<PlannedRelation> relations = new ArrayList<>();
@@ -97,18 +105,17 @@ final class ResultReader {
                     && metamodel.permitted(sourceType.get(), targetType.get(), type);
             relations.add(new PlannedRelation(type, source, target, permitted));
         }
-        return new ModelPlan(List.copyOf(planned.values()), relations,
-                Optional.of(textOrEmpty(input, "notes")));
+        return new ModelPlan(List.copyOf(planned.values()), relations, textOrEmpty(input, "notes"));
     }
 
     /** Ответ подсказки и документации: ссылки — только на объекты, которые есть в контексте. */
-    AdvisorAnswer answer(String markdown, ModelContext context) {
+    AdvisorAnswer answer(String markdown, Map<String, String> names) {
         Map<String, ElementRef> references = new LinkedHashMap<>();
         Matcher matcher = REFERENCE.matcher(markdown);
         while (matcher.find()) {
             String id = matcher.group(1);
-            if (context.contains(id)) {
-                references.putIfAbsent(id, ElementRef.of(id, context.nameOf(id).orElse(id)));
+            if (names.containsKey(id)) {
+                references.putIfAbsent(id, ElementRef.of(id, names.get(id)));
             }
         }
         return new AdvisorAnswer(markdown, List.copyOf(references.values()));
@@ -125,7 +132,7 @@ final class ResultReader {
     }
 
     private static String text(Map<String, Object> input, String field) {
-        return (String) java.util.Objects.requireNonNull(input.get(field), field);
+        return (String) Objects.requireNonNull(input.get(field), field);
     }
 
     private static String textOrEmpty(Map<String, Object> input, String field) {

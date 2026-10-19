@@ -14,6 +14,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.Severity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationMatrix;
@@ -29,11 +30,13 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationViolation
  */
 public final class MethodologyCheck {
 
+    /** Код находки о типе, которого нет в метамодели. */
     public static final String UNKNOWN_TYPE = InterchangeCodes.UNKNOWN_ELEMENT_TYPE;
 
     private final RelationMatrix matrix = RelationMatrix.archimate32();
     private final ArchiTypeRegistry registry = ArchiTypeRegistry.archimate32();
 
+    /** Находки методологии по документу: недопустимые связи и неизвестные типы. */
     public List<ImportFinding> check(ModelDocument document, Supplier<FindingId> ids) {
         Map<String, String> types = new HashMap<>();
         document.allNodes().forEach(n -> n.archiType().ifPresent(t -> types.put(n.archiId().value(), t)));
@@ -47,14 +50,14 @@ public final class MethodologyCheck {
             }
             matrix.check(source.get(), target.get(), type.get()).ifPresent(v -> findings.add(new ImportFinding(
                     ids.get(), Severity.ERROR, RelationViolation.CODE, message(v),
-                    Optional.of(relationship.archiId()), Optional.empty())));
+                    relationship.archiId(), null)));
         }
         for (DocumentNode element : document.elements()) {
             String xsiType = element.archiType().orElse("");
             if (registry.findByXsiType(xsiType).isEmpty()) {
                 findings.add(new ImportFinding(ids.get(), Severity.INFO, UNKNOWN_TYPE,
                         Message.of(InterchangeMessages.UNKNOWN_TYPE_STORED, xsiType),
-                        Optional.of(element.archiId()), Optional.empty()));
+                        element.archiId(), null));
             }
         }
         return findings;
@@ -63,7 +66,7 @@ public final class MethodologyCheck {
     private Optional<ArchiType> archiType(String value) {
         try {
             return Optional.of(ArchiType.of(value));
-        } catch (IllegalArgumentException | NullPointerException notArchimate) {
+        } catch (InvalidValueException | NullPointerException notArchimate) {
             return Optional.empty();
         }
     }

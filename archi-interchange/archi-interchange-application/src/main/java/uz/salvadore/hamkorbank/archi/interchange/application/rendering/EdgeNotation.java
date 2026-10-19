@@ -1,15 +1,14 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.rendering;
 
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.AccessType;
 
 /**
  * Оформление связи — семантика нотации, а не стиль: пунктир и наконечники по типу,
- * как на канве.
+ * как на канве. {@code null} — пунктира или наконечника нет.
  */
-record EdgeNotation(Optional<String> dash, Optional<Marker> start, Optional<Marker> end) {
+record EdgeNotation(String dash, Marker start, Marker end) {
 
-    private static final EdgeNotation PLAIN = new EdgeNotation(Optional.empty(), Optional.empty(), Optional.empty());
+    private static final EdgeNotation PLAIN = new EdgeNotation(null, null, null);
 
     /**
      * Наконечник: путь в собственных координатах, точка крепления к линии ({@code refX}, 5).
@@ -44,7 +43,8 @@ record EdgeNotation(Optional<String> dash, Optional<Marker> start, Optional<Mark
         NONE
     }
 
-    static EdgeNotation of(String archiType, Optional<AccessType> accessType, boolean directed) {
+    /** Оформление по типу связи; {@code accessType} — {@code null}, когда атрибута нет. */
+    static EdgeNotation of(String archiType, AccessType accessType, boolean directed) {
         return switch (archiType) {
             case "archimate:CompositionRelationship" -> start(Marker.DIAMOND_FILLED);
             case "archimate:AggregationRelationship" -> start(Marker.DIAMOND_OPEN);
@@ -52,7 +52,7 @@ record EdgeNotation(Optional<String> dash, Optional<Marker> start, Optional<Mark
             case "archimate:RealizationRelationship" -> both("6 4", null, Marker.TRIANGLE_OPEN);
             case "archimate:ServingRelationship" -> both(null, null, Marker.ARROW_OPEN);
             // Без атрибута Archi считает доступ записью.
-            case "archimate:AccessRelationship" -> switch (accessType.orElse(AccessType.WRITE)) {
+            case "archimate:AccessRelationship" -> switch (accessType != null ? accessType : AccessType.WRITE) {
                 case READ -> both("2 3", Marker.ARROW_OPEN, null);
                 case READ_WRITE -> both("2 3", Marker.ARROW_OPEN, Marker.ARROW_OPEN);
                 case ACCESS -> both("2 3", null, null);
@@ -72,6 +72,6 @@ record EdgeNotation(Optional<String> dash, Optional<Marker> start, Optional<Mark
     }
 
     private static EdgeNotation both(String dash, Marker start, Marker end) {
-        return new EdgeNotation(Optional.ofNullable(dash), Optional.ofNullable(start), Optional.ofNullable(end));
+        return new EdgeNotation(dash, start, end);
     }
 }

@@ -1,13 +1,13 @@
 package uz.salvadore.hamkorbank.archi.advisor.application.service;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
+import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -69,7 +69,7 @@ final class Fixture {
     final List<DomainEvent> events = new ArrayList<>();
     final List<LlmRequest> upstreamCalls = new ArrayList<>();
     boolean enabled = true;
-    Optional<Long> limit = Optional.of(1_000_000L);
+    Long limit = 1_000_000L;
     boolean upstreamDown;
     boolean deleted;
     Consumer<LlmListener> script = listener -> {
@@ -83,11 +83,11 @@ final class Fixture {
 
     static ModelGraph graph() {
         return new ModelGraph(
-                List.of(new ContextElement("crm", APP, "CRM", Optional.of("Клиентская система"),
+                List.of(new ContextElement("crm", APP, "CRM", "Клиентская система",
                                 ContextLayer.APPLICATION),
-                        new ContextElement("svc", SERVICE, "Карточка клиента", Optional.empty(),
+                        new ContextElement("svc", SERVICE, "Карточка клиента", null,
                                 ContextLayer.APPLICATION),
-                        new ContextElement("onboarding", PROCESS, "Онбординг", Optional.empty(),
+                        new ContextElement("onboarding", PROCESS, "Онбординг", null,
                                 ContextLayer.BUSINESS)),
                 List.of(new ContextRelation("r1", REALIZATION, "crm", "svc"),
                         new ContextRelation("r2", SERVING, "svc", "onboarding")),
@@ -188,7 +188,7 @@ final class Fixture {
             @Override
             public void save(WorkspaceId workspaceId, boolean on, long monthlyTokenLimit) {
                 enabled = on;
-                limit = Optional.of(monthlyTokenLimit);
+                limit = monthlyTokenLimit;
             }
         };
     }
@@ -196,7 +196,7 @@ final class Fixture {
     LlmPort llm() {
         return request -> {
             if (upstreamDown) {
-                throw new LlmUnavailableException(new java.io.IOException());
+                throw new LlmUnavailableException(new IOException());
             }
             upstreamCalls.add(request);
             FakeStream stream = new FakeStream(script);
@@ -234,7 +234,7 @@ final class Fixture {
     }
 
     AdvisorEvents events() {
-        return (Collection<? extends DomainEvent> published) -> events.addAll(published);
+        return published -> events.addAll(published);
     }
 
     static AdvisorMetrics metrics() {
@@ -245,7 +245,7 @@ final class Fixture {
             }
 
             @Override
-            public void session(AdvisorFunction function, SessionStatus outcome, Optional<RejectionReason> reason) {
+            public void session(AdvisorFunction function, SessionStatus outcome, RejectionReason reason) {
             }
 
             @Override

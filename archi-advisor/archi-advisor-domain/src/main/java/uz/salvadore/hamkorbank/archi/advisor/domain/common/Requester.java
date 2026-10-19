@@ -21,10 +21,12 @@ public record Requester(String subject, Set<Role> roles, Set<String> groups) {
         }
     }
 
+    /** Автор с ролями и без групп. */
     public static Requester of(String subject, Role... roles) {
         return new Requester(subject, Set.of(roles), Set.of());
     }
 
+    /** Есть ли у автора эта роль. */
     public boolean has(Role role) {
         return roles.contains(role);
     }

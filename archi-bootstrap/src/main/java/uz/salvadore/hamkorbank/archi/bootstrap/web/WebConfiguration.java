@@ -8,6 +8,9 @@ import org.springframework.core.Ordered;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/**
+ * Настройка веб-слоя: фильтр корреляции журнала и разбор текущего редактора из аутентификации в аргумент обработчика.
+ */
 @Configuration
 public class WebConfiguration implements WebMvcConfigurer {
 

@@ -73,36 +73,36 @@ public final class EntityMerge {
 
     /**
      * Конфликт: поле, изменённое в обеих ветвях по-разному, или удаление против правки.
+     * У конфликта поля {@code base}, {@code ours} и {@code theirs} — значения этого поля.
+     * У удаления против правки (поле {@value #REMOVAL}) смысл другой: {@code base} — имя
+     * объекта в общем предке, а у стороны, которая объект правила, — перечень изменённых ею
+     * полей через запятую; у стороны, которая объект удалила, — {@code null}.
      *
      * @param id         адрес {@code <archiId>:<поле>}, ключ выбора
-     * @param base       значение в общем предке; нет — пусто
-     * @param ours       «наше»; удалено — пусто. У удаления против правки — изменённые поля
-     * @param resolution сделанный выбор; нет — результат взят «нашим»
+     * @param archiType  тип без префикса {@code archimate:}; у папок и модели {@code null}
+     * @param base       значение в общем предке; нет — {@code null}
+     * @param ours       «наше»; удалено — {@code null}
+     * @param theirs     «их»; удалено — {@code null}
+     * @param resolution сделанный выбор; нет ({@code null}) — результат взят «нашим»
      */
-    public record Conflict(String id, Kind kind, ArchiId archiId, Optional<String> archiType, String name,
-                           String field, Optional<String> base, Optional<String> ours, Optional<String> theirs,
-                           Optional<Side> resolution) {
+    public record Conflict(String id, Kind kind, ArchiId archiId, String archiType, String name,
+                           String field, String base, String ours, String theirs, Side resolution) {
 
         public Conflict {
             Objects.requireNonNull(id, "id");
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(archiId, "archiId");
-            Objects.requireNonNull(archiType, "archiType");
             Objects.requireNonNull(name, "name");
             Objects.requireNonNull(field, "field");
-            Objects.requireNonNull(base, "base");
-            Objects.requireNonNull(ours, "ours");
-            Objects.requireNonNull(theirs, "theirs");
-            Objects.requireNonNull(resolution, "resolution");
         }
     }
 
     /**
      * Удаление как следствие разрешения, а не выбор.
      *
-     * @param view представление узла или ребра; у объектов модели пусто
+     * @param view представление узла или ребра; у объектов модели {@code null}
      */
-    public record Cascade(CascadeKind kind, ArchiId archiId, String name, Reason reason, Optional<ArchiId> view) {
+    public record Cascade(CascadeKind kind, ArchiId archiId, String name, Reason reason, ArchiId view) {
     }
 
     /** Слитый документ, конфликты в порядке объектов и каскад. */
@@ -116,11 +116,12 @@ public final class EntityMerge {
 
         /** Выбор сделан по каждому конфликту. */
         public boolean resolved() {
-            return conflicts.stream().allMatch(c -> c.resolution().isPresent());
+            return conflicts.stream().allMatch(c -> c.resolution() != null);
         }
 
+        /** Адреса конфликтов, по которым ещё нет выбора. */
         public List<String> unresolved() {
-            return conflicts.stream().filter(c -> c.resolution().isEmpty()).map(Conflict::id).toList();
+            return conflicts.stream().filter(c -> c.resolution() == null).map(Conflict::id).toList();
         }
 
         /** Выборы по адресам, которых среди конфликтов нет: отчёт, по которому выбирали, устарел. */
@@ -133,21 +134,22 @@ public final class EntityMerge {
     private EntityMerge() {
     }
 
+    /** Сливает три состояния модели по объектам и полям с учётом выборов по конфликтам. */
     public static Result merge(ModelDocument base, ModelDocument ours, ModelDocument theirs,
                                Map<String, Side> resolutions) {
         return new Merger(base, ours, theirs, Map.copyOf(resolutions)).run();
     }
 
-    /** Объект одной стороны: модель (корень) или узел; {@code parent} пуст у корня и у детей корня. */
+    /** Объект одной стороны: модель (корень) или узел; {@code parent} — {@code null} у корня и у детей корня. */
     private record Obj(ArchiId id, Kind kind, String tag, Attributes attributes, List<DocumentContent> content,
-                       Optional<ArchiId> parent) {
+                       ArchiId parent) {
 
         String name() {
             return attributes.get(NAME).orElse("");
         }
 
-        Optional<String> archiType() {
-            return attributes.get(XSI_TYPE).map(EntityMerge::bareType);
+        String archiType() {
+            return attributes.get(XSI_TYPE).map(EntityMerge::bareType).orElse(null);
         }
     }
 
@@ -164,10 +166,6 @@ public final class EntityMerge {
     private record RawKey(int index) implements Key {
     }
 
-    /** Значение без позиций: сдвиг соседей значение не меняет. */
-    private record Shape(String tag, List<Attribute> attributes, Optional<String> text, List<Shape> content) {
-    }
-
     /** Состояние одной стороны: объекты по идентификатору в порядке файла. */
     private static final class State {
 
@@ -177,11 +175,11 @@ public final class EntityMerge {
         State(ModelDocument document) {
             this.document = document;
             objects.put(document.archiId(), new Obj(document.archiId(), Kind.MODEL, "", document.attributes(),
-                    document.content(), Optional.empty()));
-            nodes(document.content()).forEach(node -> collect(node, Optional.empty()));
+                    document.content(), null));
+            nodes(document.content()).forEach(node -> collect(node, null));
         }
 
-        private void collect(DocumentNode node, Optional<ArchiId> parent) {
+        private void collect(DocumentNode node, ArchiId parent) {
             Optional<Kind> kind = ModelChanges.kind(node);
             if (kind.isEmpty()) {
                 return;
@@ -189,7 +187,7 @@ public final class EntityMerge {
             objects.putIfAbsent(node.archiId(), new Obj(node.archiId(), kind.get(), node.tag(), node.attributes(),
                     node.content(), parent));
             if (kind.get() == Kind.FOLDER) {
-                node.children().forEach(child -> collect(child, Optional.of(node.archiId())));
+                node.children().forEach(child -> collect(child, node.archiId()));
             }
         }
 
@@ -197,44 +195,45 @@ public final class EntityMerge {
             return Optional.ofNullable(objects.get(id));
         }
 
-        /** Прямые дети-объекты контейнера: корень — пустой идентификатор. */
-        Set<ArchiId> members(Optional<ArchiId> container) {
+        /** Прямые дети-объекты контейнера: корень — {@code null}. */
+        Set<ArchiId> members(ArchiId container) {
             Set<ArchiId> members = new LinkedHashSet<>();
             objects.values().forEach(o -> {
-                if (o.kind() != Kind.MODEL && o.parent().equals(container)) {
+                if (o.kind() != Kind.MODEL && Objects.equals(o.parent(), container)) {
                     members.add(o.id());
                 }
             });
             return members;
         }
 
-        String nameOf(Optional<ArchiId> folder) {
-            return folder.flatMap(this::find).map(Obj::name).orElseGet(document::name);
+        String nameOf(ArchiId folder) {
+            return Optional.ofNullable(folder).flatMap(this::find).map(Obj::name).orElseGet(document::name);
         }
     }
 
-    /** Объект результата: откуда взято каждое поле. */
-    private record Merged(ArchiId id, Kind kind, Optional<Obj> ours, Optional<Obj> theirs, Map<String, Side> fields) {
+    /** Объект результата: откуда взято каждое поле; стороны, где объекта нет, — {@code null}. */
+    private record Merged(ArchiId id, Kind kind, Obj ours, Obj theirs, Map<String, Side> fields) {
 
         Obj side(Side side) {
-            return (side == Side.OURS ? ours : theirs).orElseThrow();
+            return Objects.requireNonNull(side == Side.OURS ? ours : theirs);
         }
 
         Obj primary() {
-            return ours.orElseGet(theirs::orElseThrow);
+            return ours != null ? ours : Objects.requireNonNull(theirs);
         }
 
         Side sideOf(String field) {
-            return fields.getOrDefault(field, ours.isPresent() ? Side.OURS : Side.THEIRS);
+            return fields.getOrDefault(field, ours != null ? Side.OURS : Side.THEIRS);
         }
 
-        Optional<ArchiId> parent() {
+        /** Папка или родитель; {@code null} — корень модели. */
+        ArchiId parent() {
             return side(sideOf(ModelChanges.FOLDER)).parent();
         }
 
         Optional<String> attribute(String name) {
             Side side = sideOf(ATTRIBUTE + name);
-            return (side == Side.OURS ? ours : theirs).flatMap(o -> o.attributes().get(name));
+            return Optional.ofNullable(side == Side.OURS ? ours : theirs).flatMap(o -> o.attributes().get(name));
         }
 
         String name() {
@@ -256,6 +255,8 @@ public final class EntityMerge {
         private final Map<String, Side> resolutions;
         private final Map<ArchiId, Merged> result = new LinkedHashMap<>();
         private final List<Conflict> conflicts = new ArrayList<>();
+        /** Контейнер → объекты в нём, в порядке результата; корень модели — ключ {@code null}. */
+        private final Map<ArchiId, List<ArchiId>> children = new HashMap<>();
         private final List<Cascade> cascade = new ArrayList<>();
 
         Merger(ModelDocument base, ModelDocument ours, ModelDocument theirs, Map<String, Side> resolutions) {
@@ -278,8 +279,10 @@ public final class EntityMerge {
             cascadeFolders();
             cascadeRelationships();
             Set<ArchiId> present = result.keySet();
+            result.values().stream().filter(c -> c.kind() != Kind.MODEL)
+                    .forEach(c -> children.computeIfAbsent(c.parent(), parent -> new ArrayList<>()).add(c.id()));
             Merged model = result.get(ours.document.archiId());
-            List<DocumentContent> content = content(model, Optional.empty(), present);
+            List<DocumentContent> content = content(model, null, present);
             ModelDocument document = new ModelDocument(attributes(model), content);
             return new Result(document, conflicts, cascade);
         }
@@ -291,52 +294,48 @@ public final class EntityMerge {
             Obj o = ours.objects.get(id);
             Obj t = theirs.objects.get(theirs.document.archiId());
             Obj b = base.objects.get(base.document.archiId());
-            Map<String, Side> fields = sides(id, Kind.MODEL, o.name(), Optional.empty(), Optional.of(b),
-                    Optional.of(o), Optional.of(t));
-            result.put(id, new Merged(id, Kind.MODEL, Optional.of(o), Optional.of(t), fields));
+            Map<String, Side> fields = sides(id, Kind.MODEL, o.name(), null, b, o, t);
+            result.put(id, new Merged(id, Kind.MODEL, o, t, fields));
         }
 
         private void mergeObject(ArchiId id) {
-            Optional<Obj> b = base.find(id);
-            Optional<Obj> o = ours.find(id);
-            Optional<Obj> t = theirs.find(id);
-            Kind kind = o.or(() -> t).orElseThrow().kind();
-            if (b.isEmpty() || o.isPresent() && t.isPresent()) {
-                if (o.isPresent() && t.isPresent()) {
-                    Obj named = o.get();
-                    result.put(id, new Merged(id, kind, o, t,
-                            sides(id, kind, named.name(), named.archiType(), b, o, t)));
+            Obj b = base.objects.get(id);
+            Obj o = ours.objects.get(id);
+            Obj t = theirs.objects.get(id);
+            Obj kept = Objects.requireNonNull(o != null ? o : t);
+            Kind kind = kept.kind();
+            if (b == null || o != null && t != null) {
+                if (o != null && t != null) {
+                    result.put(id, new Merged(id, kind, o, t, sides(id, kind, o.name(), o.archiType(), b, o, t)));
                 } else {
                     result.put(id, new Merged(id, kind, o, t, Map.of()));
                 }
                 return;
             }
-            boolean oursChanged = o.isPresent() && changed(b.get(), o.get(), ours);
-            boolean theirsChanged = t.isPresent() && changed(b.get(), t.get(), theirs);
-            if (o.isEmpty() && !theirsChanged || t.isEmpty() && !oursChanged) {
+            boolean oursChanged = o != null && changed(b, o, ours);
+            boolean theirsChanged = t != null && changed(b, t, theirs);
+            if (o == null && !theirsChanged || t == null && !oursChanged) {
                 return;
             }
-            Obj kept = o.or(() -> t).orElseThrow();
             String conflictId = conflictId(id, REMOVAL);
-            Optional<Side> choice = Optional.ofNullable(resolutions.get(conflictId));
-            Optional<String> oursValue = o.map(obj -> changedFields(b.get(), obj));
-            Optional<String> theirsValue = t.map(obj -> changedFields(b.get(), obj));
+            Side choice = resolutions.get(conflictId);
+            String oursValue = o == null ? null : changedFields(b, o);
+            String theirsValue = t == null ? null : changedFields(b, t);
             conflicts.add(new Conflict(conflictId, kind, id, kept.archiType(), kept.name(), REMOVAL,
-                    Optional.of(b.get().name()), oursValue, theirsValue, choice));
-            Side side = choice.orElse(Side.OURS);
-            boolean keep = side == Side.OURS ? o.isPresent() : t.isPresent();
+                    b.name(), oursValue, theirsValue, choice));
+            Side side = choice != null ? choice : Side.OURS;
+            boolean keep = side == Side.OURS ? o != null : t != null;
             if (keep) {
-                result.put(id, new Merged(id, kind, side == Side.OURS ? o : Optional.empty(),
-                        side == Side.THEIRS ? t : Optional.empty(), Map.of()));
+                result.put(id, new Merged(id, kind, side == Side.OURS ? o : null, side == Side.THEIRS ? t : null,
+                        Map.of()));
             }
         }
 
-        /** Откуда взять каждое поле; спорные — по выбору, без выбора «наше». */
-        private Map<String, Side> sides(ArchiId id, Kind kind, String name, Optional<String> archiType,
-                                         Optional<Obj> b, Optional<Obj> o, Optional<Obj> t) {
-            Map<String, Object> baseFields = b.map(EntityMerge::fields).orElseGet(Map::of);
-            Map<String, Object> oursFields = fields(o.orElseThrow());
-            Map<String, Object> theirsFields = fields(t.orElseThrow());
+        /** Откуда взять каждое поле; спорные — по выбору, без выбора «наше». Нет объекта в базе — {@code null}. */
+        private Map<String, Side> sides(ArchiId id, Kind kind, String name, String archiType, Obj b, Obj o, Obj t) {
+            Map<String, Object> baseFields = b == null ? Map.of() : fields(b);
+            Map<String, Object> oursFields = fields(Objects.requireNonNull(o));
+            Map<String, Object> theirsFields = fields(Objects.requireNonNull(t));
             Set<String> names = new LinkedHashSet<>(oursFields.keySet());
             names.addAll(theirsFields.keySet());
             names.addAll(baseFields.keySet());
@@ -352,10 +351,10 @@ public final class EntityMerge {
                 } else {
                     String display = display(field);
                     String conflictId = conflictId(id, display);
-                    Optional<Side> choice = Optional.ofNullable(resolutions.get(conflictId));
+                    Side choice = resolutions.get(conflictId);
                     conflicts.add(new Conflict(conflictId, kind, id, archiType, name, display,
                             describe(field, b, base), describe(field, o, ours), describe(field, t, theirs), choice));
-                    sides.put(field, choice.orElse(Side.OURS));
+                    sides.put(field, choice != null ? choice : Side.OURS);
                 }
             }
             return sides;
@@ -372,8 +371,8 @@ public final class EntityMerge {
             if (before.kind() != Kind.FOLDER) {
                 return false;
             }
-            Set<ArchiId> old = base.members(Optional.of(before.id()));
-            for (ArchiId member : side.members(Optional.of(after.id()))) {
+            Set<ArchiId> old = base.members(before.id());
+            for (ArchiId member : side.members(after.id())) {
                 if (!old.contains(member) || changed(base.objects.get(member), side.objects.get(member), side)) {
                     return true;
                 }
@@ -391,24 +390,24 @@ public final class EntityMerge {
                     .collect(Collectors.joining(", "));
         }
 
-        private Optional<String> describe(String field, Optional<Obj> obj, State state) {
-            if (obj.isEmpty()) {
-                return Optional.empty();
+        /** Значение поля стороны для отчёта; объекта нет ({@code null}) или атрибута нет — {@code null}. */
+        private String describe(String field, Obj o, State state) {
+            if (o == null) {
+                return null;
             }
-            Obj o = obj.get();
             if (field.startsWith(ATTRIBUTE)) {
-                return o.attributes().get(field.substring(ATTRIBUTE.length()));
+                return o.attributes().get(field.substring(ATTRIBUTE.length())).orElse(null);
             }
             return switch (field) {
-                case ModelChanges.FOLDER -> Optional.of(state.nameOf(o.parent()));
-                case ModelChanges.DIAGRAM -> Optional.of(Integer.toString(diagramObjects(nodes(o.content()))));
-                case ModelChanges.RAW_XML -> Optional.of(raws(o.content()).stream().map(RawXmlFragment::xml)
-                        .collect(Collectors.joining("\n")));
-                case ModelChanges.PROPERTIES -> Optional.of(values(o.content(), field).stream()
+                case ModelChanges.FOLDER -> state.nameOf(o.parent());
+                case ModelChanges.DIAGRAM -> Integer.toString(diagramObjects(nodes(o.content())));
+                case ModelChanges.RAW_XML -> raws(o.content()).stream().map(RawXmlFragment::xml)
+                        .collect(Collectors.joining("\n"));
+                case ModelChanges.PROPERTIES -> values(o.content(), field).stream()
                         .map(v -> v.attribute("key").orElse("") + " = " + v.attribute("value").orElse(""))
-                        .collect(Collectors.joining("\n")));
-                default -> Optional.of(values(o.content(), field).stream()
-                        .map(v -> v.text().orElse("")).collect(Collectors.joining("\n")));
+                        .collect(Collectors.joining("\n"));
+                default -> values(o.content(), field).stream()
+                        .map(v -> Objects.requireNonNullElse(v.text(), "")).collect(Collectors.joining("\n"));
             };
         }
 
@@ -429,17 +428,15 @@ public final class EntityMerge {
                     }
                     found = true;
                     Optional<Merged> revertible = cycle.stream().map(result::get)
-                            .filter(m -> m.sideOf(ModelChanges.FOLDER) == Side.THEIRS && m.ours().isPresent())
+                            .filter(m -> m.sideOf(ModelChanges.FOLDER) == Side.THEIRS && m.ours() != null)
                             .findFirst();
                     if (revertible.isPresent()) {
                         Merged m = revertible.get();
                         result.put(m.id(), m.with(ModelChanges.FOLDER, Side.OURS));
-                        cascade.add(new Cascade(CascadeKind.FOLDER, m.id(), m.name(), Reason.FOLDER_CYCLE,
-                                Optional.empty()));
+                        cascade.add(new Cascade(CascadeKind.FOLDER, m.id(), m.name(), Reason.FOLDER_CYCLE, null));
                     } else {
                         Merged m = result.remove(cycle.getFirst());
-                        cascade.add(new Cascade(CascadeKind.FOLDER, m.id(), m.name(), Reason.FOLDER_CYCLE,
-                                Optional.empty()));
+                        cascade.add(new Cascade(CascadeKind.FOLDER, m.id(), m.name(), Reason.FOLDER_CYCLE, null));
                     }
                     break;
                 }
@@ -448,14 +445,14 @@ public final class EntityMerge {
 
         private List<ArchiId> cycle(ArchiId start) {
             List<ArchiId> path = new ArrayList<>();
-            Optional<ArchiId> current = Optional.of(start);
-            while (current.isPresent() && result.containsKey(current.get())) {
-                int seen = path.indexOf(current.get());
+            ArchiId current = start;
+            while (current != null && result.containsKey(current)) {
+                int seen = path.indexOf(current);
                 if (seen >= 0) {
                     return path.subList(seen, path.size());
                 }
-                path.add(current.get());
-                current = result.get(current.get()).parent();
+                path.add(current);
+                current = result.get(current).parent();
             }
             return List.of();
         }
@@ -469,11 +466,11 @@ public final class EntityMerge {
                     if (m.kind() == Kind.MODEL) {
                         continue;
                     }
-                    Optional<ArchiId> parent = m.parent();
-                    if (parent.isPresent() && !result.containsKey(parent.get())) {
+                    ArchiId parent = m.parent();
+                    if (parent != null && !result.containsKey(parent)) {
                         result.remove(m.id());
                         cascade.add(new Cascade(cascadeKind(m.kind()), m.id(), m.name(), Reason.FOLDER_REMOVED,
-                                Optional.empty()));
+                                null));
                         removed = true;
                     }
                 }
@@ -494,7 +491,7 @@ public final class EntityMerge {
                     if (dangling) {
                         result.remove(m.id());
                         cascade.add(new Cascade(CascadeKind.RELATIONSHIP, m.id(), m.name(),
-                                Reason.RELATION_ENDPOINT_REMOVED, Optional.empty()));
+                                Reason.RELATION_ENDPOINT_REMOVED, null));
                         removed = true;
                     }
                 }
@@ -514,18 +511,23 @@ public final class EntityMerge {
                     m.attribute(attribute.name()).ifPresent(v -> list.add(new Attribute(attribute.name(), v)));
                 }
             }
-            for (Optional<Obj> other : List.of(m.ours(), m.theirs())) {
-                other.ifPresent(o -> o.attributes().forEach(a -> {
+            for (Obj other : existing(m)) {
+                other.attributes().forEach(a -> {
                     if (seen.add(a.name())) {
                         m.attribute(a.name()).ifPresent(v -> list.add(new Attribute(a.name(), v)));
                     }
-                }));
+                });
             }
             return new Attributes(list);
         }
 
-        /** Содержимое объекта: дети-объекты, значения и фрагменты в слитом порядке. */
-        private List<DocumentContent> content(Merged m, Optional<ArchiId> container, Set<ArchiId> present) {
+        /** Стороны, где объект есть: «наша», затем «их». */
+        private static List<Obj> existing(Merged m) {
+            return Stream.of(m.ours(), m.theirs()).filter(Objects::nonNull).toList();
+        }
+
+        /** Содержимое объекта: дети-объекты, значения и фрагменты в слитом порядке; корень — {@code null}. */
+        private List<DocumentContent> content(Merged m, ArchiId container, Set<ArchiId> present) {
             boolean view = m.kind() == Kind.VIEW;
             Side diagramSide = m.sideOf(ModelChanges.DIAGRAM);
             Map<ArchiId, DocumentNode> diagram = new LinkedHashMap<>();
@@ -535,16 +537,15 @@ public final class EntityMerge {
                         .forEach(node -> diagram.put(node.archiId(), node));
                 diagram.keySet().forEach(id -> keys.add(new NodeKey(id)));
             } else {
-                result.values().stream().filter(c -> c.kind() != Kind.MODEL && c.parent().equals(container))
-                        .forEach(c -> keys.add(new NodeKey(c.id())));
+                children.getOrDefault(container, List.of()).forEach(id -> keys.add(new NodeKey(id)));
             }
             Map<String, List<DocumentContent>> fieldItems = new LinkedHashMap<>();
-            for (Optional<Obj> side : List.of(m.ours(), m.theirs())) {
-                side.ifPresent(o -> o.content().forEach(item -> {
+            for (Obj side : existing(m)) {
+                side.content().forEach(item -> {
                     if (!(item instanceof DocumentNode)) {
                         fieldItems.putIfAbsent(field(item), List.of());
                     }
-                }));
+                });
             }
             fieldItems.replaceAll((field, empty) -> items(m.side(m.sideOf(field)).content(), field));
             fieldItems.forEach((field, list) -> {
@@ -552,10 +553,9 @@ public final class EntityMerge {
                     keys.add(field.equals(ModelChanges.RAW_XML) ? new RawKey(i) : new ValueKey(field, i));
                 }
             });
-            Optional<List<Key>> forced = view ? Optional.of(sequence(m.side(diagramSide).content())) : Optional.empty();
             List<Key> order = order(sequence(base.find(m.id()).map(Obj::content).orElse(List.of())),
-                    sequence(m.ours().map(Obj::content).orElse(List.of())),
-                    sequence(m.theirs().map(Obj::content).orElse(List.of())), forced, keys);
+                    sequence(m.ours() == null ? List.of() : m.ours().content()),
+                    sequence(m.theirs() == null ? List.of() : m.theirs().content()), view ? diagramSide : null, keys);
             List<DocumentContent> content = new ArrayList<>();
             for (Key key : order) {
                 DocumentContent item = switch (key) {
@@ -571,7 +571,7 @@ public final class EntityMerge {
 
         private DocumentNode node(Merged m, Set<ArchiId> present) {
             return new DocumentNode(m.primary().tag(), DocumentOrder.of(0), attributes(m),
-                    content(m, Optional.of(m.id()), present));
+                    content(m, m.id(), present));
         }
 
         /**
@@ -591,7 +591,7 @@ public final class EntityMerge {
                 if (dangling) {
                     removeSubtree(node, removed);
                     cascade.add(new Cascade(diagramKind(node), node.archiId(), diagramName(node),
-                            Reason.DIAGRAM_REFERENCE_REMOVED, Optional.of(view)));
+                            Reason.DIAGRAM_REFERENCE_REMOVED, view));
                 }
             }
             boolean more = true;
@@ -606,7 +606,7 @@ public final class EntityMerge {
                     if (dangling) {
                         removeSubtree(node, removed);
                         cascade.add(new Cascade(CascadeKind.VIEW_CONNECTION, node.archiId(), diagramName(node),
-                                Reason.CONNECTION_ENDPOINT_REMOVED, Optional.of(view)));
+                                Reason.CONNECTION_ENDPOINT_REMOVED, view));
                         more = true;
                     }
                 }
@@ -661,15 +661,16 @@ public final class EntityMerge {
 
     /**
      * Слитый порядок ключей: основа — ветвь, менявшая относительный порядок общих с базой
-     * ключей (или заданная), остальное встаёт после всех соседей, стоявших перед ним в своей ветви.
+     * ключей, или заданная ({@code forced} — сторона, чья диаграмма взята целиком; не задана —
+     * {@code null}); остальное встаёт после всех соседей, стоявших перед ним в своей ветви.
      */
-    private static List<Key> order(List<Key> base, List<Key> ours, List<Key> theirs, Optional<List<Key>> forced,
+    private static List<Key> order(List<Key> base, List<Key> ours, List<Key> theirs, Side forced,
                                    Set<Key> keep) {
         List<Key> primary;
         List<Key> other;
-        if (forced.isPresent()) {
-            primary = forced.get();
-            other = primary == ours ? theirs : ours;
+        if (forced != null) {
+            primary = forced == Side.OURS ? ours : theirs;
+            other = forced == Side.OURS ? theirs : ours;
         } else if (!reordered(base, ours) && reordered(base, theirs)) {
             primary = theirs;
             other = ours;
@@ -678,19 +679,20 @@ public final class EntityMerge {
             other = theirs;
         }
         List<Key> merged = new ArrayList<>(primary.stream().filter(keep::contains).distinct().toList());
+        Set<Key> placed = new HashSet<>(merged);
         for (List<Key> source : List.of(other, ours, theirs, base)) {
             int anchor = -1;
             for (Key key : source) {
-                int at = merged.indexOf(key);
-                if (at >= 0) {
-                    anchor = Math.max(anchor, at);
+                if (placed.contains(key)) {
+                    anchor = Math.max(anchor, merged.indexOf(key));
                 } else if (keep.contains(key)) {
                     merged.add(anchor + 1, key);
+                    placed.add(key);
                     anchor++;
                 }
             }
         }
-        keep.stream().filter(k -> !merged.contains(k)).forEach(merged::add);
+        keep.stream().filter(k -> !placed.contains(k)).forEach(merged::add);
         return merged;
     }
 
@@ -730,14 +732,15 @@ public final class EntityMerge {
         }
         for (DocumentContent item : obj.content()) {
             if (!(item instanceof DocumentNode)) {
-                fields.computeIfAbsent(field(item), f -> shapes(items(obj.content(), f)));
+                fields.computeIfAbsent(field(item), f -> ContentShapes.of(items(obj.content(), f)));
             }
         }
         if (obj.kind() != Kind.MODEL) {
-            fields.put(ModelChanges.FOLDER, obj.parent());
+            // Корень — пустой Optional, а не null: отсутствие объекта в базе (null) и корень различаются.
+            fields.put(ModelChanges.FOLDER, Optional.ofNullable(obj.parent()));
         }
         if (obj.kind() == Kind.VIEW) {
-            fields.put(ModelChanges.DIAGRAM, shapes(List.copyOf(nodes(obj.content()))));
+            fields.put(ModelChanges.DIAGRAM, ContentShapes.of(nodes(obj.content())));
         }
         return fields;
     }
@@ -771,19 +774,6 @@ public final class EntityMerge {
         return content.stream().filter(DocumentNode.class::isInstance).map(DocumentNode.class::cast).toList();
     }
 
-    private static List<Shape> shapes(List<? extends DocumentContent> content) {
-        return content.stream().map(EntityMerge::shape).toList();
-    }
-
-    private static Shape shape(DocumentContent item) {
-        return switch (item) {
-            case DocumentNode node -> new Shape(node.tag(), node.attributes().list(), Optional.empty(),
-                    shapes(node.content()));
-            case DocumentValue value -> new Shape(value.tag(), value.attributes().list(), value.text(), List.of());
-            case RawXmlFragment raw -> new Shape("", List.of(), Optional.of(raw.xml()), List.of());
-        };
-    }
-
     private static int diagramObjects(List<DocumentNode> nodes) {
         int count = 0;
         for (DocumentNode node : nodes) {
@@ -815,13 +805,12 @@ public final class EntityMerge {
         return id.value() + ":" + field;
     }
 
-    /** Имя поля в отчёте: атрибут — своим именем, {@code xsi:type} — {@code type}. */
+    /** Имя поля в отчёте — по тому же правилу, что в отчёте об изменениях. */
     private static String display(String field) {
         if (!field.startsWith(ATTRIBUTE)) {
             return field;
         }
-        String name = field.substring(ATTRIBUTE.length());
-        return name.equals(XSI_TYPE) ? ModelChanges.TYPE : name;
+        return ModelChanges.attributeField(field.substring(ATTRIBUTE.length()));
     }
 
     private static CascadeKind cascadeKind(Kind kind) {

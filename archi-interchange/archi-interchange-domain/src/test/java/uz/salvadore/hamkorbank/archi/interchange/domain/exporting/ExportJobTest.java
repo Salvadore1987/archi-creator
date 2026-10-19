@@ -1,8 +1,8 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
@@ -11,10 +11,10 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
+import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ExportJobId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.LossEntryId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
@@ -43,9 +43,12 @@ class ExportJobTest {
         assertEquals(ExportStatus.REQUESTED, job.status());
 
         job.render(7, FILE, new LossReport(List.of(loss()), true));
-        job.deliver();
+        job.deliver(NOW);
         assertEquals(ExportStatus.DELIVERED, job.status());
-        assertTrue(job.lossReport().isPresent());
+        assertNotNull(job.lossReport());
+        ExportJobCompletedEvent completed = (ExportJobCompletedEvent) job.pullEvents().getFirst();
+        assertEquals(1, completed.lossEntryCount());
+        assertEquals(List.of(), job.pullEvents());
     }
 
     @Test
@@ -77,29 +80,33 @@ class ExportJobTest {
     void failIsAllowedOnlyBeforeDelivery() {
         ExportJob failed = job(ExportFormat.PNG, 1);
         failed.fail("Batik упал");
-        assertEquals(Optional.of("Batik упал"), failed.failureReason());
+        assertEquals("Batik упал", failed.failureReason());
 
         ExportJob delivered = job(ExportFormat.ARCHIMATE, 1);
         delivered.render(1, FILE, LossReport.lossless());
-        delivered.deliver();
-        assertThrows(IllegalStateException.class, () -> delivered.fail("поздно"));
+        delivered.deliver(NOW);
+        assertThrows(IllegalExportTransitionException.class, () -> delivered.fail("поздно"));
     }
 
     @Test
     @DisplayName("отпечаток артефакта считается по содержимому")
     void artifactHashMatchesContent() {
-        assertThrows(IllegalArgumentException.class, () -> new Artifact(new byte[] {1}, "application/xml", "a",
-                Artifact.of(new byte[] {2}, "application/xml", "a").hash()));
+        byte[] content = {1, 2, 3};
+        Artifact artifact = Artifact.of(content, "application/xml", "a");
+        content[0] = 9;
+
+        assertEquals(ContentHash.of(new byte[] {1, 2, 3}), artifact.hash());
+        assertEquals(3, artifact.size());
     }
 
     private static ExportJob job(ExportFormat format, long version) {
         return ExportJob.request(ExportJobId.next(UUIDS), new WorkspaceId(IDS.generate()),
-                new ModelId(IDS.generate()), Optional.empty(), format, ExportOptions.none(), version,
+                new ModelId(IDS.generate()), null, format, ExportOptions.none(), version,
                 "architect", NOW);
     }
 
     private static LossEntry loss() {
-        return new LossEntry(LossEntryId.next(UUIDS), ArchiId.of("id-e1"), "element", "raw_xml",
+        return new LossEntry(LossEntryId.next(UUIDS), ArchiId.of("id-e1"), LossObjectKind.ELEMENT, "raw_xml",
                 "в OEF нет места для непрозрачных узлов");
     }
 }

@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.codec;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -9,6 +10,9 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attribute;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentContent;
@@ -70,7 +74,7 @@ class ArchiReaderTest {
 
         DocumentNode element = document.folders().getFirst().children().getFirst();
         RawXmlFragment feature = assertInstanceOf(RawXmlFragment.class, element.content().get(1));
-        assertEquals(Optional.of(ArchiId.of("id-e00000000000000000000009")), feature.parentArchiId());
+        assertEquals(ArchiId.of("id-e00000000000000000000009"), feature.parentArchiId());
         assertEquals(1, feature.order().value());
         // Внутренние пробелы — как в файле: фрагмент стоит на глубине 4, его ребёнок — на 6.
         assertEquals("""
@@ -79,7 +83,7 @@ class ArchiReaderTest {
                     </feature>""", feature.xml());
 
         RawXmlFragment profile = document.orphanFragments().getFirst();
-        assertEquals(Optional.empty(), profile.parentArchiId());
+        assertNull(profile.parentArchiId());
         assertEquals(1, profile.order().value());
         assertTrue(profile.xml().startsWith("<profile name=\"Банк\" id=\"id-p00000000000000000000001\""));
     }
@@ -173,12 +177,41 @@ class ArchiReaderTest {
     }
 
     @Test
+    @DisplayName("Вложенность глубже предела — дефект файла, а не переполнение стека разбора")
+    void nestingDeeperThanLimitIsDefect() {
+        StringBuilder folders = new StringBuilder();
+        for (int i = 0; i < 80; i++) {
+            folders.append("<folder name=\"f\" id=\"id-f").append(i).append("\">");
+        }
+        for (int i = 0; i < 80; i++) {
+            folders.append("</folder>");
+        }
+
+        CorruptDocumentException e = assertThrows(CorruptDocumentException.class,
+                () -> Xml.read(Xml.model(folders.toString())));
+
+        assertEquals(InterchangeCodes.NESTING_TOO_DEEP, e.defects().getFirst().code());
+    }
+
+    @Test
+    @DisplayName("Испорченный XML — отказ с местом ошибки, без текста парсера: он на языке сервера и о его устройстве")
+    void malformedXmlKeepsParserTextOut() {
+        CorruptDocumentException e = assertThrows(CorruptDocumentException.class,
+                () -> Xml.read(Xml.model("<folder name=\"a\" name=\"b\" id=\"id-f\"/>")));
+
+        DocumentDefect defect = e.defects().getFirst();
+        assertEquals(InterchangeCodes.MALFORMED_XML, defect.code());
+        assertEquals(Message.of(InterchangeMessages.XML_UNREADABLE_NO_DETAIL), defect.message());
+        assertTrue(defect.line() != null);
+    }
+
+    @Test
     @DisplayName("файл не Archi — отказ с указанием корня")
     void foreignRootIsRejected() {
         CorruptDocumentException e = assertThrows(CorruptDocumentException.class,
                 () -> Xml.read("<?xml version=\"1.0\"?>\n<model xmlns=\"urn:other\" id=\"id-1\"/>"));
 
-        assertEquals(DocumentDefect.NOT_ARCHIMATE_MODEL, e.defects().getFirst().code());
+        assertEquals(InterchangeCodes.NOT_ARCHIMATE_MODEL, e.defects().getFirst().code());
     }
 
     private static List<String> names(DocumentNode node) {

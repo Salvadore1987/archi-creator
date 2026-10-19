@@ -7,10 +7,14 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.CorruptDocumentException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.AggregateRoot;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.DomainEvent;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
@@ -29,11 +33,10 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
  * данным. Повреждённый файл отклоняется на разборе в любом режиме; находка
  * {@code ERROR} на проверке отклоняет только в строгом.
  */
-public final class ImportSession {
+public final class ImportSession extends AggregateRoot<ImportSessionId> {
 
-    private final ImportSessionId id;
     private final WorkspaceId workspaceId;
-    private final Optional<ModelId> targetModelId;
+    private final ModelId targetModelId;
     private final String sourceName;
     private final ContentHash sourceHash;
     private final long sourceSize;
@@ -48,10 +51,10 @@ public final class ImportSession {
     private Instant finishedAt;
     private ModelId appliedModelId;
     private long appliedVersionNo;
-    private final List<ImportApplied> events = new ArrayList<>();
+    private final List<DomainEvent> events = new ArrayList<>();
 
     private ImportSession(ImportSessionId id, ImportRequest request, Instant startedAt) {
-        this.id = Objects.requireNonNull(id, "id");
+        super(id);
         this.workspaceId = request.workspaceId();
         this.targetModelId = request.targetModelId();
         this.sourceName = request.sourceName();
@@ -66,17 +69,18 @@ public final class ImportSession {
     /**
      * Сессия из хранилища. Документ не хранится: он нужен лишь в пределах одного
      * импорта, а отчёт и результат — навсегда. Повтор по ключу отдаёт этот результат,
-     * а не применяет документ снова.
+     * а не применяет документ снова. {@code null} в {@code finishedAt} и {@code appliedModelId} —
+     * сессия не завершена и ничего не применила.
      */
     public static ImportSession restore(ImportSessionId id, ImportRequest request, Instant startedAt,
                                         ImportStatus status, List<ImportFinding> findings,
-                                        Optional<Instant> finishedAt, Optional<ModelId> appliedModelId,
+                                        Instant finishedAt, ModelId appliedModelId,
                                         long appliedVersionNo) {
         ImportSession session = new ImportSession(id, request, startedAt);
         session.status = Objects.requireNonNull(status, "status");
         session.findings.addAll(findings);
-        session.finishedAt = finishedAt.orElse(null);
-        session.appliedModelId = appliedModelId.orElse(null);
+        session.finishedAt = finishedAt;
+        session.appliedModelId = appliedModelId;
         session.appliedVersionNo = appliedVersionNo;
         return session;
     }
@@ -91,7 +95,7 @@ public final class ImportSession {
      * в {@code REJECTED} сразу, в любом режиме — со всеми дефектами в отчёте.
      */
     public void parse(ArchiDocumentReader reader, InputStream content, Supplier<FindingId> findingIds, Instant now) {
-        require(ImportStatus.RECEIVED, "parse");
+        require(ImportStatus.RECEIVED, Message.of(InterchangeMessages.COMMAND_PARSE_IMPORT));
         try {
             document = reader.read(content);
             status = ImportStatus.PARSED;
@@ -106,7 +110,7 @@ public final class ImportSession {
      * в строгом режиме хотя бы одна {@link Severity#ERROR} даёт {@code REJECTED}.
      */
     public void validate(List<ImportFinding> methodologyFindings, Instant now) {
-        require(ImportStatus.PARSED, "validate");
+        require(ImportStatus.PARSED, Message.of(InterchangeMessages.COMMAND_VALIDATE_IMPORT));
         findings.addAll(methodologyFindings);
         boolean hasErrors = methodologyFindings.stream().anyMatch(f -> f.severity() == Severity.ERROR);
         if (strictMode && hasErrors) {
@@ -119,7 +123,7 @@ public final class ImportSession {
     /** Отказ из любого нетерминального состояния — с причинами в отчёте. */
     public void reject(List<ImportFinding> reasons, Instant now) {
         if (status.terminal()) {
-            throw new IllegalImportTransitionException(status, "RejectImport");
+            throw new IllegalImportTransitionException(status, Message.of(InterchangeMessages.COMMAND_REJECT_IMPORT));
         }
         findings.addAll(reasons);
         finish(ImportStatus.REJECTED, now);
@@ -130,24 +134,27 @@ public final class ImportSession {
      * разбор без проверки не даёт права писать в модель, а повтор терминальной сессии
      * удвоил бы модель.
      */
-    public ImportApplied apply(ModelId modelId, long versionNo, int opaqueObjectCount, Instant now) {
-        require(ImportStatus.VALIDATED, "ApplyImport");
+    public void apply(ModelId modelId, long versionNo, int opaqueObjectCount, Instant now) {
+        Objects.requireNonNull(modelId, "modelId");
+        if (versionNo < 1) {
+            throw new InvalidValueException(InterchangeMessages.IMPORT_VERSION_NO, versionNo);
+        }
+        require(ImportStatus.VALIDATED, Message.of(InterchangeMessages.COMMAND_APPLY_IMPORT));
         finish(ImportStatus.APPLIED, now);
-        this.appliedModelId = Objects.requireNonNull(modelId, "modelId");
+        this.appliedModelId = modelId;
         this.appliedVersionNo = versionNo;
-        ImportApplied applied = new ImportApplied(id, workspaceId, modelId, versionNo, sourceName, sourceHash,
-                strictMode, findingCounts(), opaqueObjectCount, now);
-        events.add(applied);
-        return applied;
+        events.add(new ImportSessionAppliedEvent(id(), workspaceId, modelId, versionNo, sourceName,
+                sourceHash, strictMode, findingCounts(), opaqueObjectCount, now));
     }
 
     /** События, накопленные с последнего вызова; публикует их слой приложения после коммита. */
-    public List<ImportApplied> pullEvents() {
-        List<ImportApplied> pulled = List.copyOf(events);
+    public List<DomainEvent> pullEvents() {
+        List<DomainEvent> pulled = List.copyOf(events);
         events.clear();
         return pulled;
     }
 
+    /** Число находок каждого уровня, включая уровни без находок. */
     public Map<Severity, Integer> findingCounts() {
         Map<Severity, Integer> counts = new EnumMap<>(Severity.class);
         for (Severity severity : Severity.values()) {
@@ -157,7 +164,7 @@ public final class ImportSession {
         return counts;
     }
 
-    private void require(ImportStatus expected, String command) {
+    private void require(ImportStatus expected, Message command) {
         if (status != expected) {
             throw new IllegalImportTransitionException(status, command);
         }
@@ -168,62 +175,70 @@ public final class ImportSession {
         finishedAt = Objects.requireNonNull(now, "now");
     }
 
-    public ImportSessionId id() {
-        return id;
-    }
 
+    /** Пространство, в которое идёт импорт. */
     public WorkspaceId workspaceId() {
         return workspaceId;
     }
 
-    public Optional<ModelId> targetModelId() {
+    /** Модель, содержимое которой заменяет импорт; у импорта новой модели {@code null}. */
+    public ModelId targetModelId() {
         return targetModelId;
     }
 
+    /** Имя файла или ссылки, из которой пришло содержимое. */
     public String sourceName() {
         return sourceName;
     }
 
+    /** Отпечаток присланного содержимого. */
     public ContentHash sourceHash() {
         return sourceHash;
     }
 
+    /** Размер присланного содержимого в байтах. */
     public long sourceSize() {
         return sourceSize;
     }
 
+    /** Ключ идемпотентности. */
     public String idempotencyKey() {
         return idempotencyKey;
     }
 
+    /** Включён ли строгий режим: находки уровня {@code ERROR} отклоняют импорт. */
     public boolean strictMode() {
         return strictMode;
     }
 
+    /** Состояние сессии. */
     public ImportStatus status() {
         return status;
     }
 
-    /** Документ есть в {@code PARSED}, {@code VALIDATED} и {@code APPLIED}. */
-    public Optional<ModelDocument> document() {
-        return Optional.ofNullable(document);
+    /** Документ есть в {@code PARSED}, {@code VALIDATED} и {@code APPLIED}; иначе {@code null}. */
+    public ModelDocument document() {
+        return document;
     }
 
+    /** Находки проверок в порядке появления. */
     public List<ImportFinding> findings() {
         return List.copyOf(findings);
     }
 
+    /** Кто начал импорт. */
     public String startedBy() {
         return startedBy;
     }
 
+    /** Когда начат импорт. */
     public Instant startedAt() {
         return startedAt;
     }
 
-    /** Модель, созданная применением; есть у {@code APPLIED}. */
-    public Optional<ModelId> appliedModelId() {
-        return Optional.ofNullable(appliedModelId);
+    /** Модель, созданная применением; {@code null} — сессия не применена. */
+    public ModelId appliedModelId() {
+        return appliedModelId;
     }
 
     /** Первая версия созданной модели; 0 — не применялась. */
@@ -231,8 +246,8 @@ public final class ImportSession {
         return appliedVersionNo;
     }
 
-    /** Есть у терминальных сессий. */
-    public Optional<Instant> finishedAt() {
-        return Optional.ofNullable(finishedAt);
+    /** Момент завершения; {@code null} — сессия ещё идёт. */
+    public Instant finishedAt() {
+        return finishedAt;
     }
 }

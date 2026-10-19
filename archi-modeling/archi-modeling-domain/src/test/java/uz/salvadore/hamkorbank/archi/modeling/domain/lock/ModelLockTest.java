@@ -6,14 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
-import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelLockReleased;
+import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelLockReleasedEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Models;
 
@@ -29,49 +28,49 @@ class ModelLockTest {
     @Test
     @DisplayName("INV-MDL-006: запись без своей действующей блокировки отклоняется с 409")
     void writeWithoutHeldLockIsRejected() {
-        ModelingException noLock = assertThrows(ModelingException.class,
-                () -> ModelLock.requireWriteAccess(MODEL, Optional.empty(), "alice", NOW));
+        ModelingDomainException noLock = assertThrows(ModelingDomainException.class,
+                () -> ModelLock.requireWriteAccess(MODEL, null, "alice", NOW));
         assertEquals("INV-MDL-006", noLock.code());
         assertEquals(Failure.CONFLICT, noLock.failure());
 
-        ModelLock bobs = ModelLock.acquire(MODEL, Optional.empty(), BOB, NOW, TTL).lock();
-        ModelingException foreign = assertThrows(ModelingException.class,
-                () -> ModelLock.requireWriteAccess(MODEL, Optional.of(bobs), "alice", NOW));
+        ModelLock bobs = ModelLock.acquire(MODEL, null, BOB, NOW, TTL).lock();
+        ModelingDomainException foreign = assertThrows(ModelingDomainException.class,
+                () -> ModelLock.requireWriteAccess(MODEL, bobs, "alice", NOW));
         assertEquals("bob", foreign.details().get("lockOwner"), "клиент показывает владельца блокировки");
 
-        ModelLock.requireWriteAccess(MODEL, Optional.of(bobs), "bob", NOW);
+        ModelLock.requireWriteAccess(MODEL, bobs, "bob", NOW);
     }
 
     @Test
     @DisplayName("INV-MDL-006: просроченная блокировка прав не даёт")
     void expiredLockGrantsNoWriteAccess() {
-        ModelLock alices = ModelLock.acquire(MODEL, Optional.empty(), ALICE, NOW, TTL).lock();
+        ModelLock alices = ModelLock.acquire(MODEL, null, ALICE, NOW, TTL).lock();
         Instant later = NOW.plus(TTL);
 
         assertEquals(LockStatus.EXPIRED, alices.status(later));
-        assertThrows(ModelingException.class,
-                () -> ModelLock.requireWriteAccess(MODEL, Optional.of(alices), "alice", later));
+        assertThrows(ModelingDomainException.class,
+                () -> ModelLock.requireWriteAccess(MODEL, alices, "alice", later));
 
-        ModelLock.Acquisition takeover = ModelLock.acquire(MODEL, Optional.of(alices), BOB, later, TTL);
+        ModelLock.Acquisition takeover = ModelLock.acquire(MODEL, alices, BOB, later, TTL);
         assertEquals("bob", takeover.lock().owner());
-        assertEquals(LockReleaseReason.EXPIRED, takeover.expiredPrevious().orElseThrow().reason());
+        assertEquals(LockReleaseReason.EXPIRED, takeover.expiredPrevious().reason());
     }
 
     @Test
     @DisplayName("UC-MDL-005: второй захват — 409, свой — продление, чужую снимает только ADMIN")
     void onlyOneEditorAndAdminForcesRelease() {
-        ModelLock alices = ModelLock.acquire(MODEL, Optional.empty(), ALICE, NOW, TTL).lock();
+        ModelLock alices = ModelLock.acquire(MODEL, null, ALICE, NOW, TTL).lock();
 
-        ModelingException second = assertThrows(ModelingException.class,
-                () -> ModelLock.acquire(MODEL, Optional.of(alices), BOB, NOW, TTL));
+        ModelingDomainException second = assertThrows(ModelingDomainException.class,
+                () -> ModelLock.acquire(MODEL, alices, BOB, NOW, TTL));
         assertEquals("INV-MDL-006", second.code());
 
-        ModelLock renewed = ModelLock.acquire(MODEL, Optional.of(alices), ALICE, NOW.plusSeconds(60), TTL).lock();
+        ModelLock renewed = ModelLock.acquire(MODEL, alices, ALICE, NOW.plusSeconds(60), TTL).lock();
         assertTrue(renewed.expiresAt().isAfter(alices.expiresAt()));
 
-        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingException.class,
+        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> alices.release(BOB, NOW)).failure());
-        ModelLockReleased forced = alices.release(ADMIN, NOW);
+        ModelLockReleasedEvent forced = alices.release(ADMIN, NOW);
         assertEquals(LockReleaseReason.FORCED_BY_ADMIN, forced.reason());
         assertEquals(LockReleaseReason.RELEASED_BY_OWNER, alices.release(ALICE, NOW).reason());
     }

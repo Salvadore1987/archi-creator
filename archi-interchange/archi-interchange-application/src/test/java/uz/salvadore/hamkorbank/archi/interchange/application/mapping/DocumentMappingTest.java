@@ -6,16 +6,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,8 +35,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.DiagramType;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.StyleOverride;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
@@ -84,7 +82,7 @@ class DocumentMappingTest {
     void unknownGoesToResidue(Path source) throws IOException {
         ModelContent content = decompose(read(Files.readAllBytes(source)));
 
-        assertTrue(content.model().elements().values().stream().allMatch(e -> e.rawXml().isPresent()),
+        assertTrue(content.model().elements().values().stream().allMatch(e -> e.rawXml() != null),
                 "у импортированного элемента остаток есть всегда — в нём порядок атрибутов");
         assertEquals(9, content.model().roots().size());
     }
@@ -96,25 +94,23 @@ class DocumentMappingTest {
                 ROOT.resolve("archi-bootstrap/src/test/resources/fixtures/styled_objects.archimate"))));
         ViewNode note = styled.views().stream().flatMap(v -> v.nodes().values().stream())
                 .filter(n -> n.kind() == ViewNodeKind.NOTE).findFirst().orElseThrow();
-        assertEquals(Optional.of("Легенда:\nкрасное — платёжный поток;\nзелёное — обслуживание клиента."),
+        assertEquals("Легенда:\nкрасное — платёжный поток;\nзелёное — обслуживание клиента.",
                 note.content());
-        assertTrue(note.rawXml().orElseThrow().value().indexOf("Легенда") < 0, "текста заметки нет в остатке");
+        assertTrue(note.rawXml().value().indexOf("Легенда") < 0, "текста заметки нет в остатке");
 
         ModelContent reference = decompose(read(Files.readAllBytes(
                 ROOT.resolve("docs/Hamkorbank_AS_IS_strict.archimate"))));
         ViewNode group = reference.views().stream().flatMap(v -> v.nodes().values().stream())
-                .filter(n -> n.kind() == ViewNodeKind.GROUP && n.label().equals(Optional.of("Каналы")))
+                .filter(n -> n.kind() == ViewNodeKind.GROUP && "Каналы".equals(n.label()))
                 .findFirst().orElseThrow();
-        assertTrue(group.rawXml().orElseThrow().value().indexOf("Каналы") < 0, "подписи группы нет в остатке");
+        assertTrue(group.rawXml().value().indexOf("Каналы") < 0, "подписи группы нет в остатке");
 
         View view = styled.views().stream().filter(v -> v.nodes().contains(note.id())).findFirst().orElseThrow();
-        view.nodes().put(note.id(), new ViewNode(note.id(), note.parentId(), note.archiId(), note.archiType(),
-                note.elementId(), note.bounds(), note.style(), note.label(), Optional.of("Первая\r\nвторая"),
-                note.sortOrder(), note.rawXml()));
+        view.editNode(note.id(), null, "Первая\r\nвторая", null);
         String xml = new String(write(new DocumentAssembler().assemble(styled)), StandardCharsets.UTF_8);
         assertTrue(xml.contains("<content>Первая&#xD;\nвторая</content>"), "столбец сильнее остатка, CR не теряется");
         ModelContent again = decompose(read(xml.getBytes(StandardCharsets.UTF_8)));
-        assertEquals(Optional.of("Первая\r\nвторая"), again.views().stream()
+        assertEquals("Первая\r\nвторая", again.views().stream()
                 .flatMap(v -> v.nodes().values().stream()).filter(n -> n.archiId().equals(note.archiId()))
                 .findFirst().orElseThrow().content());
     }
@@ -125,15 +121,11 @@ class DocumentMappingTest {
         ModelContent content = decompose(read(Files.readAllBytes(
                 ROOT.resolve("archi-bootstrap/src/test/resources/fixtures/styled_objects.archimate"))));
         View view = content.views().getFirst();
-        ArchiIdGenerator archiIds = new ArchiIdGenerator();
-        ViewNode group = new ViewNode(ViewNodeId.of(IDS.generate()), Optional.empty(), archiIds.next(),
-                DiagramType.of("archimate:Group"), Optional.empty(), new Bounds(0, 0, 400, 300), StyleOverride.NONE,
-                Optional.of("Каналы"), Optional.empty(), SortOrder.of(900_000), Optional.empty());
-        ViewNode note = new ViewNode(ViewNodeId.of(IDS.generate()), Optional.empty(), archiIds.next(),
-                DiagramType.of("archimate:Note"), Optional.empty(), new Bounds(10, 10, 185, 80), StyleOverride.NONE,
-                Optional.empty(), Optional.of("строка 1\nстрока 2"), SortOrder.of(901_000), Optional.empty());
-        view.nodes().put(group.id(), group);
-        view.nodes().put(note.id(), note);
+        ArchiIdGenerator archiIds = new ArchiIdGenerator(IDS::generate);
+        ViewNode group = view.placeAnnotation(ViewNodeKind.GROUP, "Каналы", null,
+                new Bounds(0, 0, 400, 300), null, ViewNodeId.of(IDS.generate()), archiIds.next());
+        ViewNode note = view.placeAnnotation(ViewNodeKind.NOTE, null, "строка 1\nстрока 2",
+                new Bounds(10, 10, 185, 80), null, ViewNodeId.of(IDS.generate()), archiIds.next());
 
         String xml = new String(write(new DocumentAssembler().assemble(content)), StandardCharsets.UTF_8);
 
@@ -146,17 +138,17 @@ class DocumentMappingTest {
     }
 
     static ModelContent decompose(ModelDocument document) {
-        ArchiIdGenerator archiIds = new ArchiIdGenerator();
-        return new DocumentDecomposer(UUID::randomUUID, archiIds::next).decompose(document,
+        ArchiIdGenerator archiIds = new ArchiIdGenerator(IDS::generate);
+        return new DocumentDecomposer(IDS::generate, archiIds::next).decompose(document,
                 new DocumentDecomposer.Identity(ModelId.of(IDS.generate()), WorkspaceId.of(IDS.generate()),
                         "architect", NOW, NOW, 0));
     }
 
     static ModelDocument read(byte[] xml) {
-        try (InputStream in = new java.io.ByteArrayInputStream(xml)) {
+        try (InputStream in = new ByteArrayInputStream(xml)) {
             return new StaxArchiDocumentReader().read(in);
         } catch (IOException e) {
-            throw new java.io.UncheckedIOException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -174,7 +166,7 @@ class DocumentMappingTest {
         ArchitectureModel model = content.model();
         Element client = model.elements().values().stream().filter(e -> e.name().equals("Клиент"))
                 .findFirst().orElseThrow();
-        model.updateElement(client.id(), "Клиент банка", Optional.of("Физическое лицо"),
+        model.updateElement(client.id(), "Клиент банка", "Физическое лицо",
                 List.of(new PropertyEntry("source", "CRM", SortOrder.of(1000)),
                         new PropertyEntry("owner", "Розница", SortOrder.of(2000))), NOW);
         model.addElement(ArchiType.ofSimpleName("BusinessRole"), "Плательщик", client.folderId(),

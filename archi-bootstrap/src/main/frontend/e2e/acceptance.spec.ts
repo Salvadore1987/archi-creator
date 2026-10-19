@@ -5,7 +5,7 @@ import { editorState, MockApi, openModel, openView, REFERENCE_FILE } from './sup
 import { relationTypes } from './support/relationMatrix';
 
 /**
- * Приёмка этапа 4 — сценарии E2E из плана тестирования интерфейса: импорт и отрисовка,
+ * Приёмка редактора — сквозные сценарии: импорт и отрисовка,
  * недопустимая связь, цепочка отмены и повтора, выгрузка и обратный импорт.
  */
 test.describe('приёмка этапа 4', () => {

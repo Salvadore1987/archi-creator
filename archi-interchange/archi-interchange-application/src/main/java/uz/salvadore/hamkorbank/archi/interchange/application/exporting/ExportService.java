@@ -15,11 +15,11 @@ import java.util.zip.ZipOutputStream;
 import uz.salvadore.hamkorbank.archi.interchange.application.ExportDefectException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeOperation;
-import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeEvents;
-import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMetrics;
 import uz.salvadore.hamkorbank.archi.interchange.application.oef.OefLoss;
 import uz.salvadore.hamkorbank.archi.interchange.application.oef.OefSchema;
 import uz.salvadore.hamkorbank.archi.interchange.application.oef.OefWriter;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeEvents;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMetrics;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
@@ -28,7 +28,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessag
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
-import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportCompleted;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportFormat;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportJob;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportOptions;
@@ -40,8 +39,9 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.LossEntryId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.UuidV7;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionSnapshot;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetVersionSnapshotQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionSnapshotResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
@@ -55,13 +55,17 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  */
 public final class ExportService {
 
+    /** Тип содержимого файла {@code .archimate} в ответе. */
     public static final String ARCHIMATE_MEDIA_TYPE = "application/xml";
+    /** Имя файла отчёта о потерях внутри архива выгрузки. */
     public static final String LOSS_REPORT_FILE = "loss-report.json";
     private static final long FIXED_ENTRY_TIME = 0L;
 
     /** Имена форматов в запросе — как в контракте API; формат по умолчанию — файл модели. */
     public static final String FORMAT_ARCHIMATE = "archimate";
+    /** Каталог элементов и связей в CSV. */
     public static final String FORMAT_CSV = "csv";
+    /** Файл Open Exchange Format с отчётом о потерях. */
     public static final String FORMAT_OEF = "oef";
 
     private static final Map<String, ExportFormat> FORMATS = Map.of(
@@ -69,7 +73,7 @@ public final class ExportService {
             FORMAT_CSV, ExportFormat.CSV_CATALOG,
             FORMAT_OEF, ExportFormat.OPEN_EXCHANGE);
 
-    private final VersionService versions;
+    private final ModelExchangeApplicationService versions;
     private final InterchangeEvents events;
     private final InterchangeMetrics metrics;
     private final Clock clock;
@@ -82,7 +86,7 @@ public final class ExportService {
      * @param notation  размеры фигур по умолчанию — те же, что у канвы и картинок
      * @param oefSchema официальная схема OEF; одна на приложение, компилируется при старте
      */
-    public ExportService(VersionService versions, InterchangeEvents events, InterchangeMetrics metrics,
+    public ExportService(ModelExchangeApplicationService versions, InterchangeEvents events, InterchangeMetrics metrics,
                          TextCatalog texts, Notation notation, OefSchema oefSchema, Clock clock) {
         this.texts = texts;
         this.notation = notation;
@@ -118,12 +122,13 @@ public final class ExportService {
         };
     }
 
-    public Export archimate(EditorIdentity actor, UUID modelId, Optional<Long> versionNo) {
+    /** Файл {@code .archimate} зафиксированной версии модели; без номера ({@code null}) — последней. */
+    public Export archimate(EditorIdentity actor, UUID modelId, Long versionNo) {
         InterchangeOperation operation = InterchangeOperation.EXPORT_ARCHIMATE;
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
-            VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
+            VersionSnapshotResponse snapshot = versions.getVersionSnapshot(actor,
+                    new GetVersionSnapshotQuery(modelId, versionNo));
             return deliver(actor, snapshot, ExportFormat.ARCHIMATE, ExportOptions.none(),
                     Artifact.of(snapshot.xml(), ARCHIMATE_MEDIA_TYPE, fileName(snapshot, "archimate")));
         });
@@ -132,17 +137,17 @@ public final class ExportService {
     /**
      * Каталог в CSV — из той же зафиксированной версии, что и файл модели:
      * таблица и {@code .archimate} одной версии не расходятся. Доступно
-     * {@code VIEWER}: читатель забирает ландшафт, не получая прав на правку.
+     * {@code VIEWER}: читатель забирает ландшафт, не получая прав на правку. Без номера ({@code null}) — последняя.
      */
-    public Export catalogCsv(EditorIdentity actor, UUID modelId, Optional<Long> versionNo, CatalogCsvOptions options) {
+    public Export catalogCsv(EditorIdentity actor, UUID modelId, Long versionNo, CatalogCsvOptions options) {
         InterchangeOperation operation = InterchangeOperation.EXPORT_CATALOG_CSV;
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
-            VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
+            VersionSnapshotResponse snapshot = versions.getVersionSnapshot(actor,
+                    new GetVersionSnapshotQuery(modelId, versionNo));
             byte[] zip = new CatalogCsvWriter(texts).write(snapshot.xml(), options);
-            ExportOptions exportOptions = new ExportOptions(Optional.empty(), Optional.empty(), Optional.empty(),
-                    Optional.of(String.valueOf(options.separator())), options.folderArchiId());
+            ExportOptions exportOptions = new ExportOptions(null, null, null, String.valueOf(options.separator()),
+                    options.folderArchiId());
             return deliver(actor, snapshot, ExportFormat.CSV_CATALOG, exportOptions,
                     Artifact.of(zip, "application/zip", fileName(snapshot, "csv.zip")));
         });
@@ -154,13 +159,14 @@ public final class ExportService {
      * (системный {@code unzip} macOS, старый Проводник), не создают файл с кириллицей.
      * Результат проверяется по официальной схеме до отдачи; не прошёл — файл не отдаётся,
      * выгрузка — сбой, а клиент получает {@code IXC_OEF_SCHEMA_VIOLATION} как ошибку сервера.
+     * Без номера версии ({@code null}) — последняя.
      */
-    public Export openExchange(EditorIdentity actor, UUID modelId, Optional<Long> versionNo) {
+    public Export openExchange(EditorIdentity actor, UUID modelId, Long versionNo) {
         InterchangeOperation operation = InterchangeOperation.EXPORT_OPEN_EXCHANGE;
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
-            VersionSnapshot snapshot = versions.snapshot(actor,
-                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(modelId), versionNo);
+            VersionSnapshotResponse snapshot = versions.getVersionSnapshot(actor,
+                    new GetVersionSnapshotQuery(modelId, versionNo));
             OefWriter.Written written = new OefWriter(notation)
                     .write(new StaxArchiDocumentReader().read(new ByteArrayInputStream(snapshot.xml())));
             ExportJob job = job(actor, snapshot, ExportFormat.OPEN_EXCHANGE, ExportOptions.none());
@@ -179,22 +185,23 @@ public final class ExportService {
         });
     }
 
-    private Export deliver(EditorIdentity actor, VersionSnapshot snapshot, ExportFormat format, ExportOptions options,
-                           Artifact artifact) {
+    private Export deliver(EditorIdentity actor, VersionSnapshotResponse snapshot, ExportFormat format,
+                           ExportOptions options, Artifact artifact) {
         return deliver(job(actor, snapshot, format, options), snapshot, artifact, LossReport.lossless());
     }
 
-    private Export deliver(ExportJob job, VersionSnapshot snapshot, Artifact artifact, LossReport report) {
+    private Export deliver(ExportJob job, VersionSnapshotResponse snapshot, Artifact artifact, LossReport report) {
         job.render(snapshot.versionNo(), artifact, report);
-        job.deliver();
-        events.publish(List.of(ExportCompleted.of(job, clock.instant())));
+        job.deliver(clock.instant());
+        events.publish(job.pullEvents());
         metrics.exportLosses(job.format().name(), report.entries().size());
         return new Export(artifact, snapshot.versionNo(), report.entries().size());
     }
 
-    private ExportJob job(EditorIdentity actor, VersionSnapshot snapshot, ExportFormat format, ExportOptions options) {
-        return ExportJob.request(ExportJobId.next(uuids), new WorkspaceId(snapshot.model().workspaceId().value()),
-                new ModelId(snapshot.model().id().value()), Optional.empty(), format, options, snapshot.versionNo(),
+    private ExportJob job(EditorIdentity actor, VersionSnapshotResponse snapshot, ExportFormat format,
+                          ExportOptions options) {
+        return ExportJob.request(ExportJobId.next(uuids), new WorkspaceId(snapshot.model().workspaceId()),
+                new ModelId(snapshot.model().id()), null, format, options, snapshot.versionNo(),
                 actor.subject(), clock.instant());
     }
 
@@ -207,7 +214,8 @@ public final class ExportService {
     private static byte[] zip(String fileName, byte[] file, byte[] report) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (ZipOutputStream zip = new ZipOutputStream(out, StandardCharsets.UTF_8)) {
-            for (var entry : List.of(Map.entry(fileName, file), Map.entry(LOSS_REPORT_FILE, report))) {
+            for (Map.Entry<String, byte[]> entry
+                    : List.of(Map.entry(fileName, file), Map.entry(LOSS_REPORT_FILE, report))) {
                 ZipEntry zipEntry = new ZipEntry(entry.getKey());
                 zipEntry.setTime(FIXED_ENTRY_TIME);
                 zip.putNextEntry(zipEntry);
@@ -220,7 +228,7 @@ public final class ExportService {
         return out.toByteArray();
     }
 
-    private static String fileName(VersionSnapshot snapshot, String extension) {
+    private static String fileName(VersionSnapshotResponse snapshot, String extension) {
         return safeFileName(snapshot.model().name(), "model") + "-v" + snapshot.versionNo() + "." + extension;
     }
 

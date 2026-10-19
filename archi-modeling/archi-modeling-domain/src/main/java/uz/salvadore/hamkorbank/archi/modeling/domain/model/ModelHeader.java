@@ -3,7 +3,6 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
@@ -15,14 +14,17 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 /**
  * Собственные поля модели без её содержимого — то, что лежит в строке {@code model}.
  *
- * @param createdBy subject автора
- * @param version   оптимистичная блокировка строки
+ * @param documentation документация; {@code null} — не задана
+ * @param rawXml        остаток XML; {@code null} — нет
+ * @param createdBy     subject автора
+ * @param version       оптимистичная блокировка строки
  */
 public record ModelHeader(ModelId id, WorkspaceId workspaceId, ArchiId archiId, String name,
-                          Optional<String> documentation, String archiVersion, ModelStatus status,
-                          List<PropertyEntry> properties, Optional<RawXml> rawXml, String createdBy,
+                          String documentation, String archiVersion, ModelStatus status,
+                          List<PropertyEntry> properties, RawXml rawXml, String createdBy,
                           Instant createdAt, Instant updatedAt, long version) {
 
+    /** Версия Archi, которая пишется в файл новой модели. */
     public static final String DEFAULT_ARCHI_VERSION = "5.0.0";
     private static final Pattern ARCHI_VERSION = Pattern.compile("^\\d+\\.\\d+\\.\\d+$");
 
@@ -30,9 +32,7 @@ public record ModelHeader(ModelId id, WorkspaceId workspaceId, ArchiId archiId, 
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(workspaceId, "workspaceId");
         Objects.requireNonNull(archiId, "archiId");
-        Objects.requireNonNull(documentation, "documentation");
         Objects.requireNonNull(status, "status");
-        Objects.requireNonNull(rawXml, "rawXml");
         Objects.requireNonNull(createdBy, "createdBy");
         Objects.requireNonNull(createdAt, "createdAt");
         Objects.requireNonNull(updatedAt, "updatedAt");
@@ -43,6 +43,17 @@ public record ModelHeader(ModelId id, WorkspaceId workspaceId, ArchiId archiId, 
         }
     }
 
+    /** Содержимое модели правят только у активной; иначе — отказ жизненного цикла. */
+    public void requireActive() {
+        status.requireActive();
+    }
+
+    /** Выгружают и читают для замены только активную модель; удалённая — отказ «модель удалена». */
+    public void requireExportable() {
+        status.requireExportable();
+    }
+
+    /** Подходит ли строка как версия Archi: три числа через точку. */
     public static boolean validArchiVersion(String value) {
         return value != null && ARCHI_VERSION.matcher(value).matches();
     }

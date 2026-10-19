@@ -8,11 +8,10 @@ import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 
 class RelationshipIntegrityTest {
@@ -25,7 +24,7 @@ class RelationshipIntegrityTest {
         Element actor = Models.element(model, "BusinessActor", FolderType.BUSINESS, "Клиент");
         Relationship serving = Models.relate(model, "ServingRelationship", component.id(), actor.id());
 
-        ModelingException rejected = assertThrows(ModelingException.class,
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
                 () -> model.removeElement(component.id(), NOW));
 
         assertEquals("INV-MDL-004", rejected.code());
@@ -46,9 +45,9 @@ class RelationshipIntegrityTest {
         Element own = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
         Element foreign = Models.element(other, "BusinessActor", FolderType.BUSINESS, "Клиент");
 
-        ModelingException rejected = assertThrows(ModelingException.class,
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
                 () -> model.addRelationship(ArchiType.ofSimpleName("ServingRelationship"), own.id(), foreign.id(),
-                        Optional.empty(), RelationshipId.next(UUIDS), Models.archiId(), NOW));
+                        null, RelationshipId.next(UUIDS), Models.archiId(), NOW));
 
         assertEquals("INV-MDL-004", rejected.code());
         assertEquals(Failure.UNPROCESSABLE, rejected.failure());

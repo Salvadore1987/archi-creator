@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
@@ -87,6 +89,7 @@ public final class DocumentDecomposer {
                            Instant now, long version) {
     }
 
+    /** Раскладывает документ по строкам модели, представлений и остатку XML. */
     public ModelContent decompose(ModelDocument document, Identity identity) {
         return new Run(document, identity).decompose();
     }
@@ -121,10 +124,10 @@ public final class DocumentDecomposer {
             for (int i = 0; i < content.size(); i++) {
                 long order = SortOrder.ofPosition(i).value();
                 switch (content.get(i)) {
-                    case DocumentNode node when node.tag().equals("folder") -> folder(node, Optional.empty(), order);
+                    case DocumentNode node when node.tag().equals("folder") -> folder(node, null, order);
                     case DocumentNode node -> throw unexpected(node, Message.of(InterchangeMessages.WHERE_MODEL_ROOT));
                     case DocumentValue value when documentation[0] == null && isDocumentation(value, "purpose") -> {
-                        documentation[0] = value.text().orElse("");
+                        documentation[0] = Objects.requireNonNullElse(value.text(), "");
                         root.slot(order, value);
                     }
                     case DocumentValue value when isProperty(value) -> {
@@ -138,8 +141,9 @@ public final class DocumentDecomposer {
             String version = document.attributes().get("version").filter(ModelHeader::validArchiVersion)
                     .orElse(ModelHeader.DEFAULT_ARCHI_VERSION);
             ModelHeader header = new ModelHeader(identity.modelId(), identity.workspaceId(),
-                    ArchiId.of(document.archiId().value()), document.name(), Optional.ofNullable(documentation[0]),
-                    version, ModelStatus.ACTIVE, properties, root.encode(), identity.createdBy(), identity.createdAt(),
+                    ArchiId.of(document.archiId().value()), document.name(), documentation[0],
+                    version, ModelStatus.ACTIVE, properties, root.encode().orElse(null), identity.createdBy(),
+                    identity.createdAt(),
                     identity.now(), identity.version());
             ArchitectureModel model = ArchitectureModel.imported(header, folders, elements, relationships,
                     views.stream().map(ViewParts::ref).toList(), () -> FolderId.of(uuids.get()), archiIds);
@@ -150,29 +154,31 @@ public final class DocumentDecomposer {
 
         // ── Папки и их содержимое ───────────────────────────────────
 
-        private void folder(DocumentNode node, Optional<FolderId> parent, long order) {
+        /** Папка и её содержимое; {@code parent} — {@code null} у корневой. */
+        private void folder(DocumentNode node, FolderId parent, long order) {
             FolderId id = FolderId.of(key(node));
-            Optional<FolderType> type = parent.isPresent() ? Optional.empty()
+            Optional<FolderType> type = parent != null ? Optional.empty()
                     : node.attribute("type").flatMap(FolderType::fromFileValue);
-            if (parent.isEmpty() && type.isEmpty()) {
+            if (parent == null && type.isEmpty()) {
                 throw new InvalidValueException(InterchangeMessages.ROOT_FOLDER_UNTYPED, node.archiId());
             }
             Residue residue = new Residue(node.attributes().list(),
-                    type.isPresent() ? XmlSchema.FOLDER_TYPED : java.util.Set.of("name", "id"));
+                    type.isPresent() ? XmlSchema.FOLDER_TYPED : Set.of("name", "id"));
             List<DocumentContent> content = node.content();
             for (int i = 0; i < content.size(); i++) {
                 long childOrder = SortOrder.ofPosition(i).value();
                 switch (content.get(i)) {
                     case DocumentNode child when child.tag().equals("folder") ->
-                            folder(child, Optional.of(id), childOrder);
+                            folder(child, id, childOrder);
                     case DocumentNode child when child.tag().equals("element") -> modelObject(child, id, childOrder);
                     case DocumentNode child -> throw unexpected(child, Message.of(InterchangeMessages.WHERE_FOLDER));
                     case DocumentValue value -> residue.value(childOrder, value);
                     case RawXmlFragment raw -> residue.fragment(childOrder, raw);
                 }
             }
-            folders.add(new ModelFolder(id, parent, archiId(node), node.attribute("name").orElse(""), type,
-                    SortOrder.of(order), residue.encode()));
+            folders.add(new ModelFolder(id, parent, archiId(node), node.attribute("name").orElse(""),
+                    type.orElse(null),
+                    SortOrder.of(order), residue.encode().orElse(null)));
         }
 
         private void modelObject(DocumentNode node, FolderId folder, long order) {
@@ -197,20 +203,20 @@ public final class DocumentDecomposer {
                     .map(c -> c.supported()).orElse(false);
             elements.add(new Element(ElementId.of(key(node)), folder, archiId(node), type,
                     node.attribute("name").orElse(""), described.documentation(), described.properties(),
-                    SortOrder.of(order), supported, residue.encode()));
+                    SortOrder.of(order), supported, residue.encode().orElse(null)));
         }
 
         private void relationship(DocumentNode node, FolderId folder, long order) {
             ArchiType type = ArchiType.of(node.archiType().orElseThrow());
-            Optional<AccessType> accessType = node.attribute("accessType").flatMap(AccessType::fromFileValue);
-            Optional<Boolean> directed = node.attribute("directed")
-                    .filter(v -> v.equals("true") || v.equals("false")).map(Boolean::parseBoolean);
+            AccessType accessType = node.attribute("accessType").flatMap(AccessType::fromFileValue).orElse(null);
+            Boolean directed = node.attribute("directed")
+                    .filter(v -> v.equals("true") || v.equals("false")).map(Boolean::parseBoolean).orElse(null);
             Residue residue = new Residue(node.attributes().list(), XmlSchema.RELATIONSHIP_TYPED) {
                 @Override
                 boolean typed(String name, String value) {
                     return switch (name) {
-                        case "accessType" -> accessType.isPresent();
-                        case "directed" -> directed.isPresent();
+                        case "accessType" -> accessType != null;
+                        case "directed" -> directed != null;
                         default -> super.typed(name, value);
                     };
                 }
@@ -218,9 +224,10 @@ public final class DocumentDecomposer {
             Described described = describedContent(node, residue);
             boolean supported = RelationshipType.fromArchiType(type).isPresent();
             relationships.add(new Relationship(RelationshipId.of(key(node)), folder, archiId(node), type,
-                    concept(node, "source"), concept(node, "target"), node.attribute("name"),
-                    described.documentation(), accessType, directed, described.properties(), SortOrder.of(order),
-                    supported, residue.encode()));
+                    concept(node, "source"), concept(node, "target"), node.attribute("name").orElse(null),
+                    described.documentation(), accessType, directed,
+                    described.properties(), SortOrder.of(order),
+                    supported, residue.encode().orElse(null)));
         }
 
         private ConceptRef concept(DocumentNode node, String attribute) {
@@ -245,7 +252,7 @@ public final class DocumentDecomposer {
                 switch (content.get(i)) {
                     case DocumentValue value when documentation[0] == null
                             && isDocumentation(value, "documentation") -> {
-                        documentation[0] = value.text().orElse("");
+                        documentation[0] = Objects.requireNonNullElse(value.text(), "");
                         residue.slot(order, value);
                     }
                     case DocumentValue value when isProperty(value) -> {
@@ -258,7 +265,7 @@ public final class DocumentDecomposer {
                             Message.of(InterchangeMessages.WHERE_INSIDE, node.archiId()));
                 }
             }
-            return new Described(Optional.ofNullable(documentation[0]), properties);
+            return new Described(documentation[0], properties);
         }
 
         // ── Представления ───────────────────────────────────────────
@@ -274,11 +281,11 @@ public final class DocumentDecomposer {
                 long childOrder = SortOrder.ofPosition(i).value();
                 switch (content.get(i)) {
                     case DocumentNode child when child.tag().equals("child") ->
-                            viewNode(child, Optional.empty(), childOrder, parts);
+                            viewNode(child, null, childOrder, parts);
                     case DocumentNode child -> throw unexpected(child, Message.of(InterchangeMessages.WHERE_VIEW));
                     case DocumentValue value when documentation[0] == null
                             && isDocumentation(value, "documentation") -> {
-                        documentation[0] = value.text().orElse("");
+                        documentation[0] = Objects.requireNonNullElse(value.text(), "");
                         residue.slot(childOrder, value);
                     }
                     case DocumentValue value when isProperty(value) -> {
@@ -291,25 +298,26 @@ public final class DocumentDecomposer {
             }
             DiagramType type = DiagramType.of(node.archiType().orElseThrow());
             ViewHeader header = new ViewHeader(id, identity.modelId(), folder, archiId(node), type,
-                    node.attribute("name").orElse(""), Optional.ofNullable(documentation[0]),
-                    node.attribute("viewpoint"), properties,
-                    SortOrder.of(order), residue.encode(), 0);
+                    node.attribute("name").orElse(""), documentation[0],
+                    node.attribute("viewpoint").orElse(null), properties,
+                    SortOrder.of(order), residue.encode().orElse(null), 0);
             parts.header = header;
             parts.ref = new ViewRef(id, folder, header.archiId(), type, header.name(), header.sortOrder());
             views.add(parts);
         }
 
-        private void viewNode(DocumentNode node, Optional<ViewNodeId> parent, long order, ViewParts view) {
+        /** Узел представления и его дети; {@code parent} — {@code null} у узла в корне представления. */
+        private void viewNode(DocumentNode node, ViewNodeId parent, long order, ViewParts view) {
             ViewNodeId id = ViewNodeId.of(key(node));
-            Optional<ElementId> element = node.attribute("archimateElement")
+            ElementId element = node.attribute("archimateElement")
                     .filter(ref -> byArchiId.containsKey(ref) && isElement(byArchiId.get(ref)))
-                    .map(ref -> ElementId.of(keys.get(ref)));
+                    .map(ref -> ElementId.of(keys.get(ref))).orElse(null);
             StyleParse style = new StyleParse(node);
             Residue residue = new Residue(node.attributes().list(), XmlSchema.NODE_TYPED) {
                 @Override
                 boolean typed(String name, String value) {
                     if (name.equals("archimateElement")) {
-                        return element.isPresent();
+                        return element != null;
                     }
                     return XmlSchema.STYLE.contains(name) ? style.typed(name) : super.typed(name, value);
                 }
@@ -321,7 +329,7 @@ public final class DocumentDecomposer {
                 long childOrder = SortOrder.ofPosition(i).value();
                 switch (content.get(i)) {
                     case DocumentNode child when child.tag().equals("child") ->
-                            viewNode(child, Optional.of(id), childOrder, view);
+                            viewNode(child, id, childOrder, view);
                     case DocumentNode child when child.tag().equals("sourceConnection") ->
                             viewEdge(child, childOrder, view);
                     case DocumentNode child -> throw unexpected(child, Message.of(InterchangeMessages.WHERE_VIEW_NODE));
@@ -330,32 +338,32 @@ public final class DocumentDecomposer {
                         residue.slot(childOrder, value);
                     }
                     case DocumentValue value when text[0] == null && isDocumentation(value, "content") -> {
-                        text[0] = value.text().orElse("");
+                        text[0] = Objects.requireNonNullElse(value.text(), "");
                         residue.slot(childOrder, value);
                     }
                     case DocumentValue value -> residue.value(childOrder, value);
                     case RawXmlFragment raw -> residue.fragment(childOrder, raw);
                 }
             }
-            view.nodes.add(new ViewNode(id, parent, archiId(node), DiagramType.of(node.archiType().orElseThrow()),
-                    element, Optional.ofNullable(bounds[0])
+            view.nodes.add(new ViewNode(id, parent, archiId(node),
+                    DiagramType.of(node.archiType().orElseThrow()), element, Optional.ofNullable(bounds[0])
                             .orElse(new Bounds(0, 0, Bounds.DEFAULT_SIZE, Bounds.DEFAULT_SIZE)),
-                    style.style(), node.attribute("name"), Optional.ofNullable(text[0]), SortOrder.of(order),
-                    residue.encode()));
+                    style.style(), node.attribute("name").orElse(null), text[0], SortOrder.of(order),
+                    residue.encode().orElse(null)));
         }
 
         private void viewEdge(DocumentNode node, long order, ViewParts view) {
             ViewEdgeId id = ViewEdgeId.of(key(node));
-            Optional<RelationshipId> relationship = node.attribute("archimateRelationship")
+            RelationshipId relationship = node.attribute("archimateRelationship")
                     .filter(ref -> byArchiId.containsKey(ref)
                             && byArchiId.get(ref).archiType().filter(t -> t.endsWith("Relationship")).isPresent())
-                    .map(ref -> RelationshipId.of(keys.get(ref)));
+                    .map(ref -> RelationshipId.of(keys.get(ref))).orElse(null);
             StyleParse style = new StyleParse(node);
             Residue residue = new Residue(node.attributes().list(), XmlSchema.EDGE_TYPED) {
                 @Override
                 boolean typed(String name, String value) {
                     if (name.equals("archimateRelationship")) {
-                        return relationship.isPresent();
+                        return relationship != null;
                     }
                     return XmlSchema.STYLE.contains(name) ? style.typed(name) : super.typed(name, value);
                 }
@@ -377,8 +385,9 @@ public final class DocumentDecomposer {
                 }
             }
             view.edges.add(new ViewEdge(id, archiId(node), DiagramType.of(node.archiType().orElseThrow()),
-                    relationship, endpoint(node, "source"), endpoint(node, "target"), bendpoints, style.style(),
-                    SortOrder.of(order), residue.encode()));
+                    relationship, endpoint(node, "source"), endpoint(node, "target"), bendpoints,
+                    style.style(),
+                    SortOrder.of(order), residue.encode().orElse(null)));
         }
 
         private ViewEndpoint endpoint(DocumentNode edge, String attribute) {
@@ -433,7 +442,8 @@ public final class DocumentDecomposer {
         }
     }
 
-    private record Described(Optional<String> documentation, List<PropertyEntry> properties) {
+    /** Документация ({@code null} — нет) и свойства узла. */
+    private record Described(String documentation, List<PropertyEntry> properties) {
     }
 
     /**
@@ -444,9 +454,9 @@ public final class DocumentDecomposer {
 
         private final List<ResidueAttribute> attributes = new ArrayList<>();
         private final List<ResidueItem> items = new ArrayList<>();
-        private final java.util.Set<String> typedNames;
+        private final Set<String> typedNames;
 
-        Residue(List<Attribute> source, java.util.Set<String> typedNames) {
+        Residue(List<Attribute> source, Set<String> typedNames) {
             this.typedNames = typedNames;
             for (Attribute attribute : source) {
                 attributes.add(typed(attribute.name(), attribute.value())
@@ -480,30 +490,34 @@ public final class DocumentDecomposer {
 
     }
 
-    /** Стиль узла или ребра: типизируется только то, что проходит проверку домена. */
+    /**
+     * Стиль узла или ребра: типизируется только то, что проходит проверку домена.
+     * Значение, которого нет или которое проверку не прошло, — {@code null}.
+     */
     private static final class StyleParse {
 
-        private final Optional<String> fillColor;
-        private final Optional<String> font;
-        private final Optional<String> fontColor;
-        private final Optional<String> lineColor;
-        private final Optional<Integer> textAlignment;
+        private final String fillColor;
+        private final String font;
+        private final String fontColor;
+        private final String lineColor;
+        private final Integer textAlignment;
 
         StyleParse(DocumentNode node) {
-            fillColor = node.attribute("fillColor").filter(StyleOverride::validColor);
-            font = node.attribute("font");
-            fontColor = node.attribute("fontColor").filter(StyleOverride::validColor);
-            lineColor = node.attribute("lineColor").filter(StyleOverride::validColor);
-            textAlignment = node.attribute("textAlignment").flatMap(StyleParse::integer);
+            fillColor = node.attribute("fillColor").filter(StyleOverride::validColor).orElse(null);
+            font = node.attribute("font").orElse(null);
+            fontColor = node.attribute("fontColor").filter(StyleOverride::validColor).orElse(null);
+            lineColor = node.attribute("lineColor").filter(StyleOverride::validColor).orElse(null);
+            textAlignment = node.attribute("textAlignment").flatMap(StyleParse::integer)
+                    .filter(StyleOverride::validTextAlignment).orElse(null);
         }
 
         boolean typed(String name) {
             return switch (name) {
-                case "fillColor" -> fillColor.isPresent();
-                case "font" -> font.isPresent();
-                case "fontColor" -> fontColor.isPresent();
-                case "lineColor" -> lineColor.isPresent();
-                case "textAlignment" -> textAlignment.isPresent();
+                case "fillColor" -> fillColor != null;
+                case "font" -> font != null;
+                case "fontColor" -> fontColor != null;
+                case "lineColor" -> lineColor != null;
+                case "textAlignment" -> textAlignment != null;
                 default -> false;
             };
         }
@@ -528,7 +542,7 @@ public final class DocumentDecomposer {
     }
 
     private static boolean isProperty(DocumentValue value) {
-        return value.tag().equals("property") && value.text().isEmpty()
+        return value.tag().equals("property") && value.text() == null
                 && value.attributes().list().stream().allMatch(a -> XmlSchema.PROPERTY.contains(a.name()))
                 && value.attribute("key").map(k -> k.length() <= PropertyEntry.KEY_MAX).orElse(true);
     }
@@ -539,7 +553,7 @@ public final class DocumentDecomposer {
     }
 
     static Optional<Bounds> parseBounds(DocumentValue value) {
-        if (!value.tag().equals("bounds") || value.text().isPresent()
+        if (!value.tag().equals("bounds") || value.text() != null
                 || !value.attributes().list().stream().allMatch(a -> XmlSchema.BOUNDS.contains(a.name()))) {
             return Optional.empty();
         }
@@ -558,7 +572,7 @@ public final class DocumentDecomposer {
     }
 
     static Optional<Bendpoint> parseBendpoint(DocumentValue value) {
-        if (!value.tag().equals("bendpoint") || value.text().isPresent()
+        if (!value.tag().equals("bendpoint") || value.text() != null
                 || !value.attributes().list().stream().allMatch(a -> XmlSchema.BENDPOINT.contains(a.name()))) {
             return Optional.empty();
         }
@@ -578,7 +592,7 @@ public final class DocumentDecomposer {
         return ArchiId.of(node.archiId().value());
     }
 
-    private static IllegalArgumentException unexpected(DocumentNode node, Message where) {
+    private static InvalidValueException unexpected(DocumentNode node, Message where) {
         return new InvalidValueException(InterchangeMessages.UNEXPECTED_NODE, node.tag(), node.archiId(), where);
     }
 }

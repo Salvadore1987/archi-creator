@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/** Строка элемента модели: типизированные поля, место в папке и остаток XML. */
 @Entity
 @Table(name = "element")
 public class ElementEntity {

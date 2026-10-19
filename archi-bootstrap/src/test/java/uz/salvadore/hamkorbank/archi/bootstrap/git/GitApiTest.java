@@ -15,11 +15,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
+import java.util.stream.Stream;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -61,7 +63,7 @@ abstract class GitApiTest extends ApiTest {
         remote = temp.resolve("landscape.git");
         Git.init().setBare(true).setDirectory(remote.toFile()).setInitialBranch("main").call().close();
         bindings.configure(ADMIN, workspace().value(), new GitBindingSettings(remote.toUri().toString(),
-                Optional.empty(), "env:ARCHI_GIT_TOKEN_IT",
+                null, "env:ARCHI_GIT_TOKEN_IT",
                 List.of(new GitBindingSettings.Author("architect-api", "Архитектор", "architect@bank.uz"))));
     }
 
@@ -86,7 +88,7 @@ abstract class GitApiTest extends ApiTest {
 
     protected Optional<String> gitSha(UUID model, long versionNo) {
         return column("select git_sha from model_version where model_id = ? and version_no = ?", String.class,
-                model, versionNo).stream().filter(java.util.Objects::nonNull).findFirst();
+                model, versionNo).stream().filter(Objects::nonNull).findFirst();
     }
 
     protected List<RevCommit> history() throws Exception {
@@ -151,7 +153,7 @@ abstract class GitApiTest extends ApiTest {
                 git.checkout().setCreateBranch(true).setName(branch).call();
             }
             boolean changed = false;
-            try (var files = Files.walk(work.resolve("models"))) {
+            try (Stream<Path> files = Files.walk(work.resolve("models"))) {
                 for (Path file : files.filter(p -> p.toString().endsWith(".yaml")).toList()) {
                     String text = Files.readString(file, StandardCharsets.UTF_8);
                     String edited = edit.apply(text);

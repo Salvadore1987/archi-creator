@@ -29,6 +29,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentValue;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
+import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossObjectKind;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.AccessType;
 
 /**
@@ -144,6 +145,7 @@ public final class OefWriter {
         }
     }
 
+    /** Документ модели в Open Exchange Format вместе с отчётом о потерях. */
     public Written write(ModelDocument document) {
         return new Run(document).write();
     }
@@ -652,7 +654,7 @@ public final class OefWriter {
                     case "archimate:Group" -> source.attribute("name").filter(n -> !n.isEmpty())
                             .ifPresent(n -> langString(body, depth + 1, "label", n));
                     case "archimate:Note" -> source.values("content").stream().findFirst()
-                            .flatMap(DocumentValue::text).filter(t -> !t.isEmpty())
+                            .map(DocumentValue::text).filter(t -> !t.isEmpty())
                             .ifPresent(t -> langString(body, depth + 1, "label", t));
                     case "archimate:DiagramModelReference" -> {
                         Optional<String> target = source.attribute("model");
@@ -888,7 +890,7 @@ public final class OefWriter {
         }
 
         private void loss(String archiId, String kind, String aspect, Message reason) {
-            losses.add(new OefLoss(archiId, kind, aspect, reason));
+            losses.add(new OefLoss(archiId, LossObjectKind.of(kind), aspect, reason));
         }
     }
 

@@ -5,6 +5,7 @@ public enum AclAccess {
     READ,
     WRITE;
 
+    /** Достаточно ли этого уровня для операции, которой нужен уровень {@code needed}. */
     public boolean covers(AclAccess needed) {
         return this == WRITE || needed == READ;
     }

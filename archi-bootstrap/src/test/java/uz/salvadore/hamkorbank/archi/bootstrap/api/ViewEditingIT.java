@@ -12,11 +12,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
 import com.fasterxml.uuid.impl.UUIDUtil;
+import com.jayway.jsonpath.JsonPath;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 
 /** Правка представления — группы, заметки, стиль, рёбра — через REST, базу и выгрузку. */
@@ -85,7 +89,7 @@ class ViewEditingIT extends ApiTest {
                                 + "\",\"targetId\":\"" + actor + "\",\"view\":{\"viewId\":\"" + view
                                 + "\",\"sourceNodeId\":\"" + cNode + "\",\"targetNodeId\":\"" + aNode + "\"}}"))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        UUID edge = UUIDUtil.uuid(com.jayway.jsonpath.JsonPath.<String>read(serving, "$.edgeId"));
+        UUID edge = UUIDUtil.uuid(JsonPath.<String>read(serving, "$.edgeId"));
         mvc.perform(patch("/api/v1/view-edges/" + edge).with(architect())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"style\":{\"lineColor\":\"#00aa00\"}}"))
                 .andExpect(status().isOk())
@@ -133,7 +137,7 @@ class ViewEditingIT extends ApiTest {
                         .param("target", "archimate:SystemSoftware").with(architect()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.nesting == true)].type")
-                        .value(org.hamcrest.Matchers.contains("COMPOSITION")));
+                        .value(Matchers.contains("COMPOSITION")));
 
         mvc.perform(put("/api/v1/view-nodes/" + inner + "/parent").with(architect())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -179,7 +183,7 @@ class ViewEditingIT extends ApiTest {
                 + "\"width\":120,\"height\":55}],\"edges\":[{\"id\":\"" + IDS.generate() + "\",\"sourceId\":\""
                 + appNode + "\",\"targetId\":\"" + unsaved + "\"}]}";
 
-        var proposal = mvc.perform(post("/api/v1/views/" + view + "/auto-layout").with(architect())
+        MvcResult proposal = mvc.perform(post("/api/v1/views/" + view + "/auto-layout").with(architect())
                         .contentType(MediaType.APPLICATION_JSON).content(graph))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nodes.length()").value(2))
@@ -197,14 +201,20 @@ class ViewEditingIT extends ApiTest {
                         .contentType(MediaType.APPLICATION_JSON).content(graph.replace("layered", "spiral")))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("MDL_INVALID_INPUT"));
+        String cycle = "{\"strategy\":\"layered\",\"nodes\":[{\"id\":\"" + unsaved + "\",\"parentId\":\"" + unsaved
+                + "\",\"conceptType\":\"archimate:Node\",\"x\":0,\"y\":0,\"width\":120,\"height\":55}],\"edges\":[]}";
+        mvc.perform(post("/api/v1/views/" + view + "/auto-layout").with(architect())
+                        .contentType(MediaType.APPLICATION_JSON).content(cycle))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("MDL_INVALID_INPUT"));
         mvc.perform(post("/api/v1/views/" + view + "/auto-layout").with(viewer())
                         .contentType(MediaType.APPLICATION_JSON).content(graph))
                 .andExpect(status().isForbidden());
     }
 
-    private static Object read(org.springframework.test.web.servlet.MvcResult result, String path, int index)
+    private static Object read(MvcResult result, String path, int index)
             throws Exception {
-        java.util.List<Object> values = read(result, path);
+        List<Object> values = read(result, path);
         return values.get(index);
     }
 

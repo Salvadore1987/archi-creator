@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 class AdvisorAuditIT extends AdvisorApiTest {
 
@@ -62,13 +63,13 @@ class AdvisorAuditIT extends AdvisorApiTest {
     @Test
     @DisplayName("FR-27: администратор включает помощника и задаёт лимит; состояние видно любой роли")
     void adminTogglesAdvisor() throws Exception {
-        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/ai/settings")
+        mvc.perform(MockMvcRequestBuilders.put("/api/v1/ai/settings")
                         .with(admin()).contentType("application/json")
                         .content("{\"enabled\":false,\"monthlyTokenLimit\":2000}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.monthlyTokenLimit").value(2000));
         mvc.perform(get("/api/v1/ai/status").with(viewer())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.enabled").value(false)).andExpect(jsonPath("$.budgetStatus").value("OK"));
-        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/ai/settings")
+        mvc.perform(MockMvcRequestBuilders.put("/api/v1/ai/settings")
                         .with(architect()).contentType("application/json")
                         .content("{\"enabled\":true,\"monthlyTokenLimit\":2000}"))
                 .andExpect(status().isForbidden());

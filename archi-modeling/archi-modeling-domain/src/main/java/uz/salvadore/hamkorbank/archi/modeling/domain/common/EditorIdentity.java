@@ -20,14 +20,17 @@ public record EditorIdentity(String subject, Set<Role> roles, Set<String> groups
         }
     }
 
+    /** Автор с ролями и без групп — для команд, где список доступа не участвует. */
     public static EditorIdentity of(String subject, Role... roles) {
         return new EditorIdentity(subject, Set.of(roles), Set.of());
     }
 
+    /** Есть ли у автора эта роль. */
     public boolean has(Role role) {
         return roles.contains(role);
     }
 
+    /** Администратор ли автор: ему открыты все модели и чужие блокировки. */
     public boolean isAdmin() {
         return has(Role.ADMIN);
     }

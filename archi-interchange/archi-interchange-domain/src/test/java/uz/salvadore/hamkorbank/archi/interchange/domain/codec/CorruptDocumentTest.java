@@ -1,13 +1,13 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.codec;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 
 /**
  * Повреждённые данные отклоняются — с кодом, объектом и строкой.
@@ -26,9 +26,23 @@ class CorruptDocumentTest {
                 </archimate:model>
                 """);
 
-        assertEquals(DocumentDefect.MALFORMED_XML, defect.code());
-        assertEquals(Optional.of(4), defect.line());
-        assertTrue(defect.column().isPresent());
+        assertEquals(InterchangeCodes.MALFORMED_XML, defect.code());
+        assertEquals(4, defect.line());
+        assertNotNull(defect.column());
+    }
+
+    @Test
+    @DisplayName("FR-50: поломка XML не отбрасывает дефекты, найденные до неё")
+    void malformedXmlKeepsEarlierDefects() {
+        CorruptDocumentException e = reject("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <archimate:model xmlns:archimate="http://www.archimatetool.com/archimate" id="id-1">
+                  <folder name="Business" id="id-1"/>
+                  <folder name="Other" id="id-2">
+                </archimate:model>
+                """);
+
+        assertEquals(List.of(InterchangeCodes.DUPLICATE_ID, InterchangeCodes.MALFORMED_XML), codes(e));
     }
 
     @Test
@@ -44,9 +58,9 @@ class CorruptDocumentTest {
                 """));
 
         // Две ссылки на один и тот же отсутствующий id — две находки, но обе об id-e1.
-        assertEquals(DocumentDefect.DANGLING_REFERENCE, defect.code());
-        assertEquals(Optional.of("id-r1"), defect.archiId());
-        assertEquals(Optional.of(4), defect.line());
+        assertEquals(InterchangeCodes.DANGLING_REFERENCE, defect.code());
+        assertEquals("id-r1", defect.archiId());
+        assertEquals(4, defect.line());
     }
 
     @Test
@@ -60,9 +74,9 @@ class CorruptDocumentTest {
                 <profile name="P" id="id-f2"/>
                 """));
 
-        assertEquals(List.of(DocumentDefect.DUPLICATE_ID, DocumentDefect.DUPLICATE_ID), codes(e));
-        assertEquals(Optional.of("id-e1"), e.defects().getFirst().archiId());
-        assertEquals(Optional.of("id-f2"), e.defects().get(1).archiId());
+        assertEquals(List.of(InterchangeCodes.DUPLICATE_ID, InterchangeCodes.DUPLICATE_ID), codes(e));
+        assertEquals("id-e1", e.defects().getFirst().archiId());
+        assertEquals("id-f2", e.defects().get(1).archiId());
     }
 
     @Test
@@ -77,8 +91,8 @@ class CorruptDocumentTest {
                 </folder>
                 """));
 
-        assertEquals(DocumentDefect.MISSING_END, defect.code());
-        assertEquals(Optional.of("id-r1"), defect.archiId());
+        assertEquals(InterchangeCodes.MISSING_END, defect.code());
+        assertEquals("id-r1", defect.archiId());
     }
 
     @Test
@@ -91,7 +105,7 @@ class CorruptDocumentTest {
                 <folder name="Other" id="id 6" type="other"/>
                 """));
 
-        assertEquals(List.of(DocumentDefect.MISSING_ATTRIBUTE, DocumentDefect.INVALID_ID), codes(e));
+        assertEquals(List.of(InterchangeCodes.MISSING_ATTRIBUTE, InterchangeCodes.INVALID_ID), codes(e));
     }
 
     @Test
@@ -112,8 +126,30 @@ class CorruptDocumentTest {
                 </folder>
                 """));
 
-        assertEquals(DocumentDefect.TARGET_CONNECTIONS_MISMATCH, defect.code());
-        assertEquals(Optional.of("id-n1"), defect.archiId());
+        assertEquals(InterchangeCodes.TARGET_CONNECTIONS_MISMATCH, defect.code());
+        assertEquals("id-n1", defect.archiId());
+    }
+
+    @Test
+    @DisplayName("ожидаемые соединения в тексте дефекта — в порядке файла, а не хеш-таблицы")
+    void expectedConnectionsAreListedInFileOrder() {
+        DocumentDefect defect = single(Xml.model("""
+                <folder name="Views" id="id-f8" type="diagrams">
+                  <element xsi:type="archimate:ArchimateDiagramModel" name="V" id="id-v1">
+                    <child xsi:type="archimate:Note" id="id-n1" targetConnections="id-c9">
+                      <bounds x="0" y="0" width="10" height="10"/>
+                    </child>
+                    <child xsi:type="archimate:Note" id="id-n2">
+                      <bounds x="0" y="0" width="10" height="10"/>
+                      <sourceConnection xsi:type="archimate:Connection" id="id-c1" source="id-n2" target="id-n1"/>
+                      <sourceConnection xsi:type="archimate:Connection" id="id-c2" source="id-n2" target="id-n1"/>
+                    </child>
+                    <child xsi:type="archimate:Note" id="id-c9"/>
+                  </element>
+                </folder>
+                """));
+
+        assertEquals("[id-c1, id-c2]", String.valueOf(defect.message().args().get(1)));
     }
 
     @Test
@@ -126,9 +162,9 @@ class CorruptDocumentTest {
                 </folder>
                 """));
 
-        assertEquals(List.of(DocumentDefect.MISSING_END, DocumentDefect.DUPLICATE_ID,
-                DocumentDefect.DANGLING_REFERENCE, DocumentDefect.DANGLING_REFERENCE,
-                DocumentDefect.DANGLING_REFERENCE), codes(e));
+        assertEquals(List.of(InterchangeCodes.MISSING_END, InterchangeCodes.DUPLICATE_ID,
+                InterchangeCodes.DANGLING_REFERENCE, InterchangeCodes.DANGLING_REFERENCE,
+                InterchangeCodes.DANGLING_REFERENCE), codes(e));
     }
 
     @Test
@@ -140,7 +176,7 @@ class CorruptDocumentTest {
                 <archimate:model xmlns:archimate="http://www.archimatetool.com/archimate" id="id-1" name="&xxe;"/>
                 """);
 
-        assertEquals(DocumentDefect.MALFORMED_XML, defect.code());
+        assertEquals(InterchangeCodes.MALFORMED_XML, defect.code());
     }
 
     private static DocumentDefect single(String xml) {

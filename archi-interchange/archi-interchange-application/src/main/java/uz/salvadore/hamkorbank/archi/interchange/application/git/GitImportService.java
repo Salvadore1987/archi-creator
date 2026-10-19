@@ -4,7 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeOperation;
@@ -21,6 +21,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.PublishedVersi
 import uz.salvadore.hamkorbank.archi.interchange.application.port.SecretResolver;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
@@ -34,7 +35,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
-import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportApplied;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
@@ -65,25 +65,28 @@ public final class GitImportService {
     private static final Pattern BASE_HASH = Pattern.compile("^[0-9a-f]{64}$");
     private static final int SHORT_SHA = 7;
 
-    /** Что подтверждает архитектор: ссылка и коммит из отчёта, отпечаток содержимого, комментарий. */
-    public record PullRequest(Optional<String> ref, Optional<String> commitSha, Optional<String> baseHash,
-                              Optional<String> comment) {
+    /**
+     * Что подтверждает архитектор: ссылка и коммит из отчёта, отпечаток содержимого, комментарий.
+     * Не переданное поле — {@code null}; без комментария версия получает комментарий по умолчанию.
+     */
+    public record PullRequest(String ref, String commitSha, String baseHash, String comment) {
     }
 
     /**
      * Отчёт до применения.
      *
-     * @param baseVersionNo последняя версия модели; у модели без версий пусто
+     * @param baseVersionNo последняя версия модели; у модели без версий {@code null}
      * @param baseHash      отпечаток текущего содержимого — его применение и подтверждает
      * @param applicable    применение пройдёт разбор и строгий режим пространства
      */
-    public record Preview(ModelId model, ResolvedRef ref, Optional<Long> baseVersionNo, String baseHash,
+    public record Preview(ModelId model, ResolvedRef ref, Long baseVersionNo, String baseHash,
                           String targetHash, ModelChanges changes, List<ImportFinding> findings, boolean applicable) {
 
         public Preview {
             findings = List.copyOf(findings);
         }
 
+        /** Содержимое по ссылке совпадает с текущим: применение версии не создаст. */
         public boolean unchanged() {
             return baseHash.equals(targetHash);
         }
@@ -98,9 +101,8 @@ public final class GitImportService {
         }
     }
 
-    /** Прочитанный коммит: сессия после разбора и проверки, документ и снимок, если собрались. */
-    private record Candidate(ResolvedRef ref, ImportSession session, Optional<ModelDocument> document,
-                             Optional<byte[]> xml) {
+    /** Прочитанный коммит: сессия после разбора и проверки, документ и снимок, если собрались, иначе {@code null}. */
+    private record Candidate(ResolvedRef ref, ImportSession session, ModelDocument document, byte[] xml) {
     }
 
     private final GitBindingRepository bindings;
@@ -135,8 +137,8 @@ public final class GitImportService {
         this.clock = clock;
     }
 
-    /** Отчёт об изменениях по ссылке. В базе ничего не меняется, сессия не создаётся. */
-    public Preview preview(EditorIdentity actor, ModelId model, Optional<String> ref) {
+    /** Отчёт об изменениях по ссылке ({@code null} — не задана, отказ). В базе ничего не меняется. */
+    public Preview preview(EditorIdentity actor, ModelId model, String ref) {
         InterchangeOperation operation = InterchangeOperation.PULL_MODEL_FROM_GIT;
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
@@ -148,9 +150,8 @@ public final class GitImportService {
                         .orElseThrow(() -> GitAttempts.refNotFound(requested));
                 return read(remote, resolved, current.workspace(), model, actor);
             });
-            ModelChanges changes = candidate.document()
-                    .map(after -> ModelChanges.between(GitAttempts.document(current.xml()), after))
-                    .orElseGet(() -> new ModelChanges(List.of()));
+            ModelChanges changes = candidate.document() == null ? new ModelChanges(List.of())
+                    : ModelChanges.between(GitAttempts.document(current.xml()), candidate.document());
             return new Preview(model, candidate.ref(), current.versionNo(), current.hash(),
                     candidate.session().sourceHash().value(), changes,
                     candidate.session().findings(), candidate.session().status() == ImportStatus.VALIDATED);
@@ -175,7 +176,7 @@ public final class GitImportService {
             WorkspaceId workspace = states.current(actor, model).workspace();
             GitBinding binding = attempts.binding(workspace);
             Fetched fetched = attempts.network(binding, remote -> {
-                Optional<GitSha> head = repository.fetch(remote);
+                GitSha head = repository.fetch(remote).orElse(null);
                 ResolvedRef commit = repository.resolve(remote, GitRef.of(sha.value()))
                         .filter(r -> r.kind() == RefKind.COMMIT && r.sha().equals(sha))
                         .orElseThrow(() -> GitAttempts.refNotFound(GitRef.of(sha.value())));
@@ -185,14 +186,14 @@ public final class GitImportService {
             Candidate candidate = fetched.candidate();
             ImportSession session = candidate.session();
             if (session.status() == ImportStatus.REJECTED) {
-                attempts.saveRejected(session, candidate.document().isEmpty());
-                throw rejected(session, candidate.document().isEmpty());
+                attempts.saveRejected(session, candidate.document() == null);
+                throw rejected(session, candidate.document() == null);
             }
-            boolean adopt = fetched.head().filter(sha::equals).isPresent();
-            String comment = request.comment().filter(c -> !c.isBlank()).orElseGet(() -> texts.text(
-                    Message.of(InterchangeMessages.GIT_PULL_COMMENT, ref.value(),
-                            sha.value().substring(0, SHORT_SHA))));
-            byte[] xml = candidate.xml().orElseThrow();
+            boolean adopt = sha.equals(fetched.head());
+            String comment = request.comment() != null && !request.comment().isBlank() ? request.comment()
+                    : texts.text(Message.of(InterchangeMessages.GIT_PULL_COMMENT, ref.value(),
+                            sha.value().substring(0, SHORT_SHA)));
+            byte[] xml = Objects.requireNonNull(candidate.xml());
             Applied applied;
             try {
                 applied = unitOfWork.write(() -> {
@@ -203,18 +204,18 @@ public final class GitImportService {
                     }
                     ModelStates.Replaced replaced = states.replace(actor, model, xml, comment);
                     Instant at = clock.instant();
-                    ImportApplied event = session.apply(model, replaced.versionNo(), replaced.opaqueObjects(), at);
+                    session.apply(model, replaced.versionNo(), replaced.opaqueObjects(), at);
                     sessions.save(session);
                     if (adopt) {
                         adopt(binding, model, replaced, sha, at);
                     }
-                    return new Applied(replaced, event);
+                    return new Applied(replaced, session.pullEvents());
                 });
             } catch (RuntimeException failure) {
                 attempts.recordFailure(session, failure);
                 throw failure;
             }
-            events.publish(List.of(applied.event()));
+            events.publish(applied.events());
             metrics.importFinished("applied", session.strictMode(), session.findings());
             if (applied.replaced().created()) {
                 metrics.opaqueObjects(model.value(), applied.replaced().opaqueObjects());
@@ -224,11 +225,11 @@ public final class GitImportService {
         });
     }
 
-    /** Голова ветки привязки в момент применения и прочитанный коммит. */
-    private record Fetched(Optional<GitSha> head, Candidate candidate) {
+    /** Голова ветки привязки в момент применения ({@code null} — ветки нет) и прочитанный коммит. */
+    private record Fetched(GitSha head, Candidate candidate) {
     }
 
-    private record Applied(ModelStates.Replaced replaced, ImportApplied event) {
+    private record Applied(ModelStates.Replaced replaced, List<DomainEvent> events) {
     }
 
     /**
@@ -248,16 +249,16 @@ public final class GitImportService {
     /** Коммит в сессию импорта: каталог модели — документ — снимок, разбор и проверка методологии. */
     private Candidate read(Remote remote, ResolvedRef ref, WorkspaceId workspace, ModelId model, EditorIdentity actor) {
         GitAttempts.Tree tree = attempts.tree(remote, ref.sha(), model);
-        Optional<byte[]> xml = tree.document().map(d -> new ArchiXmlWriter().write(d));
+        byte[] xml = tree.document() == null ? null : new ArchiXmlWriter().write(tree.document());
         ImportSession session = attempts.receive(workspace, model, ref,
-                xml.orElseGet(() -> GitAttempts.concatenated(tree.files())), actor);
-        if (tree.defect().isPresent()) {
-            attempts.corrupt(session, tree.defect().get());
-            return new Candidate(ref, session, Optional.empty(), Optional.empty());
+                xml != null ? xml : GitAttempts.concatenated(tree.files()), actor);
+        if (tree.defect() != null) {
+            attempts.corrupt(session, tree.defect());
+            return new Candidate(ref, session, null, null);
         }
-        attempts.check(session, xml.orElseThrow());
+        attempts.check(session, Objects.requireNonNull(xml));
         if (session.status() == ImportStatus.REJECTED) {
-            return new Candidate(ref, session, Optional.empty(), Optional.empty());
+            return new Candidate(ref, session, null, null);
         }
         return new Candidate(ref, session, session.document(), xml);
     }

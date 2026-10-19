@@ -1,25 +1,18 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.common;
 
-import java.util.Objects;
-
 /**
  * Значение не проходит правило типа: пустое имя, отрицательный расход, неверный
  * формат идентификатора. Вместо текста несёт сообщение с ключом.
  */
-public final class InvalidValueException extends IllegalArgumentException {
+public final class InvalidValueException extends AdvisorDomainException {
 
-    private final Message reason;
-
+    /** Отказ с причиной-сообщением. */
     public InvalidValueException(Message reason) {
-        super(Objects.requireNonNull(reason, "reason").toString());
-        this.reason = reason;
+        super(AdvisorCodes.INVALID_INPUT, Failure.UNPROCESSABLE, reason);
     }
 
+    /** Отказ с причиной по ключу и аргументам. */
     public InvalidValueException(String key, Object... args) {
         this(Message.of(key, args));
-    }
-
-    public Message reason() {
-        return reason;
     }
 }

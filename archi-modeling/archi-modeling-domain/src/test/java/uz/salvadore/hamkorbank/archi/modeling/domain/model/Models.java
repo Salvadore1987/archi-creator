@@ -16,7 +16,7 @@ public final class Models {
 
     public static final Instant NOW = Instant.parse("2026-10-08T10:00:00Z");
     public static final UuidV7 UUIDS = new UuidV7(Clock.fixed(NOW, ZoneOffset.UTC));
-    public static final ArchiIdGenerator ARCHI_IDS = new ArchiIdGenerator();
+    public static final ArchiIdGenerator ARCHI_IDS = new ArchiIdGenerator(UUIDS::next);
     public static final EditorIdentity ARCHITECT = EditorIdentity.of("architect-1", Role.ARCHITECT);
 
     private Models() {
@@ -37,7 +37,7 @@ public final class Models {
     }
 
     public static Relationship relate(ArchitectureModel model, String type, ConceptRef source, ConceptRef target) {
-        return model.addRelationship(ArchiType.ofSimpleName(type), source, target, java.util.Optional.empty(),
+        return model.addRelationship(ArchiType.ofSimpleName(type), source, target, null,
                 RelationshipId.next(UUIDS), ARCHI_IDS.next(), NOW).value();
     }
 

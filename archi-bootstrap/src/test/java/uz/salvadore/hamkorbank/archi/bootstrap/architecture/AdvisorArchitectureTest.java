@@ -11,9 +11,8 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 
 /**
  * Помощник не изменяет модель — и держится это не только формой типов результата,
@@ -27,10 +26,12 @@ class AdvisorArchitectureTest {
 
     private static final String ROOT = "uz.salvadore.hamkorbank.archi";
 
-    /** Что мосту помощника можно взять из application-слоя modeling. */
-    private static final Set<String> READ_ONLY_MODELING = Set.of(ModelQueryService.class.getName(),
-            ModelQueryService.OpenedModel.class.getName(), WorkspaceService.class.getName(),
-            ViewPlacements.class.getName());
+    /** Входные порты modeling, которые мосту помощника можно звать: только запросы. */
+    private static final Set<String> READ_ONLY_MODELING = Set.of(ModelQueryApplicationService.class.getName(),
+            WorkspaceApplicationService.class.getName());
+    /** Запросы и результаты сценариев — данные, а не путь к записи; команды сюда не входят. */
+    private static final Set<String> READ_ONLY_DTO = Set.of(ROOT + ".modeling.application.dto.query",
+            ROOT + ".modeling.application.dto.result");
 
     private static JavaClasses classes;
 
@@ -57,7 +58,8 @@ class AdvisorArchitectureTest {
         DescribedPredicate<JavaClass> modelingWrite = DescribedPredicate.describe(
                 "сервис или порт application-слоя modeling, кроме чтения",
                 c -> c.getPackageName().startsWith(ROOT + ".modeling.application")
-                        && !READ_ONLY_MODELING.contains(c.getName()));
+                        && !READ_ONLY_MODELING.contains(c.getName())
+                        && !READ_ONLY_DTO.contains(c.getPackageName()));
         noClasses().that().resideInAPackage(ROOT + ".bootstrap.advisor..")
                 .should().dependOnClassesThat(modelingWrite)
                 .because("помощник не изменяет модель: мост берёт из modeling только сценарий запросов")

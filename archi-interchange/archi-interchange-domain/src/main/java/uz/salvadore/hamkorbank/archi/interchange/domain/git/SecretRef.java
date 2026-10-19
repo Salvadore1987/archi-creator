@@ -22,6 +22,7 @@ public record SecretRef(String value) {
         }
     }
 
+    /** Ссылка на секрет из строки вида {@code env:ИМЯ}. */
     public static SecretRef of(String value) {
         return new SecretRef(value);
     }

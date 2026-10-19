@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -17,12 +16,12 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
 @Repository
 public class JpaAuditLog implements AuditLog {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
 
     private final ZoneId zone;
 
-    public JpaAuditLog(BudgetZone zone) {
+    public JpaAuditLog(EntityManager em, BudgetZone zone) {
+        this.em = em;
         this.zone = zone.value();
     }
 

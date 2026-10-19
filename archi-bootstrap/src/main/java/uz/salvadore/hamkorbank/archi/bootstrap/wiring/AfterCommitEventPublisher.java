@@ -9,7 +9,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 /**
  * Публикация доменных событий после коммита, в процессе, без брокера.
  * Откат транзакции событий не публикует. Окно потери — падение процесса между
- * коммитом и доставкой — принято до этапа 7a, где нужен outbox.
+ * коммитом и доставкой — принято: событие, которое обязано дойти (зафиксированная
+ * версия для Git), пишется в outbox той же транзакцией, а не публикуется здесь.
  */
 public final class AfterCommitEventPublisher {
 
@@ -19,11 +20,17 @@ public final class AfterCommitEventPublisher {
         this.publisher = publisher;
     }
 
-    public void publish(Collection<?> events) {
+    /**
+     * Публикует события после коммита текущей транзакции, вне транзакции — сразу.
+     *
+     * @param events события любого контекста; у каждого контекста свой тип события
+     * @param <E> тип события контекста
+     */
+    public <E> void publish(Collection<E> events) {
         if (events.isEmpty()) {
             return;
         }
-        List<?> copy = List.copyOf(events);
+        List<E> copy = List.copyOf(events);
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override

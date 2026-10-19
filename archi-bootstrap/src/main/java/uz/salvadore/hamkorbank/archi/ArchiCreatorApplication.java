@@ -13,6 +13,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class ArchiCreatorApplication {
 
+    /** Запускает приложение Spring Boot с аргументами командной строки. */
     public static void main(String[] args) {
         SpringApplication.run(ArchiCreatorApplication.class, args);
     }

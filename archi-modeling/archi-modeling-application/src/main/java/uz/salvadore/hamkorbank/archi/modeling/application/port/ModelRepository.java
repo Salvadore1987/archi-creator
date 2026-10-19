@@ -2,6 +2,8 @@ package uz.salvadore.hamkorbank.archi.modeling.application.port;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
@@ -16,8 +18,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
  */
 public interface ModelRepository {
 
+    /** Агрегат модели целиком: заголовок, дерево папок, элементы, связи, места представлений. */
     Optional<ArchitectureModel> load(ModelId id);
 
+    /** Только заголовок модели — для проверки доступа и статуса без загрузки дерева. */
     Optional<ModelHeader> findHeader(ModelId id);
 
     /** Модели рабочего пространства, кроме физически удалённых. */
@@ -27,7 +31,7 @@ public interface ModelRepository {
      * Запись изменений агрегата. Свежий — вставка целиком; загруженный — заголовок
      * с проверкой версии и тронутые сущности.
      *
-     * @throws ConcurrentModificationException строку модели успел изменить другой писатель
+     * @throws ConcurrentUpdateException строку модели успел изменить другой писатель
      */
     void save(ArchitectureModel model);
 
@@ -41,19 +45,20 @@ public interface ModelRepository {
     void purge(ModelId id);
 
     /** Модель, которой принадлежит папка, элемент, связь или представление с этим ключом. */
-    Optional<ModelId> ownerOf(java.util.UUID objectId);
+    Optional<ModelId> ownerOf(UUID objectId);
 
     /**
      * Занят ли ключ хоть одной строкой содержимого — папкой, элементом, связью,
      * представлением, узлом или ребром любой модели.
      */
-    boolean idTaken(java.util.UUID id);
+    boolean idTaken(UUID id);
 
     /** Занят ли {@code archiId} узлом или ребром какого-нибудь представления модели. */
-    boolean diagramArchiIdTaken(ModelId modelId, uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId archiId);
+    boolean diagramArchiIdTaken(ModelId modelId, ArchiId archiId);
 
     /** Где элемент или связь вообще упоминаются на представлениях — чтобы снять размещения. */
     List<ViewId> viewsReferencing(ElementId elementId);
 
+    /** Представления, на которых связь нарисована ребром. */
     List<ViewId> viewsReferencing(RelationshipId relationshipId);
 }

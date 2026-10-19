@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.idempotency;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Instant;
@@ -13,7 +14,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 
 class IdempotentCommandTest {
 
@@ -29,7 +30,8 @@ class IdempotentCommandTest {
         assertEquals(first, replay);
         assertEquals(List.of(1L), versions, "вторая версия не создана");
 
-        ModelingException conflict = assertThrows(ModelingException.class, () -> save("key-1", "другое тело"));
+        ModelingDomainException conflict = assertThrows(ModelingDomainException.class,
+                () -> save("key-1", "другое тело"));
         assertEquals("INV-MDL-003", conflict.code());
         assertEquals(Failure.CONFLICT, conflict.failure());
         assertEquals(List.of(1L), versions);
@@ -39,22 +41,45 @@ class IdempotentCommandTest {
     @DisplayName("INV-MDL-003: отпечаток различает поля, а не их склейку")
     void fingerprintSeparatesFields() {
         assertEquals(IdempotentCommand.fingerprint("a", Optional.of("b")), IdempotentCommand.fingerprint("a", "b"));
-        assertInstanceOf(IdempotentCommand.Execute.class, IdempotentCommand.decide(Optional.empty(), "x"));
+        assertInstanceOf(IdempotentCommand.Execute.class, IdempotentCommand.decide(null, "x"));
         assertEquals(false, IdempotentCommand.fingerprint("ab", "c").equals(IdempotentCommand.fingerprint("a", "bc")));
     }
 
     /** Команда «сохранить версию» в миниатюре: решение домена плюс запись результата. */
     private String save(String key, String comment) {
         String fingerprint = IdempotentCommand.fingerprint("SaveModel", comment);
-        return switch (IdempotentCommand.decide(Optional.ofNullable(records.get(key)), fingerprint)) {
+        return switch (IdempotentCommand.decide(records.get(key), fingerprint)) {
             case IdempotentCommand.Replay replay -> replay.resultRef();
             case IdempotentCommand.Execute execute -> {
                 long versionNo = versions.size() + 1L;
                 versions.add(versionNo);
-                records.put(key, new IdempotencyRecord("SaveModel", "architect-1", key, fingerprint,
+                records.put(key, IdempotencyRecord.restore("SaveModel", "architect-1", key, fingerprint,
                         String.valueOf(versionNo), Instant.EPOCH));
                 yield String.valueOf(versionNo);
             }
         };
+    }
+
+    @Test
+    @DisplayName("Отпечаток различает «значения нет» и строку \"null\"")
+    void absentDiffersFromNullText() {
+        String text = IdempotentCommand.fingerprint("a", "null");
+        String absent = IdempotentCommand.fingerprint("a", Optional.empty());
+
+        assertNotEquals(text, absent);
+        assertNotEquals(text, IdempotentCommand.fingerprint("a", (Object) null));
+        assertEquals(absent, IdempotentCommand.fingerprint("a", (Object) null));
+    }
+
+    /** Составное значение команды: его {@code toString} — не контракт отпечатка. */
+    private record Composite(String name, int size) {
+    }
+
+    @Test
+    @DisplayName("INV-MDL-003: отпечаток — из простых значений, составное значение — ошибка программиста")
+    void fingerprintTakesPlainValuesOnly() {
+        assertThrows(IllegalArgumentException.class, () -> IdempotentCommand.fingerprint("a", new Composite("x", 1)));
+        assertEquals(IdempotentCommand.fingerprint("a", 1, true, null),
+                IdempotentCommand.fingerprint("a", 1, true, null));
     }
 }

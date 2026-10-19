@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.UUID;
 
+/** Узел представления: вид, элемент, родительский узел, границы относительно родителя, стиль и текст. */
 @Entity
 @Table(name = "view_node")
 public class ViewNodeEntity {

@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
 import java.time.Clock;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
@@ -49,6 +48,6 @@ class ExportServiceFormatTest {
     }
 
     private static ExportRequest request(String format) {
-        return new ExportRequest(format, Optional.empty(), Optional.empty(), Optional.empty());
+        return new ExportRequest(format, null, null, null);
     }
 }

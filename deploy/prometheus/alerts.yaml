@@ -4,8 +4,6 @@
 # вслед за ними, а не отдельно.
 #
 # Метрики выставляет /actuator/prometheus (роль ADMIN).
-# Алерт GitBindingUnreachable для interchange появится на этапе 7a,
-# вместе с PushModelToGit.
 # ───────────────────────────────────────────────────────────────────
 groups:
   - name: archi-creator-modeling
@@ -58,6 +56,14 @@ groups:
         labels: { severity: ticket }
         annotations:
           summary: Нарушение NFR-02 — импорт дольше трёх секунд в p95.
+
+      - alert: GitBindingUnreachable
+        expr: |
+          sum(rate(interchange_usecase_errors_total{usecase="PushModelToGit"}[15m])) > 0.05
+        for: 15m
+        labels: { severity: ticket }
+        annotations:
+          summary: Репозиторий привязки недоступен — проверить, что очистка снимков версий остановлена (FR-47).
 
   - name: archi-creator-advisor
     rules:

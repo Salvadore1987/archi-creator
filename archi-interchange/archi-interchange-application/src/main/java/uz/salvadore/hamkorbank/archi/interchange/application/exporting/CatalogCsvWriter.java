@@ -53,6 +53,7 @@ public final class CatalogCsvWriter {
     private static final long FIXED_ENTRY_TIME = 0L;
     private static final ArchiTypeRegistry REGISTRY = ArchiTypeRegistry.archimate32();
 
+    /** Каталог элементов и связей модели в zip из двух файлов CSV. */
     public byte[] write(byte[] archimate, CatalogCsvOptions options) {
         ModelDocument document = new StaxArchiDocumentReader().read(new ByteArrayInputStream(archimate));
         Catalog catalog = new Catalog(document, options);
@@ -96,14 +97,15 @@ public final class CatalogCsvWriter {
             for (DocumentNode relationship : document.relationships()) {
                 String source = relationship.attribute("source").orElse("");
                 String target = relationship.attribute("target").orElse("");
-                if (options.folderArchiId().isEmpty() || (exported.contains(source) && exported.contains(target))) {
+                if (options.folderArchiId() == null || (exported.contains(source) && exported.contains(target))) {
                     relationships.add(relationship);
                 }
             }
         }
 
-        private void walkFolder(DocumentNode folder, String path, boolean inside, Optional<String> filter) {
-            boolean selected = inside || filter.isEmpty() || filter.get().equals(folder.archiId().value());
+        /** Обход папки; {@code filter} — {@code null}, когда выгружается вся модель. */
+        private void walkFolder(DocumentNode folder, String path, boolean inside, String filter) {
+            boolean selected = inside || filter == null || filter.equals(folder.archiId().value());
             folderPath.put(folder.archiId().value(), path);
             for (DocumentNode child : folder.children()) {
                 if (child.tag().equals("folder")) {

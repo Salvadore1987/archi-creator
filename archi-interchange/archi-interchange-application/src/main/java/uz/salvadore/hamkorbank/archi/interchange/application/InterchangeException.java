@@ -25,18 +25,22 @@ public class InterchangeException extends RuntimeException {
         this.details = Map.copyOf(details);
     }
 
+    /** Код ошибки для клиента API. */
     public String code() {
         return code;
     }
 
+    /** Класс отказа, по которому адаптер выбирает статус ответа. */
     public Failure failure() {
         return failure;
     }
 
+    /** Сообщение с ключом, которое переводится на язык запроса. */
     public Message reason() {
         return reason;
     }
 
+    /** Дополнительные поля ответа об ошибке. */
     public Map<String, Object> details() {
         return details;
     }

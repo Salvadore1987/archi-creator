@@ -10,6 +10,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.MvcResult;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 
@@ -33,7 +34,7 @@ class ValidationReportIT extends ApiTest {
                 .andExpect(jsonPath("$[0].targetId").value("id-r1"));
     }
 
-    private static UUID id(org.springframework.test.web.servlet.MvcResult result, String path) throws Exception {
+    private static UUID id(MvcResult result, String path) throws Exception {
         return UUIDUtil.uuid(ApiTest.<String>read(result, path));
     }
 }

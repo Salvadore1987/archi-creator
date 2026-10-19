@@ -2,17 +2,17 @@ package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
-import jakarta.persistence.PersistenceContext;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ElementEntity;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.FolderEntity;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ModelEntity;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.RelationshipEntity;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ViewEntity;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentModificationException;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentUpdateException;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
@@ -40,12 +40,12 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 @Repository
 public class JpaModelRepository implements ModelRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
 
     private final ViewRepository views;
 
-    public JpaModelRepository(ViewRepository views) {
+    public JpaModelRepository(EntityManager em, ViewRepository views) {
+        this.em = em;
         this.views = views;
     }
 
@@ -56,17 +56,18 @@ public class JpaModelRepository implements ModelRepository {
             return Optional.empty();
         }
         UUID modelId = id.value();
-        var folders = em.createQuery("select f from FolderEntity f where f.modelId = :m", FolderEntity.class)
+        List<FolderEntity> folders = em.createQuery(
+                        "select f from FolderEntity f where f.modelId = :m", FolderEntity.class)
                 .setParameter("m", modelId).getResultList();
-        var elements = em.createQuery(
+        List<ElementEntity> elements = em.createQuery(
                         "select distinct e from ElementEntity e left join fetch e.properties where e.modelId = :m",
                         ElementEntity.class)
                 .setParameter("m", modelId).getResultList();
-        var relationships = em.createQuery(
+        List<RelationshipEntity> relationships = em.createQuery(
                         "select distinct r from RelationshipEntity r left join fetch r.properties where r.modelId = :m",
                         RelationshipEntity.class)
                 .setParameter("m", modelId).getResultList();
-        var views = em.createQuery("select v from ViewEntity v where v.modelId = :m", ViewEntity.class)
+        List<ViewEntity> views = em.createQuery("select v from ViewEntity v where v.modelId = :m", ViewEntity.class)
                 .setParameter("m", modelId).getResultList();
         return Optional.of(ArchitectureModel.restore(EntityMapper.toHeader(model),
                 folders.stream().map(EntityMapper::toFolder).toList(),
@@ -110,6 +111,7 @@ public class JpaModelRepository implements ModelRepository {
                 (d, e) -> EntityMapper.apply(d, modelId, e));
         AggregateWrites.sync(em, model.relationships(), RelationshipEntity.class, RelationshipEntity::new,
                 (d, e) -> EntityMapper.apply(d, modelId, e));
+        model.markPersisted();
         AggregateWrites.flush(em, Message.of(ModelingMessages.MODEL, model.id()));
     }
 
@@ -118,7 +120,7 @@ public class JpaModelRepository implements ModelRepository {
         ModelId id = content.model().id();
         ModelEntity entity = requireModel(id);
         if (entity.version != content.model().version()) {
-            throw new ConcurrentModificationException(Message.of(ModelingMessages.MODEL, id));
+            throw new ConcurrentUpdateException(Message.of(ModelingMessages.MODEL, id));
         }
         em.flush();
         for (String table : List.of("ViewEdgeEntity", "ViewNodeEntity", "ViewEntity", "RelationshipEntity",
@@ -137,9 +139,7 @@ public class JpaModelRepository implements ModelRepository {
                 .forEach(x -> persist(new ElementEntity(), e -> EntityMapper.apply(x, modelId, e)));
         content.model().relationships().values()
                 .forEach(x -> persist(new RelationshipEntity(), e -> EntityMapper.apply(x, modelId, e)));
-        content.model().folders().markPersisted();
-        content.model().elements().markPersisted();
-        content.model().relationships().markPersisted();
+        content.model().markPersisted();
         content.views().forEach(views::save);
         AggregateWrites.flush(em, Message.of(ModelingMessages.MODEL, id));
     }
@@ -203,12 +203,12 @@ public class JpaModelRepository implements ModelRepository {
     private ModelEntity requireModel(ModelId id) {
         ModelEntity entity = em.find(ModelEntity.class, id.value());
         if (entity == null) {
-            throw new ConcurrentModificationException(Message.of(ModelingMessages.MODEL, id));
+            throw new ConcurrentUpdateException(Message.of(ModelingMessages.MODEL, id));
         }
         return entity;
     }
 
-    private <E> void persist(E entity, java.util.function.Consumer<E> fill) {
+    private <E> void persist(E entity, Consumer<E> fill) {
         fill.accept(entity);
         em.persist(entity);
     }

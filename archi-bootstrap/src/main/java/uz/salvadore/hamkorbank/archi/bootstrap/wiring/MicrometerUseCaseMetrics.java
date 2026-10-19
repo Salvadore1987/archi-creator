@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.wiring;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import java.time.Duration;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -25,6 +26,10 @@ public final class MicrometerUseCaseMetrics {
         this.errorCode = errorCode;
     }
 
+    /**
+     * Выполняет сценарий и пишет счётчик запросов с исходом, длительность и, при отказе, ошибку с её кодом. Исключение
+     * пробрасывается дальше без изменений.
+     */
     public <T> T observe(String useCase, Supplier<T> work) {
         Timer.Sample sample = Timer.start(registry);
         String outcome = "success";
@@ -37,10 +42,10 @@ public final class MicrometerUseCaseMetrics {
             throw e;
         } finally {
             sample.stop(Timer.builder(prefix + ".usecase.duration").tag("usecase", useCase)
-                    .serviceLevelObjectives(java.time.Duration.ofMillis(10), java.time.Duration.ofMillis(50),
-                            java.time.Duration.ofMillis(100), java.time.Duration.ofMillis(250),
-                            java.time.Duration.ofMillis(500), java.time.Duration.ofSeconds(1),
-                            java.time.Duration.ofSeconds(2), java.time.Duration.ofSeconds(5))
+                    .serviceLevelObjectives(Duration.ofMillis(10), Duration.ofMillis(50),
+                            Duration.ofMillis(100), Duration.ofMillis(250),
+                            Duration.ofMillis(500), Duration.ofSeconds(1),
+                            Duration.ofSeconds(2), Duration.ofSeconds(5))
                     .register(registry));
             Counter.builder(prefix + ".usecase.requests").tag("usecase", useCase).tag("outcome", outcome)
                     .register(registry).increment();

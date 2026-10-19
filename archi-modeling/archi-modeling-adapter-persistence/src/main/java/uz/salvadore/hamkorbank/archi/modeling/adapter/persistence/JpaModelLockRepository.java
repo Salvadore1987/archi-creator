@@ -1,12 +1,11 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ModelLockEntity;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentModificationException;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentUpdateException;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelLockRepository;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
@@ -20,13 +19,16 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 @Repository
 public class JpaModelLockRepository implements ModelLockRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public JpaModelLockRepository(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public Optional<ModelLock> find(ModelId modelId) {
         return Optional.ofNullable(em.find(ModelLockEntity.class, modelId.value()))
-                .map(e -> new ModelLock(ModelId.of(e.modelId), e.owner, e.acquiredAt, e.expiresAt));
+                .map(e -> ModelLock.restore(ModelId.of(e.modelId), e.owner, e.acquiredAt, e.expiresAt));
     }
 
     @Override
@@ -46,7 +48,7 @@ public class JpaModelLockRepository implements ModelLockRepository {
             }
             em.flush();
         } catch (PersistenceException e) {
-            throw new ConcurrentModificationException(Message.of(ModelingMessages.MODEL_LOCK, lock.modelId()));
+            throw new ConcurrentUpdateException(Message.of(ModelingMessages.MODEL_LOCK, lock.modelId()));
         }
     }
 

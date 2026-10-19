@@ -11,7 +11,9 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSessionL
  */
 public interface ImportSessionRepository extends ImportSessionLookup {
 
+    /** Сессия импорта по идентификатору. */
     Optional<ImportSession> find(ImportSessionId id);
 
+    /** Сохраняет сессию вместе с находками. */
     void save(ImportSession session);
 }

@@ -1,12 +1,10 @@
 package uz.salvadore.hamkorbank.archi.advisor.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.AdvisorSettingsRepository;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
@@ -19,8 +17,11 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
 @Repository
 public class NativeQueryAdvisorSettings implements AdvisorSettingsRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public NativeQueryAdvisorSettings(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public StoredSettings find(WorkspaceId workspaceId) {
@@ -30,7 +31,7 @@ public class NativeQueryAdvisorSettings implements AdvisorSettingsRepository {
             throw notFound(workspaceId);
         }
         Object[] row = (Object[]) rows.getFirst();
-        return new StoredSettings((Boolean) row[0], Optional.ofNullable((Number) row[1]).map(Number::longValue));
+        return new StoredSettings((Boolean) row[0], row[1] == null ? null : ((Number) row[1]).longValue());
     }
 
     @Override
@@ -44,7 +45,7 @@ public class NativeQueryAdvisorSettings implements AdvisorSettingsRepository {
         }
     }
 
-    private static AdvisorException notFound(WorkspaceId workspaceId) {
-        return AdvisorException.notFound(Message.of(AdvisorMessages.WORKSPACE, workspaceId));
+    private static AdvisorDomainException notFound(WorkspaceId workspaceId) {
+        return AdvisorDomainException.notFound(Message.of(AdvisorMessages.WORKSPACE, workspaceId));
     }
 }

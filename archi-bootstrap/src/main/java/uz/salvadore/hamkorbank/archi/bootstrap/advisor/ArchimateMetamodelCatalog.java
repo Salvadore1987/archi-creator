@@ -1,5 +1,7 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.advisor;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -7,6 +9,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.MetamodelCatalog;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ConceptDefinition;
@@ -26,7 +29,7 @@ public final class ArchimateMetamodelCatalog implements MetamodelCatalog {
     private final List<String> elementTypes = registry.concepts(ConceptKind.ELEMENT).stream()
             .filter(ConceptDefinition::supported)
             .map(c -> c.type().value()).sorted().toList();
-    private final List<String> relationshipTypes = java.util.Arrays.stream(RelationshipType.values())
+    private final List<String> relationshipTypes = Arrays.stream(RelationshipType.values())
             .map(r -> r.archiType().value()).sorted().toList();
 
     @Override
@@ -49,7 +52,7 @@ public final class ArchimateMetamodelCatalog implements MetamodelCatalog {
         for (String target : elementTypes) {
             Set<RelationshipType> relations = matrix.permitted(source.get(), ArchiType.of(target));
             relations.forEach(r -> permitted.computeIfAbsent(r.archiType().value(),
-                    k -> new java.util.ArrayList<>()).add(target));
+                    k -> new ArrayList<>()).add(target));
         }
         return new LinkedHashMap<>(permitted);
     }
@@ -67,7 +70,7 @@ public final class ArchimateMetamodelCatalog implements MetamodelCatalog {
         try {
             ArchiType type = ArchiType.of(value);
             return matrix.knows(type) ? Optional.of(type) : Optional.empty();
-        } catch (IllegalArgumentException invalid) {
+        } catch (InvalidValueException invalid) {
             return Optional.empty();
         }
     }

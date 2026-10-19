@@ -24,10 +24,12 @@ public record ArchiId(String value) {
         }
     }
 
+    /** Идентификатор из строки; недопустимая строка — отказ. */
     public static ArchiId of(String value) {
         return new ArchiId(value);
     }
 
+    /** Годится ли строка в идентификатор Archi. */
     public static boolean isValid(String value) {
         return value != null && FORMAT.matcher(value).matches();
     }

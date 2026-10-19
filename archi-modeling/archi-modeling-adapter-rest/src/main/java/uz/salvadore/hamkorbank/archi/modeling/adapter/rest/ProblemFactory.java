@@ -23,6 +23,7 @@ public final class ProblemFactory {
     private ProblemFactory() {
     }
 
+    /** HTTP-статус для класса отказа. */
     public static HttpStatus status(Failure failure) {
         return switch (failure) {
             case NOT_FOUND -> HttpStatus.NOT_FOUND;
@@ -31,9 +32,14 @@ public final class ProblemFactory {
             case FORBIDDEN -> HttpStatus.FORBIDDEN;
             case GONE -> HttpStatus.GONE;
             case UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+            case DEFECT -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
     }
 
+    /**
+     * Ответ {@code problem+json}: тип по коду ошибки, заголовок на языке запроса, адрес запроса и дополнительные поля
+     * отказа.
+     */
     public static ProblemDetail problem(HttpStatus status, String code, String detail, Map<String, Object> details,
                                         HttpServletRequest request, TextCatalog text) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);

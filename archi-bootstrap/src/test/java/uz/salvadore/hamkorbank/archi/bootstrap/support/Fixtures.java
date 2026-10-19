@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.support;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
 import uz.salvadore.hamkorbank.archi.bootstrap.roundtrip.RoundTripGoldenFileTest;
@@ -58,6 +59,6 @@ public final class Fixtures {
                   </folder>
                   <folder name="Views" id="id-f9" type="diagrams"/>
                 </archimate:model>
-                """.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                """.getBytes(StandardCharsets.UTF_8);
     }
 }

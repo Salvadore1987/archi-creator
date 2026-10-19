@@ -19,7 +19,7 @@ public record ViewRef(ViewId id, FolderId folderId, ArchiId archiId, DiagramType
         Objects.requireNonNull(folderId, "folderId");
         Objects.requireNonNull(archiId, "archiId");
         Objects.requireNonNull(archiType, "archiType");
-        Objects.requireNonNull(name, "name");
+        Names.limited(name, Names.VIEW);
         Objects.requireNonNull(sortOrder, "sortOrder");
     }
 }

@@ -1,15 +1,17 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.DomainEvent;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
 
 class AdvisorSessionTest {
 
@@ -21,15 +23,15 @@ class AdvisorSessionTest {
                 SessionStatus.FAILED, s -> s.fail(TokenUsage.NONE, Sessions.audit(), Sessions.NOW),
                 SessionStatus.COMPLETED, s -> {
                     s.startStreaming(100, false);
-                    s.complete(new TokenUsage(100, 20), Optional.empty(), Optional.empty(), Sessions.audit(),
+                    s.complete(new TokenUsage(100, 20), null, null, Sessions.audit(),
                             Sessions.NOW);
                 });
         outcomes.forEach((outcome, finish) -> {
             AdvisorSession session = Sessions.review();
-            assertTrue(session.auditEntry().isEmpty(), "до терминального состояния записи нет");
+            assertNull(session.auditEntry(), "до терминального состояния записи нет");
             finish.accept(session);
 
-            AuditEntry entry = session.auditEntry().orElseThrow();
+            AuditEntry entry = session.auditEntry();
             assertEquals(outcome, entry.outcome());
             assertEquals("alice", entry.actor());
             assertEquals(AdvisorFunction.REVIEW, entry.function());
@@ -37,7 +39,7 @@ class AdvisorSessionTest {
 
             List<DomainEvent> events = session.pullEvents();
             assertEquals(1, events.size(), "событие завершения — на каждый исход");
-            assertEquals(outcome, ((AdvisorSessionCompleted) events.getFirst()).outcome());
+            assertEquals(outcome, ((AdvisorSessionCompletedEvent) events.getFirst()).outcome());
         });
     }
 
@@ -47,8 +49,8 @@ class AdvisorSessionTest {
         AdvisorSession session = Sessions.review();
         session.reject(RejectionReason.ADVISOR_DISABLED, Sessions.audit(), Sessions.NOW);
 
-        AuditEntry entry = session.auditEntry().orElseThrow();
-        assertEquals(Optional.of(RejectionReason.ADVISOR_DISABLED), entry.rejectionReason());
+        AuditEntry entry = session.auditEntry();
+        assertEquals(RejectionReason.ADVISOR_DISABLED, entry.rejectionReason());
         assertEquals(0, entry.usage().total());
     }
 
@@ -57,7 +59,7 @@ class AdvisorSessionTest {
     void fingerprintDistinguishesReplayFromConflict() {
         AdvisorSession session = Sessions.review();
 
-        assertTrue(session.sameRequest(AdvisorRequest.review(Sessions.MODEL, Optional.empty())));
+        assertTrue(session.sameRequest(AdvisorRequest.review(Sessions.MODEL, null)));
         assertTrue(!session.sameRequest(AdvisorRequest.explain(Sessions.MODEL, "id-1")));
     }
 
@@ -69,6 +71,33 @@ class AdvisorSessionTest {
         session.firstToken(Sessions.NOW);
         session.firstToken(Sessions.NOW.plusSeconds(5));
 
-        assertEquals(Optional.of(Sessions.NOW), session.firstTokenAt());
+        assertEquals(Sessions.NOW, session.firstTokenAt());
+    }
+
+    @Test
+    @DisplayName("результат — своей функции: ответ обязателен подсказке, чужой план или ответ — отказ")
+    void resultBelongsToFunction() {
+        AdvisorAnswer answer = new AdvisorAnswer("ответ", List.of());
+        ModelPlan plan = new ModelPlan(List.of(), List.of(), null);
+
+        AdvisorSession explain = streaming(AdvisorRequest.explain(Sessions.MODEL, "id-e1"));
+        assertThrows(InvalidValueException.class,
+                () -> explain.complete(TokenUsage.NONE, null, null, Sessions.audit(), Sessions.NOW));
+        assertThrows(InvalidValueException.class,
+                () -> explain.complete(TokenUsage.NONE, plan, answer, Sessions.audit(), Sessions.NOW));
+
+        AdvisorSession review = streaming(AdvisorRequest.review(Sessions.MODEL, null));
+        assertThrows(InvalidValueException.class,
+                () -> review.complete(TokenUsage.NONE, null, answer, Sessions.audit(), Sessions.NOW));
+        assertEquals(SessionStatus.STREAMING, review.status(), "отказ ничего не меняет");
+
+        explain.complete(TokenUsage.NONE, null, answer, Sessions.audit(), Sessions.NOW);
+        assertEquals(answer, explain.answer());
+    }
+
+    private static AdvisorSession streaming(AdvisorRequest request) {
+        AdvisorSession session = Sessions.requested(request);
+        session.startStreaming(10, false);
+        return session;
     }
 }

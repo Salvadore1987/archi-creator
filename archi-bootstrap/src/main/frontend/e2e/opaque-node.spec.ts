@@ -4,7 +4,7 @@ import { editorState, openModel, openView } from './support/mockApi';
 test('UI-020: неподдержанный объект виден, двигается, но не правится', async ({ page }) => {
   const api = await openModel(page);
   const viewId = await openView(page, api, '10 ');
-  // Location не отнесён ни к одной фазе метамодели — после этапа 6 он остаётся opaque.
+  // Location не отнесён ни к одной поддержанной фазе метамодели — он остаётся opaque.
   const view = api.views[viewId]!;
   const placed = view.nodes.find((n) =>
     api.tree.elements.some((e) => e.id === n.elementId && e.archiType === 'archimate:Location'),

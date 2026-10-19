@@ -32,6 +32,7 @@ public final class UuidV7 {
         });
     }
 
+    /** Новый идентификатор версии 7 по часам приложения. */
     public UUID next() {
         return generator.generate();
     }

@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.importing;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uz.salvadore.hamkorbank.archi.interchange.domain.importing.Sessions.NOW;
@@ -8,9 +9,11 @@ import static uz.salvadore.hamkorbank.archi.interchange.domain.importing.Session
 
 import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 
 class ImportSessionStateMachineTest {
@@ -28,12 +31,13 @@ class ImportSessionStateMachineTest {
         assertThrows(IllegalImportTransitionException.class, () -> received.apply(MODEL, 1, 0, NOW));
 
         received.validate(List.of(), NOW);
-        ImportApplied applied = received.apply(MODEL, 1, 0, NOW);
+        received.apply(MODEL, 1, 0, NOW);
 
         assertEquals(ImportStatus.APPLIED, received.status());
+        ImportSessionAppliedEvent applied = (ImportSessionAppliedEvent) received.pullEvents().getFirst();
         assertEquals(MODEL, applied.modelId());
-        assertEquals(List.of(applied), received.pullEvents());
-        assertEquals(Optional.of(NOW), received.finishedAt());
+        assertEquals(List.of(), received.pullEvents());
+        assertEquals(NOW, received.finishedAt());
     }
 
     @Test
@@ -76,6 +80,33 @@ class ImportSessionStateMachineTest {
 
         Sessions.parse(session, VALID);
         assertThrows(IllegalImportTransitionException.class, () -> Sessions.parse(session, VALID));
-        assertTrue(session.document().isPresent());
+        assertNotNull(session.document());
+    }
+
+    @Test
+    @DisplayName("INV-IXC-002: применение без модели или с номером версии меньше единицы не меняет сессию")
+    void applyChecksBeforeTransition() {
+        ImportSession session = Sessions.received(VALID, false);
+        Sessions.parse(session, VALID);
+        session.validate(List.of(), NOW);
+
+        assertThrows(RuntimeException.class, () -> session.apply(null, 1, 0, NOW));
+        assertThrows(InvalidValueException.class, () -> session.apply(MODEL, 0, 0, NOW));
+
+        assertEquals(ImportStatus.VALIDATED, session.status());
+        session.apply(MODEL, 1, 0, NOW);
+        assertEquals(ImportStatus.APPLIED, session.status());
+    }
+
+    @Test
+    @DisplayName("Отказ перехода сессии импорта называет команду и состояние ключами — их переводят")
+    void importTransitionRefusalIsTranslatable() {
+        ImportSession received = Sessions.received(VALID, false);
+
+        IllegalImportTransitionException e = assertThrows(IllegalImportTransitionException.class,
+                () -> received.apply(MODEL, 1, 0, NOW));
+
+        assertEquals(List.of(Message.of(InterchangeMessages.COMMAND_APPLY_IMPORT),
+                Message.of(InterchangeMessages.STATUS_IMPORT_RECEIVED)), e.reason().args());
     }
 }

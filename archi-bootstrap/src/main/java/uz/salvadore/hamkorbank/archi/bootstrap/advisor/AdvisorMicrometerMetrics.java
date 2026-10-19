@@ -7,7 +7,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -41,9 +40,9 @@ public final class AdvisorMicrometerMetrics implements AdvisorMetrics {
     }
 
     @Override
-    public void session(AdvisorFunction function, SessionStatus outcome, Optional<RejectionReason> reason) {
+    public void session(AdvisorFunction function, SessionStatus outcome, RejectionReason reason) {
         Counter.builder("advisor.sessions").tag("function", function.name()).tag("outcome", outcome.name())
-                .tag("rejection_reason", reason.map(Enum::name).orElse("none")).register(registry).increment();
+                .tag("rejection_reason", reason == null ? "none" : reason.name()).register(registry).increment();
     }
 
     @Override

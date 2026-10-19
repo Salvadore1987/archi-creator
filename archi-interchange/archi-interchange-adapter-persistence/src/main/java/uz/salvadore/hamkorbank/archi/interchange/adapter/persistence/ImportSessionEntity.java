@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
+/** Строка сессии импорта: источник, ключ идемпотентности, режим, состояние и итог. */
 @Entity
 @Table(name = "import_session")
 public class ImportSessionEntity {

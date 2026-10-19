@@ -18,6 +18,7 @@ public record ViewPlacements(ViewId viewId, List<ElementId> elementIds, List<Rel
         relationshipIds = List.copyOf(relationshipIds);
     }
 
+    /** Представление, на котором не размещено ничего. */
     public static ViewPlacements empty(ViewId viewId) {
         return new ViewPlacements(viewId, List.of(), List.of());
     }

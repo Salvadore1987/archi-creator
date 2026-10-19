@@ -9,6 +9,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
 /** Метрики interchange: длительность сценариев, исходы импорта, непрозрачные объекты. */
 public interface InterchangeMetrics {
 
+    /** Выполняет сценарий и замеряет его длительность. */
     <T> T observe(String useCase, Supplier<T> work);
 
     /**

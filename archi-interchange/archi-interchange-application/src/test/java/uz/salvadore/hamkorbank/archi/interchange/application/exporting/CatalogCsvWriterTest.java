@@ -1,7 +1,5 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.exporting;
 
-import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
-import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,11 +13,12 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 
 class CatalogCsvWriterTest {
 
@@ -34,7 +33,7 @@ class CatalogCsvWriterTest {
     void catalogHasTwoFilesWithBom() throws IOException {
         Map<String, byte[]> files = unzip(new CatalogCsvWriter(RU).write(
                 Files.readAllBytes(FIXTURES.resolve("all_relationship_types.archimate")),
-                CatalogCsvOptions.of(Optional.empty(), Optional.empty())));
+                CatalogCsvOptions.of(null, null)));
 
         assertEquals(List.of("elements.csv", "relations.csv"), List.copyOf(files.keySet()));
         assertArrayEquals(new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF},
@@ -53,13 +52,13 @@ class CatalogCsvWriterTest {
     void propertyColumnsByFrequencyAndFolderFilter() throws IOException {
         byte[] reference = Files.readAllBytes(REFERENCE);
         String all = text(unzip(new CatalogCsvWriter(RU).write(reference,
-                CatalogCsvOptions.of(Optional.of(","), Optional.empty()))).get("elements.csv"));
+                CatalogCsvOptions.of(",", null))).get("elements.csv"));
         String header = all.substring(0, all.indexOf("\r\n"));
         assertTrue(header.startsWith("id,type,name,layer,folder,documentation,views,placed,"), header);
 
         String applicationFolder = "id-" + firstFolderId(reference, "application");
         String filtered = text(unzip(new CatalogCsvWriter(RU).write(reference,
-                CatalogCsvOptions.of(Optional.empty(), Optional.of(applicationFolder)))).get("elements.csv"));
+                CatalogCsvOptions.of(null, applicationFolder))).get("elements.csv"));
         assertTrue(filtered.contains(";Application;"), "поддерево Application на месте");
         assertTrue(!filtered.contains(";Business;") && !filtered.contains(";Technology;"),
                 "чужие корни отфильтрованы");

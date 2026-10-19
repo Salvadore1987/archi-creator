@@ -7,24 +7,41 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
-import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclEntry;
-import uz.salvadore.hamkorbank.archi.modeling.domain.access.PrincipalType;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.DeleteElementCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.DeleteTreeItemsCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewNodeCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceAccessListCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.SaveVersionCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ListModelsQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ListVersionsQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ProposeViewLayoutQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.SuggestRelationTypesQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.AccessListResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelSummaryResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelTreeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PlacementResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationTypeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationshipResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.SaveVersionResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
-import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommitted;
+import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommittedEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 
 class ModelingScenariosTest {
 
@@ -38,113 +55,142 @@ class ModelingScenariosTest {
     @Test
     @DisplayName("UC-MDL-001: модель создаётся с версией 1, повтор ключа — та же модель")
     void createModelIsIdempotentAndStartsHistory() {
-        ArchitectureModel first = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", Optional.of("k-1"));
-        ArchitectureModel replay = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", Optional.of("k-1"));
+        ModelSummaryResponse first = create(ALICE, "Ландшафт", "k-1");
+        ModelSummaryResponse replay = create(ALICE, "Ландшафт", "k-1");
 
         assertEquals(first.id(), replay.id());
         assertEquals(1, ports.models.size());
-        assertEquals(1, ports.versionService.list(ALICE, first.id()).size());
-        assertEquals(9, ports.models.get(first.id()).roots().size());
-        ModelingException other = assertThrows(ModelingException.class,
-                () -> ports.lifecycle.create(ALICE, ports.workspace.id(), "Другая", Optional.of("k-1")));
+        assertEquals(1, ports.versionService.listVersions(ALICE, new ListVersionsQuery(first.id())).size());
+        assertEquals(9, ports.models.get(ModelId.of(first.id())).roots().size());
+        ModelingDomainException other = assertThrows(ModelingDomainException.class,
+                () -> create(ALICE, "Другая", "k-1"));
         assertEquals("INV-MDL-003", other.code());
     }
 
     @Test
     @DisplayName("FR-28: VIEWER не создаёт модель и не правит, но читает")
     void viewerReadsButDoesNotWrite() {
-        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", Optional.empty()).id();
+        ModelId model = ports.createModel(ALICE, "Ландшафт");
 
-        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingException.class,
-                () -> ports.lifecycle.create(READER, ports.workspace.id(), "x", Optional.empty())).failure());
-        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingException.class,
-                () -> ports.lockService.acquire(READER, model)).failure());
-        assertEquals("Ландшафт", ports.queries.open(READER, model).name());
+        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
+                () -> create(READER, "x", null)).failure());
+        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
+                () -> ports.lock(READER, model)).failure());
+        assertEquals("Ландшафт", open(READER, model).model().name());
+    }
+
+    @Test
+    @DisplayName("FR-28: роль проверяется раньше разбора ввода — читатель получает 403, а не 422")
+    void roleIsCheckedBeforeInput() {
+        ModelId model = ports.createModel(ALICE, "Ландшафт");
+        ports.lock(ALICE, model);
+        ViewSummaryResponse view = ports.view(ALICE, model, "Контекст");
+        PlaceViewNodeCommand noElement = new PlaceViewNodeCommand(view.id(), "DIAGRAM_OBJECT", null, null, null,
+                0, 0, null, null, null, null, null);
+
+        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
+                () -> ports.viewService.placeNode(READER, noElement)).failure());
+        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
+                () -> ports.viewQueries.proposeLayout(READER, new ProposeViewLayoutQuery(view.id(),
+                        "no-such-strategy", List.of(), List.of()))).failure());
+        assertEquals(ModelingCodes.INVALID_INPUT, assertThrows(ModelingDomainException.class,
+                () -> ports.viewService.placeNode(ALICE, noElement)).code(), "автору — отказ во вводе");
+    }
+
+    @Test
+    @DisplayName("FR-28: отказ роли называет операцию сообщением, а не именем сценария и списком ролей")
+    void roleDenialNamesOperationByKey() {
+        ModelingDomainException denied = assertThrows(ModelingDomainException.class,
+                () -> create(READER, "x", null));
+
+        assertEquals(List.of(Message.of(ModelingMessages.OPERATION_CREATE_MODEL)), denied.reason().args());
     }
 
     @Test
     @DisplayName("INV-MDL-006: правка без блокировки — 409, второй редактор — 409 с владельцем")
     void writesRequireOwnLock() {
-        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", Optional.empty()).id();
+        ModelId model = ports.createModel(ALICE, "Ландшафт");
 
-        ModelingException noLock = assertThrows(ModelingException.class, () -> ports.elements.create(ALICE, model,
-                COMPONENT, "АБС", Optional.empty(), Optional.empty()));
+        ModelingDomainException noLock = assertThrows(ModelingDomainException.class,
+                () -> ports.element(ALICE, model, COMPONENT, "АБС"));
         assertEquals("INV-MDL-006", noLock.code());
 
-        ports.lockService.acquire(ALICE, model);
-        Element element = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(), Optional.empty());
+        ports.lock(ALICE, model);
+        ElementResponse element = ports.element(ALICE, model, COMPONENT, "АБС");
         assertEquals("АБС", element.name());
 
-        ModelingException taken = assertThrows(ModelingException.class, () -> ports.lockService.acquire(BOB, model));
+        ModelingDomainException taken = assertThrows(ModelingDomainException.class,
+                () -> ports.lock(BOB, model));
         assertEquals("alice", taken.details().get("lockOwner"));
-        assertThrows(ModelingException.class, () -> ports.elements.create(BOB, model, COMPONENT, "CRM",
-                Optional.empty(), Optional.empty()));
+        assertThrows(ModelingDomainException.class, () -> ports.element(BOB, model, COMPONENT, "CRM"));
 
         ports.clock.advance(Duration.ofMinutes(31));
-        assertEquals("bob", ports.lockService.acquire(BOB, model).owner(), "просроченная блокировка не держит");
+        assertEquals("bob", ports.lock(BOB, model).owner(), "просроченная блокировка не держит");
     }
 
     @Test
     @DisplayName("UC-MDL-004: изменений нет — версия не создаётся; есть — номер растёт")
     void saveCreatesVersionOnlyOnChanges() {
-        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", Optional.empty()).id();
-        ports.lockService.acquire(ALICE, model);
+        ModelId model = ports.createModel(ALICE, "Ландшафт");
+        ports.lock(ALICE, model);
 
-        VersionService.SaveResult unchanged = ports.versionService.save(ALICE, model, Optional.of("пусто"),
-                Optional.empty());
+        SaveVersionResponse unchanged = ports.versionService.saveVersion(ALICE,
+                new SaveVersionCommand(model.value(), "пусто", null));
         assertFalse(unchanged.created());
         assertEquals(1, unchanged.version().versionNo());
 
-        ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(), Optional.empty());
-        VersionService.SaveResult saved = ports.versionService.save(ALICE, model, Optional.of("АБС"),
-                Optional.of("save-1"));
-        VersionService.SaveResult replay = ports.versionService.save(ALICE, model, Optional.of("АБС"),
-                Optional.of("save-1"));
+        ports.element(ALICE, model, COMPONENT, "АБС");
+        SaveVersionResponse saved = ports.versionService.saveVersion(ALICE,
+                new SaveVersionCommand(model.value(), "АБС", "save-1"));
+        SaveVersionResponse replay = ports.versionService.saveVersion(ALICE,
+                new SaveVersionCommand(model.value(), "АБС", "save-1"));
 
         assertTrue(saved.created());
         assertEquals(2, saved.version().versionNo());
         assertEquals(2, replay.version().versionNo());
         assertEquals(2, ports.versions.size());
-        assertEquals(2, ports.published.stream().filter(ModelVersionCommitted.class::isInstance).count());
+        assertEquals(2, ports.published.stream().filter(ModelVersionCommittedEvent.class::isInstance).count());
     }
 
     @Test
     @DisplayName("INV-MDL-011: модель со списком скрыта от чужих — её нет в списке, прямой запрос 404")
     void accessListHidesModel() {
-        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Секретная", Optional.empty()).id();
-        ports.accessLists.replace(ALICE, model, List.of(new AclEntry(PrincipalType.USER, "alice", AclAccess.WRITE)));
+        ModelId model = ports.createModel(ALICE, "Секретная");
+        ports.accessLists.replaceAccessList(ALICE, new ReplaceAccessListCommand(model.value(),
+                List.of(acl("USER", "alice", "WRITE"))));
 
-        assertEquals(List.of(), ports.queries.list(BOB, ports.workspace.id()));
-        assertEquals(Failure.NOT_FOUND, assertThrows(ModelingException.class,
-                () -> ports.queries.open(BOB, model)).failure());
-        assertEquals(1, ports.queries.list(ALICE, ports.workspace.id()).size());
-        assertEquals(Failure.NOT_FOUND, assertThrows(ModelingException.class,
-                () -> ports.accessLists.replace(BOB, model, List.of())).failure(),
+        assertEquals(List.of(), list(BOB));
+        assertEquals(Failure.NOT_FOUND, assertThrows(ModelingDomainException.class,
+                () -> open(BOB, model)).failure());
+        assertEquals(1, list(ALICE).size());
+        assertEquals(Failure.NOT_FOUND, assertThrows(ModelingDomainException.class,
+                () -> clearAccess(BOB, model)).failure(),
                 "скрытая модель отвечает 404 раньше, чем выдала бы себя отказом 403");
 
-        ports.accessLists.replace(ALICE, model, List.of(new AclEntry(PrincipalType.USER, "alice", AclAccess.WRITE),
-                new AclEntry(PrincipalType.GROUP, "audit", AclAccess.READ)));
+        ports.accessLists.replaceAccessList(ALICE, new ReplaceAccessListCommand(model.value(),
+                List.of(acl("USER", "alice", "WRITE"), acl("GROUP", "audit", "READ"))));
         EditorIdentity auditor = new EditorIdentity("carol", Set.of(Role.ARCHITECT), Set.of("audit"));
-        assertEquals("Секретная", ports.queries.open(auditor, model).name());
-        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingException.class,
-                () -> ports.accessLists.replace(auditor, model, List.of())).failure(), "список меняют автор и ADMIN");
-        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingException.class,
-                () -> ports.lockService.acquire(auditor, model)).failure(), "READ не даёт правки");
+        assertEquals("Секретная", open(auditor, model).model().name());
+        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
+                () -> clearAccess(auditor, model)).failure(), "список меняют автор и ADMIN");
+        assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
+                () -> ports.lock(auditor, model)).failure(), "READ не даёт правки");
     }
 
     @Test
     @DisplayName("FR-31: дерево модели с размещениями — запись на каждое представление, пустое тоже")
     void treeWithPlacementsCoversEveryView() {
-        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", Optional.empty()).id();
-        ports.lockService.acquire(ALICE, model);
-        Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(), Optional.empty());
-        View placed = ports.viewService.create(ALICE, model, "Контекст", Optional.empty(), Optional.empty());
-        View empty = ports.viewService.create(ALICE, model, "Пустое", Optional.empty(), Optional.empty());
-        ports.viewService.place(ALICE, placed.id(), component.id(), new Bounds(10, 10, 120, 55), Optional.empty());
+        ModelId model = ports.createModel(ALICE, "Ландшафт");
+        ports.lock(ALICE, model);
+        ElementResponse component = ports.element(ALICE, model, COMPONENT, "АБС");
+        ViewSummaryResponse placed = ports.view(ALICE, model, "Контекст");
+        ViewSummaryResponse empty = ports.view(ALICE, model, "Пустое");
+        ports.place(ALICE, placed.id(), component.id(), new Bounds(10, 10, 120, 55));
 
-        var opened = ports.queries.openWithPlacements(READER, model);
+        ModelTreeResponse opened = open(READER, model);
 
-        assertEquals(List.of(placed.id(), empty.id()), opened.placements().stream().map(p -> p.viewId()).toList());
+        assertEquals(List.of(placed.id(), empty.id()),
+                opened.placements().stream().map(PlacementResponse::viewId).toList());
         assertEquals(List.of(component.id()), opened.placements().getFirst().elementIds());
         assertTrue(opened.placements().getLast().elementIds().isEmpty());
     }
@@ -152,43 +198,70 @@ class ModelingScenariosTest {
     @Test
     @DisplayName("INV-MDL-004: удаление элемента со связью — 409; групповое вместе со связью проходит")
     void deleteWithRelationshipsTogether() {
-        ModelId model = ports.lifecycle.create(ALICE, ports.workspace.id(), "Ландшафт", Optional.empty()).id();
-        ports.lockService.acquire(ALICE, model);
-        Element component = ports.elements.create(ALICE, model, COMPONENT, "АБС", Optional.empty(), Optional.empty());
-        Element actor = ports.elements.create(ALICE, model, ArchiType.ofSimpleName("BusinessActor"), "Клиент",
-                Optional.empty(), Optional.empty());
-        var serving = ports.relationships.create(ALICE, model, ArchiType.ofSimpleName("ServingRelationship"),
-                component.id().value(), actor.id().value(), Optional.empty(), Optional.empty(), Optional.empty());
-        View view = ports.viewService.create(ALICE, model, "Контекст", Optional.empty(), Optional.empty());
-        ports.viewService.place(ALICE, view.id(), component.id(), new Bounds(10, 10, 120, 55), Optional.empty());
+        ModelId model = ports.createModel(ALICE, "Ландшафт");
+        ports.lock(ALICE, model);
+        ElementResponse component = ports.element(ALICE, model, COMPONENT, "АБС");
+        ElementResponse actor = ports.element(ALICE, model, ArchiType.ofSimpleName("BusinessActor"), "Клиент");
+        RelationshipResponse serving = ports.relate(ALICE, model, ArchiType.ofSimpleName("ServingRelationship"),
+                component.id(), actor.id());
+        ViewSummaryResponse view = ports.view(ALICE, model, "Контекст");
+        ports.place(ALICE, view.id(), component.id(), new Bounds(10, 10, 120, 55));
 
-        ModelingException blocked = assertThrows(ModelingException.class,
-                () -> ports.elements.delete(ALICE, component.id()));
+        ModelingDomainException blocked = assertThrows(ModelingDomainException.class,
+                () -> ports.elements.deleteElement(ALICE, new DeleteElementCommand(component.id())));
         assertEquals("INV-MDL-004", blocked.code());
 
-        ports.tree.delete(ALICE, model, List.of(component.id().value(), serving.relationship().id().value()));
+        ports.tree.deleteTreeItems(ALICE, new DeleteTreeItemsCommand(model.value(),
+                List.of(component.id(), serving.id())));
 
         assertEquals(1, ports.models.get(model).elements().size());
-        assertEquals(0, ports.views.get(view.id()).nodes().size(), "размещение ушло вместе с элементом");
+        assertEquals(0, ports.views.get(ViewId.of(view.id())).nodes().size(), "размещение ушло вместе с элементом");
     }
 
     @Test
     @DisplayName("UI-004: среди допустимых связей пары помечена подразумеваемая вложением — одна или ни одной")
     void suggestionsMarkNestingRelationship() {
-        var nodeInNode = RelationshipService.suggestions(ArchiType.ofSimpleName("Node"),
-                ArchiType.ofSimpleName("SystemSoftware"));
-        assertEquals(List.of("COMPOSITION"), nodeInNode.stream().filter(RelationshipService.Suggestion::nesting)
-                .map(x -> x.type().name()).toList(), "где допустимы обе — composition");
+        List<RelationTypeResponse> nodeInNode = suggest("Node", "SystemSoftware");
+        assertEquals(List.of("COMPOSITION"), nodeInNode.stream().filter(RelationTypeResponse::nesting)
+                .map(RelationTypeResponse::type).toList(), "где допустимы обе — composition");
         assertTrue(nodeInNode.getFirst().byDefault());
-        assertEquals(1, nodeInNode.stream().filter(RelationshipService.Suggestion::byDefault).count());
+        assertEquals(1, nodeInNode.stream().filter(RelationTypeResponse::byDefault).count());
 
-        var actorInRole = RelationshipService.suggestions(ArchiType.ofSimpleName("BusinessActor"),
-                ArchiType.ofSimpleName("BusinessRole"));
-        assertEquals(List.of("ASSIGNMENT"), actorInRole.stream().filter(RelationshipService.Suggestion::nesting)
-                .map(x -> x.type().name()).toList());
+        List<RelationTypeResponse> actorInRole = suggest("BusinessActor", "BusinessRole");
+        assertEquals(List.of("ASSIGNMENT"), actorInRole.stream().filter(RelationTypeResponse::nesting)
+                .map(RelationTypeResponse::type).toList());
 
-        var componentInProcess = RelationshipService.suggestions(COMPONENT, ArchiType.ofSimpleName("BusinessProcess"));
-        assertFalse(componentInProcess.stream().anyMatch(RelationshipService.Suggestion::nesting),
+        List<RelationTypeResponse> componentInProcess = suggest("ApplicationComponent", "BusinessProcess");
+        assertFalse(componentInProcess.stream().anyMatch(RelationTypeResponse::nesting),
                 "вложенность связи не подразумевает");
+        assertEquals(ModelingCodes.INVALID_INPUT, assertThrows(ModelingDomainException.class,
+                () -> ports.metamodel.suggestRelationTypes(new SuggestRelationTypesQuery(
+                        ArchiType.ofSimpleName("Node").value(), "Node"))).code(),
+                "тип без префикса нотации — отказ во вводе");
+    }
+
+    private List<RelationTypeResponse> suggest(String source, String target) {
+        return ports.metamodel.suggestRelationTypes(new SuggestRelationTypesQuery(
+                ArchiType.ofSimpleName(source).value(), ArchiType.ofSimpleName(target).value()));
+    }
+
+    private ModelSummaryResponse create(EditorIdentity actor, String name, String key) {
+        return ports.lifecycle.createModel(actor, new CreateModelCommand(ports.workspace.id().value(), name, key));
+    }
+
+    private ModelTreeResponse open(EditorIdentity actor, ModelId model) {
+        return ports.queries.getModel(actor, new GetModelQuery(model.value()));
+    }
+
+    private List<ModelSummaryResponse> list(EditorIdentity actor) {
+        return ports.queries.listModels(actor, new ListModelsQuery(ports.workspace.id().value()));
+    }
+
+    private static ReplaceAccessListCommand.Entry acl(String principalType, String principal, String access) {
+        return new ReplaceAccessListCommand.Entry(principalType, principal, access);
+    }
+
+    private AccessListResponse clearAccess(EditorIdentity actor, ModelId model) {
+        return ports.accessLists.replaceAccessList(actor, new ReplaceAccessListCommand(model.value(), List.of()));
     }
 }

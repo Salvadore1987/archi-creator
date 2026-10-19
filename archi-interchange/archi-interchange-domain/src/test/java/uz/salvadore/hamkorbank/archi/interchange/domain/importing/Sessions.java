@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
@@ -45,7 +44,7 @@ final class Sessions {
     }
 
     static ImportRequest request(String xml, String key, boolean strict) {
-        return ImportRequest.of(WORKSPACE, Optional.empty(), "model.archimate",
+        return ImportRequest.of(WORKSPACE, null, "model.archimate",
                 xml.getBytes(StandardCharsets.UTF_8), key, strict, "architect");
     }
 
@@ -58,6 +57,6 @@ final class Sessions {
     static ImportFinding matrixViolation() {
         return new ImportFinding(FindingId.next(UUIDS), Severity.ERROR, "RELATION_NOT_PERMITTED",
                 ImportFinding.storedText("Composition от BusinessActor к ApplicationComponent не допускается"),
-                Optional.of(ArchiId.of("id-r1")), Optional.of(8));
+                ArchiId.of("id-r1"), 8);
     }
 }

@@ -40,7 +40,8 @@ class OefExportFixturesTest {
     void exportMatchesFixture(String name) throws IOException {
         OefWriter.Written written = WRITER.write(new StaxArchiDocumentReader()
                 .read(new ByteArrayInputStream(Fixtures.fixture(name))));
-        String losses = written.losses().stream().map(l -> l.archiId() + " " + l.objectKind() + " " + l.aspect())
+        String losses = written.losses().stream()
+                .map(l -> l.archiId() + " " + l.objectKind().value() + " " + l.aspect())
                 .collect(Collectors.joining("\n", "", "\n"));
         Path xml = FIXTURES.resolve("oef_export_" + name + ".xml");
         Path report = FIXTURES.resolve("oef_export_" + name + ".losses.txt");

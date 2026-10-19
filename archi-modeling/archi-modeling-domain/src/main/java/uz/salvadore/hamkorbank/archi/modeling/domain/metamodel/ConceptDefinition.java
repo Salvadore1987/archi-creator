@@ -1,25 +1,23 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.metamodel;
 
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Запись каталога: что за тип, какого слоя и с какой фазы поддержан.
  *
- * @param phase фаза, в которой тип становится редактируемым; пусто — фаза не назначена
+ * @param phase фаза, в которой тип становится редактируемым; {@code null} — фаза не назначена
  *              (так сейчас у {@code Location} и {@code Grouping}: они пока не отнесены ни к одной)
  */
-public record ConceptDefinition(ArchiType type, ConceptKind kind, Layer layer, Optional<MetamodelPhase> phase) {
+public record ConceptDefinition(ArchiType type, ConceptKind kind, Layer layer, MetamodelPhase phase) {
 
     public ConceptDefinition {
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(layer, "layer");
-        Objects.requireNonNull(phase, "phase");
     }
 
     /** Редактируется ли тип в текущей фазе. Неподдержанный хранится как opaque. */
     public boolean supported() {
-        return phase.filter(MetamodelPhase::supported).isPresent();
+        return phase != null && phase.supported();
     }
 }

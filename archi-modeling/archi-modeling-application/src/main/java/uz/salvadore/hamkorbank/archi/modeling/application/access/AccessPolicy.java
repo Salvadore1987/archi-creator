@@ -5,7 +5,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
@@ -18,10 +18,11 @@ public final class AccessPolicy {
     private AccessPolicy() {
     }
 
+    /** Отказывает с {@code 403}, если ни одна роль автора не допускает операцию. */
     public static void require(EditorIdentity actor, Operation operation) {
         if (actor.roles().stream().noneMatch(operation.roles()::contains)) {
-            throw new ModelingException(ModelingCodes.ACCESS_DENIED, Failure.FORBIDDEN,
-                    Message.of(ModelingMessages.OPERATION_DENIED, operation.useCase(), operation.roles()),
+            throw new ModelingDomainException(ModelingCodes.ACCESS_DENIED, Failure.FORBIDDEN,
+                    Message.of(ModelingMessages.OPERATION_DENIED, operation.label()),
                     Map.of("operation", operation.useCase()));
         }
     }

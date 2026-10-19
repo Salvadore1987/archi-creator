@@ -7,7 +7,13 @@
   - номер раздела: ``§10.3``;
   - якорь: ``FR-02``, ``NFR-05``, ``INV-IXC-005``, ``UC-MDL-001``, ``UI-004``,
     ``ADR-0017``;
-  - путь в каталог спецификации или обоснований: ``spec/…``, ``docs/…``.
+  - путь в каталог спецификации или обоснований: ``spec/…``, ``docs/…``;
+  - этап плана работ: ``этап 2``, ``(этап 5a)``, ``до этапа 7b`` — номер этапа
+    устаревает вместе с планом, а поведение кода от него не зависит;
+  - имя файла спецификации без пути: ``aggregates.yaml``, ``invariants.md`` —
+    список берётся из ``git ls-files spec`` (кроме ``README.md``). Имя с путём
+    перед ним (``ui/design-tokens.yaml`` — копия в classpath, которую код читает)
+    ссылкой не считается.
 
 Проверяются только комментарии — строки, аннотации и константы нет:
 коды ошибок (``"INV-MDL-006"``) и ``@DisplayName`` тестов — данные.
@@ -50,7 +56,18 @@ REF = re.compile(
     r"|\bUI-\d+"
     r"|\bADR-\d+"
     r"|(?<![\w./-])(?:spec|docs)/"
+    r"|(?i:\bэтап\w*\s+\d+[a-z]?\b)"
 )
+
+def spec_file_names() -> re.Pattern[str]:
+    """Имена файлов спецификации, упомянутые без пути, — та же ссылка на документ."""
+    listed = subprocess.run(["git", "ls-files", "spec"], cwd=ROOT, capture_output=True, text=True,
+                            check=True).stdout.split()
+    names = sorted({Path(name).name for name in listed} - {"README.md"}, key=len, reverse=True)
+    return re.compile(r"(?<![\w./-])(?:" + "|".join(re.escape(n) for n in names) + r")(?![\w.-])")
+
+
+SPEC_FILE = spec_file_names()
 
 SKIP_PREFIXES = ("spec/", "docs/", "tools/", ".idea/", ".mvn/")
 SKIP_NAMES = {"mvnw", "mvnw.cmd", "package-lock.json"}
@@ -72,6 +89,9 @@ EXEMPT = {
     ("archi-bootstrap/src/main/java/uz/salvadore/hamkorbank/archi/bootstrap/wiring/"
      "MicrometerUseCaseMetrics.java", "{@code INV-MDL-006}"):
         "буквальное значение метки error_code, по которому фильтрует алерт",
+    ("archi-bootstrap/src/test/java/uz/salvadore/hamkorbank/archi/bootstrap/architecture/"
+     "CodingRulesTest.java", "spec/domain/<контекст>/aggregates.yaml"):
+        "тест читает список корней агрегатов из этого файла",
 }
 
 C_LIKE = {".java", ".ts", ".tsx", ".js", ".mjs", ".cjs"}
@@ -192,7 +212,7 @@ def main() -> int:
         scanned += 1
         seen = set()
         for no, comment in comments_of(rel, text):
-            m = REF.search(comment)
+            m = REF.search(comment) or SPEC_FILE.search(comment)
             if not m or (rel, no) in seen:
                 continue
             if any(rel == p and frag in comment for p, frag in EXEMPT):

@@ -35,6 +35,7 @@ public record Notation(Size defaultSize, Map<String, Size> defaultSizeByType, Ma
         return shapes.getOrDefault(archiType, fallback);
     }
 
+    /** Есть ли у типа свой силуэт, а не заглушка. */
     public boolean hasOwnShape(String archiType) {
         return shapes.containsKey(archiType);
     }
@@ -59,10 +60,12 @@ public record Notation(Size defaultSize, Map<String, Size> defaultSizeByType, Ma
         return Double.parseDouble(value(key).replace("px", "").strip());
     }
 
+    /** Заливка и обводка слоя; неизвестный ключ — слой {@code other}. */
     public LayerPaint layer(String key) {
         return Optional.ofNullable(layers.get(key)).orElseGet(() -> layers.get("other"));
     }
 
+    /** Размер фигуры. */
     public record Size(double width, double height) {
     }
 
@@ -70,26 +73,25 @@ public record Notation(Size defaultSize, Map<String, Size> defaultSizeByType, Ma
     public record Box(double x, double y, double width, double height) {
     }
 
+    /** Угловая иконка фигуры: символ спрайта, место и размер. */
     public record CornerIcon(String spriteId, double x, double y, double size) {
     }
 
+    /** Цвета заливки и обводки слоя. */
     public record LayerPaint(String fill, String border) {
     }
 
     /**
      * Запись силуэта: имя примитива контура, угловая иконка, область подписи,
      * токен радиуса, ключ слоя ({@code null} — слой элемента) и пунктир обводки.
+     * Иконки, области подписи и пунктира нет — {@code null}.
      */
-    public record ShapeEntry(String outline, Optional<CornerIcon> icon, Optional<Box> labelBox, String radiusToken,
-                             Optional<String> layer, Optional<String> dash) {
+    public record ShapeEntry(String outline, CornerIcon icon, Box labelBox, String radiusToken, String layer,
+                             String dash) {
 
         public ShapeEntry {
             Objects.requireNonNull(outline, "outline");
-            Objects.requireNonNull(icon, "icon");
-            Objects.requireNonNull(labelBox, "labelBox");
             Objects.requireNonNull(radiusToken, "radiusToken");
-            Objects.requireNonNull(layer, "layer");
-            Objects.requireNonNull(dash, "dash");
         }
     }
 }

@@ -6,10 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
+import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ModelChanges.Change;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ModelChanges.Count;
@@ -55,12 +55,12 @@ class ModelChangesTest {
         ModelChanges changes = ModelChanges.between(before, after);
 
         assertEquals(List.of(
-                new Change(Kind.ELEMENT, Type.ADDED, id("id-node-1"), Optional.of("Node"), "Сервер", List.of()),
-                new Change(Kind.ELEMENT, Type.REMOVED, id("id-crm"), Optional.of("ApplicationComponent"), "CRM",
+                new Change(Kind.ELEMENT, Type.ADDED, id("id-node-1"), "Node", "Сервер", List.of()),
+                new Change(Kind.ELEMENT, Type.REMOVED, id("id-crm"), "ApplicationComponent", "CRM",
                         List.of()),
-                new Change(Kind.ELEMENT, Type.CHANGED, id("id-app"), Optional.of("ApplicationComponent"),
+                new Change(Kind.ELEMENT, Type.CHANGED, id("id-app"), "ApplicationComponent",
                         "АБС «Ядро»", List.of("name")),
-                new Change(Kind.RELATIONSHIP, Type.REMOVED, id("id-rel"), Optional.of("ServingRelationship"), "",
+                new Change(Kind.RELATIONSHIP, Type.REMOVED, id("id-rel"), "ServingRelationship", "",
                         List.of())), changes.changes());
         assertTrue(changes.summary().containsAll(List.of(new Count(Kind.ELEMENT, 1, 1, 1),
                 new Count(Kind.RELATIONSHIP, 0, 1, 0))));
@@ -96,9 +96,19 @@ class ModelChangesTest {
 
         Change change = ModelChanges.between(before, after).changes().getFirst();
 
-        assertEquals(Optional.of("ApplicationCollaboration"), change.archiType());
+        assertEquals("ApplicationCollaboration", change.archiType());
         assertEquals(List.of(ModelChanges.TYPE, ModelChanges.PROPERTIES, ModelChanges.DOCUMENTATION),
                 change.fields());
+    }
+
+    @Test
+    @DisplayName("Описание представления не меняет его диаграмму, хотя сдвигает позиции узлов в файле")
+    void viewDocumentationIsNotDiagramChange() {
+        ModelDocument before = model(APP, "", VIEW.formatted(12));
+        ModelDocument after = model(APP, "", VIEW.formatted(12).replace("id=\"id-view\">",
+                "id=\"id-view\">\n    <documentation>карта</documentation>"));
+
+        assertEquals(List.of(ModelChanges.DOCUMENTATION), single(ModelChanges.between(before, after)).fields());
     }
 
     @Test
@@ -108,7 +118,7 @@ class ModelChangesTest {
         ModelDocument after = model(APP, "", VIEW.formatted(240));
 
         assertEquals(List.of(new Change(Kind.VIEW, Type.CHANGED, id("id-view"),
-                        Optional.of("ArchimateDiagramModel"), "Контекст", List.of(ModelChanges.DIAGRAM))),
+                        "ArchimateDiagramModel", "Контекст", List.of(ModelChanges.DIAGRAM))),
                 ModelChanges.between(before, after).changes());
     }
 
@@ -138,6 +148,16 @@ class ModelChangesTest {
         assertEquals(Kind.MODEL, change.kind());
         assertEquals("Тест 2", change.name());
         assertEquals(List.of("name", ModelChanges.DOCUMENTATION), change.fields());
+    }
+
+    @Test
+    @DisplayName("смена вида развилки — поле @type, а не смена типа ArchiMate")
+    void junctionKindIsAttributeField() {
+        String junction = "<element xsi:type=\"archimate:Junction\" name=\"J\" id=\"id-j\" type=\"or\"/>";
+        ModelDocument before = model(junction, "", "");
+        ModelDocument after = model(junction.replace("type=\"or\"", "type=\"and\""), "", "");
+
+        assertEquals(List.of("@type"), single(ModelChanges.between(before, after)).fields());
     }
 
     private static Change single(ModelChanges changes) {
@@ -171,7 +191,7 @@ class ModelChangesTest {
         return new StaxArchiDocumentReader().read(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
     }
 
-    private static uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId id(String value) {
-        return uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId.of(value);
+    private static ArchiId id(String value) {
+        return ArchiId.of(value);
     }
 }

@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
@@ -14,14 +13,17 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 /**
  * Направленная связь между концептами одной модели.
  *
- * @param accessType только у Access; пусто — атрибута в файле нет (Archi читает как WRITE)
- * @param directed   только у Association
+ * @param name          имя; {@code null} — не задано
+ * @param documentation документация; {@code null} — не задана
+ * @param accessType    только у Access; {@code null} — атрибута в файле нет (Archi читает как WRITE)
+ * @param directed      только у Association; {@code null} — атрибута нет
+ * @param rawXml        остаток XML; {@code null} — нет
  */
 public record Relationship(RelationshipId id, FolderId folderId, ArchiId archiId, ArchiType archiType,
-                           ConceptRef source, ConceptRef target, Optional<String> name,
-                           Optional<String> documentation, Optional<AccessType> accessType,
-                           Optional<Boolean> directed, List<PropertyEntry> properties, SortOrder sortOrder,
-                           boolean supported, Optional<RawXml> rawXml) {
+                           ConceptRef source, ConceptRef target, String name,
+                           String documentation, AccessType accessType,
+                           Boolean directed, List<PropertyEntry> properties, SortOrder sortOrder,
+                           boolean supported, RawXml rawXml) {
 
     public Relationship {
         Objects.requireNonNull(id, "id");
@@ -30,15 +32,12 @@ public record Relationship(RelationshipId id, FolderId folderId, ArchiId archiId
         Objects.requireNonNull(archiType, "archiType");
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(target, "target");
-        Objects.requireNonNull(name, "name");
-        Objects.requireNonNull(documentation, "documentation");
-        Objects.requireNonNull(accessType, "accessType");
-        Objects.requireNonNull(directed, "directed");
         Objects.requireNonNull(sortOrder, "sortOrder");
-        Objects.requireNonNull(rawXml, "rawXml");
-        name.ifPresent(n -> Names.limited(n, Names.RELATIONSHIP));
+        if (name != null) {
+            Names.limited(name, Names.RELATIONSHIP);
+        }
         properties = List.copyOf(properties);
-        if (!supported && rawXml.isEmpty()) {
+        if (!supported && rawXml == null) {
             throw new InvalidValueException(ModelingMessages.OPAQUE_WITHOUT_RESIDUE, archiId);
         }
         if (source.value().equals(id.value()) || target.value().equals(id.value())) {
@@ -46,16 +45,22 @@ public record Relationship(RelationshipId id, FolderId folderId, ArchiId archiId
         }
     }
 
+    /** Служит ли концепт концом этой связи — источником или целью. */
     public boolean touches(ConceptRef concept) {
         return source.equals(concept) || target.equals(concept);
     }
 
-    public Relationship edited(Optional<String> newName, Optional<String> newDocumentation,
+    /**
+     * Та же связь с новыми именем, документацией и свойствами; концы и тип не меняются.
+     * {@code null} в имени или документации — значения нет.
+     */
+    public Relationship edited(String newName, String newDocumentation,
                                List<PropertyEntry> newProperties) {
         return new Relationship(id, folderId, archiId, archiType, source, target, newName, newDocumentation,
                 accessType, directed, newProperties, sortOrder, supported, rawXml);
     }
 
+    /** Та же связь в другой папке и на другой позиции. */
     public Relationship movedTo(FolderId folder, SortOrder order) {
         return new Relationship(id, folder, archiId, archiType, source, target, name, documentation, accessType,
                 directed, properties, order, supported, rawXml);

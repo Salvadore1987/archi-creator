@@ -33,15 +33,27 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
  */
 public record ModelChanges(List<Change> changes) {
 
+    /** Поле: тип ArchiMate объекта. */
     public static final String TYPE = "type";
+    /** Поле: описание объекта. */
     public static final String DOCUMENTATION = "documentation";
+    /** Поле: свойства объекта списком. */
     public static final String PROPERTIES = "properties";
+    /** Поле: папка или родитель объекта. */
     public static final String FOLDER = "folder";
+    /** Поле: диаграмма представления целиком — узлы и рёбра. */
     public static final String DIAGRAM = "diagram";
+    /** Поле: относительный порядок детей. */
     public static final String ORDER = "order";
+    /** Поле: остаток XML, который столбцы не знают. */
     public static final String RAW_XML = "raw_xml";
+    /** Поле: идентификатор модели. */
     public static final String ID = "id";
 
+    /** Признак атрибута, чьё имя совпало бы с полем отчёта: {@code @type} у развилки и папки. */
+    public static final String ATTRIBUTE_MARK = "@";
+    private static final Set<String> FIELDS = Set.of(TYPE, DOCUMENTATION, PROPERTIES, FOLDER, DIAGRAM, ORDER,
+            RAW_XML, ID);
     private static final String XSI_TYPE = "xsi:type";
     private static final String ARCHIMATE_PREFIX = "archimate:";
     private static final Comparator<Change> ORDERING = Comparator.comparing(Change::kind)
@@ -56,18 +68,17 @@ public record ModelChanges(List<Change> changes) {
     public enum Type { ADDED, REMOVED, CHANGED }
 
     /**
-     * @param archiType тип без префикса {@code archimate:}; у папок и модели пусто
+     * @param archiType тип без префикса {@code archimate:}; у папок и модели {@code null}
      * @param name      имя после изменения, у удалённого — до
      * @param fields    изменённые поля; у добавленного и удалённого пусто
      */
-    public record Change(Kind kind, Type type, ArchiId archiId, Optional<String> archiType, String name,
+    public record Change(Kind kind, Type type, ArchiId archiId, String archiType, String name,
                          List<String> fields) {
 
         public Change {
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(type, "type");
             Objects.requireNonNull(archiId, "archiId");
-            Objects.requireNonNull(archiType, "archiType");
             Objects.requireNonNull(name, "name");
             fields = List.copyOf(fields);
         }
@@ -81,6 +92,7 @@ public record ModelChanges(List<Change> changes) {
         changes = List.copyOf(changes);
     }
 
+    /** Изменения при переходе от одного состояния модели к другому. */
     public static ModelChanges between(ModelDocument before, ModelDocument after) {
         Map<ArchiId, Entry> old = index(before);
         Map<ArchiId, Entry> now = index(after);
@@ -103,6 +115,7 @@ public record ModelChanges(List<Change> changes) {
         return new ModelChanges(changes);
     }
 
+    /** Состояния не различаются. */
     public boolean isEmpty() {
         return changes.isEmpty();
     }
@@ -120,11 +133,11 @@ public record ModelChanges(List<Change> changes) {
         return (int) changes.stream().filter(c -> c.kind() == kind && c.type() == type).count();
     }
 
-    /** Объект отчёта: узел, его вид и родитель — папка или корень модели. */
-    private record Entry(ArchiId id, Kind kind, DocumentNode node, Optional<ArchiId> parent) {
+    /** Объект отчёта: узел, его вид и родитель — папка или корень модели ({@code null}). */
+    private record Entry(ArchiId id, Kind kind, DocumentNode node, ArchiId parent) {
 
         Change change(Type type, List<String> fields) {
-            return new Change(kind, type, id, node.archiType().map(ModelChanges::bareType),
+            return new Change(kind, type, id, node.archiType().map(ModelChanges::bareType).orElse(null),
                     node.attribute("name").orElse(""), fields);
         }
     }
@@ -133,18 +146,18 @@ public record ModelChanges(List<Change> changes) {
     private static Map<ArchiId, Entry> index(ModelDocument document) {
         Map<ArchiId, Entry> entries = new LinkedHashMap<>();
         only(document.content(), DocumentNode.class)
-                .forEach(node -> collect(node, Optional.empty(), entries));
+                .forEach(node -> collect(node, null, entries));
         return entries;
     }
 
-    private static void collect(DocumentNode node, Optional<ArchiId> parent, Map<ArchiId, Entry> into) {
+    private static void collect(DocumentNode node, ArchiId parent, Map<ArchiId, Entry> into) {
         Optional<Kind> kind = kind(node);
         if (kind.isEmpty()) {
             return;
         }
         into.putIfAbsent(node.archiId(), new Entry(node.archiId(), kind.get(), node, parent));
         if (kind.get() == Kind.FOLDER) {
-            node.children().forEach(child -> collect(child, Optional.of(node.archiId()), into));
+            node.children().forEach(child -> collect(child, node.archiId(), into));
         }
     }
 
@@ -175,7 +188,7 @@ public record ModelChanges(List<Change> changes) {
         if (fields.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(new Change(Kind.MODEL, Type.CHANGED, after.archiId(), Optional.empty(), after.name(),
+        return Optional.of(new Change(Kind.MODEL, Type.CHANGED, after.archiId(), null, after.name(),
                 List.copyOf(fields)));
     }
 
@@ -184,11 +197,11 @@ public record ModelChanges(List<Change> changes) {
         attributeFields(before.node().attributes(), after.node().attributes(), fields);
         valueFields(before.node().content(), after.node().content(), fields);
         rawFields(before.node().content(), after.node().content(), fields);
-        if (!before.parent().equals(after.parent())) {
+        if (!Objects.equals(before.parent(), after.parent())) {
             fields.add(FOLDER);
         }
         if (after.kind() == Kind.VIEW
-                && !before.node().children().equals(after.node().children())) {
+                && !ContentShapes.of(before.node().children()).equals(ContentShapes.of(after.node().children()))) {
             fields.add(DIAGRAM);
         }
         if (after.kind() == Kind.FOLDER
@@ -198,6 +211,17 @@ public record ModelChanges(List<Change> changes) {
         return List.copyOf(fields);
     }
 
+    /**
+     * Поле отчёта для атрибута XML: {@code xsi:type} — тип ArchiMate ({@code type}), атрибут с именем
+     * поля отчёта — с {@code @} ({@code type} развилки — {@code @type}), прочие — своим именем.
+     */
+    static String attributeField(String name) {
+        if (name.equals(XSI_TYPE)) {
+            return TYPE;
+        }
+        return FIELDS.contains(name) ? ATTRIBUTE_MARK + name : name;
+    }
+
     private static void attributeFields(Attributes before, Attributes after, Set<String> into) {
         Set<String> names = new LinkedHashSet<>();
         before.forEach(a -> names.add(a.name()));
@@ -205,7 +229,7 @@ public record ModelChanges(List<Change> changes) {
         names.remove(ID);
         for (String name : names) {
             if (!before.get(name).equals(after.get(name))) {
-                into.add(name.equals(XSI_TYPE) ? TYPE : name);
+                into.add(attributeField(name));
             }
         }
     }
@@ -233,7 +257,7 @@ public record ModelChanges(List<Change> changes) {
         }
     }
 
-    private record ValueKey(List<Attribute> attributes, Optional<String> text) {
+    private record ValueKey(List<Attribute> attributes, String text) {
     }
 
     private static Map<String, List<ValueKey>> values(List<DocumentContent> content) {

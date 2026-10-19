@@ -27,7 +27,7 @@ final class LossReportJson {
         for (int i = 0; i < entries.size(); i++) {
             LossEntry e = entries.get(i);
             out.append(i == 0 ? "" : ",").append("{\"archiId\":").append(string(e.archiId().value()))
-                    .append(",\"objectKind\":").append(string(e.objectKind()))
+                    .append(",\"objectKind\":").append(string(e.objectKind().value()))
                     .append(",\"lostAspect\":").append(string(e.lostAspect()))
                     .append(",\"reason\":").append(string(e.reason())).append('}');
         }

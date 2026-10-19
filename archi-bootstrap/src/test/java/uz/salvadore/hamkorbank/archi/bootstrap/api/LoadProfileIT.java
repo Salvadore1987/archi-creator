@@ -11,8 +11,11 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.IntFunction;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.RequestBuilder;
@@ -31,6 +34,7 @@ import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
  */
 class LoadProfileIT extends ApiTest {
 
+    private static final Logger LOG = LoggerFactory.getLogger(LoadProfileIT.class);
     private static final int WARM_UP = 10;
     private static final int RUNS = 60;
 
@@ -60,14 +64,14 @@ class LoadProfileIT extends ApiTest {
         p95.put("OpenView", measure(i -> get("/api/v1/views/" + view).with(viewer()), status().isOk()));
         p95.put("OpenModel", measure(i -> get("/api/v1/models/" + model).with(viewer()), status().isOk()));
 
-        System.out.println("NFR-03 профиль, p95 мс: " + p95);
+        LOG.info("NFR-03 профиль, p95 мс: {}", p95);
         assertTrue(p95.get("CreateElement") <= 300, () -> "CreateElement p95 " + p95);
         assertTrue(p95.get("SaveViewLayout") <= 300, () -> "SaveViewLayout p95 " + p95);
         assertTrue(p95.get("OpenView") <= 1000, () -> "OpenView p95 " + p95);
         assertTrue(p95.get("OpenModel") <= 1000, () -> "OpenModel p95 " + p95);
     }
 
-    private long measure(java.util.function.IntFunction<RequestBuilder> request, ResultMatcher expected)
+    private long measure(IntFunction<RequestBuilder> request, ResultMatcher expected)
             throws Exception {
         for (int i = 0; i < WARM_UP; i++) {
             mvc.perform(request.apply(i)).andExpect(expected);

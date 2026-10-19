@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.application.service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.MetamodelCatalog;
@@ -65,6 +66,6 @@ final class AdvisorTools {
     }
 
     private static List<String> names(Enum<?>[] values) {
-        return java.util.Arrays.stream(values).map(Enum::name).toList();
+        return Arrays.stream(values).map(Enum::name).toList();
     }
 }

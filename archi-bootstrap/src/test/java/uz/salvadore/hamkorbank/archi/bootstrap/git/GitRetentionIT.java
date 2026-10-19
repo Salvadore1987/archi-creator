@@ -8,7 +8,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,9 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingSettings;
-import uz.salvadore.hamkorbank.archi.interchange.application.mapping.ArchimateSnapshots;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelingKernel;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.SnapshotPurgeCommandHandler;
 
 /**
  * Очистка снимков с настоящим Git: идёт только при доступном репозитории, а очищенный
@@ -29,8 +27,6 @@ class GitRetentionIT extends GitApiTest {
     @Autowired
     ModelingKernel kernel;
     @Autowired
-    ArchimateSnapshots snapshots;
-    @Autowired
     GitSnapshotArchive git;
 
     @Test
@@ -39,7 +35,7 @@ class GitRetentionIT extends GitApiTest {
         UUID model = modelWithVersions();
         byte[] first = export(model, 1);
 
-        assertThat(retention().purgeSnapshots()).isEqualTo(2);
+        assertThat(retention().handle()).isEqualTo(2);
 
         assertThat(snapshotsOf(model)).isEqualTo(1);
         assertThat(export(model, 1)).isEqualTo(first);
@@ -50,9 +46,9 @@ class GitRetentionIT extends GitApiTest {
     void purgeStopsWhenRepositoryIsUnreachable() throws Exception {
         UUID model = modelWithVersions();
         bindings.configure(ADMIN, workspace().value(), new GitBindingSettings(
-                temp.resolve("gone.git").toUri().toString(), Optional.empty(), "env:ARCHI_GIT_TOKEN_IT", List.of()));
+                temp.resolve("gone.git").toUri().toString(), null, "env:ARCHI_GIT_TOKEN_IT", List.of()));
 
-        assertThat(retention().purgeSnapshots()).isZero();
+        assertThat(retention().handle()).isZero();
 
         assertThat(snapshotsOf(model)).isEqualTo(3);
         assertThat(column("select status from git_binding", String.class)).containsExactly("UNREACHABLE");
@@ -77,8 +73,8 @@ class GitRetentionIT extends GitApiTest {
         return model;
     }
 
-    private VersionService retention() {
-        return new VersionService(kernel, snapshots, snapshots, git, git, ZoneOffset.UTC, true);
+    private SnapshotPurgeCommandHandler retention() {
+        return new SnapshotPurgeCommandHandler(kernel, git, ZoneOffset.UTC, true);
     }
 
     private byte[] export(UUID model, long versionNo) throws Exception {

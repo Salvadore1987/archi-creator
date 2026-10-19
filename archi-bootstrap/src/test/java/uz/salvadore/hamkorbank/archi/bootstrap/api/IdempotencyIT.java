@@ -11,6 +11,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 
 class IdempotencyIT extends ApiTest {
@@ -48,7 +49,7 @@ class IdempotencyIT extends ApiTest {
         mvc.perform(post("/api/v1/models/" + model + "/versions").with(architect()).header("Idempotency-Key", "s-1")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"comment\":\"первое\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.version.versionNo").value(2));
-        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+        mvc.perform(MockMvcRequestBuilders
                         .get("/api/v1/models/" + model + "/versions").with(viewer()))
                 .andExpect(jsonPath("$.length()").value(2));
     }

@@ -30,7 +30,9 @@ final class ContextJson {
             json.key("id").string(e.archiId()).out.append(',');
             json.key("type").string(e.archiType()).out.append(',');
             json.key("name").string(e.name());
-            e.documentation().ifPresent(d -> json.out.append(',').append("\"doc\":").append(quote(d)));
+            if (e.documentation() != null) {
+                json.out.append(',').append("\"doc\":").append(quote(e.documentation()));
+            }
             json.out.append('}');
         }
         json.out.append("],");

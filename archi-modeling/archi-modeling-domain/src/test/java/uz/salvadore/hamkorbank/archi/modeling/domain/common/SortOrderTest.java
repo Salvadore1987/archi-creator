@@ -23,7 +23,7 @@ class SortOrderTest {
         ArchitectureModel model = Models.empty();
         Element first = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
         Element second = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "CRM");
-        model.elements().markPersisted();
+        model.markPersisted();
 
         Element third = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "Шлюз");
 

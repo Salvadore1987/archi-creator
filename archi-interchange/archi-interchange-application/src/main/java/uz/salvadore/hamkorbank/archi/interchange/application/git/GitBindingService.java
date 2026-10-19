@@ -30,15 +30,24 @@ public final class GitBindingService {
     private final UnitOfWork unitOfWork;
     private final InterchangeMetrics metrics;
     private final Clock clock;
+    private final boolean localRepositories;
 
+    /**
+     * Сценарии привязки.
+     *
+     * @param localRepositories можно ли привязать репозиторий в файловой системе сервера ({@code file://});
+     *                          в работе — нет: администратор получил бы доступ к любому каталогу сервера
+     */
     public GitBindingService(GitBindingRepository bindings, UnitOfWork unitOfWork, InterchangeMetrics metrics,
-                             Clock clock) {
+                             Clock clock, boolean localRepositories) {
         this.bindings = bindings;
         this.unitOfWork = unitOfWork;
         this.metrics = metrics;
         this.clock = clock;
+        this.localRepositories = localRepositories;
     }
 
+    /** Привязка пространства к репозиторию; нет привязки — «не найдено». */
     public GitBinding binding(EditorIdentity actor, UUID workspaceId) {
         InterchangeOperation.CONFIGURE_GIT_BINDING.require(actor);
         return unitOfWork.read(() -> require(new WorkspaceId(workspaceId)));
@@ -62,6 +71,10 @@ public final class GitBindingService {
                 throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE, e.reason(),
                         Map.of());
             }
+            if (configured.local() && !localRepositories) {
+                throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE,
+                        Message.of(InterchangeMessages.GIT_URL_LOCAL, configured.repoUrl()), Map.of());
+            }
             return unitOfWork.write(() -> {
                 if (!bindings.workspaceExists(workspace)) {
                     throw new InterchangeException(InterchangeCodes.NOT_FOUND, Failure.NOT_FOUND,
@@ -70,7 +83,7 @@ public final class GitBindingService {
                 GitBinding binding = bindings.find(workspace)
                         .filter(old -> old.repoUrl().equals(configured.repoUrl())
                                 && old.branch().equals(configured.branch()))
-                        .flatMap(GitBinding::lastCommitSha)
+                        .map(GitBinding::lastCommitSha)
                         .map(sha -> configured.committed(sha, clock.instant()))
                         .orElse(configured);
                 bindings.save(binding);

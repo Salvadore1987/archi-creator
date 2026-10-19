@@ -17,6 +17,7 @@ public record DocumentOrder(int value) {
         }
     }
 
+    /** Позиция с данным номером. */
     public static DocumentOrder of(int value) {
         return new DocumentOrder(value);
     }

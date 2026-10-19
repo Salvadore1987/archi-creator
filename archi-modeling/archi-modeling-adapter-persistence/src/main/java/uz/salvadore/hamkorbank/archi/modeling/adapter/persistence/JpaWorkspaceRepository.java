@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
@@ -10,16 +9,26 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceReposito
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.Workspace;
 import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
+/** Рабочие пространства в таблице {@code workspace}: modeling читает и вставляет только имя и время создания. */
 @Repository
 public class JpaWorkspaceRepository implements WorkspaceRepository {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final EntityManager em;
+
+    public JpaWorkspaceRepository(EntityManager em) {
+        this.em = em;
+    }
 
     @Override
     public List<Workspace> findAll() {
         return em.createQuery("select w from WorkspaceEntity w order by w.createdAt, w.id", WorkspaceEntity.class)
                 .getResultList().stream().map(JpaWorkspaceRepository::toDomain).toList();
+    }
+
+    @Override
+    public Optional<Workspace> first() {
+        return em.createQuery("select w from WorkspaceEntity w order by w.createdAt, w.id", WorkspaceEntity.class)
+                .setMaxResults(1).getResultStream().findFirst().map(JpaWorkspaceRepository::toDomain);
     }
 
     @Override
@@ -38,6 +47,6 @@ public class JpaWorkspaceRepository implements WorkspaceRepository {
     }
 
     private static Workspace toDomain(WorkspaceEntity e) {
-        return new Workspace(WorkspaceId.of(e.id), e.name, e.createdAt);
+        return Workspace.restore(WorkspaceId.of(e.id), e.name, e.createdAt);
     }
 }

@@ -12,6 +12,8 @@ import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeDomainException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
@@ -31,6 +33,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
  */
 public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> items) {
 
+    /** Остаток без атрибутов и содержимого. */
     public static final NodeResidue EMPTY = new NodeResidue(List.of(), List.of());
 
     public NodeResidue {
@@ -38,10 +41,12 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
         items = List.copyOf(items);
     }
 
+    /** Остатка нет: ни атрибутов, ни содержимого. */
     public boolean empty() {
         return attributes.isEmpty() && items.isEmpty();
     }
 
+    /** Атрибут остатка по имени. */
     public Optional<ResidueAttribute> attribute(String name) {
         return attributes.stream().filter(a -> a.name().equals(name)).findFirst();
     }
@@ -52,75 +57,95 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
                 .map(ResidueItem.Slot.class::cast).toList();
     }
 
+    /** Строковая форма остатка для хранения. */
     public String encode() {
         StringWriter out = new StringWriter();
         try {
-            XMLStreamWriter xml = XMLOutputFactory.newFactory().createXMLStreamWriter(out);
-            xml.writeStartElement("r");
-            writeAttributes(xml, attributes);
-            for (ResidueItem item : items) {
-                switch (item) {
-                    case ResidueItem.Slot slot -> {
-                        xml.writeStartElement("s");
-                        xml.writeAttribute("o", Long.toString(slot.order()));
-                        xml.writeAttribute("t", slot.tag());
-                        writeAttributes(xml, slot.attributes());
-                        xml.writeEndElement();
-                    }
-                    case ResidueItem.Value value -> {
-                        xml.writeStartElement("v");
-                        xml.writeAttribute("o", Long.toString(value.order()));
-                        xml.writeAttribute("t", value.tag());
-                        writeAttributes(xml, value.attributes());
-                        if (value.text().isPresent()) {
-                            xml.writeStartElement("x");
-                            writeText(xml, value.text().get());
-                            xml.writeEndElement();
-                        }
-                        xml.writeEndElement();
-                    }
-                    case ResidueItem.Fragment fragment -> {
-                        xml.writeStartElement("f");
-                        xml.writeAttribute("o", Long.toString(fragment.order()));
-                        writeText(xml, fragment.xml());
-                        xml.writeEndElement();
-                    }
-                }
+            XMLStreamWriter xml = XMLOutputFactory.newDefaultFactory().createXMLStreamWriter(out);
+            try {
+                write(xml);
+            } finally {
+                xml.close();
             }
-            xml.writeEndElement();
-            xml.close();
         } catch (XMLStreamException e) {
             throw new IllegalStateException(Message.of(InterchangeMessages.RESIDUE_UNWRITABLE).toString(), e);
         }
         return out.toString();
     }
 
+    private void write(XMLStreamWriter xml) throws XMLStreamException {
+        xml.writeStartElement("r");
+        writeAttributes(xml, attributes);
+        for (ResidueItem item : items) {
+            switch (item) {
+                case ResidueItem.Slot slot -> {
+                    xml.writeStartElement("s");
+                    xml.writeAttribute("o", Long.toString(slot.order()));
+                    xml.writeAttribute("t", slot.tag());
+                    writeAttributes(xml, slot.attributes());
+                    xml.writeEndElement();
+                }
+                case ResidueItem.Value value -> {
+                    xml.writeStartElement("v");
+                    xml.writeAttribute("o", Long.toString(value.order()));
+                    xml.writeAttribute("t", value.tag());
+                    writeAttributes(xml, value.attributes());
+                    if (value.text() != null) {
+                        xml.writeStartElement("x");
+                        writeText(xml, value.text());
+                        xml.writeEndElement();
+                    }
+                    xml.writeEndElement();
+                }
+                case ResidueItem.Fragment fragment -> {
+                    xml.writeStartElement("f");
+                    xml.writeAttribute("o", Long.toString(fragment.order()));
+                    writeText(xml, fragment.xml());
+                    xml.writeEndElement();
+                }
+            }
+        }
+        xml.writeEndElement();
+    }
+
+    /** Остаток из строковой формы. */
     public static NodeResidue decode(String encoded) {
         Objects.requireNonNull(encoded, "encoded");
         try {
-            XMLInputFactory factory = XMLInputFactory.newFactory();
+            XMLInputFactory factory = XMLInputFactory.newDefaultFactory();
             factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
             factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
             factory.setProperty(XMLInputFactory.IS_COALESCING, true);
             XMLStreamReader xml = factory.createXMLStreamReader(new StringReader(encoded));
-            List<ResidueAttribute> attributes = new ArrayList<>();
-            List<ResidueItem> items = new ArrayList<>();
-            xml.nextTag();
-            require(xml, "r");
-            while (xml.nextTag() == XMLStreamConstants.START_ELEMENT) {
-                switch (xml.getLocalName()) {
-                    case "a" -> attributes.add(readAttribute(xml));
-                    case "s" -> items.add(readSlot(xml));
-                    case "v" -> items.add(readValue(xml));
-                    case "f" -> items.add(new ResidueItem.Fragment(order(xml), xml.getElementText()));
-                    default -> throw new InvalidValueException(InterchangeMessages.RESIDUE_UNKNOWN_RECORD,
-                            xml.getLocalName());
-                }
+            try {
+                return read(xml);
+            } finally {
+                xml.close();
             }
-            return new NodeResidue(attributes, items);
-        } catch (XMLStreamException e) {
-            throw new IllegalArgumentException(Message.of(InterchangeMessages.RESIDUE_CORRUPTED).toString(), e);
+        } catch (XMLStreamException | RuntimeException e) {
+            InterchangeDomainException corrupted = new InterchangeDomainException(InterchangeCodes.RESIDUE_CORRUPTED,
+                    Message.of(InterchangeMessages.RESIDUE_CORRUPTED));
+            corrupted.initCause(e);
+            throw corrupted;
         }
+    }
+
+    private static NodeResidue read(XMLStreamReader xml) throws XMLStreamException {
+        List<ResidueAttribute> attributes = new ArrayList<>();
+        List<ResidueItem> items = new ArrayList<>();
+        xml.nextTag();
+        require(xml, "r");
+        while (xml.nextTag() == XMLStreamConstants.START_ELEMENT) {
+            switch (xml.getLocalName()) {
+                case "a" -> attributes.add(readAttribute(xml));
+                case "s" -> items.add(readSlot(xml));
+                case "v" -> items.add(readValue(xml));
+                case "f" -> items.add(new ResidueItem.Fragment(order(xml), xml.getElementText()));
+                default -> throw new InvalidValueException(InterchangeMessages.RESIDUE_UNKNOWN_RECORD,
+                        xml.getLocalName());
+            }
+        }
+        return new NodeResidue(attributes, items);
     }
 
     private static ResidueAttribute readAttribute(XMLStreamReader xml) throws XMLStreamException {
@@ -144,10 +169,10 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
         long order = order(xml);
         String tag = xml.getAttributeValue(null, "t");
         List<ResidueAttribute> attributes = new ArrayList<>();
-        Optional<String> text = Optional.empty();
+        String text = null;
         while (xml.nextTag() == XMLStreamConstants.START_ELEMENT) {
             if (xml.getLocalName().equals("x")) {
-                text = Optional.of(xml.getElementText());
+                text = xml.getElementText();
             } else {
                 attributes.add(readAttribute(xml));
             }
@@ -160,8 +185,8 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
         for (ResidueAttribute attribute : attributes) {
             xml.writeStartElement("a");
             xml.writeAttribute("n", attribute.name());
-            if (attribute.value().isPresent()) {
-                writeText(xml, attribute.value().get());
+            if (attribute.value() != null) {
+                writeText(xml, attribute.value());
             } else {
                 xml.writeAttribute("typed", "1");
             }

@@ -55,16 +55,17 @@ public record ModelContext(AdvisorFunction function, List<ContextElement> elemen
      * Контекст в пределах {@code maxTokens}. Сначала уходит документация, затем элементы
      * — по слоям снизу вверх, внутри слоя первыми уходят наименее связанные. Связь
      * остаётся, только если остались оба её конца; представление — со списком только
-     * оставшихся элементов.
+     * оставшихся элементов. Представления не отбрасываются: если без единого элемента
+     * контекст всё равно больше предела — пусто.
      */
-    public ModelContext fit(int maxTokens) {
+    public Optional<ModelContext> fit(int maxTokens) {
         if (tokenEstimate <= maxTokens) {
-            return this;
+            return Optional.of(this);
         }
         List<ContextElement> bare = elements.stream().map(ContextElement::withoutDocumentation).toList();
         if (estimate(bare, relationships, views) <= maxTokens) {
-            return new ModelContext(function, bare, relationships, views, estimate(bare, relationships, views), true,
-                    scopeSize);
+            return Optional.of(new ModelContext(function, bare, relationships, views,
+                    estimate(bare, relationships, views), true, scopeSize));
         }
         List<ContextElement> ranked = ranked(bare);
         int low = 0;
@@ -78,8 +79,7 @@ public record ModelContext(AdvisorFunction function, List<ContextElement> elemen
             }
         }
         ModelContext kept = prefix(ranked, low);
-        return new ModelContext(function, kept.elements, kept.relationships, kept.views, kept.tokenEstimate, true,
-                scopeSize);
+        return kept.tokenEstimate <= maxTokens ? Optional.of(kept) : Optional.empty();
     }
 
     /** Доля элементов области, оставшихся после усечения: 1 — ничего не потеряно. */
@@ -87,19 +87,17 @@ public record ModelContext(AdvisorFunction function, List<ContextElement> elemen
         return scopeSize == 0 ? 1.0 : (double) elements.size() / scopeSize;
     }
 
-    /** Есть ли в контексте объект с таким {@code archiId} — элемент, связь или представление. */
-    public boolean contains(String archiId) {
-        return elements.stream().anyMatch(e -> e.archiId().equals(archiId))
-                || relationships.stream().anyMatch(r -> r.archiId().equals(archiId))
-                || views.stream().anyMatch(v -> v.archiId().equals(archiId));
-    }
-
-    /** Отображаемое имя объекта контекста; у связи без имени — её тип. */
-    public Optional<String> nameOf(String archiId) {
-        return elements.stream().filter(e -> e.archiId().equals(archiId)).map(ContextElement::name).findFirst()
-                .or(() -> views.stream().filter(v -> v.archiId().equals(archiId)).map(ContextView::name).findFirst())
-                .or(() -> relationships.stream().filter(r -> r.archiId().equals(archiId))
-                        .map(ContextRelation::archiType).findFirst());
+    /**
+     * Объекты контекста по {@code archiId} — элементы, представления и связи — с отображаемым именем;
+     * у связи имени нет, вместо него тип. Карта строится за один проход: тот, кто проверяет много
+     * ссылок, строит её один раз, а не ищет по спискам на каждую.
+     */
+    public Map<String, String> names() {
+        Map<String, String> names = new HashMap<>();
+        elements.forEach(e -> names.putIfAbsent(e.archiId(), e.name()));
+        views.forEach(v -> names.putIfAbsent(v.archiId(), v.name()));
+        relationships.forEach(r -> names.putIfAbsent(r.archiId(), r.archiType()));
+        return Map.copyOf(names);
     }
 
     private List<ContextElement> ranked(List<ContextElement> source) {
@@ -138,7 +136,7 @@ public record ModelContext(AdvisorFunction function, List<ContextElement> elemen
         long chars = 0;
         for (ContextElement e : elements) {
             chars += ELEMENT_OVERHEAD + e.archiId().length() + e.archiType().length() + e.name().length()
-                    + e.documentation().map(String::length).orElse(0);
+                    + (e.documentation() == null ? 0 : e.documentation().length());
         }
         for (ContextRelation r : relationships) {
             chars += RELATION_OVERHEAD + r.archiId().length() + r.archiType().length() + r.sourceArchiId().length()

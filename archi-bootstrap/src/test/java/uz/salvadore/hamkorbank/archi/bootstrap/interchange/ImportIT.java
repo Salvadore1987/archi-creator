@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.interchange;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -9,7 +10,6 @@ import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -49,16 +49,16 @@ class ImportIT extends IntegrationTest {
         int before = models();
 
         ImportReport first = imports.importFile(ARCHITECT, workspace().value(), "s.archimate", file,
-                Optional.of("retry-1"));
+                "retry-1");
         ImportReport retry = imports.importFile(ARCHITECT, workspace().value(), "s.archimate", file,
-                Optional.of("retry-1"));
+                "retry-1");
 
         assertEquals(first.modelId(), retry.modelId());
         assertTrue(retry.replayed());
         assertEquals(before + 1, models());
         InterchangeException otherFile = assertThrows(InterchangeException.class, () -> imports.importFile(
                 ARCHITECT, workspace().value(), "x.archimate", Fixtures.fixture("nested_containment"),
-                Optional.of("retry-1")));
+                "retry-1"));
         assertEquals(Failure.CONFLICT, otherFile.failure());
     }
 
@@ -66,7 +66,7 @@ class ImportIT extends IntegrationTest {
     @DisplayName("INV-IXC-002: применённая сессия повторно не применяется")
     void applyTwiceIsRejected() {
         ImportReport report = imports.importFile(ARCHITECT, workspace().value(), "a.archimate",
-                Fixtures.fixture("nested_containment"), Optional.empty());
+                Fixtures.fixture("nested_containment"), null);
         ImportSession stored = sessions.find(report.sessionId()).orElseThrow();
 
         assertEquals(ImportStatus.APPLIED, stored.status());
@@ -81,11 +81,9 @@ class ImportIT extends IntegrationTest {
                 .getBytes(StandardCharsets.UTF_8);
         int before = models();
 
-        ImportReport lenient = imports.importFile(ARCHITECT, workspace().value(), "c.archimate", corrupt,
-                Optional.empty());
+        ImportReport lenient = imports.importFile(ARCHITECT, workspace().value(), "c.archimate", corrupt, null);
         imports.configureStrictImport(ADMIN, workspace().value(), true);
-        ImportReport strict = imports.importFile(ARCHITECT, workspace().value(), "c.archimate", corrupt,
-                Optional.empty());
+        ImportReport strict = imports.importFile(ARCHITECT, workspace().value(), "c.archimate", corrupt, null);
 
         assertEquals(ImportStatus.REJECTED, lenient.status());
         assertEquals(ImportStatus.REJECTED, strict.status());
@@ -98,17 +96,17 @@ class ImportIT extends IntegrationTest {
     @DisplayName("FR-49: нарушение матрицы — отчёт в мягком режиме, отказ в строгом")
     void matrixViolationDependsOnStrictMode() {
         ImportReport lenient = imports.importFile(ARCHITECT, workspace().value(), "v.archimate",
-                Fixtures.withMatrixViolation(), Optional.empty());
+                Fixtures.withMatrixViolation(), null);
         imports.configureStrictImport(ADMIN, workspace().value(), true);
         ImportReport strict = imports.importFile(ARCHITECT, workspace().value(), "v.archimate",
-                Fixtures.withMatrixViolation(), Optional.empty());
+                Fixtures.withMatrixViolation(), null);
 
         assertEquals(ImportStatus.APPLIED, lenient.status());
         assertTrue(lenient.findings().stream().anyMatch(f -> f.severity() == Severity.ERROR
-                && f.code().equals("RELATION_NOT_PERMITTED") && f.archiId().orElseThrow().value().equals("id-r1")));
+                && f.code().equals("RELATION_NOT_PERMITTED") && f.archiId().value().equals("id-r1")));
         assertEquals(ImportStatus.REJECTED, strict.status());
         assertFalse(strict.rejectedAsCorrupt());
-        assertTrue(strict.modelId().isEmpty());
+        assertNull(strict.modelId());
     }
 
     @Test
@@ -117,7 +115,7 @@ class ImportIT extends IntegrationTest {
         assertEquals(Failure.FORBIDDEN, assertThrows(InterchangeException.class,
                 () -> imports.configureStrictImport(ARCHITECT, workspace().value(), true)).failure());
         assertEquals(Failure.FORBIDDEN, assertThrows(InterchangeException.class, () -> imports.importFile(VIEWER,
-                workspace().value(), "v.archimate", Fixtures.fixture("styled_objects"), Optional.empty())).failure());
+                workspace().value(), "v.archimate", Fixtures.fixture("styled_objects"), null)).failure());
     }
 
     private int models() {

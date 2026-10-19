@@ -7,7 +7,6 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Models;
@@ -40,10 +39,10 @@ class SnapshotRetentionTest {
         List<ModelVersion> versions = new ArrayList<>();
         String[] dates = {"2026-07-01", "2026-07-10", "2026-07-20", "2026-08-01", "2026-08-15", "2026-10-01"};
         for (int i = 0; i < dates.length; i++) {
-            ModelVersion v = new ModelVersion(VersionId.next(Models.UUIDS), ModelVersionTest.MODEL, i + 1, "a",
-                    Optional.empty(), i == 1 ? Optional.of("релиз") : Optional.empty(),
-                    Instant.parse(dates[i] + "T12:00:00Z"), Optional.of(new byte[] {1}), ModelVersionTest.HASH,
-                    Optional.of("c".repeat(40)));
+            ModelVersion v = ModelVersion.restore(VersionId.next(Models.UUIDS), ModelVersionTest.MODEL, i + 1, "a",
+                    null, i == 1 ? "релиз" : null,
+                    Instant.parse(dates[i] + "T12:00:00Z"), new byte[] {1}, ModelVersionTest.HASH,
+                    "c".repeat(40));
             versions.add(v);
         }
         return versions;

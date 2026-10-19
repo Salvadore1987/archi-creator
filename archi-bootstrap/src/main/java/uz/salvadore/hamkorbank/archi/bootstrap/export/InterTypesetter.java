@@ -39,6 +39,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter;
  */
 public final class InterTypesetter implements Typesetter {
 
+    /** Имя семейства шрифта, которым набираются подписи экспорта и канвы. */
     public static final String FAMILY = "Inter";
 
     private static final Map<Integer, String> FILES = Map.of(400, "Regular", 500, "Medium", 600, "SemiBold",

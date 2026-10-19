@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.advisor;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
+import java.util.function.Supplier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,8 +26,8 @@ import uz.salvadore.hamkorbank.archi.advisor.application.service.AdvisorService;
 import uz.salvadore.hamkorbank.archi.advisor.application.service.RateLimiter;
 import uz.salvadore.hamkorbank.archi.bootstrap.wiring.AfterCommitEventPublisher;
 import uz.salvadore.hamkorbank.archi.bootstrap.wiring.TransactionalUnitOfWork;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 
 /**
  * Сценарии помощника — бинами. Мост к modeling — только чтение: сценарий запросов
@@ -49,7 +50,7 @@ public class AdvisorConfiguration {
     }
 
     @Bean
-    ModelContextReader modelContextReader(ModelQueryService models) {
+    ModelContextReader modelContextReader(ModelQueryApplicationService models) {
         return new ModelingContextReader(models);
     }
 
@@ -59,7 +60,7 @@ public class AdvisorConfiguration {
     }
 
     @Bean
-    WorkspaceDirectory workspaceDirectory(WorkspaceService workspaces) {
+    WorkspaceDirectory workspaceDirectory(WorkspaceApplicationService workspaces) {
         return new ModelingWorkspaceDirectory(workspaces);
     }
 
@@ -77,12 +78,12 @@ public class AdvisorConfiguration {
     UnitOfWork advisorUnitOfWork(TransactionalUnitOfWork transactions) {
         return new UnitOfWork() {
             @Override
-            public <T> T write(java.util.function.Supplier<T> work) {
+            public <T> T write(Supplier<T> work) {
                 return transactions.write(work);
             }
 
             @Override
-            public <T> T read(java.util.function.Supplier<T> work) {
+            public <T> T read(Supplier<T> work) {
                 return transactions.read(work);
             }
         };

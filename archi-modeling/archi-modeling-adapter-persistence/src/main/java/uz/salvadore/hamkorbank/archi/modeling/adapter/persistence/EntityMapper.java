@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ElementEntity;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.FolderEntity;
@@ -56,7 +55,7 @@ final class EntityMapper {
 
     static ModelHeader toHeader(ModelEntity e) {
         return new ModelHeader(ModelId.of(e.id), WorkspaceId.of(e.workspaceId), ArchiId.of(e.archiId), e.name,
-                Optional.ofNullable(e.documentation), e.archiVersion, ModelStatus.valueOf(e.status),
+                e.documentation, e.archiVersion, ModelStatus.valueOf(e.status),
                 toProperties(e.properties), raw(e.rawXml), e.createdBy, e.createdAt, e.updatedAt, e.version);
     }
 
@@ -65,10 +64,10 @@ final class EntityMapper {
         e.workspaceId = h.workspaceId().value();
         e.archiId = h.archiId().value();
         e.name = h.name();
-        e.documentation = h.documentation().orElse(null);
+        e.documentation = h.documentation();
         e.archiVersion = h.archiVersion();
         e.status = h.status().name();
-        e.rawXml = h.rawXml().map(RawXml::value).orElse(null);
+        e.rawXml = h.rawXml() == null ? null : h.rawXml().value();
         e.createdBy = h.createdBy();
         e.createdAt = h.createdAt();
         e.updatedAt = h.updatedAt();
@@ -78,25 +77,25 @@ final class EntityMapper {
     // ── Папки, элементы, связи ──────────────────────────────────────
 
     static ModelFolder toFolder(FolderEntity e) {
-        return new ModelFolder(FolderId.of(e.id), Optional.ofNullable(e.parentId).map(FolderId::of),
-                ArchiId.of(e.archiId), e.name, Optional.ofNullable(e.folderType).map(FolderType::valueOf),
+        return new ModelFolder(FolderId.of(e.id), e.parentId == null ? null : FolderId.of(e.parentId),
+                ArchiId.of(e.archiId), e.name, e.folderType == null ? null : FolderType.valueOf(e.folderType),
                 SortOrder.of(e.sortOrder), raw(e.rawXml));
     }
 
     static void apply(ModelFolder f, UUID modelId, FolderEntity e) {
         e.id = f.id().value();
         e.modelId = modelId;
-        e.parentId = f.parentId().map(FolderId::value).orElse(null);
+        e.parentId = f.parentId() == null ? null : f.parentId().value();
         e.archiId = f.archiId().value();
         e.name = f.name();
-        e.folderType = f.folderType().map(Enum::name).orElse(null);
+        e.folderType = f.folderType() == null ? null : f.folderType().name();
         e.sortOrder = f.sortOrder().value();
-        e.rawXml = f.rawXml().map(RawXml::value).orElse(null);
+        e.rawXml = f.rawXml() == null ? null : f.rawXml().value();
     }
 
     static Element toElement(ElementEntity e) {
         return new Element(ElementId.of(e.id), FolderId.of(e.folderId), ArchiId.of(e.archiId),
-                ArchiType.of(e.archiType), e.name, Optional.ofNullable(e.documentation), toProperties(e.properties),
+                ArchiType.of(e.archiType), e.name, e.documentation, toProperties(e.properties),
                 SortOrder.of(e.sortOrder), e.supported, raw(e.rawXml));
     }
 
@@ -108,19 +107,19 @@ final class EntityMapper {
         e.archiType = d.archiType().value();
         e.layer = d.layer().name();
         e.name = d.name();
-        e.documentation = d.documentation().orElse(null);
+        e.documentation = d.documentation();
         e.sortOrder = d.sortOrder().value();
         e.supported = d.supported();
-        e.rawXml = d.rawXml().map(RawXml::value).orElse(null);
+        e.rawXml = d.rawXml() == null ? null : d.rawXml().value();
         replaceProperties(e.properties, d.properties());
     }
 
     static Relationship toRelationship(RelationshipEntity e) {
         return new Relationship(RelationshipId.of(e.id), FolderId.of(e.folderId), ArchiId.of(e.archiId),
                 ArchiType.of(e.archiType), concept(e.sourceElementId, e.sourceRelationshipId),
-                concept(e.targetElementId, e.targetRelationshipId), Optional.ofNullable(e.name),
-                Optional.ofNullable(e.documentation), Optional.ofNullable(e.accessType).map(AccessType::valueOf),
-                Optional.ofNullable(e.directed), toProperties(e.properties), SortOrder.of(e.sortOrder), e.supported,
+                concept(e.targetElementId, e.targetRelationshipId), e.name,
+                e.documentation, e.accessType == null ? null : AccessType.valueOf(e.accessType),
+                e.directed, toProperties(e.properties), SortOrder.of(e.sortOrder), e.supported,
                 raw(e.rawXml));
     }
 
@@ -134,13 +133,13 @@ final class EntityMapper {
         e.sourceRelationshipId = d.source() instanceof RelationshipId id ? id.value() : null;
         e.targetElementId = d.target() instanceof ElementId id ? id.value() : null;
         e.targetRelationshipId = d.target() instanceof RelationshipId id ? id.value() : null;
-        e.name = d.name().orElse(null);
-        e.documentation = d.documentation().orElse(null);
-        e.accessType = d.accessType().map(Enum::name).orElse(null);
-        e.directed = d.directed().orElse(null);
+        e.name = d.name();
+        e.documentation = d.documentation();
+        e.accessType = d.accessType() == null ? null : d.accessType().name();
+        e.directed = d.directed();
         e.sortOrder = d.sortOrder().value();
         e.supported = d.supported();
-        e.rawXml = d.rawXml().map(RawXml::value).orElse(null);
+        e.rawXml = d.rawXml() == null ? null : d.rawXml().value();
         replaceProperties(e.properties, d.properties());
     }
 
@@ -152,8 +151,8 @@ final class EntityMapper {
 
     static ViewHeader toViewHeader(ViewEntity e) {
         return new ViewHeader(ViewId.of(e.id), ModelId.of(e.modelId), FolderId.of(e.folderId), ArchiId.of(e.archiId),
-                DiagramType.of(e.archiType), e.name, Optional.ofNullable(e.documentation),
-                Optional.ofNullable(e.viewpoint), toProperties(e.properties), SortOrder.of(e.sortOrder),
+                DiagramType.of(e.archiType), e.name, e.documentation,
+                e.viewpoint, toProperties(e.properties), SortOrder.of(e.sortOrder),
                 raw(e.rawXml), e.version);
     }
 
@@ -169,19 +168,20 @@ final class EntityMapper {
         e.archiId = h.archiId().value();
         e.archiType = h.archiType().value();
         e.name = h.name();
-        e.documentation = h.documentation().orElse(null);
-        e.viewpoint = h.viewpoint().orElse(null);
+        e.documentation = h.documentation();
+        e.viewpoint = h.viewpoint();
         e.sortOrder = h.sortOrder().value();
-        e.rawXml = h.rawXml().map(RawXml::value).orElse(null);
+        e.rawXml = h.rawXml() == null ? null : h.rawXml().value();
         replaceProperties(e.properties, h.properties());
     }
 
     static ViewNode toNode(ViewNodeEntity e) {
-        return new ViewNode(ViewNodeId.of(e.id), Optional.ofNullable(e.parentId).map(ViewNodeId::of),
-                ArchiId.of(e.archiId), DiagramType.of(e.archiType), Optional.ofNullable(e.elementId).map(ElementId::of),
+        return new ViewNode(ViewNodeId.of(e.id), e.parentId == null ? null : ViewNodeId.of(e.parentId),
+                ArchiId.of(e.archiId), DiagramType.of(e.archiType),
+                e.elementId == null ? null : ElementId.of(e.elementId),
                 new Bounds(e.x, e.y, e.width, e.height),
                 style(e.fillColor, e.font, e.fontColor, e.lineColor, e.textAlignment),
-                Optional.ofNullable(e.label), Optional.ofNullable(e.content), SortOrder.of(e.sortOrder),
+                e.label, e.content, SortOrder.of(e.sortOrder),
                 raw(e.rawXml));
     }
 
@@ -189,29 +189,30 @@ final class EntityMapper {
         e.id = n.id().value();
         e.modelId = modelId;
         e.viewId = viewId;
-        e.parentId = n.parentId().map(ViewNodeId::value).orElse(null);
+        e.parentId = n.parentId() == null ? null : n.parentId().value();
         e.archiId = n.archiId().value();
         e.archiType = n.archiType().value();
         e.kind = n.kind().name();
-        e.elementId = n.elementId().map(ElementId::value).orElse(null);
+        e.elementId = n.elementId() == null ? null : n.elementId().value();
         e.x = n.bounds().x();
         e.y = n.bounds().y();
         e.width = n.bounds().width();
         e.height = n.bounds().height();
-        e.fillColor = n.style().fillColor().orElse(null);
-        e.font = n.style().font().orElse(null);
-        e.fontColor = n.style().fontColor().orElse(null);
-        e.lineColor = n.style().lineColor().orElse(null);
-        e.textAlignment = n.style().textAlignment().orElse(null);
-        e.label = n.label().orElse(null);
-        e.content = n.content().orElse(null);
+        e.fillColor = n.style().fillColor();
+        e.font = n.style().font();
+        e.fontColor = n.style().fontColor();
+        e.lineColor = n.style().lineColor();
+        e.textAlignment = n.style().textAlignment();
+        e.label = n.label();
+        e.content = n.content();
         e.sortOrder = n.sortOrder().value();
-        e.rawXml = n.rawXml().map(RawXml::value).orElse(null);
+        e.rawXml = n.rawXml() == null ? null : n.rawXml().value();
     }
 
     static ViewEdge toEdge(ViewEdgeEntity e) {
         return new ViewEdge(ViewEdgeId.of(e.id), ArchiId.of(e.archiId), DiagramType.of(e.archiType),
-                Optional.ofNullable(e.relationshipId).map(RelationshipId::of), endpoint(e.sourceNodeId, e.sourceEdgeId),
+                e.relationshipId == null ? null : RelationshipId.of(e.relationshipId),
+                endpoint(e.sourceNodeId, e.sourceEdgeId),
                 endpoint(e.targetNodeId, e.targetEdgeId), Bendpoints.parse(e.bendpoints),
                 style(e.fillColor, e.font, e.fontColor, e.lineColor, e.textAlignment), SortOrder.of(e.sortOrder),
                 raw(e.rawXml));
@@ -223,19 +224,19 @@ final class EntityMapper {
         e.viewId = viewId;
         e.archiId = d.archiId().value();
         e.archiType = d.archiType().value();
-        e.relationshipId = d.relationshipId().map(RelationshipId::value).orElse(null);
+        e.relationshipId = d.relationshipId() == null ? null : d.relationshipId().value();
         e.sourceNodeId = d.source() instanceof ViewNodeId id ? id.value() : null;
         e.sourceEdgeId = d.source() instanceof ViewEdgeId id ? id.value() : null;
         e.targetNodeId = d.target() instanceof ViewNodeId id ? id.value() : null;
         e.targetEdgeId = d.target() instanceof ViewEdgeId id ? id.value() : null;
         e.bendpoints = Bendpoints.format(d.bendpoints());
-        e.fillColor = d.style().fillColor().orElse(null);
-        e.font = d.style().font().orElse(null);
-        e.fontColor = d.style().fontColor().orElse(null);
-        e.lineColor = d.style().lineColor().orElse(null);
-        e.textAlignment = d.style().textAlignment().orElse(null);
+        e.fillColor = d.style().fillColor();
+        e.font = d.style().font();
+        e.fontColor = d.style().fontColor();
+        e.lineColor = d.style().lineColor();
+        e.textAlignment = d.style().textAlignment();
         e.sortOrder = d.sortOrder().value();
-        e.rawXml = d.rawXml().map(RawXml::value).orElse(null);
+        e.rawXml = d.rawXml() == null ? null : d.rawXml().value();
     }
 
     private static ViewEndpoint endpoint(UUID node, UUID edge) {
@@ -243,8 +244,7 @@ final class EntityMapper {
     }
 
     private static StyleOverride style(String fill, String font, String fontColor, String line, Integer alignment) {
-        return new StyleOverride(Optional.ofNullable(fill), Optional.ofNullable(font), Optional.ofNullable(fontColor),
-                Optional.ofNullable(line), Optional.ofNullable(alignment));
+        return new StyleOverride(fill, font, fontColor, line, alignment);
     }
 
     // ── Общее ───────────────────────────────────────────────────────
@@ -263,8 +263,8 @@ final class EntityMapper {
         }
     }
 
-    private static Optional<RawXml> raw(String value) {
-        return Optional.ofNullable(value).filter(v -> !v.isEmpty()).map(RawXml::new);
+    private static RawXml raw(String value) {
+        return value == null || value.isEmpty() ? null : new RawXml(value);
     }
 
     /** Точки перегиба в {@code jsonb}: массив четвёрок, без библиотеки — формат закрыт и мал. */

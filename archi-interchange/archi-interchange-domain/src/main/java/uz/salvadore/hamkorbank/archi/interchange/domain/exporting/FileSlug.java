@@ -1,6 +1,8 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 
+import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -42,7 +44,7 @@ public final class FileSlug {
      * по краям и подряд; пустое имя — {@code unnamed}.
      */
     public static String slug(String name) {
-        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        String lower = name.toLowerCase(Locale.ROOT);
         StringBuilder latin = new StringBuilder(lower.length());
         for (int i = 0; i < lower.length(); i++) {
             char c = lower.charAt(i);
@@ -63,7 +65,7 @@ public final class FileSlug {
         if (hex.find()) {
             return hex.group(1);
         }
-        return ContentHash.of(id.value().getBytes(java.nio.charset.StandardCharsets.UTF_8)).value()
+        return ContentHash.of(id.value().getBytes(StandardCharsets.UTF_8)).value()
                 .substring(0, SHORT_ID);
     }
 }

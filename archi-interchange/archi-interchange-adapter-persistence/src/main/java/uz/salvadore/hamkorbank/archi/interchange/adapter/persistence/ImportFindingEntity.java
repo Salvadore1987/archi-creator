@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.UUID;
 
+/** Строка находки сессии импорта: уровень, код, текст и место в файле. */
 @Entity
 @Table(name = "import_finding")
 public class ImportFindingEntity {

@@ -9,6 +9,7 @@ import java.io.Serializable;
 import java.time.Instant;
 import java.util.Objects;
 
+/** Запись ключа идемпотентности: отпечаток команды и ссылка на созданный ею объект. */
 @Entity
 @Table(name = "idempotency_record")
 @IdClass(IdempotencyEntity.Key.class)
@@ -33,6 +34,7 @@ public class IdempotencyEntity {
     @Column(name = "created_at", nullable = false)
     public Instant createdAt;
 
+    /** Составной ключ записи: область команды, автор и ключ клиента. */
     public static class Key implements Serializable {
         public String scope;
         public String actor;

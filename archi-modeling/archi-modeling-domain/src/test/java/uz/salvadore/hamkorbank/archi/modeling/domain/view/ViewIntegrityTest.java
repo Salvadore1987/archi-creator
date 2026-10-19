@@ -4,15 +4,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
@@ -32,16 +33,16 @@ class ViewIntegrityTest {
         Element foreign = Models.element(other, "BusinessActor", FolderType.BUSINESS, "Клиент");
         View view = newView(model);
 
-        ModelingException rejected = assertThrows(ModelingException.class, () -> view.placeElement(model,
-                foreign.id(), BOX, Optional.empty(), ViewNodeId.next(UUIDS), Models.archiId()));
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class, () -> view.placeElement(model,
+                foreign.id(), BOX, null, ViewNodeId.next(UUIDS), Models.archiId()));
         assertEquals("INV-MDL-008", rejected.code());
 
-        assertThrows(IllegalArgumentException.class, () -> new ViewNode(ViewNodeId.next(UUIDS), Optional.empty(),
-                Models.archiId(), DiagramType.DIAGRAM_OBJECT, Optional.empty(), BOX, StyleOverride.NONE,
-                SortOrder.ofPosition(0), Optional.empty()), "DIAGRAM_OBJECT без элемента");
-        assertThrows(IllegalArgumentException.class, () -> new ViewNode(ViewNodeId.next(UUIDS), Optional.empty(),
-                Models.archiId(), DiagramType.GROUP, Optional.of(foreign.id()), BOX, StyleOverride.NONE,
-                SortOrder.ofPosition(0), Optional.empty()), "у группы элемента нет");
+        assertThrows(InvalidValueException.class, () -> new ViewNode(ViewNodeId.next(UUIDS), null,
+                Models.archiId(), DiagramType.DIAGRAM_OBJECT, null, BOX, StyleOverride.NONE,
+                SortOrder.ofPosition(0), null), "DIAGRAM_OBJECT без элемента");
+        assertThrows(InvalidValueException.class, () -> new ViewNode(ViewNodeId.next(UUIDS), null,
+                Models.archiId(), DiagramType.GROUP, foreign.id(), BOX, StyleOverride.NONE,
+                SortOrder.ofPosition(0), null), "у группы элемента нет");
     }
 
     @Test
@@ -51,14 +52,43 @@ class ViewIntegrityTest {
         Element component = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
         View view = newView(model);
 
-        ViewNode first = view.placeElement(model, component.id(), BOX, Optional.empty(), ViewNodeId.next(UUIDS),
+        ViewNode first = view.placeElement(model, component.id(), BOX, null, ViewNodeId.next(UUIDS),
                 Models.archiId()).value();
-        var second = view.placeElement(model, component.id(), new Bounds(300, 10, 120, 55), Optional.empty(),
+        ArchitectureModel.Created<ViewNode> second = view.placeElement(model, component.id(),
+                new Bounds(300, 10, 120, 55), null,
                 ViewNodeId.next(UUIDS), Models.archiId());
 
         assertFalse(second.created());
         assertEquals(first.id(), second.value().id());
         assertEquals(1, view.nodes().size());
+    }
+
+    @Test
+    @DisplayName("дубль решает агрегат: идентификаторы нового объекта у существующего не запрашиваются")
+    void duplicatesDoNotDrawNewIds() {
+        ArchitectureModel model = Models.empty();
+        Element component = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
+        Element actor = Models.element(model, "BusinessActor", FolderType.BUSINESS, "Клиент");
+        Relationship serving = Models.relate(model, "ServingRelationship", component.id(), actor.id());
+        View view = newView(model);
+        ViewNode c = view.placeElement(model, component.id(), BOX, null, ViewNodeId.next(UUIDS),
+                Models.archiId()).value();
+        ViewNode a = view.placeElement(model, actor.id(), new Bounds(300, 10, 120, 55), null,
+                ViewNodeId.next(UUIDS), Models.archiId()).value();
+        view.connect(model, serving.id(), c.id(), a.id(), ViewEdgeId.next(UUIDS), Models.archiId());
+
+        ArchitectureModel.Created<ViewNode> node = view.placeElement(model, component.id(), BOX, null,
+                () -> fail("ключ узла не нужен"), () -> fail("archiId узла не нужен"));
+        ArchitectureModel.Created<ViewEdge> edge = view.connect(model, serving.id(), c.id(), a.id(), List.of(),
+                () -> fail("ключ ребра не нужен"), () -> fail("archiId ребра не нужен"));
+        ArchitectureModel.Created<Relationship> relation = model.addRelationship(serving.archiType(),
+                component.id(), actor.id(), null, null, null, null, () -> fail("ключ связи не нужен"),
+                () -> fail("archiId связи не нужен"), NOW);
+
+        assertFalse(node.created());
+        assertFalse(edge.created());
+        assertFalse(relation.created());
+        assertEquals(serving.id(), relation.value().id());
     }
 
     @Test
@@ -69,9 +99,9 @@ class ViewIntegrityTest {
         Element antifraud = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "Антифрод");
         Relationship composition = Models.relate(model, "CompositionRelationship", gateway.id(), antifraud.id());
         View view = newView(model);
-        ViewNode outer = view.placeElement(model, gateway.id(), new Bounds(0, 0, 300, 200), Optional.empty(),
+        ViewNode outer = view.placeElement(model, gateway.id(), new Bounds(0, 0, 300, 200), null,
                 ViewNodeId.next(UUIDS), Models.archiId()).value();
-        ViewNode inner = view.placeElement(model, antifraud.id(), BOX, Optional.of(outer.id()),
+        ViewNode inner = view.placeElement(model, antifraud.id(), BOX, outer.id(),
                 ViewNodeId.next(UUIDS), Models.archiId()).value();
         ViewEdge edge = view.connect(model, composition.id(), outer.id(), inner.id(), ViewEdgeId.next(UUIDS),
                 Models.archiId()).value();
@@ -91,12 +121,12 @@ class ViewIntegrityTest {
         Element actor = Models.element(model, "BusinessActor", FolderType.BUSINESS, "Клиент");
         Relationship serving = Models.relate(model, "ServingRelationship", component.id(), actor.id());
         View view = newView(model);
-        ViewNode c = view.placeElement(model, component.id(), BOX, Optional.empty(), ViewNodeId.next(UUIDS),
+        ViewNode c = view.placeElement(model, component.id(), BOX, null, ViewNodeId.next(UUIDS),
                 Models.archiId()).value();
-        ViewNode a = view.placeElement(model, actor.id(), new Bounds(300, 10, 120, 55), Optional.empty(),
+        ViewNode a = view.placeElement(model, actor.id(), new Bounds(300, 10, 120, 55), null,
                 ViewNodeId.next(UUIDS), Models.archiId()).value();
 
-        assertThrows(ModelingException.class, () -> view.connect(model, serving.id(), a.id(), c.id(),
+        assertThrows(ModelingDomainException.class, () -> view.connect(model, serving.id(), a.id(), c.id(),
                 ViewEdgeId.next(UUIDS), Models.archiId()), "ребро наоборот не изображает связь");
 
         ViewEdge edge = view.connect(model, serving.id(), c.id(), a.id(), ViewEdgeId.next(UUIDS),
@@ -105,6 +135,19 @@ class ViewIntegrityTest {
                 Map.of(edge.id(), List.of(new Bendpoint(0, 80, -100, 0))));
         assertEquals(400, view.requireNode(a.id()).bounds().x());
         assertEquals(1, view.requireEdge(edge.id()).bendpoints().size());
+    }
+
+    @Test
+    @DisplayName("INV-MDL-001: узел импортированного представления не берёт archi_id самого представления")
+    void importedNodeCannotReuseViewArchiId() {
+        ArchitectureModel model = Models.empty();
+        View view = newView(model);
+        ViewNode group = new ViewNode(ViewNodeId.next(UUIDS), null, view.archiId(), DiagramType.GROUP,
+                null, BOX, StyleOverride.NONE, SortOrder.ofPosition(0), null);
+
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> View.imported(view.header(), List.of(group), List.of(), model));
+        assertEquals("INV-MDL-001", rejected.code());
     }
 
     private static View newView(ArchitectureModel model) {

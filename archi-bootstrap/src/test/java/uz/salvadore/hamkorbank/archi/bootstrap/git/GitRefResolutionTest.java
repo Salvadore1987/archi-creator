@@ -19,7 +19,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Remote;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitRef;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.RefKind;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
@@ -60,7 +62,7 @@ class GitRefResolutionTest {
         }
         repository = new JGitRepository(temp.resolve("cache"), "oauth2", Duration.ofSeconds(10));
         remote = new Remote(new WorkspaceId(Generators.timeBasedEpochGenerator().generate()), bare.toUri().toString(),
-                "main", Optional.empty());
+                "main", null);
     }
 
     @Test
@@ -99,16 +101,16 @@ class GitRefResolutionTest {
     void unknownReferenceIsEmpty() {
         assertThat(resolve("nope")).isEmpty();
         assertThat(resolve("0123456789abcdef0123456789abcdef01234567")).isEmpty();
-        assertThatThrownBy(() -> GitRef.of("main..feature")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> GitRef.of("")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> GitRef.of("-upload-pack")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> GitRef.of("main..feature")).isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> GitRef.of("")).isInstanceOf(InvalidValueException.class);
+        assertThatThrownBy(() -> GitRef.of("-upload-pack")).isInstanceOf(InvalidValueException.class);
     }
 
     @Test
     @DisplayName("FR-38: недоступный репозиторий — Unreachable, а не «не найдено»")
     void unreachableRepositoryIsReported() {
         Remote missing = new Remote(remote.workspace(), temp.resolve("missing.git").toUri().toString(), "main",
-                Optional.empty());
+                null);
 
         assertThatThrownBy(() -> repository.resolve(missing, GitRef.of("main")))
                 .isInstanceOf(GitRepositoryPort.Unreachable.class);
@@ -122,8 +124,8 @@ class GitRefResolutionTest {
         return new ResolvedRef(GitRef.of(ref), kind, sha(commit));
     }
 
-    private static uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha sha(RevCommit commit) {
-        return uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha.of(commit.name());
+    private static GitSha sha(RevCommit commit) {
+        return GitSha.of(commit.name());
     }
 
     private static RevCommit commit(Git git, Path work, String text) throws Exception {

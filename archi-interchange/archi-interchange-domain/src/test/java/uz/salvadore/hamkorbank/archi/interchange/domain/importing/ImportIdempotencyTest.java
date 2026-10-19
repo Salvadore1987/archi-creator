@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 
 class ImportIdempotencyTest {
 
@@ -47,6 +49,8 @@ class ImportIdempotencyTest {
                 () -> intake.receive(Sessions.request(VALID + "\n", "retry-1", false)));
 
         assertEquals("retry-1", conflict.existing().idempotencyKey());
+        assertEquals(InterchangeCodes.IMPORT_IDEMPOTENCY, conflict.code());
+        assertEquals(InterchangeMessages.IMPORT_KEY_REUSED, conflict.reason().key());
     }
 
     @Test

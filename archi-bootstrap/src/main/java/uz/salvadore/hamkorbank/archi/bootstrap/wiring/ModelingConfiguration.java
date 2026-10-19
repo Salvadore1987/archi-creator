@@ -22,6 +22,64 @@ import uz.salvadore.hamkorbank.archi.interchange.application.mapping.ArchimateSn
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EnsureDefaultWorkspaceCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListReplaceCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.CommittedVersionGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementCreateCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementDeleteCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementTypeListQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.FolderCreateCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockAcquireCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockReleaseCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelContentGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelContentReplaceCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelContents;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelCreateCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelDeleteCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelImportCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelListQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelPurgeCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelRestoreCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelSummaryGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelValidateQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelingKernel;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.PublishedVersionGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationTypeSuggestQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipCreateCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipDeleteCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.SnapshotPurgeCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemRenameCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemsDeleteCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemsMoveCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionCommitter;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionContents;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionGitShaRecordCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionLabelCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionListQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionRestoreCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionSaveCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionSnapshotGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewCreateCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewEdgeEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewEdgePlaceCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewEdgeRemoveCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewLayoutProposeQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewLayoutSaveCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewLookup;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewNodeEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewNodeMoveCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewNodePlaceCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewNodeRemoveCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceEnsureDefaultCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceListQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceResolveQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.DomainEventPublisher;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.IdempotencyRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelAccessListRepository;
@@ -33,18 +91,34 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.AccessListService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.LockService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelLifecycleService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.TreeService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.AccessListApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ElementApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.MetamodelApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.RelationshipApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.SnapshotRetentionApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.TreeApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.VersionApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.AccessListApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.LockApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.MetamodelApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelExchangeApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.SnapshotRetentionApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.TreeApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewQueryApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiIdGenerator;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
 
@@ -89,7 +163,7 @@ public class ModelingConfiguration {
     @Bean
     ArchimateSnapshots archimateSnapshots(Clock clock) {
         UuidV7 uuids = new UuidV7(clock);
-        ArchiIdGenerator archiIds = new ArchiIdGenerator();
+        ArchiIdGenerator archiIds = new ArchiIdGenerator(uuids::next);
         return new ArchimateSnapshots(new StaxArchiDocumentReader(), new ArchiXmlWriter(), uuids::next,
                 archiIds::next);
     }
@@ -105,77 +179,142 @@ public class ModelingConfiguration {
     }
 
     @Bean
-    VersionService versionService(ModelingKernel kernel, ArchimateSnapshots snapshots, GitSnapshotArchive git,
-                                  ModelingSettings settings) {
-        return new VersionService(kernel, snapshots, snapshots, git, git, ZoneId.systemDefault(),
-                settings.retentionEnabled());
+    VersionCommitter versionCommitter(ModelingKernel kernel, ArchimateSnapshots snapshots) {
+        return new VersionCommitter(kernel, snapshots);
     }
 
     @Bean
-    ModelLifecycleService modelLifecycleService(ModelingKernel kernel, WorkspaceRepository workspaces,
-                                                VersionService versions) {
-        return new ModelLifecycleService(kernel, workspaces, versions);
+    VersionContents versionContents(ModelingKernel kernel, VersionCommitter committer, ArchimateSnapshots snapshots,
+                                    GitSnapshotArchive git) {
+        return new VersionContents(kernel, committer, snapshots, snapshots, git);
     }
 
     @Bean
-    ModelQueryService modelQueryService(ModelingKernel kernel) {
-        return new ModelQueryService(kernel);
+    VersionApplicationService versionApplicationService(ModelingKernel kernel, VersionCommitter committer,
+                                                        VersionContents contents) {
+        return new VersionApplicationServiceImpl(new VersionSaveCommandHandler(kernel, committer),
+                new VersionListQueryHandler(kernel), new VersionLabelCommandHandler(kernel, contents),
+                new VersionRestoreCommandHandler(kernel, contents));
+    }
+
+    /** Вход для выгрузки и Git: роль у каждой их операции своя, её проверяет вызывающий. */
+    @Bean
+    ModelExchangeApplicationService modelExchangeApplicationService(ModelingKernel kernel,
+                                                                    WorkspaceRepository workspaces,
+                                                                    VersionCommitter committer,
+                                                                    VersionContents contents) {
+        return new ModelExchangeApplicationServiceImpl(new ModelImportCommandHandler(kernel, workspaces, committer),
+                new VersionSnapshotGetQueryHandler(kernel, contents),
+                new ModelSummaryGetQueryHandler(kernel), new ModelContentGetQueryHandler(kernel, contents),
+                new ModelContentReplaceCommandHandler(kernel, contents), new CommittedVersionGetQueryHandler(kernel),
+                new PublishedVersionGetQueryHandler(kernel), new VersionGitShaRecordCommandHandler(kernel, contents));
     }
 
     @Bean
-    LockService lockService(ModelingKernel kernel) {
-        return new LockService(kernel);
+    SnapshotRetentionApplicationService snapshotRetentionApplicationService(ModelingKernel kernel,
+                                                                            GitSnapshotArchive git,
+                                                                            ModelingSettings settings) {
+        return new SnapshotRetentionApplicationServiceImpl(new SnapshotPurgeCommandHandler(kernel, git,
+                ZoneId.systemDefault(), settings.retentionEnabled()));
     }
 
     @Bean
-    ElementService elementService(ModelingKernel kernel) {
-        return new ElementService(kernel);
+    ModelApplicationService modelApplicationService(ModelingKernel kernel, WorkspaceRepository workspaces,
+                                                    UnitOfWork unitOfWork, VersionCommitter committer) {
+        return new ModelApplicationServiceImpl(new ModelCreateCommandHandler(kernel, workspaces,
+                new WorkspaceResolveQueryHandler(workspaces, unitOfWork), committer),
+                new ModelEditCommandHandler(kernel),
+                new ModelDeleteCommandHandler(kernel), new ModelRestoreCommandHandler(kernel),
+                new ModelPurgeCommandHandler(kernel));
     }
 
     @Bean
-    RelationshipService relationshipService(ModelingKernel kernel, ElementService elements) {
-        return new RelationshipService(kernel, elements);
+    ModelQueryApplicationService modelQueryApplicationService(ModelingKernel kernel, WorkspaceRepository workspaces,
+                                                              UnitOfWork unitOfWork) {
+        return new ModelQueryApplicationServiceImpl(new ModelListQueryHandler(kernel,
+                new WorkspaceResolveQueryHandler(workspaces, unitOfWork)), new ModelGetQueryHandler(kernel),
+                new ModelValidateQueryHandler(kernel));
     }
 
     @Bean
-    ViewService viewService(ModelingKernel kernel) {
-        return new ViewService(kernel);
+    ViewQueryApplicationService viewQueryApplicationService(ModelingKernel kernel) {
+        ViewLookup lookup = new ViewLookup(kernel);
+        return new ViewQueryApplicationServiceImpl(new ViewGetQueryHandler(kernel, lookup),
+                new ViewLayoutProposeQueryHandler(kernel, lookup));
     }
 
     @Bean
-    TreeService treeService(ModelingKernel kernel, ElementService elements, RelationshipService relationships) {
-        return new TreeService(kernel, elements, relationships);
+    LockApplicationService lockApplicationService(ModelingKernel kernel) {
+        return new LockApplicationServiceImpl(new LockAcquireCommandHandler(kernel),
+                new LockReleaseCommandHandler(kernel), new LockGetQueryHandler(kernel));
     }
 
     @Bean
-    AccessListService accessListService(ModelingKernel kernel) {
-        return new AccessListService(kernel);
+    ElementApplicationService elementApplicationService(ModelingKernel kernel) {
+        ModelContents contents = new ModelContents(kernel);
+        return new ElementApplicationServiceImpl(new ElementCreateCommandHandler(kernel),
+                new ElementEditCommandHandler(kernel, contents), new ElementDeleteCommandHandler(kernel, contents));
     }
 
     @Bean
-    ModelImportService modelImportService(ModelingKernel kernel, WorkspaceRepository workspaces,
-                                          VersionService versions) {
-        return new ModelImportService(kernel, workspaces, versions);
+    RelationshipApplicationService relationshipApplicationService(ModelingKernel kernel) {
+        ModelContents contents = new ModelContents(kernel);
+        return new RelationshipApplicationServiceImpl(new RelationshipCreateCommandHandler(kernel),
+                new RelationshipEditCommandHandler(kernel, contents),
+                new RelationshipDeleteCommandHandler(kernel, contents));
     }
 
     @Bean
-    WorkspaceService workspaceService(WorkspaceRepository workspaces, UnitOfWork unitOfWork, TextCatalog texts,
-                                      Clock clock) {
-        return new WorkspaceService(workspaces, unitOfWork, texts, clock);
+    MetamodelApplicationService metamodelApplicationService() {
+        return new MetamodelApplicationServiceImpl(new ElementTypeListQueryHandler(),
+                new RelationTypeSuggestQueryHandler());
+    }
+
+    @Bean
+    ViewApplicationService viewApplicationService(ModelingKernel kernel) {
+        ViewLookup lookup = new ViewLookup(kernel);
+        return new ViewApplicationServiceImpl(new ViewCreateCommandHandler(kernel),
+                new ViewNodePlaceCommandHandler(kernel, lookup), new ViewEdgePlaceCommandHandler(kernel, lookup),
+                new ViewNodeMoveCommandHandler(kernel, lookup), new ViewNodeEditCommandHandler(kernel, lookup),
+                new ViewEdgeEditCommandHandler(kernel, lookup), new ViewNodeRemoveCommandHandler(kernel, lookup),
+                new ViewEdgeRemoveCommandHandler(kernel, lookup), new ViewLayoutSaveCommandHandler(kernel, lookup));
+    }
+
+    @Bean
+    TreeApplicationService treeApplicationService(ModelingKernel kernel) {
+        return new TreeApplicationServiceImpl(new FolderCreateCommandHandler(kernel),
+                new TreeItemRenameCommandHandler(kernel), new TreeItemsMoveCommandHandler(kernel),
+                new TreeItemsDeleteCommandHandler(kernel, new ModelContents(kernel)));
+    }
+
+    @Bean
+    AccessListApplicationService accessListApplicationService(ModelingKernel kernel) {
+        return new AccessListApplicationServiceImpl(new AccessListGetQueryHandler(kernel),
+                new AccessListReplaceCommandHandler(kernel));
+    }
+
+    @Bean
+    WorkspaceApplicationService workspaceApplicationService(WorkspaceRepository workspaces, UnitOfWork unitOfWork,
+                                                            TextCatalog texts, Clock clock) {
+        return new WorkspaceApplicationServiceImpl(new WorkspaceListQueryHandler(workspaces, unitOfWork),
+                new WorkspaceResolveQueryHandler(workspaces, unitOfWork),
+                new WorkspaceEnsureDefaultCommandHandler(workspaces, unitOfWork, texts, clock));
     }
 
     /**
-     * Первое рабочее пространство — при старте на пустой базе (журнал этапа 0). Запроса
+     * Первое рабочее пространство — при старте на пустой базе. Запроса
      * на старте нет, поэтому язык имени — язык приложения по умолчанию, а не системная
      * локаль сервера.
      */
     @Bean
-    ApplicationRunner defaultWorkspace(WorkspaceService workspaces, ModelingSettings settings, WebProperties web) {
+    ApplicationRunner defaultWorkspace(WorkspaceApplicationService workspaces, ModelingSettings settings,
+                                       WebProperties web) {
         return args -> {
             LocaleContextHolder.setLocale(Optional.ofNullable(web.getLocale()).orElse(Locale.ROOT));
             try {
-                workspaces.ensureDefault(Optional.ofNullable(settings.defaultWorkspaceName())
-                        .filter(name -> !name.isBlank()));
+                workspaces.ensureDefaultWorkspace(new EnsureDefaultWorkspaceCommand(
+                        Optional.ofNullable(settings.defaultWorkspaceName()).filter(name -> !name.isBlank())
+                                .orElse(null)));
             } finally {
                 LocaleContextHolder.resetLocaleContext();
             }
@@ -184,7 +323,8 @@ public class ModelingConfiguration {
 
     /** Очистка снимков по расписанию; выключенная настройкой — пустой проход. */
     @Bean
-    SchedulingConfigurer snapshotRetention(VersionService versions, ModelingSettings settings) {
-        return registrar -> registrar.addCronTask(versions::purgeSnapshots, settings.retentionCron());
+    SchedulingConfigurer snapshotRetention(SnapshotRetentionApplicationService retention,
+                                           ModelingSettings settings) {
+        return registrar -> registrar.addCronTask(retention::purgeSnapshots, settings.retentionCron());
     }
 }

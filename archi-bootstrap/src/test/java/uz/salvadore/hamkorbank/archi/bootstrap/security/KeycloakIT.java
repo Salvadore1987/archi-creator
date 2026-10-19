@@ -13,6 +13,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Base64;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -93,7 +94,7 @@ class KeycloakIT {
             + "/ui-config без токена")
     void meFromKeycloakToken() throws Exception {
         String architect = token("architect");
-        String subject = JsonPath.read(new String(java.util.Base64.getUrlDecoder().decode(architect.split("\\.")[1]),
+        String subject = JsonPath.read(new String(Base64.getUrlDecoder().decode(architect.split("\\.")[1]),
                 StandardCharsets.UTF_8), "$.sub");
 
         mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + architect))
@@ -113,7 +114,7 @@ class KeycloakIT {
         return "http://" + KEYCLOAK.getHost() + ":" + KEYCLOAK.getMappedPort(8080) + "/realms/archi";
     }
 
-    /** Парольный грант публичного клиента SPA — как вход на этапе 0, только без браузера. */
+    /** Парольный грант публичного клиента SPA — как вход из интерфейса, только без браузера. */
     private static String token(String user) throws Exception {
         String form = "grant_type=password&client_id=archi-creator-ui&username=" + user + "&password="
                 + URLEncoder.encode(user, StandardCharsets.UTF_8);

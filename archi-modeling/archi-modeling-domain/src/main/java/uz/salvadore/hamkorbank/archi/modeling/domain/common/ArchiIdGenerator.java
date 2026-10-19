@@ -7,21 +7,19 @@ import java.util.function.Supplier;
 
 /**
  * Идентификаторы новых объектов в том виде, в каком их выдаёт Archi:
- * {@code id-} и 32 hex случайного UUID. Импортированные
+ * {@code id-} и 32 hex UUID версии 7 от генератора приложения. Импортированные
  * идентификаторы этот класс не трогает.
  */
 public final class ArchiIdGenerator {
 
     private final Supplier<UUID> uuids;
 
-    public ArchiIdGenerator() {
-        this(UUID::randomUUID);
-    }
-
+    /** Генератор поверх UUID приложения — {@code UuidV7::next} своего контекста. */
     public ArchiIdGenerator(Supplier<UUID> uuids) {
         this.uuids = Objects.requireNonNull(uuids, "uuids");
     }
 
+    /** Новый идентификатор в формате Archi; занятость в модели не проверяется. */
     public ArchiId next() {
         return ArchiId.of("id-" + uuids.get().toString().replace("-", ""));
     }

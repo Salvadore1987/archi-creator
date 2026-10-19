@@ -26,3 +26,6 @@
 | Этап | Файл | Находок |
 |---|---|---|
 | 0. Подготовка | [`00-podgotovka.md`](00-podgotovka.md) | — (реестр отклонений) |
+| 1. Механические проверки | [`01-mekhanicheskie-proverki.md`](01-mekhanicheskie-proverki.md) | 15 |
+| 2. Домен modeling | [`02-domen-modeling.md`](02-domen-modeling.md) | 21 |
+| 3. Домен interchange | [`03-domen-interchange.md`](03-domen-interchange.md) | 18 |

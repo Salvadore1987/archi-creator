@@ -97,6 +97,18 @@ Application-слои без Spring: транзакция — порт `UnitOfWor
 события — после коммита, роль проверяется на границе use case'а по таблице
 `spec/nfr/<bc>.yaml`, а не URL.
 
+**Application-слой modeling — входные порты, handler'ы и DTO.** Адаптеры, мосты `bootstrap`
+и другие контексты зовут сценарии только через интерфейсы `application/port/in/`
+(`…ApplicationService`, реализация `…Impl` в `service` лишь делегирует). Сценарий — handler
+`application/handler/{Entity}{Action}CommandHandler`/`…QueryHandler`: роль, метрика, транзакция
+через `ModelingKernel` (он и `RequestedIds` видны только пакету `handler`). Команды, запросы
+и результаты — record'ы `application/dto/command|query|result` из простых значений; агрегат
+наружу не выходит, перевод — `application/mapper/`. Вход других контекстов (выгрузка, Git,
+импорт) — `ModelExchangeApplicationService`: роль у этих операций проверяет вызывающий.
+Держит `ApplicationLayerTest` (ArchUnit); единственное исключение — `ModelContent` во входе
+импорта, до перевода раскладки документа interchange. Interchange и advisor переводятся
+по этому образцу на своих этапах ревью.
+
 Модули доменов друг от друга **не зависят**: Maven не допускает цикла, а partnership
 в карте контекстов двусторонний. Поэтому у interchange свой `ArchiId`, а проверка
 матрицы при импорте (`RelationMatrix.check`) соединяется с сессией в application-слое
@@ -119,9 +131,9 @@ Application-слои без Spring: транзакция — порт `UnitOfWor
 
 | Что | Где |
 |---|---|
-| Правка представления: группа и заметка, подпись и текст, стиль узла и ребра, удаление ребра, вложение узла ([`UC-MDL-008`](spec/application/modeling/usecases/edit-view.md)) | `View`, `ViewService`, `ViewController`; `ViewEditingIT` |
+| Правка представления: группа и заметка, подпись и текст, стиль узла и ребра, удаление ребра, вложение узла ([`UC-MDL-008`](spec/application/modeling/usecases/edit-view.md)) | `View`, `ViewApplicationService`, `ViewController`; `ViewEditingIT` |
 | Авторазметка — предложение геометрии, база не меняется ([`ADR-0019`](spec/adr/0019-auto-layout-proposal.md)) | `archi-modeling-domain/.../modeling/domain/view/layout/` |
-| Флаг связи вложения в `/metamodel/relations` | `RelationshipService.suggestions` по `NestingRules` |
+| Флаг связи вложения в `/metamodel/relations` | `RelationTypeSuggestQueryHandler` по `NestingRules` |
 | Умные связи, вложенность, авторазметка, паритет с Archi на канве | `frontend/src/canvas/` (`CanvasView`, `CanvasTools`, `RelationPicker`, `guides.ts`), `frontend/src/model/ops.ts` |
 | Собственный стиль объекта в «Свойствах» | `frontend/src/panels/StyleEditor.tsx` |
 | E2E этапа и приёмка | `frontend/e2e/{smart-relation,nesting,auto-layout,editing-parity,acceptance}.spec.ts`; работа `e2e` в CI |
@@ -150,7 +162,7 @@ API и фиксирует версию. Идентификаторы новых 
 
 **Помощник не изменяет модель — и держит это граница модулей.** Модули advisor
 не зависят от modeling вовсе; порт чтения `ModelContextReader` и каталог метамодели
-реализует мост в `bootstrap.advisor` поверх `ModelQueryService` и `RelationMatrix`.
+реализует мост в `bootstrap.advisor` поверх `ModelQueryApplicationService` и `RelationMatrix`.
 `AdvisorArchitectureTest` (ArchUnit) роняет сборку, если мост тронет сервис записи.
 Отказы (роль, выключатель, бюджет, частота, размер контекста) принимаются до вызова
 API и до открытия потока; расход списывается в транзакции сессии даже при обрыве.
@@ -235,7 +247,7 @@ macOS и старый Проводник его не создают. Измен�
 | Outbox зафиксированных версий ([`ADR-0003`](spec/adr/0003-event-publishing.md)) | `outbox_event` (`V7__outbox.sql`), `JpaGitOutbox`, `bootstrap/wiring/OutboxEventPublisher` |
 | JGit, секреты из окружения, мост к версиям, проход очереди | `archi-bootstrap/.../bootstrap/git/`, `wiring/GitConfiguration`; `archi.git.*` |
 | REST: `PUT/GET/DELETE /workspaces/{id}/git-binding`, `POST /models/{id}/git/push` | `GitController` |
-| Ретеншен с Git, восстановление очищенного снимка из коммита | `VersionService` + порт `SnapshotArchive`; `GitSnapshotArchive` |
+| Ретеншен с Git, восстановление очищенного снимка из коммита | `SnapshotPurgeCommandHandler`, `VersionContents` + порт `SnapshotArchive`; `GitSnapshotArchive` |
 | CI-задача `.archimate` на теге в репозитории выгрузки | `deploy/git/gitlab-ci.yml.example` |
 | Тесты | `GitYamlWriterTest`, `GitPublisherTest` (JGit без Docker); `GitExportIT`, `GitRetentionIT`, `GitRoundTripIT`, `GitBindingIT` |
 
@@ -254,6 +266,8 @@ macOS и старый Проводник его не создают. Измен�
 записи. Ветка двигается только вперёд (push с ожидаемой головой, без принуждения).
 Расхождение — чужой коммит в каталоге модели или переписанная история; чужое вне
 каталога ложится под наш коммит. Токена нет ни в базе, ни в домене — `env:ИМЯ`.
+Репозиторий по `file://` привязывается только при `archi.git.allow-local-repositories=true`
+(включено в интеграционных тестах), иначе администратор привязал бы любой каталог сервера.
 Каталог модели — `models/<слаг>.<8 hex от ModelId>/`, при переименовании не двигается.
 
 Что появилось на этапе 7b и где лежит:
@@ -263,7 +277,7 @@ macOS и старый Проводник его не создают. Измен�
 | Отчёт об изменениях по объектам и полям | `archi-interchange-domain/.../domain/git/ModelChanges`; `ModelChangesTest` |
 | Ссылка: ветка, тег, коммит (`GitRef`, `ResolvedRef`), разрешение на JGit | `GitRepositoryPort.resolve`, `JGitRepository`; `GitRefResolutionTest` |
 | Сценарий импорта по ссылке ([`UC-IXC-006`](spec/application/interchange/usecases/pull-model-from-git.md)): отчёт и применение | `GitImportService`; порт `ModelStates`, мост `bootstrap/git/ModelingModelStates` |
-| Замена содержимого модели новой версией (общая часть с откатом) | `ModelImportService.current`/`replace`, `VersionService.replace` |
+| Замена содержимого модели новой версией (общая часть с откатом) | `ModelContentGetQueryHandler`/`ModelContentReplaceCommandHandler`, `VersionContents.replace` |
 | REST: `POST /models/{id}/git/pull/preview`, `POST /models/{id}/git/pull` | `GitController`, `GitDtoMapper`, `FindingMapper` |
 | Расхождение снимается импортом головы ветки | `GitImportService.adopt`, `GitOutbox.supersede`; правила `accepted`/`carries` в `GitPublishingService` |
 | Тесты | `GitImportTest` (фейки с откатом), `GitImportIT`, новые случаи `GitPublisherTest` |
@@ -308,7 +322,7 @@ macOS и старый Проводник его не создают. Измен�
 Контуры добавляемых узлов — узлы React Flow вне документа: их изменения размеров
 в состояние канвы не идут, иначе ResizeObserver зацикливается.
 
-Тестов на сервере: 467 юнит-тестов (`./mvnw test`) и 96 интеграционных `*IT` на
+Тестов на сервере: 592 юнит-теста (`./mvnw test`) и 96 интеграционных `*IT` на
 Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
 Во фронтенде: 67 юнит-тестов vitest (`npm test`, гоняется фазой `test` Maven)
 и 87 сценариев Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
@@ -358,14 +372,17 @@ tools/render-depgraph.py           # граф зависимостей в PlantU
 tools/check-comment-refs.py        # комментарии в коде без ссылок на спеку (см. ниже)
 tools/check-string-literals.py     # строки кода: текст в i18n, без якорей (см. ниже)
 tools/check-nfr-config.py          # числа application.yaml совпадают со spec/nfr
+tools/check-coverage.py            # пороги покрытия по отчёту JaCoCo (после ./mvnw verify)
+tools/check-qualified-names.py     # тип — простым именем через импорт, а не полным
 git config core.hooksPath .githooks # включить хук commit-msg, один раз на клон
 ```
 
-Восемь скриптов на Python 3.9+ без зависимостей, каждый возвращает ненулевой код при
+Десять скриптов на Python 3.9+ без зависимостей, каждый возвращает ненулевой код при
 первом нарушении. Правишь спеку — прогони первые два; правишь требования — третий;
 четвёртый вызывается хуком сам; пятый — по закрытии этапа; шестой — после правки
 комментариев в коде; седьмой — после правки сообщений и строк в коде; восьмой —
-после правки `spec/nfr/` или чисел в `application.yaml`.
+после правки `spec/nfr/` или чисел в `application.yaml`; девятый — после полного
+`./mvnw verify` (в CI — шаг после сборки); десятый — после правки кода Java.
 
 ### Граф зависимостей
 
@@ -412,6 +429,24 @@ jar'а в репозитории нет.
 `ARCHI_DB_PORT` (5432), `ARCHI_KEYCLOAK_PORT` (8081). Занят соседним проектом —
 меняется `.env`, а не состав.
 
+## Стиль кода держит сборка
+
+Стандарт — внутренний `java-spring-code-guidelines-v2.md` с отступлениями по
+[`ADR-0021`](spec/adr/0021-source-style.md) (отступ 4, строка 120, импорты Google,
+сложность до 25, без `@author`). Нарушение роняет сборку, а не ревью:
+
+| Что | Чем | Когда |
+|---|---|---|
+| Строка ≤ 120, без табуляции; импорты — без `*`, без лишних, статические первым блоком, остальные одним по алфавиту; Javadoc у публичных типов, публичных и protected методов (кроме `@Override`) и публичных констант основного кода | Checkstyle, `config/checkstyle.xml` | `validate` |
+| Сложность метода ≤ 25, нет пустого `catch` (и с комментарием), нет `var`, нет `System.out` и `printStackTrace` — в основном коде и тестах | PMD, `config/pmd-ruleset.xml` | `process-test-classes` |
+| Параметры публичных методов без `?`; зависимости только конструктором, поля бинов `final`; связи JPA без `EAGER`; `findAll()` порта без предела — только в списке исключений; Jackson 3, не 2; сущности агрегата меняет только агрегат | ArchUnit, `CodingRulesTest` | `test` |
+| Типы домена ([`ADR-0027`](spec/adr/0027-domain-types-and-absence.md)): `Optional` не поле и не параметр (только результат поиска и локальная переменная); ключи `*Id` — `BaseId`; корни агрегатов из раздела `aggregates:` спецификации — `AggregateRoot` без публичных конструкторов; исключения домена — `DomainException` контекста; события — `{Агрегат}{Действие}Event` через тип агрегата | ArchUnit, `CodingRulesTest` | `test` |
+| Покрытие строк: `domain` 90 %, `application` 80 %, адаптеры 50 %, весь код 60 % | JaCoCo + `tools/check-coverage.py` | после `verify` |
+
+Конфигурация Checkstyle и PMD в `<configuration>` родителя сильнее `-D`: чтобы увидеть
+все нарушения сразу, а не первого модуля, — `./mvnw -fae`. Javadoc — по правилу
+комментариев ниже: суть поведения, без ссылок на спецификацию.
+
 ## Идентификаторы: UUID только через java-uuid-generator
 
 **UUID создаются и разбираются только библиотекой `com.fasterxml.uuid:java-uuid-generator`**
@@ -420,19 +455,22 @@ jar'а в репозитории нет.
 
 - **Новый идентификатор** — версия 7. В коде контекстов — `UuidV7` своего домена
   (`ElementId.next(uuids)` и т. п.): он отдаёт библиотеке часы приложения, поэтому
-  время фиксируется в тестах через `Clock`. Вне контекстов и в тестах —
+  время фиксируется в тестах через `Clock`. В основном коде `Generators` зовёт только
+  `UuidV7`: идентификаторы Archi (`ArchiIdGenerator`) тоже берут `UuidV7::next`. В тестах —
   `Generators.timeBasedEpochGenerator()`; в тестовом классе — поле
   `IDS = Generators.timeBasedEpochGenerator()`.
 - **Строка в UUID** — `UUIDUtil.uuid(value)`, а не `UUID.fromString`.
 - **Детерминированный UUID в тесте** — `UUIDUtil.constructUUID(UUIDType.TIME_BASED_EPOCH, hi, lo)`.
 - **Запрещены** везде, тесты включительно: `UUID.randomUUID()`, `UUID.nameUUIDFromBytes(…)`,
-  `UUID.fromString(…)`, `new UUID(long, long)`. Случайная версия 4 рядом с версией 7
+  `UUID.fromString(…)`, `new UUID(long, long)` — и вызовом, и ссылкой на метод
+  (`UUID::randomUUID` в `Supplier<UUID>` — тот же вызов, отложенный). Случайная версия 4 рядом с версией 7
   размывает «ключи монотонны», а своя сборка битов — место для ошибки в версии и варианте.
 - Версия библиотеки — в `dependencyManagement` родителя, `slf4j-api` из неё исключён:
   доменным модулям логгер не нужен, а генератор версии 7 и разбор его не трогают.
 
 Проверяет `UuidRulesTest` (`archi-bootstrap`, пакет `architecture`): ArchUnit по байткоду
-основного кода и сканирование исходников всех модулей. Фронтенда правило не касается —
+основного кода (вызов и ссылка на метод — `UUID::randomUUID` тоже) и сканирование исходников
+всех модулей. Фронтенда правило не касается —
 у браузера свой генератор версии 7 (`frontend/src/model/ids.ts`).
 
 ## Комментарии в коде
@@ -441,7 +479,7 @@ jar'а в репозитории нет.
 строчных и блочных комментариях всех файлов — Java, TypeScript, SQL, YAML, XML,
 `pom.xml`, CSS — нет ссылок на документы разработки:
 
-- номеров разделов `docs/` (`§10.3`, `docs/backend.md §8`);
+- номеров разделов `docs/` (`§10.3`, `docs/backend.md §8`) и этапов плана (`этап 2`);
 - якорей спецификации `FR-xx`, `NFR-xx`, `INV-<BC>-NNN`, `UC-<BC>-NNN`, `UI-NNN`, `ADR-NNNN`;
 - путей к файлам спецификации и обоснований (`spec/…`, `docs/…`) как к источнику «почему».
 
@@ -479,8 +517,8 @@ jar'а в репозитории нет.
 В контроллере:
 
 - **можно:** разобрать параметры и тело в запрос сценария (строку — в тип,
-  `null` — в `Optional`), отказать в неразборчивом вводе через
-  `ModelingException.invalid(...)` («поле не задано», «не тот формат значения»),
+  «не задано» передать `null`), отказать в неразборчивом вводе через
+  `ModelingDomainException.invalid(...)` («поле не задано», «не тот формат значения»),
   вызвать **один** метод сценария, перевести результат в DTO и статус HTTP;
 - **нельзя:** ветвиться по значению запроса, выбирая сценарий (`switch (fmt)`),
   подставлять умолчания со смыслом (пространство, размер узла, имя файла),
@@ -502,7 +540,7 @@ jar'а в репозитории нет.
 переводиться подстановкой ресурса, а не правкой кода, и документ разработки
 не должен уходить пользователю в тексте ошибки.
 
-- **Сервер.** Исключение несёт `Message(key, args)` (`ModelingException`,
+- **Сервер.** Исключение несёт `Message(key, args)` (`ModelingDomainException`,
   `InterchangeException`, `InvalidValueException` своего контекста), ключи —
   константы классов `ModelingMessages`, `InterchangeMessages`, `BootstrapMessages`,
   тексты — `archi-bootstrap/src/main/resources/i18n/messages.properties` (русский,
@@ -512,7 +550,8 @@ jar'а в репозитории нет.
   находка импорта, значения CSV), собирается через порт `TextCatalog`.
 - **Коды ошибок** (`INV-MDL-006`, `MDL_NOT_FOUND`) — контракт API, константы классов
   `ModelingCodes` и `InterchangeCodes`, во фронтенде — `src/api/codes.ts`. Только там
-  строка с якорем и допустима.
+  строка с якорем и допустима; код ошибки вне `*Codes` (литерал `IXC_…` или константа
+  вида `КОД_ОШИБКИ`) роняет `tools/check-string-literals.py`.
 - **Тексты MessageFormat:** подстановки `{0}`, без апострофов (служебный символ),
   кавычки — «ёлочки»; ведущий пробел в `.properties` экранируется `\ `.
 - **Фронтенд:** весь текст — `src/i18n/`, клиент шлёт `Accept-Language` языка
@@ -595,7 +634,7 @@ Co-Authored-By: …
 | [`spec/application/<bc>/usecases/`](spec/application/) | Use case'ы `UC-<BC>-NNN`: Given/When/Then, порты, отказы |
 | [`spec/ui/`](spec/ui/README.md) | Слой интерфейса: правила `UI-NNN`, токены стиля, контракт геометрии фигур |
 | [`spec/contracts/<bc>/`](spec/contracts/) | OpenAPI и AsyncAPI |
-| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 26 записей, четырнадцать с файлами MADR |
+| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 28 записей, шестнадцать с файлами MADR |
 | [`spec/nfr/<bc>.yaml`](spec/nfr/) | SLO, latency, throughput, security по контекстам |
 
 Правила при правке `spec/`:

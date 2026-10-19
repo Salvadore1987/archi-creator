@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.common;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -15,7 +16,7 @@ import java.util.Set;
  *
  * <p>Порядок — порядок вставки: в нём сущности загружены из хранилища.
  */
-public final class TrackedMap<K, V> {
+public final class TrackedMap<K, V> implements TrackedEntities<K, V> {
 
     private final Map<K, V> values = new LinkedHashMap<>();
     private final Set<K> persisted = new HashSet<>();
@@ -28,12 +29,14 @@ public final class TrackedMap<K, V> {
         persisted.add(key);
     }
 
+    /** Добавление или замена: запись помечается изменённой, отметка об удалении снимается. */
     public void put(K key, V value) {
         values.put(key, value);
         upserted.add(key);
         removed.remove(key);
     }
 
+    /** Удаление; хранилище узнает о нём, только если сущность была в нём сохранена. */
     public void remove(K key) {
         if (values.remove(key) != null) {
             upserted.remove(key);
@@ -43,23 +46,32 @@ public final class TrackedMap<K, V> {
         }
     }
 
+    /** Сущность по ключу; пусто — её нет или она удалена. */
+    @Override
     public Optional<V> get(K key) {
         return Optional.ofNullable(values.get(key));
     }
 
+    /** Есть ли сущность с таким ключом сейчас. */
+    @Override
     public boolean contains(K key) {
         return values.containsKey(key);
     }
 
+    /** Текущие сущности в порядке вставки. */
+    @Override
     public Collection<V> values() {
-        return values.values();
+        return Collections.unmodifiableCollection(values.values());
     }
 
+    /** Число текущих сущностей. */
+    @Override
     public int size() {
         return values.size();
     }
 
     /** Добавленные и изменённые после загрузки, в порядке изменения. */
+    @Override
     public Map<K, V> upserts() {
         Map<K, V> result = new LinkedHashMap<>();
         upserted.forEach(k -> result.put(k, values.get(k)));
@@ -67,15 +79,19 @@ public final class TrackedMap<K, V> {
     }
 
     /** Те, что были в хранилище и удалены. */
+    @Override
     public Set<K> removals() {
         return Set.copyOf(removed);
     }
 
     /** Есть ли ещё в хранилище: обновлять, а не вставлять. */
+    @Override
     public boolean isPersisted(K key) {
         return persisted.contains(key);
     }
 
+    /** Есть ли что записать: добавленные, изменённые или удалённые с момента загрузки. */
+    @Override
     public boolean changed() {
         return !upserted.isEmpty() || !removed.isEmpty();
     }

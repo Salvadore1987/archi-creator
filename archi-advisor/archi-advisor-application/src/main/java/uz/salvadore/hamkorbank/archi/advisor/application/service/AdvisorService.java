@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import uz.salvadore.hamkorbank.archi.advisor.application.access.AccessPolicy;
@@ -30,7 +31,7 @@ import uz.salvadore.hamkorbank.archi.advisor.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.advisor.domain.budget.BudgetPeriod;
 import uz.salvadore.hamkorbank.archi.advisor.domain.budget.TokenBudget;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorCodes;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Failure;
@@ -170,7 +171,7 @@ public final class AdvisorService {
             LOG.log(System.Logger.Level.WARNING, "advisor upstream unavailable: {0}",
                     unavailable.getCause() == null ? "-" : unavailable.getCause().getClass().getName());
             finish(session, () -> session.fail(TokenUsage.NONE, AuditEntryId.next(uuids), clock.instant()));
-            throw new AdvisorException(AdvisorCodes.UNAVAILABLE, Failure.UNAVAILABLE,
+            throw new AdvisorDomainException(AdvisorCodes.UNAVAILABLE, Failure.UNAVAILABLE,
                     Message.of(AdvisorMessages.UNAVAILABLE));
         }
         try {
@@ -190,16 +191,20 @@ public final class AdvisorService {
     private LlmRequest prompt(AdvisorRequest request, ModelContext context, Locale language) {
         Map<String, Object> header = new LinkedHashMap<>();
         header.put("task", request.function().name());
-        header.put("scope", request.viewId().isPresent() ? "VIEW"
-                : request.elementId().isPresent() ? "ELEMENT" : "MODEL");
+        header.put("scope", request.viewId() != null ? "VIEW"
+                : request.elementId() != null ? "ELEMENT" : "MODEL");
         header.put("truncated", context.truncated());
-        request.elementId().ifPresent(id -> header.put("focus", id));
+        if (request.elementId() != null) {
+            header.put("focus", request.elementId());
+        }
         if (request.function() == AdvisorFunction.EXPLAIN) {
-            String type = context.elements().stream().filter(e -> e.archiId().equals(request.elementId().get()))
+            String type = context.elements().stream().filter(e -> e.archiId().equals(request.elementId()))
                     .findFirst().map(e -> e.archiType()).orElse("");
             header.put("permittedRelations", metamodel.permittedFrom(type));
         }
-        request.prompt().ifPresent(p -> header.put("request", p));
+        if (request.prompt() != null) {
+            header.put("request", request.prompt());
+        }
         header.put("model", new ContextJson.Raw(ContextJson.model(context)));
         return new LlmRequest(prompts.system(request.function(), language), ContextJson.object(header),
                 AdvisorTools.forFunction(request.function(), metamodel, prompts), policy.maxOutputTokens());
@@ -208,13 +213,13 @@ public final class AdvisorService {
     /** Повтор ключа: тот же запрос — результат существующей сессии, другой — конфликт. */
     private AdvisorStream replay(AdvisorSession session, AdvisorRequest request) {
         if (!session.sameRequest(request)) {
-            throw new AdvisorException(AdvisorCodes.IDEMPOTENCY, Failure.CONFLICT,
+            throw new AdvisorDomainException(AdvisorCodes.IDEMPOTENCY, Failure.CONFLICT,
                     Message.of(AdvisorMessages.IDEMPOTENCY_KEY_REUSED, session.idempotencyKey()));
         }
         return switch (session.status()) {
-            case REQUESTED, STREAMING -> throw new AdvisorException(AdvisorCodes.IDEMPOTENCY, Failure.CONFLICT,
+            case REQUESTED, STREAMING -> throw new AdvisorDomainException(AdvisorCodes.IDEMPOTENCY, Failure.CONFLICT,
                     Message.of(AdvisorMessages.SESSION_IN_PROGRESS, session.idempotencyKey()));
-            case REJECTED -> throw rejection(session.rejectionReason().orElseThrow(), Map.of());
+            case REJECTED -> throw rejection(Objects.requireNonNull(session.rejectionReason()), Map.of());
             case COMPLETED, FAILED -> new AdvisorStream() {
                 @Override
                 public AdvisorSessionId sessionId() {
@@ -224,8 +229,12 @@ public final class AdvisorService {
                 @Override
                 public void run(StreamSink sink) {
                     session.findings().forEach(sink::finding);
-                    session.plan().ifPresent(sink::plan);
-                    session.answer().ifPresent(sink::answer);
+                    if (session.plan() != null) {
+                        sink.plan(session.plan());
+                    }
+                    if (session.answer() != null) {
+                        sink.answer(session.answer());
+                    }
                     sink.meta(SessionMeta.of(session));
                 }
             };
@@ -234,26 +243,28 @@ public final class AdvisorService {
 
     private BudgetPolicy budgetPolicy(WorkspaceId workspaceId) {
         AdvisorSettingsRepository.StoredSettings stored = unitOfWork.read(() -> settings.find(workspaceId));
-        return new BudgetPolicy(stored.enabled(), stored.monthlyTokenLimit().orElse(policy.defaultMonthlyTokenLimit()));
+        return new BudgetPolicy(stored.enabled(), Objects.requireNonNullElse(stored.monthlyTokenLimit(),
+                policy.defaultMonthlyTokenLimit()));
     }
 
     /** Записать отказ сессией с аудитом и вернуть исключение для ответа. */
-    private AdvisorException reject(AdvisorSession session, RejectionReason reason, Map<String, Object> details) {
+    private AdvisorDomainException reject(AdvisorSession session, RejectionReason reason, Map<String, Object> details) {
         finish(session, () -> session.reject(reason, AuditEntryId.next(uuids), clock.instant()));
         return rejection(reason, details);
     }
 
-    private static AdvisorException rejection(RejectionReason reason, Map<String, Object> details) {
+    private static AdvisorDomainException rejection(RejectionReason reason, Map<String, Object> details) {
         return switch (reason) {
-            case ADVISOR_DISABLED -> new AdvisorException(AdvisorCodes.ADVISOR_DISABLED, Failure.FORBIDDEN,
+            case ADVISOR_DISABLED -> new AdvisorDomainException(AdvisorCodes.ADVISOR_DISABLED, Failure.FORBIDDEN,
                     Message.of(AdvisorMessages.ADVISOR_DISABLED), details);
-            case BUDGET_EXHAUSTED -> new AdvisorException(AdvisorCodes.BUDGET_EXHAUSTED, Failure.TOO_MANY_REQUESTS,
+            case BUDGET_EXHAUSTED -> new AdvisorDomainException(AdvisorCodes.BUDGET_EXHAUSTED,
+                    Failure.TOO_MANY_REQUESTS,
                     Message.of(AdvisorMessages.BUDGET_EXHAUSTED, details.getOrDefault("resetsAt", "")), details);
-            case RATE_LIMITED -> new AdvisorException(AdvisorCodes.RATE_LIMITED, Failure.TOO_MANY_REQUESTS,
+            case RATE_LIMITED -> new AdvisorDomainException(AdvisorCodes.RATE_LIMITED, Failure.TOO_MANY_REQUESTS,
                     Message.of(AdvisorMessages.RATE_LIMITED, details.getOrDefault("retryAfterSeconds", "")), details);
-            case CONTEXT_TOO_LARGE -> new AdvisorException(AdvisorCodes.CONTEXT_TOO_LARGE, Failure.TOO_LARGE,
+            case CONTEXT_TOO_LARGE -> new AdvisorDomainException(AdvisorCodes.CONTEXT_TOO_LARGE, Failure.TOO_LARGE,
                     Message.of(AdvisorMessages.CONTEXT_TOO_LARGE), details);
-            case MODEL_DELETED -> new AdvisorException(AdvisorCodes.MODEL_DELETED, Failure.UNPROCESSABLE,
+            case MODEL_DELETED -> new AdvisorDomainException(AdvisorCodes.MODEL_DELETED, Failure.UNPROCESSABLE,
                     Message.of(AdvisorMessages.MODEL_DELETED), details);
         };
     }
@@ -309,11 +320,12 @@ public final class AdvisorService {
             StringBuilder text = new StringBuilder();
             AtomicReference<ModelPlan> plan = new AtomicReference<>();
             AtomicReference<TokenUsage> usage = new AtomicReference<>(TokenUsage.NONE);
+            Map<String, String> names = context.names();
             try {
                 upstream.consume(new LlmListener() {
                     @Override
                     public void text(String delta) {
-                        if (session.firstTokenAt().isEmpty()) {
+                        if (session.firstTokenAt() == null) {
                             Instant now = clock.instant();
                             session.firstToken(now);
                             metrics.firstToken(session.function(), Duration.between(session.requestedAt(), now));
@@ -325,7 +337,7 @@ public final class AdvisorService {
                     @Override
                     public void toolCall(String name, Map<String, Object> input) {
                         if (session.function() == AdvisorFunction.REVIEW && AdvisorTools.REPORT_FINDING.equals(name)) {
-                            results.finding(input, context).ifPresent(finding -> {
+                            results.finding(input, names).ifPresent(finding -> {
                                 session.addFinding(finding);
                                 sink.finding(finding);
                             });
@@ -340,17 +352,21 @@ public final class AdvisorService {
                         usage.set(cumulative);
                     }
                 });
-                Optional<ModelPlan> proposed = Optional.ofNullable(plan.get());
-                if (session.function() == AdvisorFunction.PLAN && proposed.isEmpty()) {
+                ModelPlan proposed = plan.get();
+                if (session.function() == AdvisorFunction.PLAN && proposed == null) {
                     finish(session, () -> session.fail(usage.get(), AuditEntryId.next(uuids), clock.instant()));
                 } else {
-                    Optional<AdvisorAnswer> answer = session.function() == AdvisorFunction.EXPLAIN
+                    AdvisorAnswer answer = session.function() == AdvisorFunction.EXPLAIN
                             || session.function() == AdvisorFunction.DOCUMENT
-                            ? Optional.of(results.answer(text.toString(), context)) : Optional.empty();
+                            ? results.answer(text.toString(), names) : null;
                     finish(session, () -> session.complete(usage.get(), proposed, answer, AuditEntryId.next(uuids),
                             clock.instant()));
-                    proposed.ifPresent(sink::plan);
-                    answer.ifPresent(sink::answer);
+                    if (proposed != null) {
+                        sink.plan(proposed);
+                    }
+                    if (answer != null) {
+                        sink.answer(answer);
+                    }
                 }
                 sink.meta(SessionMeta.of(session));
             } catch (LlmUnavailableException | RuntimeException broken) {
@@ -364,6 +380,8 @@ public final class AdvisorService {
                     sink.meta(SessionMeta.of(session));
                 } catch (RuntimeException clientGone) {
                     // Клиент ушёл — сообщить итог некому; сессия и расход уже записаны.
+                    LOG.log(System.Logger.Level.INFO, "advisor stream: client gone before result, session {0}",
+                            session.id());
                 }
             } finally {
                 active.release(session.requestedBy(), upstream);
