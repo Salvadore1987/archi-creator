@@ -37,7 +37,8 @@ class NodeResidueTest {
     @Test
     @DisplayName("Повреждённый остаток из хранилища — один отказ «остаток повреждён», какой бы ни была порча")
     void corruptedResidueIsOneDomainFailure() {
-        for (String broken : List.of("<r><s/></r>", "<r><a/></r>", "<r><x/></r>", "<r>")) {
+        for (String broken : List.of("<r><s/></r>", "<r><a/></r>", "<r><x/></r>", "<r>",
+                "<r><s o=\"x\" t=\"a\"/></r>", "<r><v o=\"1\"/></r>", "<r><f o=\"1\"></f></r>")) {
             InterchangeDomainException e = assertThrows(InterchangeDomainException.class,
                     () -> NodeResidue.decode(broken), broken);
             assertEquals(InterchangeCodes.RESIDUE_CORRUPTED, e.code(), broken);

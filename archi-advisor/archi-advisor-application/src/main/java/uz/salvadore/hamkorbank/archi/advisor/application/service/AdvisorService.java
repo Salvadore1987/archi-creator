@@ -174,15 +174,18 @@ public final class AdvisorService {
             throw new AdvisorDomainException(AdvisorCodes.UNAVAILABLE, Failure.UNAVAILABLE,
                     Message.of(AdvisorMessages.UNAVAILABLE));
         }
+        boolean started = false;
         try {
             session.startStreaming(context.tokenEstimate(), context.truncated());
             unitOfWork.write(() -> {
                 sessions.save(session);
                 return null;
             });
-        } catch (RuntimeException e) {
-            upstream.cancel();
-            throw e;
+            started = true;
+        } finally {
+            if (!started) {
+                upstream.cancel();
+            }
         }
         active.replace(requester.subject(), upstream);
         return new LiveStream(session, context, upstream);
@@ -369,7 +372,7 @@ public final class AdvisorService {
                     }
                 }
                 sink.meta(SessionMeta.of(session));
-            } catch (LlmUnavailableException | RuntimeException broken) {
+            } catch (LlmUnavailableException | RuntimeException broken) { // NOPMD - расход пишется при любом обрыве
                 upstream.cancel();
                 LOG.log(System.Logger.Level.WARNING, "advisor stream broken: session {0}, {1}", session.id(),
                         broken.getClass().getName());
@@ -378,7 +381,7 @@ public final class AdvisorService {
                 }
                 try {
                     sink.meta(SessionMeta.of(session));
-                } catch (RuntimeException clientGone) {
+                } catch (RuntimeException clientGone) { // NOPMD - адаптер потока сообщает уход клиента как угодно
                     // Клиент ушёл — сообщить итог некому; сессия и расход уже записаны.
                     LOG.log(System.Logger.Level.INFO, "advisor stream: client gone before result, session {0}",
                             session.id());

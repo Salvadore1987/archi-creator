@@ -362,12 +362,12 @@ public final class InterchangeMessages {
     public static final String TITLE_BAD_FILE = "interchange.problem.bad-file";
     /** Заголовок ответа об ошибке импорта и выгрузки в остальных случаях. */
     public static final String TITLE_INTERCHANGE = "interchange.problem.interchange";
-    /** Запрос импорта не разобран. */
-    public static final String INVALID_REQUEST = "interchange.request.invalid";
     /** Остаток XML в базе не разбирается. */
     public static final String RESIDUE_CORRUPTED = "interchange.residue.corrupted";
     /** В остатке XML на этом месте ожидалась запись другого вида. */
     public static final String RESIDUE_RECORD_EXPECTED = "interchange.residue.record-expected";
+    /** У записи остатка XML нет обязательного атрибута. */
+    public static final String RESIDUE_ATTRIBUTE_MISSING = "interchange.residue.attribute-missing";
     /** В остатке XML встретилась неизвестная запись. */
     public static final String RESIDUE_UNKNOWN_RECORD = "interchange.residue.unknown-record";
     /** У нетипизированного значения остатка нашёлся небуквальный атрибут. */

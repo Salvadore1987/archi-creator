@@ -122,7 +122,7 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
             } finally {
                 xml.close();
             }
-        } catch (XMLStreamException | RuntimeException e) {
+        } catch (XMLStreamException | InvalidValueException | NumberFormatException e) {
             InterchangeDomainException corrupted = new InterchangeDomainException(InterchangeCodes.RESIDUE_CORRUPTED,
                     Message.of(InterchangeMessages.RESIDUE_CORRUPTED));
             corrupted.initCause(e);
@@ -149,7 +149,7 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
     }
 
     private static ResidueAttribute readAttribute(XMLStreamReader xml) throws XMLStreamException {
-        String name = xml.getAttributeValue(null, "n");
+        String name = attribute(xml, "n");
         boolean typed = "1".equals(xml.getAttributeValue(null, "typed"));
         String text = xml.getElementText();
         return typed ? ResidueAttribute.placeholder(name) : ResidueAttribute.literal(name, text);
@@ -157,7 +157,7 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
 
     private static ResidueItem.Slot readSlot(XMLStreamReader xml) throws XMLStreamException {
         long order = order(xml);
-        String tag = xml.getAttributeValue(null, "t");
+        String tag = attribute(xml, "t");
         List<ResidueAttribute> attributes = new ArrayList<>();
         while (xml.nextTag() == XMLStreamConstants.START_ELEMENT) {
             attributes.add(readAttribute(xml));
@@ -167,7 +167,7 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
 
     private static ResidueItem.Value readValue(XMLStreamReader xml) throws XMLStreamException {
         long order = order(xml);
-        String tag = xml.getAttributeValue(null, "t");
+        String tag = attribute(xml, "t");
         List<ResidueAttribute> attributes = new ArrayList<>();
         String text = null;
         while (xml.nextTag() == XMLStreamConstants.START_ELEMENT) {
@@ -212,7 +212,15 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
     }
 
     private static long order(XMLStreamReader xml) {
-        return Long.parseLong(xml.getAttributeValue(null, "o"));
+        return Long.parseLong(attribute(xml, "o"));
+    }
+
+    private static String attribute(XMLStreamReader xml, String name) {
+        String value = xml.getAttributeValue(null, name);
+        if (value == null) {
+            throw new InvalidValueException(InterchangeMessages.RESIDUE_ATTRIBUTE_MISSING, xml.getLocalName(), name);
+        }
+        return value;
     }
 
     private static void require(XMLStreamReader xml, String name) {

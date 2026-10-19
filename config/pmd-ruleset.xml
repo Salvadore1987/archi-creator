@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-    Правила PMD, которые держит сборка: сложность метода, пустой catch, var, вывод в консоль.
+    Правила PMD, которые держит сборка: сложность метода, пустой и общий catch, var, вывод в консоль.
     Основной код и тесты всех модулей.
 -->
 <ruleset name="archi-creator"
@@ -23,6 +23,13 @@
             <property name="allowCommentedBlocks" value="false"/>
         </properties>
     </rule>
+
+    <!--
+        Ловится то, что код умеет обработать: исключение разбора значения, отказ контекста.
+        NullPointerException, RuntimeException, Exception, Throwable и Error не ловятся —
+        перехват выдаёт будущую ошибку программы за ожидаемый отказ.
+    -->
+    <rule ref="category/java/errorprone.xml/AvoidCatchingGenericException"/>
 
     <!-- Тип переменной виден в диффе: var запрещён. -->
     <rule ref="category/java/codestyle.xml/UseExplicitTypes"/>

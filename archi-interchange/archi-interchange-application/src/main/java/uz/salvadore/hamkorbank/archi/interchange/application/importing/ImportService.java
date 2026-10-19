@@ -227,9 +227,6 @@ public final class ImportService {
         } catch (InvalidValueException invalid) {
             throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE, invalid.reason(),
                     Map.of());
-        } catch (IllegalArgumentException invalid) {
-            throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE,
-                    Message.of(InterchangeMessages.INVALID_REQUEST), Map.of());
         }
     }
 

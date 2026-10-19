@@ -211,7 +211,7 @@ public final class GitImportService {
                     }
                     return new Applied(replaced, session.pullEvents());
                 });
-            } catch (RuntimeException failure) {
+            } catch (RuntimeException failure) { // NOPMD - любой отказ записи — в журнал попыток, и дальше
                 attempts.recordFailure(session, failure);
                 throw failure;
             }

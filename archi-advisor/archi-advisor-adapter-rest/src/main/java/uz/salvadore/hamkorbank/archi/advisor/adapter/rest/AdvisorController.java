@@ -94,7 +94,7 @@ public class AdvisorController {
             try {
                 stream.run(new SseWriter(emitter, json));
                 emitter.complete();
-            } catch (RuntimeException broken) {
+            } catch (RuntimeException broken) { // NOPMD - фоновый поток: отказ закрывает поток клиента
                 LOG.error("advisor stream failed", broken);
                 emitter.completeWithError(broken);
             }

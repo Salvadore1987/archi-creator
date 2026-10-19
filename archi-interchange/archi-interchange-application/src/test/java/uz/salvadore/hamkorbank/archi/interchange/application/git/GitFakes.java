@@ -82,7 +82,7 @@ final class GitFakes {
             depth++;
             try {
                 return work.get();
-            } catch (RuntimeException e) {
+            } catch (RuntimeException e) { // NOPMD - как настоящая транзакция: откат на любой отказ
                 for (int i = 0; i < stores.size(); i++) {
                     restore(stores.get(i), snapshots.get(i));
                 }
