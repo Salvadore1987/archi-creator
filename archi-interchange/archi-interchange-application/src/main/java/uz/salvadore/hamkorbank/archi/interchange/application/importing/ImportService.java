@@ -43,8 +43,14 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
  *
  * <p>Сессия проходит {@code RECEIVED → PARSED → VALIDATED → APPLIED} без пропуска шагов;
  * повреждённый файл отклоняется на разборе в любом режиме, нарушения методологии —
- * только в строгом. Применение — одна транзакция с записью модели и её первой версии.
- * Повтор с тем же ключом отдаёт результат первой попытки, принятой или отклонённой.
+ * только в строгом. Повтор с тем же ключом отдаёт результат первой попытки, принятой
+ * или отклонённой.
+ *
+ * <p>Импорт идёт в три шага: приём читает строгость и ищет попытку с тем же ключом;
+ * разбор, проверка методологии и раскладка — без транзакции, файл бывает большим;
+ * применение — одна транзакция с итогом сессии, записью модели и её первой версии.
+ * Перед применением ключ проверяется ещё раз: повтор, пришедший во время разбора,
+ * получает итог первой попытки, а не вторую модель.
  */
 public final class ImportService {
 
@@ -89,14 +95,16 @@ public final class ImportService {
             operation.require(actor);
             WorkspaceId workspace = new WorkspaceId(workspaceId);
             String key = idempotencyKey == null || idempotencyKey.isBlank() ? uuids.next().toString() : idempotencyKey;
-            ImportRequest request = request(workspace, fileName, content, key, actor);
-            return gate.through(workspace, () -> unitOfWork.write(() -> {
-                ImportIntake.Intake intake = intake(request);
+            return gate.through(workspace, () -> {
+                boolean strict = unitOfWork.read(() -> policy.strictImport(workspace));
+                ImportRequest request = request(workspace, fileName, content, key, strict, actor);
+                ImportIntake.Intake intake = unitOfWork.read(() -> intake(request));
                 if (intake.replayed()) {
                     return report(intake.session(), true);
                 }
-                return process(intake.session(), content, actor);
-            }));
+                Prepared prepared = prepare(intake.session(), content, actor);
+                return unitOfWork.write(() -> apply(request, prepared, actor));
+            });
         });
     }
 
@@ -124,17 +132,24 @@ public final class ImportService {
         }
     }
 
-    private ImportReport process(ImportSession session, byte[] content, EditorIdentity actor) {
+    /**
+     * Разобранная попытка до применения: сессия и, если файл принят, модель для записи.
+     *
+     * @param model {@code null} — сессия отклонена, записывать нечего
+     */
+    private record Prepared(ImportSession session, ModelContent model, Instant now) {
+    }
+
+    /** Разбор, методология и раскладка — без транзакции. */
+    private Prepared prepare(ImportSession session, byte[] content, EditorIdentity actor) {
         session.parse(reader, new ByteArrayInputStream(content), this::findingId, clock.instant());
         if (session.status() == ImportStatus.REJECTED) {
-            sessions.save(session);
-            return finished(session);
+            return new Prepared(session, null, null);
         }
         ModelDocument document = Objects.requireNonNull(session.document());
         session.validate(methodology.check(document, this::findingId), clock.instant());
         if (session.status() == ImportStatus.REJECTED) {
-            sessions.save(session);
-            return finished(session);
+            return new Prepared(session, null, null);
         }
         Instant now = clock.instant();
         ModelId modelId = ModelId.of(uuids.next());
@@ -142,13 +157,29 @@ public final class ImportService {
         ModelContent model = new DocumentDecomposer(uuids::next, archiIds::next).decompose(document,
                 new DocumentDecomposer.Identity(modelId, uz.salvadore.hamkorbank.archi.modeling.domain.workspace
                         .WorkspaceId.of(session.workspaceId().value()), actor.subject(), now, now, 0));
+        return new Prepared(session, model, now);
+    }
+
+    /** Итог попытки — в транзакции записи; ключ, занятый за время разбора, отдаёт первую попытку. */
+    private ImportReport apply(ImportRequest request, Prepared prepared, EditorIdentity actor) {
+        ImportIntake.Intake again = intake(request);
+        if (again.replayed()) {
+            return report(again.session(), true);
+        }
+        ImportSession session = prepared.session();
+        if (prepared.model() == null) {
+            sessions.save(session);
+            return finished(session);
+        }
+        ModelContent model = prepared.model();
+        ModelId modelId = model.model().header().id();
         VersionResponse version = models.importModel(actor, model,
                 texts.text(Message.of(InterchangeMessages.COMMENT_IMPORTED, session.sourceName())));
         int opaque = (int) (model.model().elements().values().stream().filter(e -> !e.supported()).count()
                 + model.model().relationships().values().stream().filter(r -> !r.supported()).count());
         session.apply(
                 new uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId(modelId.value()),
-                version.versionNo(), opaque, now);
+                version.versionNo(), opaque, prepared.now());
         sessions.save(session);
         events.publish(session.pullEvents());
         metrics.opaqueObjects(modelId.value(), opaque);
@@ -156,10 +187,9 @@ public final class ImportService {
     }
 
     private ImportRequest request(WorkspaceId workspace, String fileName, byte[] content, String key,
-                                  EditorIdentity actor) {
+                                  boolean strict, EditorIdentity actor) {
         try {
-            return ImportRequest.of(workspace, null, fileName, content, key,
-                    policy.strictImport(workspace), actor.subject());
+            return ImportRequest.of(workspace, null, fileName, content, key, strict, actor.subject());
         } catch (InvalidValueException invalid) {
             throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE, invalid.reason(),
                     Map.of());
