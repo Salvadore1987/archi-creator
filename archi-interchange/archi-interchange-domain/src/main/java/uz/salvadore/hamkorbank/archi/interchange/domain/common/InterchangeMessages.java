@@ -276,6 +276,10 @@ public final class InterchangeMessages {
     public static final String IMPORT_IN_PROGRESS = "interchange.import.in-progress";
     /** Ключ идемпотентности уже использован для другого файла. */
     public static final String IMPORT_KEY_REUSED = "interchange.import.key-reused";
+    /** Файл разобран, но модель из него не собирается; в тексте — причина. */
+    public static final String IMPORT_CONTENT_REJECTED = "interchange.import.content-rejected";
+    /** Модель из файла собрана, но не записана; в тексте — причина отказа modeling. */
+    public static final String IMPORT_APPLY_FAILED = "interchange.import.apply-failed";
     /** В рабочее пространство уже идёт другой импорт. */
     public static final String IMPORT_WORKSPACE_BUSY = "interchange.import.workspace-busy";
     /** Импорт файла отклонён: файл повреждён. */

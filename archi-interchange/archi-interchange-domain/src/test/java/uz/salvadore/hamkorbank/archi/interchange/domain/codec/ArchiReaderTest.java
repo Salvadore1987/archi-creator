@@ -181,7 +181,7 @@ class ArchiReaderTest {
     void nestingDeeperThanLimitIsDefect() {
         StringBuilder folders = new StringBuilder();
         for (int i = 0; i < 80; i++) {
-            folders.append("<folder name=\"f\" id=\"id-f").append(i).append("\">");
+            folders.append("<folder name=\"f\" id=\"id-f").append(i).append(i == 0 ? "\" type=\"other\">" : "\">");
         }
         for (int i = 0; i < 80; i++) {
             folders.append("</folder>");

@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.interchange.application.importing;
 import java.io.ByteArrayInputStream;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -16,6 +17,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMet
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeDomainException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
@@ -24,10 +26,12 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.UuidV7;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.IdempotencyConflictException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportIntake;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
+import uz.salvadore.hamkorbank.archi.interchange.domain.importing.Severity;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
@@ -35,6 +39,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeA
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiIdGenerator;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationViolation;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
@@ -103,7 +108,12 @@ public final class ImportService {
                     return report(intake.session(), true);
                 }
                 Prepared prepared = prepare(intake.session(), content, actor);
-                return unitOfWork.write(() -> apply(request, prepared, actor));
+                try {
+                    return unitOfWork.write(() -> apply(request, prepared, actor));
+                } catch (ModelingDomainException refused) {
+                    recordRefusal(prepared.session(), refused);
+                    throw refused;
+                }
             });
         });
     }
@@ -154,10 +164,34 @@ public final class ImportService {
         Instant now = clock.instant();
         ModelId modelId = ModelId.of(uuids.next());
         ArchiIdGenerator archiIds = new ArchiIdGenerator(uuids::next);
-        ModelContent model = new DocumentDecomposer(uuids::next, archiIds::next).decompose(document,
-                new DocumentDecomposer.Identity(modelId, uz.salvadore.hamkorbank.archi.modeling.domain.workspace
-                        .WorkspaceId.of(session.workspaceId().value()), actor.subject(), now, now, 0));
-        return new Prepared(session, model, now);
+        try {
+            ModelContent model = new DocumentDecomposer(uuids::next, archiIds::next).decompose(document,
+                    new DocumentDecomposer.Identity(modelId, uz.salvadore.hamkorbank.archi.modeling.domain.workspace
+                            .WorkspaceId.of(session.workspaceId().value()), actor.subject(), now, now, 0));
+            return new Prepared(session, model, now);
+        } catch (InterchangeDomainException unbuildable) {
+            return unbuildable(session, unbuildable.reason());
+        } catch (ModelingDomainException unbuildable) {
+            return unbuildable(session, unbuildable.reason());
+        }
+    }
+
+    /** Файл разобран, но модель из него не собирается — тот же отказ, что у повреждённого файла. */
+    private Prepared unbuildable(ImportSession session, Object reason) {
+        session.reject(List.of(new ImportFinding(findingId(), Severity.ERROR, InterchangeCodes.CORRUPT_DOCUMENT,
+                Message.of(InterchangeMessages.IMPORT_CONTENT_REJECTED, reason), null, null)), clock.instant());
+        return new Prepared(session, null, null);
+    }
+
+    /**
+     * Запись модели отказала — транзакция откачена; попытка уходит в журнал отклонённой
+     * отдельной транзакцией, чтобы отказ был виден в отчёте и повтор ключа отдавал его же.
+     */
+    private void recordRefusal(ImportSession session, ModelingDomainException refused) {
+        session.reject(List.of(new ImportFinding(findingId(), Severity.ERROR, refused.code(),
+                Message.of(InterchangeMessages.IMPORT_APPLY_FAILED, refused.reason()), null, null)), clock.instant());
+        unitOfWork.write(() -> sessions.save(session));
+        metrics.importFinished("rejected_apply", session.strictMode(), session.findings());
     }
 
     /** Итог попытки — в транзакции записи; ключ, занятый за время разбора, отдаёт первую попытку. */
@@ -207,9 +241,10 @@ public final class ImportService {
         return report;
     }
 
+    /** Отклонена не строгостью: среди ошибок есть не только нарушения матрицы. */
     private static ImportReport report(ImportSession session, boolean replayed) {
-        boolean corrupt = session.status() == ImportStatus.REJECTED && session.document() == null
-                && session.findings().stream().noneMatch(f -> f.code().equals(RelationViolation.CODE));
+        boolean corrupt = session.status() == ImportStatus.REJECTED && session.findings().stream()
+                .anyMatch(f -> f.severity() == Severity.ERROR && !f.code().equals(RelationViolation.CODE));
         return new ImportReport(session.id(), session.status(),
                 session.appliedModelId() == null ? null : session.appliedModelId().value(), session.appliedVersionNo(),
                 session.findings(), replayed, corrupt);

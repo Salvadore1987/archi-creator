@@ -89,6 +89,8 @@ public final class InterchangeCodes {
     public static final String UNEXPECTED_TEXT = "IXC_UNEXPECTED_TEXT";
     /** Узлы вложены глубже предела разбора. */
     public static final String NESTING_TOO_DEEP = "IXC_NESTING_TOO_DEEP";
+    /** Узел не на своём месте в дереве: папка в представлении, узел представления в папке. */
+    public static final String MISPLACED_NODE = "IXC_MISPLACED_NODE";
 
     private InterchangeCodes() {
     }

@@ -22,7 +22,7 @@ class CorruptDocumentTest {
         DocumentDefect defect = single("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <archimate:model xmlns:archimate="http://www.archimatetool.com/archimate" id="id-1">
-                  <folder name="Business" id="id-2">
+                  <folder name="Business" id="id-2" type="business">
                 </archimate:model>
                 """);
 
@@ -37,8 +37,8 @@ class CorruptDocumentTest {
         CorruptDocumentException e = reject("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <archimate:model xmlns:archimate="http://www.archimatetool.com/archimate" id="id-1">
-                  <folder name="Business" id="id-1"/>
-                  <folder name="Other" id="id-2">
+                  <folder name="Business" id="id-1" type="business"/>
+                  <folder name="Other" id="id-2" type="other">
                 </archimate:model>
                 """);
 
@@ -93,6 +93,41 @@ class CorruptDocumentTest {
 
         assertEquals(InterchangeCodes.MISSING_END, defect.code());
         assertEquals("id-r1", defect.archiId());
+    }
+
+    @Test
+    @DisplayName("INV-IXC-007: корневая папка без типа — повреждение, вложенная — нет")
+    void rootFolderWithoutTypeIsRejected() {
+        DocumentDefect defect = single(Xml.model("""
+                <folder name="Business" id="id-f1">
+                  <folder name="Вложенная" id="id-f2"/>
+                </folder>
+                """));
+
+        assertEquals(InterchangeCodes.MISSING_ATTRIBUTE, defect.code());
+        assertEquals("id-f1", defect.archiId());
+    }
+
+    @Test
+    @DisplayName("INV-IXC-007: узел не на своём месте — повреждение с местом каждого")
+    void misplacedNodesAreRejected() {
+        CorruptDocumentException e = reject(Xml.model("""
+                <folder name="Business" id="id-f1" type="business">
+                  <child xsi:type="archimate:DiagramObject" id="id-n1"/>
+                  <element xsi:type="archimate:BusinessActor" name="A" id="id-e1">
+                    <element xsi:type="archimate:BusinessRole" name="B" id="id-e2"/>
+                  </element>
+                </folder>
+                <folder name="Views" id="id-f9" type="diagrams">
+                  <element xsi:type="archimate:ArchimateDiagramModel" name="V" id="id-v1">
+                    <folder name="Лишняя" id="id-f3"/>
+                  </element>
+                </folder>
+                """));
+
+        assertEquals(List.of(InterchangeCodes.MISPLACED_NODE, InterchangeCodes.MISPLACED_NODE,
+                InterchangeCodes.MISPLACED_NODE), codes(e));
+        assertEquals(List.of("id-n1", "id-e2", "id-f3"), e.defects().stream().map(DocumentDefect::archiId).toList());
     }
 
     @Test
