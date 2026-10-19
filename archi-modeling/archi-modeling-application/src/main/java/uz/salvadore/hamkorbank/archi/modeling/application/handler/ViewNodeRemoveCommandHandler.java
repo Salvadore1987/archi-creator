@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.modeling.application.handler;
 
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.RemoveViewNodeCommand;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;

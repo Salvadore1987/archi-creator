@@ -6,8 +6,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateRelationshipCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.CreateRelationshipResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.mapper.ModelDataMapper;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.RequestedIds;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;

@@ -15,8 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingSettings;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.SnapshotPurgeCommandHandler;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 
 /**
  * Очистка снимков с настоящим Git: идёт только при доступном репозитории, а очищенный

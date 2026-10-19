@@ -5,7 +5,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetCommitted
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.CommittedVersionResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.mapper.ModelDataMapper;
 import uz.salvadore.hamkorbank.archi.modeling.application.mapper.VersionDataMapper;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 

@@ -50,6 +50,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelListQuery
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelPurgeCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelRestoreCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelValidateQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationTypeSuggestQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipCreateCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipDeleteCommandHandler;

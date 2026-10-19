@@ -5,7 +5,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetLockQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.LockResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.mapper.LockDataMapper;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.LockStatus;

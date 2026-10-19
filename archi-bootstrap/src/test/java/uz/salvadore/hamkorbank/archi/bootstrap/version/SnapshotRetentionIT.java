@@ -12,13 +12,13 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLoc
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateElementCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.SaveVersionCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.SnapshotPurgeCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ElementApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.SnapshotRetentionApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.VersionApplicationService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 

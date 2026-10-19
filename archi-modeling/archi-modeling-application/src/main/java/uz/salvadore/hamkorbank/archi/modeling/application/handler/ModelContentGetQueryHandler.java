@@ -3,7 +3,6 @@ package uz.salvadore.hamkorbank.archi.modeling.application.handler;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelContentQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelContentResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.mapper.ModelDataMapper;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;

@@ -4,7 +4,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelTreeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.mapper.ModelDataMapper;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;

@@ -47,6 +47,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelPurgeComm
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelRestoreCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelSummaryGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelValidateQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.PublishedVersionGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationTypeSuggestQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipCreateCommandHandler;
@@ -111,7 +112,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.service.MetamodelAppli
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelExchangeApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryApplicationServiceImpl;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.SnapshotRetentionApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.TreeApplicationServiceImpl;
@@ -220,19 +220,19 @@ public class ModelingConfiguration {
 
     @Bean
     ModelApplicationService modelApplicationService(ModelingKernel kernel, WorkspaceRepository workspaces,
-                                                    VersionCommitter committer) {
+                                                    UnitOfWork unitOfWork, VersionCommitter committer) {
         return new ModelApplicationServiceImpl(new ModelCreateCommandHandler(kernel, workspaces,
-                new WorkspaceResolveQueryHandler(workspaces, kernel.unitOfWork()), committer),
+                new WorkspaceResolveQueryHandler(workspaces, unitOfWork), committer),
                 new ModelEditCommandHandler(kernel),
                 new ModelDeleteCommandHandler(kernel), new ModelRestoreCommandHandler(kernel),
                 new ModelPurgeCommandHandler(kernel));
     }
 
     @Bean
-    ModelQueryApplicationService modelQueryApplicationService(ModelingKernel kernel,
-                                                              WorkspaceRepository workspaces) {
+    ModelQueryApplicationService modelQueryApplicationService(ModelingKernel kernel, WorkspaceRepository workspaces,
+                                                              UnitOfWork unitOfWork) {
         return new ModelQueryApplicationServiceImpl(new ModelListQueryHandler(kernel,
-                new WorkspaceResolveQueryHandler(workspaces, kernel.unitOfWork())), new ModelGetQueryHandler(kernel),
+                new WorkspaceResolveQueryHandler(workspaces, unitOfWork)), new ModelGetQueryHandler(kernel),
                 new ModelValidateQueryHandler(kernel));
     }
 

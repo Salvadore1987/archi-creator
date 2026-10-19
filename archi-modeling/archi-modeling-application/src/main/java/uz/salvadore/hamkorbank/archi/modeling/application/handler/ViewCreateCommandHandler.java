@@ -4,8 +4,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateViewCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.mapper.ViewDataMapper;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.RequestedIds;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;

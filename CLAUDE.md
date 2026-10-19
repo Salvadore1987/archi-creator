@@ -97,6 +97,18 @@ Application-слои без Spring: транзакция — порт `UnitOfWor
 события — после коммита, роль проверяется на границе use case'а по таблице
 `spec/nfr/<bc>.yaml`, а не URL.
 
+**Application-слой modeling — входные порты, handler'ы и DTO.** Адаптеры, мосты `bootstrap`
+и другие контексты зовут сценарии только через интерфейсы `application/port/in/`
+(`…ApplicationService`, реализация `…Impl` в `service` лишь делегирует). Сценарий — handler
+`application/handler/{Entity}{Action}CommandHandler`/`…QueryHandler`: роль, метрика, транзакция
+через `ModelingKernel` (он и `RequestedIds` видны только пакету `handler`). Команды, запросы
+и результаты — record'ы `application/dto/command|query|result` из простых значений; агрегат
+наружу не выходит, перевод — `application/mapper/`. Вход других контекстов (выгрузка, Git,
+импорт) — `ModelExchangeApplicationService`: роль у этих операций проверяет вызывающий.
+Держит `ApplicationLayerTest` (ArchUnit); единственное исключение — `ModelContent` во входе
+импорта, до перевода раскладки документа interchange. Interchange и advisor переводятся
+по этому образцу на своих этапах ревью.
+
 Модули доменов друг от друга **не зависят**: Maven не допускает цикла, а partnership
 в карте контекстов двусторонний. Поэтому у interchange свой `ArchiId`, а проверка
 матрицы при импорте (`RelationMatrix.check`) соединяется с сессией в application-слое
@@ -119,9 +131,9 @@ Application-слои без Spring: транзакция — порт `UnitOfWor
 
 | Что | Где |
 |---|---|
-| Правка представления: группа и заметка, подпись и текст, стиль узла и ребра, удаление ребра, вложение узла ([`UC-MDL-008`](spec/application/modeling/usecases/edit-view.md)) | `View`, `ViewService`, `ViewController`; `ViewEditingIT` |
+| Правка представления: группа и заметка, подпись и текст, стиль узла и ребра, удаление ребра, вложение узла ([`UC-MDL-008`](spec/application/modeling/usecases/edit-view.md)) | `View`, `ViewApplicationService`, `ViewController`; `ViewEditingIT` |
 | Авторазметка — предложение геометрии, база не меняется ([`ADR-0019`](spec/adr/0019-auto-layout-proposal.md)) | `archi-modeling-domain/.../modeling/domain/view/layout/` |
-| Флаг связи вложения в `/metamodel/relations` | `RelationshipService.suggestions` по `NestingRules` |
+| Флаг связи вложения в `/metamodel/relations` | `RelationTypeSuggestQueryHandler` по `NestingRules` |
 | Умные связи, вложенность, авторазметка, паритет с Archi на канве | `frontend/src/canvas/` (`CanvasView`, `CanvasTools`, `RelationPicker`, `guides.ts`), `frontend/src/model/ops.ts` |
 | Собственный стиль объекта в «Свойствах» | `frontend/src/panels/StyleEditor.tsx` |
 | E2E этапа и приёмка | `frontend/e2e/{smart-relation,nesting,auto-layout,editing-parity,acceptance}.spec.ts`; работа `e2e` в CI |
@@ -150,7 +162,7 @@ API и фиксирует версию. Идентификаторы новых 
 
 **Помощник не изменяет модель — и держит это граница модулей.** Модули advisor
 не зависят от modeling вовсе; порт чтения `ModelContextReader` и каталог метамодели
-реализует мост в `bootstrap.advisor` поверх `ModelQueryService` и `RelationMatrix`.
+реализует мост в `bootstrap.advisor` поверх `ModelQueryApplicationService` и `RelationMatrix`.
 `AdvisorArchitectureTest` (ArchUnit) роняет сборку, если мост тронет сервис записи.
 Отказы (роль, выключатель, бюджет, частота, размер контекста) принимаются до вызова
 API и до открытия потока; расход списывается в транзакции сессии даже при обрыве.
@@ -235,7 +247,7 @@ macOS и старый Проводник его не создают. Измен�
 | Outbox зафиксированных версий ([`ADR-0003`](spec/adr/0003-event-publishing.md)) | `outbox_event` (`V7__outbox.sql`), `JpaGitOutbox`, `bootstrap/wiring/OutboxEventPublisher` |
 | JGit, секреты из окружения, мост к версиям, проход очереди | `archi-bootstrap/.../bootstrap/git/`, `wiring/GitConfiguration`; `archi.git.*` |
 | REST: `PUT/GET/DELETE /workspaces/{id}/git-binding`, `POST /models/{id}/git/push` | `GitController` |
-| Ретеншен с Git, восстановление очищенного снимка из коммита | `VersionService` + порт `SnapshotArchive`; `GitSnapshotArchive` |
+| Ретеншен с Git, восстановление очищенного снимка из коммита | `SnapshotPurgeCommandHandler`, `VersionContents` + порт `SnapshotArchive`; `GitSnapshotArchive` |
 | CI-задача `.archimate` на теге в репозитории выгрузки | `deploy/git/gitlab-ci.yml.example` |
 | Тесты | `GitYamlWriterTest`, `GitPublisherTest` (JGit без Docker); `GitExportIT`, `GitRetentionIT`, `GitRoundTripIT`, `GitBindingIT` |
 
@@ -265,7 +277,7 @@ macOS и старый Проводник его не создают. Измен�
 | Отчёт об изменениях по объектам и полям | `archi-interchange-domain/.../domain/git/ModelChanges`; `ModelChangesTest` |
 | Ссылка: ветка, тег, коммит (`GitRef`, `ResolvedRef`), разрешение на JGit | `GitRepositoryPort.resolve`, `JGitRepository`; `GitRefResolutionTest` |
 | Сценарий импорта по ссылке ([`UC-IXC-006`](spec/application/interchange/usecases/pull-model-from-git.md)): отчёт и применение | `GitImportService`; порт `ModelStates`, мост `bootstrap/git/ModelingModelStates` |
-| Замена содержимого модели новой версией (общая часть с откатом) | `ModelImportService.current`/`replace`, `VersionService.replace` |
+| Замена содержимого модели новой версией (общая часть с откатом) | `ModelContentGetQueryHandler`/`ModelContentReplaceCommandHandler`, `VersionContents.replace` |
 | REST: `POST /models/{id}/git/pull/preview`, `POST /models/{id}/git/pull` | `GitController`, `GitDtoMapper`, `FindingMapper` |
 | Расхождение снимается импортом головы ветки | `GitImportService.adopt`, `GitOutbox.supersede`; правила `accepted`/`carries` в `GitPublishingService` |
 | Тесты | `GitImportTest` (фейки с откатом), `GitImportIT`, новые случаи `GitPublisherTest` |
@@ -310,7 +322,7 @@ macOS и старый Проводник его не создают. Измен�
 Контуры добавляемых узлов — узлы React Flow вне документа: их изменения размеров
 в состояние канвы не идут, иначе ResizeObserver зацикливается.
 
-Тестов на сервере: 574 юнит-тестов (`./mvnw test`) и 96 интеграционных `*IT` на
+Тестов на сервере: 592 юнит-теста (`./mvnw test`) и 96 интеграционных `*IT` на
 Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
 Во фронтенде: 67 юнит-тестов vitest (`npm test`, гоняется фазой `test` Maven)
 и 87 сценариев Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —

@@ -28,9 +28,6 @@ import org.junit.jupiter.api.Test;
  * Application-слой по стандарту: сценарий вызывают через входной порт области ({@code port.in}),
  * он принимает команду или запрос и отдаёт результат — record'ы {@code dto}, без доменных типов;
  * работу делает handler сценария. Доменный агрегат за пределы application не выходит.
- *
- * <p>Пока сценарии переводятся по областям, адаптеры ещё зовут старые сервисы — их список
- * {@link #NOT_YET_MIGRATED} сокращается с каждой областью и в конце удаляется вместе с исключением.
  */
 class ApplicationLayerTest {
 
@@ -44,9 +41,6 @@ class ApplicationLayerTest {
      * этого входа в DTO идёт вместе с раскладкой документа при переводе interchange.
      */
     private static final Set<String> INTERCHANGE_INPUT = Set.of(APPLICATION + ".port.ModelContent");
-    /** Сервисы, которые адаптеры ещё зовут напрямую. */
-    private static final Set<String> NOT_YET_MIGRATED = Set.of(
-            "ModelingKernel", "RequestedIds");
 
     private static JavaClasses classes;
 
@@ -114,18 +108,10 @@ class ApplicationLayerTest {
     @DisplayName("Адаптеры зовут сценарии modeling через входной порт, а не сервисы и handler'ы")
     void adaptersUseInputPorts() {
         noClasses().that().resideOutsideOfPackages(APPLICATION + "..", ROOT + ".bootstrap.wiring..")
-                .should().dependOnClassesThat(describe("modeling service or handler not yet behind port.in",
-                        target -> (target.getPackageName().equals(APPLICATION + ".service")
-                                || target.getPackageName().startsWith(APPLICATION + ".handler"))
-                                && !NOT_YET_MIGRATED.contains(outermost(target))))
+                .should().dependOnClassesThat(describe("modeling service or handler behind port.in",
+                        target -> target.getPackageName().equals(APPLICATION + ".service")
+                                || target.getPackageName().startsWith(APPLICATION + ".handler")))
                 .check(classes);
-    }
-
-
-    /** Простое имя внешнего класса: у вложенного record'а сервиса — имя сервиса. */
-    private static String outermost(JavaClass type) {
-        String name = type.getName();
-        return name.substring(name.lastIndexOf('.') + 1).split("\\$")[0];
     }
 
     /** Тип и все типы в его параметрах, включая вложенные и границы подстановок. */

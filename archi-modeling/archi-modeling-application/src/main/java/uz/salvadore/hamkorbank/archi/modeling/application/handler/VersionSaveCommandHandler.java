@@ -5,7 +5,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.SaveVersionCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.SaveVersionResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.mapper.VersionDataMapper;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;

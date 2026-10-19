@@ -4,7 +4,6 @@ import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetLastPublishedVersionQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.mapper.VersionDataMapper;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
 /** Последняя опубликованная в Git версия модели — системное чтение, без актора. */

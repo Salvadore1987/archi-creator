@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceModelContentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ReplaceModelContentResponse;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;

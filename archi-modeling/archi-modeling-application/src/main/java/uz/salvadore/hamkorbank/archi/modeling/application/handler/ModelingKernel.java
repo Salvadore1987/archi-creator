@@ -1,4 +1,4 @@
-package uz.salvadore.hamkorbank.archi.modeling.application.service;
+package uz.salvadore.hamkorbank.archi.modeling.application.handler;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -39,7 +39,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 
 /**
- * Общее у всех сценариев modeling: зависимости и порядок проверок записи.
+ * Общее у всех сценариев modeling: зависимости и порядок проверок записи. Открыто только
+ * handler'ам: адаптеры и другие контексты зовут сценарии через входные порты.
  *
  * <p>Порядок не случаен: роль (дёшево, без базы) → модель и список доступа (скрытая модель
  * отвечает {@code 404} раньше, чем выдаст себя чем-нибудь ещё) → состояние модели →
@@ -47,20 +48,20 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
  */
 public final class ModelingKernel {
 
-    final ModelRepository models;
-    final ViewRepository views;
-    final ModelLockRepository locks;
-    final ModelVersionRepository versions;
-    final ModelAccessListRepository accessLists;
-    final IdempotencyRepository idempotency;
-    final UnitOfWork unitOfWork;
-    final DomainEventPublisher events;
-    final UseCaseMetrics metrics;
-    final TextCatalog texts;
-    final Clock clock;
-    final UuidV7 uuids;
-    final ArchiIdGenerator archiIds;
-    final Duration lockTtl;
+    private final ModelRepository models;
+    private final ViewRepository views;
+    private final ModelLockRepository locks;
+    private final ModelVersionRepository versions;
+    private final ModelAccessListRepository accessLists;
+    private final IdempotencyRepository idempotency;
+    private final UnitOfWork unitOfWork;
+    private final DomainEventPublisher events;
+    private final UseCaseMetrics metrics;
+    private final TextCatalog texts;
+    private final Clock clock;
+    private final UuidV7 uuids;
+    private final ArchiIdGenerator archiIds;
+    private final Duration lockTtl;
 
     public ModelingKernel(ModelRepository models, ViewRepository views, ModelLockRepository locks,
                           ModelVersionRepository versions, ModelAccessListRepository accessLists,
@@ -83,72 +84,72 @@ public final class ModelingKernel {
     }
 
     /** Текущий момент по часам приложения. */
-    public Instant now() {
+    Instant now() {
         return clock.instant();
     }
 
     /** Транзакции сценария. */
-    public UnitOfWork unitOfWork() {
+    UnitOfWork unitOfWork() {
         return unitOfWork;
     }
 
     /** Хранилище агрегатов модели. */
-    public ModelRepository models() {
+    ModelRepository models() {
         return models;
     }
 
     /** Хранилище представлений. */
-    public ViewRepository views() {
+    ViewRepository views() {
         return views;
     }
 
     /** История версий. */
-    public ModelVersionRepository versions() {
+    ModelVersionRepository versions() {
         return versions;
     }
 
     /** Тексты на языке запроса — для того, что сервер сохраняет как данные. */
-    public TextCatalog texts() {
+    TextCatalog texts() {
         return texts;
     }
 
     /** Генератор ключей версии 7 по часам приложения. */
-    public UuidV7 uuids() {
+    UuidV7 uuids() {
         return uuids;
     }
 
     /** Генератор идентификаторов Archi. */
-    public ArchiIdGenerator archiIds() {
+    ArchiIdGenerator archiIds() {
         return archiIds;
     }
 
     /** Хранилище блокировок. */
-    public ModelLockRepository locks() {
+    ModelLockRepository locks() {
         return locks;
     }
 
     /** Хранилище списков доступа. */
-    public ModelAccessListRepository accessLists() {
+    ModelAccessListRepository accessLists() {
         return accessLists;
     }
 
     /** Публикация доменных событий после коммита. */
-    public DomainEventPublisher events() {
+    DomainEventPublisher events() {
         return events;
     }
 
     /** Метрики сценариев. */
-    public UseCaseMetrics metrics() {
+    UseCaseMetrics metrics() {
         return metrics;
     }
 
     /** Срок блокировки модели. */
-    public Duration lockTtl() {
+    Duration lockTtl() {
         return lockTtl;
     }
 
     /** Операция под метрикой use case'а и с проверкой роли. */
-    public <T> T run(Operation operation, EditorIdentity actor, Supplier<T> work) {
+    <T> T run(Operation operation, EditorIdentity actor, Supplier<T> work) {
         return metrics.observe(operation.useCase(), () -> {
             AccessPolicy.require(actor, operation);
             return work.get();
@@ -156,7 +157,7 @@ public final class ModelingKernel {
     }
 
     /** Заголовок модели, видимой автору с данным уровнем доступа. */
-    public ModelHeader visibleHeader(ModelId modelId, EditorIdentity actor, AclAccess access) {
+    ModelHeader visibleHeader(ModelId modelId, EditorIdentity actor, AclAccess access) {
         ModelHeader header = models.findHeader(modelId)
                 .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.MODEL, modelId)));
         accessLists.find(modelId).require(actor, access);
@@ -164,7 +165,7 @@ public final class ModelingKernel {
     }
 
     /** Модель целиком, видимая автору с данным уровнем доступа. */
-    public ArchitectureModel visibleModel(ModelId modelId, EditorIdentity actor, AclAccess access) {
+    ArchitectureModel visibleModel(ModelId modelId, EditorIdentity actor, AclAccess access) {
         visibleHeader(modelId, actor, access);
         return models.load(modelId)
                 .orElseThrow(() -> ModelingDomainException.notFound(Message.of(ModelingMessages.MODEL, modelId)));
@@ -174,7 +175,7 @@ public final class ModelingKernel {
      * Модель для записи содержимого: видима на запись, активна,
      * заблокирована автором команды.
      */
-    public ArchitectureModel writableModel(ModelId modelId, EditorIdentity actor) {
+    ArchitectureModel writableModel(ModelId modelId, EditorIdentity actor) {
         ArchitectureModel model = visibleModel(modelId, actor, AclAccess.WRITE);
         model.requireActive();
         ModelLock.requireWriteAccess(modelId, locks.find(modelId).orElse(null), actor.subject(), now());
@@ -182,7 +183,7 @@ public final class ModelingKernel {
     }
 
     /** Запись модели и публикация её событий. */
-    public void save(ArchitectureModel model) {
+    void save(ArchitectureModel model) {
         models.save(model);
         events.publish(model.pullEvents());
     }
@@ -192,7 +193,7 @@ public final class ModelingKernel {
     }
 
     /** Ключ нового объекта: заданный клиентом — если свободен, иначе следующий UUIDv7. */
-    public UUID newId(RequestedIds requested) {
+    UUID newId(RequestedIds requested) {
         UUID id = requested.id();
         if (id == null) {
             return uuids.next();
@@ -208,12 +209,12 @@ public final class ModelingKernel {
      * {@code archiId} нового объекта модели. Заданный клиентом проверяется по формату
      * и по всему, что попадёт в тот же файл: концептам, папкам, представлениям, их узлам и рёбрам.
      */
-    public ArchiId newArchiId(ArchitectureModel model, RequestedIds requested) {
+    ArchiId newArchiId(ArchitectureModel model, RequestedIds requested) {
         return requested.archiId() != null ? requireFree(model, null, requested.archiId()) : newArchiId(model);
     }
 
     /** {@code archiId} нового узла или ребра: свободен и в модели, и на представлении. */
-    public ArchiId newArchiId(ArchitectureModel model, View view, RequestedIds requested) {
+    ArchiId newArchiId(ArchitectureModel model, View view, RequestedIds requested) {
         return requested.archiId() != null
                 ? requireFree(model, view, requested.archiId())
                 : archiIds.nextUnique(id -> model.archiIdTaken(id) || view.archiIdTaken(id));
@@ -243,7 +244,7 @@ public final class ModelingKernel {
      * @param execute выполнить и вернуть ссылку на результат
      * @param reload  результат по ссылке
      */
-    public <R> R idempotent(String scope, EditorIdentity actor, String key, String fingerprint,
+    <R> R idempotent(String scope, EditorIdentity actor, String key, String fingerprint,
                      Supplier<String> execute, Function<String, R> reload) {
         if (key == null) {
             return reload.apply(execute.get());

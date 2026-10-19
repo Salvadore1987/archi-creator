@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.handler;
 
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.RecordGitShaCommand;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
 /** Связать версию с коммитом, в котором её содержимое лежит в репозитории, — системная запись. */

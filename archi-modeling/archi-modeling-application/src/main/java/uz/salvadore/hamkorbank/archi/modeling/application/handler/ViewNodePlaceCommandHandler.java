@@ -4,8 +4,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewNodeCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PlaceViewNodeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.mapper.ViewDataMapper;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.RequestedIds;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
