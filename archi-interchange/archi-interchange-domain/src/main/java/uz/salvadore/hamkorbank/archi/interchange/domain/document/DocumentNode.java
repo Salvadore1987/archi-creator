@@ -25,6 +25,22 @@ public record DocumentNode(String tag, DocumentOrder order, Attributes attribute
     /** Теги узлов с идентификатором, которые кодек разбирает сам. */
     public static final Set<String> TAGS = Set.of("folder", "element", "child", "sourceConnection");
 
+    /** Вид узла документа: что за объект модели за ним стоит. */
+    public enum Kind {
+        /** Папка — {@code <folder>}. */
+        FOLDER,
+        /** Элемент модели — {@code <element>} с типом, кроме связи и представления. */
+        ELEMENT,
+        /** Связь — {@code <element>} с типом {@code …Relationship}. */
+        RELATIONSHIP,
+        /** Представление — {@code <element>} с типом {@code …Model}: диаграмма, скетч, холст. */
+        VIEW,
+        /** Узел представления — {@code <child>}. */
+        VIEW_NODE,
+        /** Ребро представления — {@code <sourceConnection>}. */
+        VIEW_EDGE
+    }
+
     public DocumentNode {
         Objects.requireNonNull(tag, "tag");
         Objects.requireNonNull(order, "order");
@@ -46,6 +62,28 @@ public record DocumentNode(String tag, DocumentOrder order, Attributes attribute
     /** Идентификатор узла из атрибута {@code id}. */
     public ArchiId archiId() {
         return ArchiId.of(attributes.get("id").orElseThrow());
+    }
+
+    /** Вид узла по тегу и типу. */
+    public Kind kind() {
+        return kind(tag, attributes);
+    }
+
+    /**
+     * Вид узла по тегу и атрибутам — для читателя, пока узел ещё не собран. Тег {@code element}
+     * делится по окончанию {@code xsi:type}: так Archi отличает связи и представления от элементов.
+     */
+    public static Kind kind(String tag, Attributes attributes) {
+        return switch (tag) {
+            case "folder" -> Kind.FOLDER;
+            case "child" -> Kind.VIEW_NODE;
+            case "sourceConnection" -> Kind.VIEW_EDGE;
+            default -> {
+                String type = attributes.get("xsi:type").orElse("");
+                yield type.endsWith("Relationship") ? Kind.RELATIONSHIP
+                        : type.endsWith("Model") ? Kind.VIEW : Kind.ELEMENT;
+            }
+        };
     }
 
     /** Значение {@code xsi:type}; у папок пусто. */

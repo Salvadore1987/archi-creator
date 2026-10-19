@@ -14,13 +14,42 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationNotPermittedException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.DiagramType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 class ArchitectureModelTest {
+
+    @Test
+    @DisplayName("непрозрачные объекты модели — неподдержанные элементы и связи, поддержанные не в счёт")
+    void opaqueCount() {
+        RawXml residue = new RawXml("<element/>");
+        FolderId other = FolderId.next(UUIDS);
+        FolderId relations = FolderId.next(UUIDS);
+        List<ModelFolder> roots = List.of(
+                FolderTreeInitializer.root(FolderType.OTHER, other, Models.archiId(), SortOrder.ofPosition(0)),
+                FolderTreeInitializer.root(FolderType.RELATIONS, relations, Models.archiId(), SortOrder.ofPosition(1)));
+        Element location = new Element(ElementId.next(UUIDS), other, Models.archiId(),
+                ArchiType.ofSimpleName("Location"), "Ташкент", null, List.of(), SortOrder.ofPosition(0), false,
+                residue);
+        Element grouping = new Element(ElementId.next(UUIDS), other, Models.archiId(),
+                ArchiType.ofSimpleName("Grouping"), "Группа", null, List.of(), SortOrder.ofPosition(1), true, null);
+        Relationship unknown = new Relationship(RelationshipId.next(UUIDS), relations, Models.archiId(),
+                ArchiType.ofSimpleName("TeleportRelationship"), location.id(), grouping.id(), null,
+                null, null, null, List.of(), SortOrder.ofPosition(0), false, residue);
+        ModelHeader header = new ModelHeader(ModelId.next(UUIDS), WorkspaceId.next(UUIDS), Models.archiId(), "Файл",
+                null, "5.0.0", ModelStatus.ACTIVE, List.of(), null, "a", NOW, NOW, 0);
+
+        ArchitectureModel model = ArchitectureModel.imported(header, roots, List.of(location, grouping),
+                List.of(unknown), List.of(), () -> FolderId.next(UUIDS), Models::archiId);
+
+        assertEquals(2, model.opaqueCount());
+        assertEquals(0, Models.empty().opaqueCount());
+    }
 
     @Test
     @DisplayName("INV-MDL-001: archi_id уникален в пределах модели")

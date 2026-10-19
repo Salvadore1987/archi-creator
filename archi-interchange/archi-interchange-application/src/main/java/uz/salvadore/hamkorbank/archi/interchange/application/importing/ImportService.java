@@ -209,8 +209,7 @@ public final class ImportService {
         ModelId modelId = model.model().header().id();
         VersionResponse version = models.importModel(actor, model,
                 texts.text(Message.of(InterchangeMessages.COMMENT_IMPORTED, session.sourceName())));
-        int opaque = (int) (model.model().elements().values().stream().filter(e -> !e.supported()).count()
-                + model.model().relationships().values().stream().filter(r -> !r.supported()).count());
+        int opaque = model.model().opaqueCount();
         session.apply(
                 new uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId(modelId.value()),
                 version.versionNo(), opaque, prepared.now());

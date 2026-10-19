@@ -763,6 +763,12 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
         return relationships;
     }
 
+    /** Сколько элементов и связей модели непрозрачны: тип не поддержан, объект хранится исходным XML. */
+    public int opaqueCount() {
+        return (int) (elements.values().stream().filter(e -> !e.supported()).count()
+                + relationships.values().stream().filter(r -> !r.supported()).count());
+    }
+
     /** Хранилище записало папки, элементы и связи: всё текущее теперь сохранено. */
     public void markPersisted() {
         folders.markPersisted();

@@ -101,11 +101,11 @@ public record ModelDocument(Attributes attributes, List<DocumentContent> content
     }
 
     private static boolean isRelationship(DocumentNode node) {
-        return node.archiType().filter(t -> t.endsWith("Relationship")).isPresent();
+        return node.kind() == DocumentNode.Kind.RELATIONSHIP;
     }
 
     private static boolean isView(DocumentNode node) {
-        return node.archiType().filter(t -> t.endsWith("Model")).isPresent();
+        return node.kind() == DocumentNode.Kind.VIEW;
     }
 
     private static void collect(DocumentNode node, List<DocumentNode> into) {

@@ -66,9 +66,7 @@ public final class VersionContents {
     public Replacement replace(ArchitectureModel model, byte[] xml, EditorIdentity actor, String comment) {
         ModelContent restored = snapshotReader.read(xml, model.header(), kernel.now());
         kernel.models().replaceContent(restored);
-        int opaque = (int) (restored.model().elements().values().stream().filter(e -> !e.supported()).count()
-                + restored.model().relationships().values().stream().filter(r -> !r.supported()).count());
-        return new Replacement(committer.commit(restored.model(), actor, comment), opaque);
+        return new Replacement(committer.commit(restored.model(), actor, comment), restored.model().opaqueCount());
     }
 
     /** Текущее содержимое модели в базе — тем же снимком, который соберёт сохранение. */

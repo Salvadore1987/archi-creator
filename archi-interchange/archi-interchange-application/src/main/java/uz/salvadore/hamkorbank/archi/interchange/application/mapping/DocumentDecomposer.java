@@ -182,15 +182,13 @@ public final class DocumentDecomposer {
         }
 
         private void modelObject(DocumentNode node, FolderId folder, long order) {
-            String xsiType = node.archiType()
-                    .orElseThrow(() -> unexpected(node,
-                            Message.of(InterchangeMessages.WHERE_WITHOUT, XmlSchema.XSI_TYPE)));
-            if (xsiType.endsWith("Relationship")) {
-                relationship(node, folder, order);
-            } else if (xsiType.endsWith("Model")) {
-                view(node, folder, order);
-            } else {
-                element(node, folder, order);
+            if (node.archiType().isEmpty()) {
+                throw unexpected(node, Message.of(InterchangeMessages.WHERE_WITHOUT, XmlSchema.XSI_TYPE));
+            }
+            switch (node.kind()) {
+                case RELATIONSHIP -> relationship(node, folder, order);
+                case VIEW -> view(node, folder, order);
+                default -> element(node, folder, order);
             }
         }
 
@@ -238,8 +236,7 @@ public final class DocumentDecomposer {
                 throw new InvalidValueException(InterchangeMessages.RELATIONSHIP_OUTSIDE, node.archiId(), target);
             }
             UUID id = keys.get(target);
-            return end.archiType().filter(t -> t.endsWith("Relationship")).isPresent()
-                    ? RelationshipId.of(id) : ElementId.of(id);
+            return end.kind() == DocumentNode.Kind.RELATIONSHIP ? RelationshipId.of(id) : ElementId.of(id);
         }
 
         /** Документация и свойства элемента или связи; прочее — в остаток. */
@@ -356,7 +353,7 @@ public final class DocumentDecomposer {
             ViewEdgeId id = ViewEdgeId.of(key(node));
             RelationshipId relationship = node.attribute("archimateRelationship")
                     .filter(ref -> byArchiId.containsKey(ref)
-                            && byArchiId.get(ref).archiType().filter(t -> t.endsWith("Relationship")).isPresent())
+                            && byArchiId.get(ref).kind() == DocumentNode.Kind.RELATIONSHIP)
                     .map(ref -> RelationshipId.of(keys.get(ref))).orElse(null);
             StyleParse style = new StyleParse(node);
             Residue residue = new Residue(node.attributes().list(), XmlSchema.EDGE_TYPED) {
@@ -408,8 +405,7 @@ public final class DocumentDecomposer {
         }
 
         private boolean isElement(DocumentNode node) {
-            return node.tag().equals("element") && node.archiType()
-                    .filter(t -> !t.endsWith("Relationship") && !t.endsWith("Model")).isPresent();
+            return node.kind() == DocumentNode.Kind.ELEMENT && node.archiType().isPresent();
         }
     }
 

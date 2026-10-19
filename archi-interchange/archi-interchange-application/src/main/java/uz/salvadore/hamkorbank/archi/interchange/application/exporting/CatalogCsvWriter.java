@@ -189,8 +189,7 @@ public final class CatalogCsvWriter {
     }
 
     private static boolean isElement(DocumentNode node) {
-        return node.tag().equals("element") && node.archiType()
-                .filter(t -> !t.endsWith("Relationship") && !t.endsWith("Model")).isPresent();
+        return node.kind() == DocumentNode.Kind.ELEMENT && node.archiType().isPresent();
     }
 
     /** {@code archimate:ApplicationComponent} → {@code Application Component}. */

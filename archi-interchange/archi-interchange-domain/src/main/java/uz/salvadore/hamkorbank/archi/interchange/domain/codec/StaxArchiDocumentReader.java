@@ -286,12 +286,12 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         }
 
         private static Kind kind(String tag, Attributes attributes) {
-            return switch (tag) {
-                case "folder" -> Kind.FOLDER;
-                case "child" -> Kind.DIAGRAM_NODE;
-                case "sourceConnection" -> Kind.CONNECTION;
-                default -> attributes.get("xsi:type").filter(t -> t.endsWith("Model")).isPresent()
-                        ? Kind.DIAGRAM : Kind.CONCEPT;
+            return switch (DocumentNode.kind(tag, attributes)) {
+                case FOLDER -> Kind.FOLDER;
+                case VIEW_NODE -> Kind.DIAGRAM_NODE;
+                case VIEW_EDGE -> Kind.CONNECTION;
+                case VIEW -> Kind.DIAGRAM;
+                case ELEMENT, RELATIONSHIP -> Kind.CONCEPT;
             };
         }
 
@@ -318,7 +318,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             }
             switch (tag) {
                 case "element" -> {
-                    if (type.filter(t -> t.endsWith("Relationship")).isPresent()) {
+                    if (DocumentNode.kind(tag, attributes) == DocumentNode.Kind.RELATIONSHIP) {
                         end(id, attributes, "source", line);
                         end(id, attributes, "target", line);
                     }
