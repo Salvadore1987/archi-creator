@@ -25,9 +25,15 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentR
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EnsureDefaultWorkspaceCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListReplaceCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementCreateCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementDeleteCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementTypeListQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.FolderCreateCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockAcquireCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockReleaseCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelContents;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelCreateCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelDeleteCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelEditCommandHandler;
@@ -36,6 +42,13 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelListQuery
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelPurgeCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelRestoreCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelValidateQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationTypeSuggestQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipCreateCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipDeleteCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemRenameCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemsDeleteCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemsMoveCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionCommitter;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceEnsureDefaultCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceListQueryHandler;
@@ -52,20 +65,25 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.UseCaseMetrics;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.AccessListApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ElementApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.MetamodelApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.RelationshipApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.TreeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.AccessListApplicationServiceImpl;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.LockApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.MetamodelApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.TreeService;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.TreeApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceApplicationServiceImpl;
@@ -165,13 +183,24 @@ public class ModelingConfiguration {
     }
 
     @Bean
-    ElementService elementService(ModelingKernel kernel) {
-        return new ElementService(kernel);
+    ElementApplicationService elementApplicationService(ModelingKernel kernel) {
+        ModelContents contents = new ModelContents(kernel);
+        return new ElementApplicationServiceImpl(new ElementCreateCommandHandler(kernel),
+                new ElementEditCommandHandler(kernel, contents), new ElementDeleteCommandHandler(kernel, contents));
     }
 
     @Bean
-    RelationshipService relationshipService(ModelingKernel kernel, ElementService elements) {
-        return new RelationshipService(kernel, elements);
+    RelationshipApplicationService relationshipApplicationService(ModelingKernel kernel) {
+        ModelContents contents = new ModelContents(kernel);
+        return new RelationshipApplicationServiceImpl(new RelationshipCreateCommandHandler(kernel),
+                new RelationshipEditCommandHandler(kernel, contents),
+                new RelationshipDeleteCommandHandler(kernel, contents));
+    }
+
+    @Bean
+    MetamodelApplicationService metamodelApplicationService() {
+        return new MetamodelApplicationServiceImpl(new ElementTypeListQueryHandler(),
+                new RelationTypeSuggestQueryHandler());
     }
 
     @Bean
@@ -180,8 +209,10 @@ public class ModelingConfiguration {
     }
 
     @Bean
-    TreeService treeService(ModelingKernel kernel, ElementService elements, RelationshipService relationships) {
-        return new TreeService(kernel, elements, relationships);
+    TreeApplicationService treeApplicationService(ModelingKernel kernel) {
+        return new TreeApplicationServiceImpl(new FolderCreateCommandHandler(kernel),
+                new TreeItemRenameCommandHandler(kernel), new TreeItemsMoveCommandHandler(kernel),
+                new TreeItemsDeleteCommandHandler(kernel, new ModelContents(kernel)));
     }
 
     @Bean

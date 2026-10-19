@@ -39,9 +39,11 @@ import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryServ
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RequestedIds;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
+import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
@@ -202,7 +204,7 @@ public class ViewController {
             }
             return new LayoutGraph.Node(ViewNodeId.of(n.id()),
                                         n.parentId() == null ? null : ViewNodeId.of(n.parentId()), 
-                    n.conceptType() == null ? null : ContentController.archiType(n.conceptType()),
+                    n.conceptType() == null ? null : archiType(n.conceptType()),
                     new Bounds(n.x(), n.y(), n.width(), n.height()));
         }).toList();
         Set<UUID> nodeIds = request.nodes().stream().map(LayoutNode::id).collect(Collectors.toSet());
@@ -236,5 +238,13 @@ public class ViewController {
     private static StyleOverride style(StyleDto dto) {
         return new StyleOverride(dto.fillColor(), dto.font(), dto.fontColor(), dto.lineColor(),
                 dto.textAlignment());
+    }
+
+    private static ArchiType archiType(String value) {
+        try {
+            return ArchiType.of(value);
+        } catch (InvalidValueException | NullPointerException invalid) {
+            throw ModelingDomainException.invalid(Message.of(ModelingMessages.ARCHI_TYPE_REQUESTED, value));
+        }
     }
 }

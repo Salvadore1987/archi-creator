@@ -21,13 +21,23 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateElementCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateRelationshipCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.LockResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationshipResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListReplaceCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementCreateCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementDeleteCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementTypeListQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.FolderCreateCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockAcquireCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.LockReleaseCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelContents;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelCreateCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelDeleteCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelEditCommandHandler;
@@ -36,6 +46,13 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelListQuery
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelPurgeCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelRestoreCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelValidateQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationTypeSuggestQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipCreateCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipDeleteCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.RelationshipEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemRenameCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemsDeleteCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemsMoveCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionCommitter;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceResolveQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.DomainEventPublisher;
@@ -54,9 +71,13 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewPlacements;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ViewRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.WorkspaceRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.AccessListApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ElementApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.MetamodelApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.RelationshipApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.TreeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.ModelAccessList;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.DomainEvent;
@@ -64,6 +85,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.idempotency.IdempotencyRecord;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
+import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
@@ -370,10 +392,19 @@ final class InMemoryPorts {
             new ModelValidateQueryHandler(kernel));
     final LockApplicationService lockService = new LockApplicationServiceImpl(new LockAcquireCommandHandler(kernel),
             new LockReleaseCommandHandler(kernel), new LockGetQueryHandler(kernel));
-    final ElementService elements = new ElementService(kernel);
-    final RelationshipService relationships = new RelationshipService(kernel, elements);
+    private final ModelContents contents = new ModelContents(kernel);
+    final ElementApplicationService elements = new ElementApplicationServiceImpl(
+            new ElementCreateCommandHandler(kernel), new ElementEditCommandHandler(kernel, contents),
+            new ElementDeleteCommandHandler(kernel, contents));
+    final RelationshipApplicationService relationships = new RelationshipApplicationServiceImpl(
+            new RelationshipCreateCommandHandler(kernel), new RelationshipEditCommandHandler(kernel, contents),
+            new RelationshipDeleteCommandHandler(kernel, contents));
     final ViewService viewService = new ViewService(kernel);
-    final TreeService tree = new TreeService(kernel, elements, relationships);
+    final TreeApplicationService tree = new TreeApplicationServiceImpl(new FolderCreateCommandHandler(kernel),
+            new TreeItemRenameCommandHandler(kernel), new TreeItemsMoveCommandHandler(kernel),
+            new TreeItemsDeleteCommandHandler(kernel, contents));
+    final MetamodelApplicationService metamodel = new MetamodelApplicationServiceImpl(
+            new ElementTypeListQueryHandler(), new RelationTypeSuggestQueryHandler());
     final AccessListApplicationService accessLists = new AccessListApplicationServiceImpl(
             new AccessListGetQueryHandler(kernel), new AccessListReplaceCommandHandler(kernel));
 
@@ -381,6 +412,18 @@ final class InMemoryPorts {
     ModelId createModel(EditorIdentity actor, String name) {
         return ModelId.of(lifecycle.createModel(actor, new CreateModelCommand(workspace.id().value(), name, null))
                 .id());
+    }
+
+    /** Новый элемент в корне слоя с идентификаторами от сервера — короткий путь. */
+    ElementResponse element(EditorIdentity actor, ModelId model, ArchiType type, String name) {
+        return elements.createElement(actor, new CreateElementCommand(model.value(), type.value(), name, null, null,
+                null, null));
+    }
+
+    /** Связь без имени и ребра с идентификаторами от сервера — короткий путь. */
+    RelationshipResponse relate(EditorIdentity actor, ModelId model, ArchiType type, UUID source, UUID target) {
+        return relationships.createRelationship(actor, new CreateRelationshipCommand(model.value(), type.value(),
+                source, target, null, null, null, null, null, null, null, null)).relationship();
     }
 
     /** Блокировка модели автором — короткий путь для сценариев, которым нужна запись. */

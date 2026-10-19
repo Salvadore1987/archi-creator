@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewEndpoints;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.AclAccess;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
@@ -25,7 +26,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.StyleOverride;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdge;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEndpoint;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
@@ -113,17 +113,12 @@ public final class ViewService {
             View view = loadView(viewId);
             ArchitectureModel model = kernel.writableModel(view.modelId(), actor);
             model.requireRelationship(relationshipId);
-            Created<ViewEdge> edge = view.connect(model, relationshipId, endpoint(view, sourceId),
-                    endpoint(view, targetId), bendpoints, () -> ViewEdgeId.of(kernel.newId(ids)),
+            Created<ViewEdge> edge = view.connect(model, relationshipId, ViewEndpoints.of(view, sourceId),
+                    ViewEndpoints.of(view, targetId), bendpoints, () -> ViewEdgeId.of(kernel.newId(ids)),
                     () -> kernel.newArchiId(model, view, ids));
             kernel.views.save(view);
             return edge;
         }));
-    }
-
-    /** Конец ребра по ключу: узел, если такой узел есть на представлении, иначе ребро. */
-    static ViewEndpoint endpoint(View view, UUID id) {
-        return view.nodes().contains(ViewNodeId.of(id)) ? ViewNodeId.of(id) : ViewEdgeId.of(id);
     }
 
     /**

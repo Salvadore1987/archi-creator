@@ -187,12 +187,12 @@ public final class ModelingKernel {
         events.publish(model.pullEvents());
     }
 
-    ArchiId newArchiId(ArchitectureModel model) {
+    private ArchiId newArchiId(ArchitectureModel model) {
         return archiIds.nextUnique(model::archiIdTaken);
     }
 
     /** Ключ нового объекта: заданный клиентом — если свободен, иначе следующий UUIDv7. */
-    UUID newId(RequestedIds requested) {
+    public UUID newId(RequestedIds requested) {
         UUID id = requested.id();
         if (id == null) {
             return uuids.next();
@@ -208,12 +208,12 @@ public final class ModelingKernel {
      * {@code archiId} нового объекта модели. Заданный клиентом проверяется по формату
      * и по всему, что попадёт в тот же файл: концептам, папкам, представлениям, их узлам и рёбрам.
      */
-    ArchiId newArchiId(ArchitectureModel model, RequestedIds requested) {
+    public ArchiId newArchiId(ArchitectureModel model, RequestedIds requested) {
         return requested.archiId() != null ? requireFree(model, null, requested.archiId()) : newArchiId(model);
     }
 
     /** {@code archiId} нового узла или ребра: свободен и в модели, и на представлении. */
-    ArchiId newArchiId(ArchitectureModel model, View view, RequestedIds requested) {
+    public ArchiId newArchiId(ArchitectureModel model, View view, RequestedIds requested) {
         return requested.archiId() != null
                 ? requireFree(model, view, requested.archiId())
                 : archiIds.nextUnique(id -> model.archiIdTaken(id) || view.archiIdTaken(id));

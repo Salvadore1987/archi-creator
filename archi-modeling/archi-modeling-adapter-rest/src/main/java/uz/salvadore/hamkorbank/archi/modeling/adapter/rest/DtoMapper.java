@@ -6,6 +6,7 @@ import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.BendpointDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EdgeBendpoints;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ElementDto;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ElementTypeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.Finding;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.FolderDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.LayoutPatch;
@@ -23,16 +24,17 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewEdgeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewNodeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewPayload;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewSummary;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementTypeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.FolderResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.LockResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelTreeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PropertyResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationTypeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationshipResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ValidationFindingResponse;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelFolder;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.Relationship;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.StyleOverride;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
@@ -56,14 +58,9 @@ public final class DtoMapper {
     /** Открытая модель целиком: заголовок, папки, элементы, связи, представления и их размещения. */
     public static ModelTree tree(ModelTreeResponse tree) {
         return new ModelTree(summary(tree.model()),
-                tree.folders().stream().map(f -> new FolderDto(f.id(), f.parentId(), f.archiId(), f.name(),
-                        f.folderType(), f.sortOrder())).toList(),
-                tree.elements().stream().map(e -> new ElementDto(e.id(), e.folderId(), e.archiId(), e.archiType(),
-                        e.layer(), e.name(), e.documentation(), propertyDtos(e.properties()), e.supported(),
-                        e.sortOrder())).toList(),
-                tree.relationships().stream().map(r -> new RelationshipDto(r.id(), r.folderId(), r.archiId(),
-                        r.archiType(), r.sourceId(), r.targetId(), r.name(), r.documentation(), r.accessType(),
-                        r.directed(), propertyDtos(r.properties()), r.supported(), r.sortOrder(), null)).toList(),
+                tree.folders().stream().map(DtoMapper::folder).toList(),
+                tree.elements().stream().map(DtoMapper::element).toList(),
+                tree.relationships().stream().map(r -> relationship(r, null)).toList(),
                 tree.views().stream().map(v -> new ViewSummary(v.id(), v.folderId(), v.archiId(), v.archiType(),
                         v.name(), v.sortOrder())).toList(),
                 tree.placements().stream().map(p -> new PlacementDto(p.viewId(), p.elementIds(),
@@ -75,24 +72,21 @@ public final class DtoMapper {
     }
 
     /** Папка дерева; у корневой — тип, у вложенной — родитель. */
-    public static FolderDto folder(ModelFolder f) {
-        return new FolderDto(f.id().value(), f.parentId() == null ? null : f.parentId().value(), f.archiId().value(),
-                f.name(), f.folderType() == null ? null : f.folderType().name(), f.sortOrder().value());
+    public static FolderDto folder(FolderResponse f) {
+        return new FolderDto(f.id(), f.parentId(), f.archiId(), f.name(), f.folderType(), f.sortOrder());
     }
 
     /** Элемент со свойствами в порядке документа. */
-    public static ElementDto element(Element e) {
-        return new ElementDto(e.id().value(), e.folderId().value(), e.archiId().value(), e.archiType().value(),
-                e.layer().name(), e.name(), e.documentation(), properties(e.properties()), e.supported(),
-                e.sortOrder().value());
+    public static ElementDto element(ElementResponse e) {
+        return new ElementDto(e.id(), e.folderId(), e.archiId(), e.archiType(), e.layer(), e.name(),
+                e.documentation(), propertyDtos(e.properties()), e.supported(), e.sortOrder());
     }
 
     /** Связь; {@code edgeId} — ребро, нарисованное вместе с ней, иначе {@code null}. */
-    public static RelationshipDto relationship(Relationship r, UUID edgeId) {
-        return new RelationshipDto(r.id().value(), r.folderId().value(), r.archiId().value(), r.archiType().value(),
-                r.source().value(), r.target().value(), r.name(), r.documentation(),
-                r.accessType() == null ? null : r.accessType().name(), r.directed(), properties(r.properties()),
-                r.supported(), r.sortOrder().value(), edgeId);
+    public static RelationshipDto relationship(RelationshipResponse r, UUID edgeId) {
+        return new RelationshipDto(r.id(), r.folderId(), r.archiId(), r.archiType(), r.sourceId(), r.targetId(),
+                r.name(), r.documentation(), r.accessType(), r.directed(), propertyDtos(r.properties()),
+                r.supported(), r.sortOrder(), edgeId);
     }
 
     /** Заголовок загруженного представления — без узлов и рёбер. */
@@ -156,9 +150,12 @@ public final class DtoMapper {
                 .map(p -> new PropertyDto(p.key(), p.value())).toList();
     }
 
-    static RelationTypeDto relationType(RelationshipService.Suggestion suggestion) {
-        return new RelationTypeDto(suggestion.type().archiType().value(), suggestion.type().name(),
-                suggestion.byDefault(), suggestion.nesting());
+    static RelationTypeDto relationType(RelationTypeResponse r) {
+        return new RelationTypeDto(r.archiType(), r.type(), r.byDefault(), r.nesting());
+    }
+
+    static ElementTypeDto elementType(ElementTypeResponse t) {
+        return new ElementTypeDto(t.archiType(), t.kind(), t.layer(), t.phase(), t.supported());
     }
 
     /** Предложение авторазметки в форме правки геометрии: точки перегиба рёбер — пустые. */

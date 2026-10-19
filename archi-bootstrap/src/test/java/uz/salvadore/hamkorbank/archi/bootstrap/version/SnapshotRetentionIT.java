@@ -10,11 +10,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
 import uz.salvadore.hamkorbank.archi.interchange.application.mapping.ArchimateSnapshots;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateElementCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotArchive;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ElementApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
@@ -31,7 +32,7 @@ class SnapshotRetentionIT extends IntegrationTest {
     @Autowired
     LockApplicationService locks;
     @Autowired
-    ElementService elements;
+    ElementApplicationService elements;
     @Autowired
     VersionService versions;
     @Autowired
@@ -46,8 +47,8 @@ class SnapshotRetentionIT extends IntegrationTest {
                 new CreateModelCommand(workspace().value(), "Ретеншен", null)).id());
         locks.acquireLock(ARCHITECT, new AcquireLockCommand(model.value()));
         for (int i = 0; i < 3; i++) {
-            elements.create(ARCHITECT, model, ArchiType.ofSimpleName("ApplicationComponent"), "Система " + i,
-                    null, null);
+            elements.createElement(ARCHITECT, new CreateElementCommand(model.value(),
+                    ArchiType.ofSimpleName("ApplicationComponent").value(), "Система " + i, null, null, null, null));
             versions.save(ARCHITECT, model, "правка " + i, null);
         }
         // Версии «стареют» на полгода и получают git_sha — по правилу ретеншена их снимки лишние.
