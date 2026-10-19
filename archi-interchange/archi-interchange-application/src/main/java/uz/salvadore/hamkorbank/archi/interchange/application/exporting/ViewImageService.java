@@ -47,12 +47,13 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.UuidV7;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ViewId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetViewQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionSnapshot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 
 /**
  * Картинки представлений в SVG и PNG из зафиксированной версии.
@@ -83,7 +84,7 @@ public final class ViewImageService {
     public static final int MAX_PNG_SIDE = 16_000;
     private static final long FIXED_ENTRY_TIME = 0L;
 
-    private final ModelQueryService queries;
+    private final ViewQueryApplicationService queries;
     private final VersionService versions;
     private final Notation notation;
     private final Typesetter typesetter;
@@ -94,7 +95,7 @@ public final class ViewImageService {
     private final Clock clock;
     private final UuidV7 uuids;
 
-    public ViewImageService(ModelQueryService queries, VersionService versions, Notation notation,
+    public ViewImageService(ViewQueryApplicationService queries, VersionService versions, Notation notation,
                             Typesetter typesetter, Rasterizer rasterizer, InterchangeEvents events,
                             InterchangeMetrics metrics, TextCatalog texts, Clock clock) {
         this.queries = queries;
@@ -138,10 +139,12 @@ public final class ViewImageService {
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
             Settings settings = settings(request);
-            View view = queries.openView(actor, uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId.of(viewId));
-            VersionSnapshot snapshot = versions.snapshot(actor, view.modelId(), request.versionNo());
+            ViewResponse view = queries.getView(actor, new GetViewQuery(viewId));
+            VersionSnapshot snapshot = versions.snapshot(actor,
+                    uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId.of(view.modelId()),
+                    request.versionNo());
             ModelDocument document = read(snapshot);
-            DocumentNode node = document.find(ArchiId.of(view.archiId().value()))
+            DocumentNode node = document.find(ArchiId.of(view.archiId()))
                     .filter(n -> n.tag().equals("element"))
                     .orElseThrow(() -> new InterchangeException(InterchangeCodes.VIEW_NOT_IN_VERSION,
                             Failure.NOT_FOUND,

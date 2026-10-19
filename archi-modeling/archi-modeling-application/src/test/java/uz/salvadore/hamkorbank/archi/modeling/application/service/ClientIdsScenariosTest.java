@@ -12,31 +12,35 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.BendpointValue;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateElementCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateFolderCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateRelationshipCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateViewCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewEdgeCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewNodeCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.RemoveViewNodeCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.CreateRelationshipResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.FolderResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PlaceViewEdgeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PlaceViewNodeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationshipResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewEdgeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewNodeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelFolder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bendpoint;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdge;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 
 /** Идентификаторы новых объектов от клиента и ребро существующей связи. */
 class ClientIdsScenariosTest {
@@ -74,31 +78,29 @@ class ClientIdsScenariosTest {
         ElementResponse component = ports.elements.createElement(ALICE, new CreateElementCommand(model.value(),
                 COMPONENT.value(), "АБС", folder.id(), elementId, "id-abs", null));
         ElementResponse actor = ports.element(ALICE, model, ACTOR, "Клиент");
-        View view = ports.viewService.create(ALICE, model, "Контекст", null,
-                RequestedIds.of(viewId, "id-view-1"), null);
-        ViewNode node = ports.viewService.place(ALICE, view.id(), ElementId.of(component.id()),
-                new Bounds(10, 10, 120, 55), null, RequestedIds.of(nodeId, "id-node-1")).value();
-        ViewNode actorNode = ports.viewService.place(ALICE, view.id(), ElementId.of(actor.id()),
-                new Bounds(300, 10, 120, 55), null);
+        ViewSummaryResponse view = ports.viewService.createView(ALICE, new CreateViewCommand(model.value(),
+                "Контекст", null, viewId, "id-view-1", null));
+        ViewNodeResponse node = placeNode(view.id(), component.id(), new Bounds(10, 10, 120, 55), nodeId,
+                "id-node-1").node();
+        ViewNodeResponse actorNode = ports.place(ALICE, view.id(), actor.id(), new Bounds(300, 10, 120, 55));
         CreateRelationshipResponse serving = ports.relationships.createRelationship(ALICE,
                 new CreateRelationshipCommand(model.value(), SERVING.value(), elementId, actor.id(), null, null, null,
                         null, relationshipId, "id-serving",
-                        new CreateRelationshipCommand.Edge(view.id().value(), nodeId, actorNode.id().value(), edgeId,
-                                "id-edge-1"),
+                        new CreateRelationshipCommand.Edge(view.id(), nodeId, actorNode.id(), edgeId, "id-edge-1"),
                         null));
 
         assertEquals(folderId, folder.id());
         assertEquals("id-folder-1", folder.archiId());
         assertEquals(elementId, component.id());
         assertEquals("id-abs", component.archiId());
-        assertEquals(viewId, view.id().value());
-        assertEquals("id-view-1", view.archiId().value());
-        assertEquals(nodeId, node.id().value());
-        assertEquals("id-node-1", node.archiId().value());
+        assertEquals(viewId, view.id());
+        assertEquals("id-view-1", view.archiId());
+        assertEquals(nodeId, node.id());
+        assertEquals("id-node-1", node.archiId());
         assertEquals(relationshipId, serving.relationship().id());
         assertEquals("id-serving", serving.relationship().archiId());
         assertEquals(edgeId, serving.edgeId());
-        assertEquals("id-edge-1", ports.views.get(view.id()).requireEdge(ViewEdgeId.of(serving.edgeId()))
+        assertEquals("id-edge-1", ports.views.get(ViewId.of(view.id())).requireEdge(ViewEdgeId.of(serving.edgeId()))
                 .archiId().value());
     }
 
@@ -106,9 +108,8 @@ class ClientIdsScenariosTest {
     @DisplayName("ADR-0018: занятый id или archiId — 409 MDL_ID_TAKEN, недопустимый archiId — 422")
     void takenIdsAreRejected() {
         ElementResponse component = createElement("АБС", IDS.generate(), "id-abs", null);
-        View view = ports.viewService.create(ALICE, model, "Контекст", null, null);
-        ViewNode node = ports.viewService.place(ALICE, view.id(), ElementId.of(component.id()),
-                new Bounds(10, 10, 120, 55), null);
+        ViewSummaryResponse view = ports.view(ALICE, model, "Контекст");
+        ViewNodeResponse node = ports.place(ALICE, view.id(), component.id(), new Bounds(10, 10, 120, 55));
 
         ModelingDomainException sameId = assertThrows(ModelingDomainException.class,
                 () -> createElement("CRM", component.id(), null, null));
@@ -116,8 +117,8 @@ class ClientIdsScenariosTest {
         assertEquals(Failure.CONFLICT, sameId.failure());
 
         ModelingDomainException idOfNode = assertThrows(ModelingDomainException.class,
-                () -> ports.viewService.create(ALICE,
-                model, "Другое", null, RequestedIds.of(node.id().value(), null), null));
+                () -> ports.viewService.createView(ALICE, new CreateViewCommand(model.value(), "Другое", null,
+                        node.id(), null, null)));
         assertEquals("MDL_ID_TAKEN", idOfNode.code(), "ключ узла тоже занят");
 
         ModelingDomainException sameArchiId = assertThrows(ModelingDomainException.class,
@@ -125,7 +126,7 @@ class ClientIdsScenariosTest {
         assertEquals("MDL_ID_TAKEN", sameArchiId.code());
 
         ModelingDomainException archiIdOfNode = assertThrows(ModelingDomainException.class,
-                () -> createElement("CRM", null, node.archiId().value(), null));
+                () -> createElement("CRM", null, node.archiId(), null));
         assertEquals("MDL_ID_TAKEN", archiIdOfNode.code(), "archiId узла на представлении — тоже занят в файле");
 
         ModelingDomainException invalid = assertThrows(ModelingDomainException.class,
@@ -153,38 +154,31 @@ class ClientIdsScenariosTest {
     void edgeOfExistingRelationshipIsPlacedBack() {
         ElementResponse component = ports.element(ALICE, model, COMPONENT, "АБС");
         ElementResponse actor = ports.element(ALICE, model, ACTOR, "Клиент");
-        RelationshipId serving = RelationshipId.of(
-                ports.relate(ALICE, model, SERVING, component.id(), actor.id()).id());
-        View view = ports.viewService.create(ALICE, model, "Контекст", null, null);
-        ViewNode c = ports.viewService.place(ALICE, view.id(), ElementId.of(component.id()),
-                new Bounds(10, 10, 120, 55), null);
-        ViewNode a = ports.viewService.place(ALICE, view.id(), ElementId.of(actor.id()),
-                new Bounds(300, 10, 120, 55), null);
-        List<Bendpoint> bend = List.of(new Bendpoint(10, 40, -150, 40));
-        ViewEdge edge = ports.viewService.placeEdge(ALICE, view.id(), serving, c.id().value(), a.id().value(),
-                bend, RequestedIds.NONE).value();
+        UUID serving = ports.relate(ALICE, model, SERVING, component.id(), actor.id()).id();
+        ViewSummaryResponse view = ports.view(ALICE, model, "Контекст");
+        ViewNodeResponse c = ports.place(ALICE, view.id(), component.id(), new Bounds(10, 10, 120, 55));
+        ViewNodeResponse a = ports.place(ALICE, view.id(), actor.id(), new Bounds(300, 10, 120, 55));
+        List<BendpointValue> bend = List.of(new BendpointValue(10, 40, -150, 40));
+        ViewEdgeResponse edge = placeEdge(view.id(), serving, c.id(), a.id(), bend, null, null).edge();
 
-        ports.viewService.removeNode(ALICE, c.id());
-        assertTrue(ports.views.get(view.id()).edges().values().isEmpty(), "ребро ушло вместе с узлом");
+        ports.viewService.removeNode(ALICE, new RemoveViewNodeCommand(c.id()));
+        assertTrue(ports.views.get(ViewId.of(view.id())).edges().values().isEmpty(), "ребро ушло вместе с узлом");
 
-        ViewNode restored = ports.viewService.place(ALICE, view.id(), ElementId.of(component.id()), c.bounds(), null,
-                RequestedIds.of(c.id().value(), c.archiId().value())).value();
-        ArchitectureModel.Created<ViewEdge> again = ports.viewService.placeEdge(ALICE, view.id(), serving,
-                restored.id().value(),
-                a.id().value(), edge.bendpoints(), RequestedIds.of(edge.id().value(), edge.archiId().value()));
+        ViewNodeResponse restored = placeNode(view.id(), component.id(),
+                new Bounds(c.x(), c.y(), c.width(), c.height()), c.id(), c.archiId()).node();
+        PlaceViewEdgeResponse again = placeEdge(view.id(), serving, restored.id(), a.id(), edge.bendpoints(),
+                edge.id(), edge.archiId());
 
         assertTrue(again.created());
         assertEquals(c.id(), restored.id());
-        assertEquals(edge.id(), again.value().id());
-        assertEquals(edge.archiId(), again.value().archiId());
-        assertEquals(bend, again.value().bendpoints());
-        assertEquals(restored.id(), again.value().source(), "ребро лежит в содержимом узла-источника");
+        assertEquals(edge.id(), again.edge().id());
+        assertEquals(edge.archiId(), again.edge().archiId());
+        assertEquals(bend, again.edge().bendpoints());
+        assertEquals(restored.id(), again.edge().sourceId(), "ребро лежит в содержимом узла-источника");
 
-        ArchitectureModel.Created<ViewEdge> duplicate = ports.viewService.placeEdge(ALICE, view.id(), serving,
-                restored.id().value(),
-                a.id().value(), List.of(), RequestedIds.NONE);
+        PlaceViewEdgeResponse duplicate = placeEdge(view.id(), serving, restored.id(), a.id(), List.of(), null, null);
         assertFalse(duplicate.created(), "то же ребро между теми же концами не дублируется");
-        assertEquals(edge.id(), duplicate.value().id());
+        assertEquals(edge.id(), duplicate.edge().id());
     }
 
     @Test
@@ -192,23 +186,18 @@ class ClientIdsScenariosTest {
     void edgeEndsMustDepictRelationshipEnds() {
         ElementResponse component = ports.element(ALICE, model, COMPONENT, "АБС");
         ElementResponse actor = ports.element(ALICE, model, ACTOR, "Клиент");
-        RelationshipId serving = RelationshipId.of(
-                ports.relate(ALICE, model, SERVING, component.id(), actor.id()).id());
-        View view = ports.viewService.create(ALICE, model, "Контекст", null, null);
-        ViewNode c = ports.viewService.place(ALICE, view.id(), ElementId.of(component.id()),
-                new Bounds(10, 10, 120, 55), null);
-        ViewNode a = ports.viewService.place(ALICE, view.id(), ElementId.of(actor.id()),
-                new Bounds(300, 10, 120, 55), null);
+        UUID serving = ports.relate(ALICE, model, SERVING, component.id(), actor.id()).id();
+        ViewSummaryResponse view = ports.view(ALICE, model, "Контекст");
+        ViewNodeResponse c = ports.place(ALICE, view.id(), component.id(), new Bounds(10, 10, 120, 55));
+        ViewNodeResponse a = ports.place(ALICE, view.id(), actor.id(), new Bounds(300, 10, 120, 55));
 
         ModelingDomainException reversed = assertThrows(ModelingDomainException.class,
-                () -> ports.viewService.placeEdge(ALICE,
-                view.id(), serving, a.id().value(), c.id().value(), List.of(), RequestedIds.NONE));
+                () -> placeEdge(view.id(), serving, a.id(), c.id(), List.of(), null, null));
         assertEquals("INV-MDL-008", reversed.code());
         assertEquals(Failure.UNPROCESSABLE, reversed.failure());
 
         ModelingDomainException foreign = assertThrows(ModelingDomainException.class,
-                () -> ports.viewService.placeEdge(ALICE,
-                view.id(), serving, IDS.generate(), a.id().value(), List.of(), RequestedIds.NONE));
+                () -> placeEdge(view.id(), serving, IDS.generate(), a.id(), List.of(), null, null));
         assertEquals("INV-MDL-008", foreign.code(), "конец не на этом представлении");
     }
 
@@ -258,5 +247,16 @@ class ClientIdsScenariosTest {
         return ports.relationships.createRelationship(ALICE, new CreateRelationshipCommand(model.value(),
                 type.value(), source, target, null, folderId, accessType, directed, null, null, null, null))
                 .relationship();
+    }
+
+    private PlaceViewNodeResponse placeNode(UUID view, UUID element, Bounds bounds, UUID id, String archiId) {
+        return ports.viewService.placeNode(ALICE, new PlaceViewNodeCommand(view, null, element, null, null,
+                bounds.x(), bounds.y(), bounds.width(), bounds.height(), null, id, archiId));
+    }
+
+    private PlaceViewEdgeResponse placeEdge(UUID view, UUID relationship, UUID source, UUID target,
+                                            List<BendpointValue> bendpoints, UUID id, String archiId) {
+        return ports.viewService.placeEdge(ALICE, new PlaceViewEdgeCommand(view, relationship, source, target,
+                bendpoints, id, archiId));
     }
 }

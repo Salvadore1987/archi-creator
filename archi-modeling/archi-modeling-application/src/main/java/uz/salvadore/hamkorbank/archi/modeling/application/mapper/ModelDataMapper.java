@@ -97,7 +97,7 @@ public final class ModelDataMapper {
                 p.relationshipIds().stream().map(r -> r.value()).toList());
     }
 
-    private static List<PropertyResponse> properties(List<PropertyEntry> entries) {
+    static List<PropertyResponse> properties(List<PropertyEntry> entries) {
         return entries.stream().sorted(Comparator.comparing(PropertyEntry::sortOrder))
                 .map(p -> new PropertyResponse(p.key(), p.value())).toList();
     }

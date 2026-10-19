@@ -1,6 +1,5 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.rest;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.BendpointDto;
@@ -24,9 +23,11 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewEdgeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewNodeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewPayload;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewSummary;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.StyleValue;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementTypeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.FolderResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.LayoutProposalResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.LockResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelTreeResponse;
@@ -34,14 +35,11 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PropertyRes
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationTypeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationshipResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ValidationFindingResponse;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewEdgeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewNodeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.StyleOverride;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdge;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewHeader;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutProposal;
 
 /** Агрегаты — в DTO. Списки — в порядке {@code sort_order}: клиенту не нужно сортировать заново. */
 public final class DtoMapper {
@@ -89,39 +87,30 @@ public final class DtoMapper {
                 r.supported(), r.sortOrder(), edgeId);
     }
 
-    /** Заголовок загруженного представления — без узлов и рёбер. */
-    public static ViewSummary view(View v) {
-        ViewHeader h = v.header();
-        return new ViewSummary(h.id().value(), h.folderId().value(), h.archiId().value(), h.archiType().value(),
-                h.name(), h.sortOrder().value());
+    /** Заголовок представления — без узлов и рёбер. */
+    public static ViewSummary view(ViewSummaryResponse v) {
+        return new ViewSummary(v.id(), v.folderId(), v.archiId(), v.archiType(), v.name(), v.sortOrder());
     }
 
     /** Представление целиком: заголовок, узлы и рёбра с геометрией и стилем. */
-    public static ViewPayload payload(View view) {
-        ViewHeader h = view.header();
-        return new ViewPayload(h.id().value(), h.modelId().value(), h.folderId().value(), h.archiId().value(),
-                h.archiType().value(), h.name(), h.documentation(), h.viewpoint(),
-                properties(h.properties()), h.editable(),
-                view.nodes().values().stream().sorted(Comparator.comparing(ViewNode::sortOrder)).map(DtoMapper::node)
-                        .toList(),
-                view.edges().values().stream().sorted(Comparator.comparing(ViewEdge::sortOrder)).map(DtoMapper::edge)
-                        .toList());
+    public static ViewPayload payload(ViewResponse v) {
+        return new ViewPayload(v.id(), v.modelId(), v.folderId(), v.archiId(), v.archiType(), v.name(),
+                v.documentation(), v.viewpoint(), propertyDtos(v.properties()), v.editable(),
+                v.nodes().stream().map(DtoMapper::node).toList(), v.edges().stream().map(DtoMapper::edge).toList());
     }
 
     /** Узел представления; границы — относительно родителя. */
-    public static ViewNodeDto node(ViewNode n) {
-        return new ViewNodeDto(n.id().value(), n.parentId() == null ? null : n.parentId().value(), n.archiId().value(),
-                n.archiType().value(), n.kind().name(), n.elementId() == null ? null : n.elementId().value(),
-                n.bounds().x(), n.bounds().y(), n.bounds().width(), n.bounds().height(), style(n.style()),
-                n.label(), n.content(), n.sortOrder().value());
+    public static ViewNodeDto node(ViewNodeResponse n) {
+        return new ViewNodeDto(n.id(), n.parentId(), n.archiId(), n.archiType(), n.kind(), n.elementId(), n.x(),
+                n.y(), n.width(), n.height(), style(n.style()), n.label(), n.content(), n.sortOrder());
     }
 
     /** Ребро представления с точками перегиба и стилем. */
-    public static ViewEdgeDto edge(ViewEdge e) {
-        return new ViewEdgeDto(e.id().value(), e.archiId().value(), e.archiType().value(),
-                e.relationshipId() == null ? null : e.relationshipId().value(), e.source().value(), e.target().value(),
-                e.bendpoints().stream().map(b -> new BendpointDto(b.startX(), b.startY(), b.endX(), b.endY())).toList(),
-                style(e.style()), e.sortOrder().value());
+    public static ViewEdgeDto edge(ViewEdgeResponse e) {
+        return new ViewEdgeDto(e.id(), e.archiId(), e.archiType(), e.relationshipId(), e.sourceId(), e.targetId(),
+                e.bendpoints().stream().map(b -> new BendpointDto(b.startX(), b.startY(), b.endX(), b.endY()))
+                        .toList(),
+                style(e.style()), e.sortOrder());
     }
 
     /** Версия модели без снимка; есть ли снимок — отдельным флагом. */
@@ -140,14 +129,9 @@ public final class DtoMapper {
         return new Finding(f.severity(), f.code(), f.message(), f.targetKind(), f.targetId(), f.suggestion());
     }
 
-    private static StyleDto style(StyleOverride s) {
-        return s.empty() ? null : new StyleDto(s.fillColor(), s.font(),
-                s.fontColor(), s.lineColor(), s.textAlignment());
-    }
-
-    private static List<PropertyDto> properties(List<PropertyEntry> entries) {
-        return entries.stream().sorted(Comparator.comparing(PropertyEntry::sortOrder))
-                .map(p -> new PropertyDto(p.key(), p.value())).toList();
+    private static StyleDto style(StyleValue s) {
+        return s == null ? null
+                : new StyleDto(s.fillColor(), s.font(), s.fontColor(), s.lineColor(), s.textAlignment());
     }
 
     static RelationTypeDto relationType(RelationTypeResponse r) {
@@ -159,11 +143,9 @@ public final class DtoMapper {
     }
 
     /** Предложение авторазметки в форме правки геометрии: точки перегиба рёбер — пустые. */
-    static LayoutPatch layoutPatch(LayoutProposal proposal) {
-        return new LayoutPatch(proposal.nodes().entrySet().stream()
-                .map(e -> new NodeBounds(e.getKey().value(), e.getValue().x(), e.getValue().y(), e.getValue().width(),
-                        e.getValue().height()))
-                .toList(),
-                proposal.clearedEdges().stream().map(id -> new EdgeBendpoints(id.value(), List.of())).toList());
+    static LayoutPatch layoutPatch(LayoutProposalResponse proposal) {
+        return new LayoutPatch(proposal.nodes().stream()
+                .map(n -> new NodeBounds(n.id(), n.x(), n.y(), n.width(), n.height())).toList(),
+                proposal.clearedEdges().stream().map(id -> new EdgeBendpoints(id, List.of())).toList());
     }
 }

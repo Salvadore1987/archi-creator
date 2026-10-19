@@ -41,9 +41,8 @@ class ApplicationLayerTest {
     private static final String ACTOR = DOMAIN + ".common.EditorIdentity";
     /** Сервисы, которые адаптеры ещё зовут напрямую. */
     private static final Set<String> NOT_YET_MIGRATED = Set.of(
-            "CommittedVersion", "ModelImportService",
-            "ModelQueryService", "ModelingKernel", "RequestedIds",
-            "VersionService", "VersionSnapshot", "ViewService");
+            "CommittedVersion", "ModelImportService", "ModelingKernel", "RequestedIds",
+            "VersionService", "VersionSnapshot");
 
     private static JavaClasses classes;
 

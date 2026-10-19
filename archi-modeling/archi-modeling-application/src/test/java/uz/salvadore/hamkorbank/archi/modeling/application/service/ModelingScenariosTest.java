@@ -13,9 +13,11 @@ import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.DeleteElementCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.DeleteTreeItemsCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewNodeCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceAccessListCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ListModelsQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ProposeViewLayoutQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.SuggestRelationTypesQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.AccessListResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementResponse;
@@ -24,6 +26,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelTreeRe
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PlacementResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationTypeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationshipResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
@@ -33,12 +36,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelVersionCommittedEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeKind;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutGraph;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
 
 class ModelingScenariosTest {
 
@@ -81,15 +81,17 @@ class ModelingScenariosTest {
     void roleIsCheckedBeforeInput() {
         ModelId model = ports.createModel(ALICE, "Ландшафт");
         ports.lock(ALICE, model);
-        View view = ports.viewService.create(ALICE, model, "Контекст", null, null);
-        ViewService.NewNode noElement = new ViewService.NewNode(ViewNodeKind.DIAGRAM_OBJECT, null, null, null,
-                0, 0, null, null, null, RequestedIds.NONE);
+        ViewSummaryResponse view = ports.view(ALICE, model, "Контекст");
+        PlaceViewNodeCommand noElement = new PlaceViewNodeCommand(view.id(), "DIAGRAM_OBJECT", null, null, null,
+                0, 0, null, null, null, null, null);
 
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
-                () -> ports.viewService.placeNode(READER, view.id(), noElement)).failure());
+                () -> ports.viewService.placeNode(READER, noElement)).failure());
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
-                () -> ports.viewService.proposeLayout(READER, view.id(), "no-such-strategy",
-                        new LayoutGraph(List.of(), List.of()))).failure());
+                () -> ports.viewQueries.proposeLayout(READER, new ProposeViewLayoutQuery(view.id(),
+                        "no-such-strategy", List.of(), List.of()))).failure());
+        assertEquals(ModelingCodes.INVALID_INPUT, assertThrows(ModelingDomainException.class,
+                () -> ports.viewService.placeNode(ALICE, noElement)).code(), "автору — отказ во вводе");
     }
 
     @Test
@@ -178,13 +180,13 @@ class ModelingScenariosTest {
         ModelId model = ports.createModel(ALICE, "Ландшафт");
         ports.lock(ALICE, model);
         ElementResponse component = ports.element(ALICE, model, COMPONENT, "АБС");
-        View placed = ports.viewService.create(ALICE, model, "Контекст", null, null);
-        View empty = ports.viewService.create(ALICE, model, "Пустое", null, null);
-        ports.viewService.place(ALICE, placed.id(), ElementId.of(component.id()), new Bounds(10, 10, 120, 55), null);
+        ViewSummaryResponse placed = ports.view(ALICE, model, "Контекст");
+        ViewSummaryResponse empty = ports.view(ALICE, model, "Пустое");
+        ports.place(ALICE, placed.id(), component.id(), new Bounds(10, 10, 120, 55));
 
         ModelTreeResponse opened = open(READER, model);
 
-        assertEquals(List.of(placed.id().value(), empty.id().value()),
+        assertEquals(List.of(placed.id(), empty.id()),
                 opened.placements().stream().map(PlacementResponse::viewId).toList());
         assertEquals(List.of(component.id()), opened.placements().getFirst().elementIds());
         assertTrue(opened.placements().getLast().elementIds().isEmpty());
@@ -199,8 +201,8 @@ class ModelingScenariosTest {
         ElementResponse actor = ports.element(ALICE, model, ArchiType.ofSimpleName("BusinessActor"), "Клиент");
         RelationshipResponse serving = ports.relate(ALICE, model, ArchiType.ofSimpleName("ServingRelationship"),
                 component.id(), actor.id());
-        View view = ports.viewService.create(ALICE, model, "Контекст", null, null);
-        ports.viewService.place(ALICE, view.id(), ElementId.of(component.id()), new Bounds(10, 10, 120, 55), null);
+        ViewSummaryResponse view = ports.view(ALICE, model, "Контекст");
+        ports.place(ALICE, view.id(), component.id(), new Bounds(10, 10, 120, 55));
 
         ModelingDomainException blocked = assertThrows(ModelingDomainException.class,
                 () -> ports.elements.deleteElement(ALICE, new DeleteElementCommand(component.id())));
@@ -210,7 +212,7 @@ class ModelingScenariosTest {
                 List.of(component.id(), serving.id())));
 
         assertEquals(1, ports.models.get(model).elements().size());
-        assertEquals(0, ports.views.get(view.id()).nodes().size(), "размещение ушло вместе с элементом");
+        assertEquals(0, ports.views.get(ViewId.of(view.id())).nodes().size(), "размещение ушло вместе с элементом");
     }
 
     @Test

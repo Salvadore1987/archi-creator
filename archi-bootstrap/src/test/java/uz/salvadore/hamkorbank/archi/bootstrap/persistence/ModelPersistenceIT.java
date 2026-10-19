@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -15,31 +14,33 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.BendpointValue;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.PropertyValue;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLockCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateElementCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateRelationshipCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateViewCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EditElementCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewNodeCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.SaveViewLayoutCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetViewQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.CreateRelationshipResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelTreeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewNodeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ElementApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.RelationshipApplicationService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bendpoint;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
 
 class ModelPersistenceIT extends IntegrationTest {
 
@@ -55,11 +56,11 @@ class ModelPersistenceIT extends IntegrationTest {
     @Autowired
     RelationshipApplicationService relationships;
     @Autowired
-    ViewService views;
+    ViewApplicationService views;
     @Autowired
     ModelQueryApplicationService queries;
     @Autowired
-    ModelQueryService viewQueries;
+    ViewQueryApplicationService viewQueries;
 
     @Test
     @DisplayName("INV-MDL-001: дубль archi_id в модели отклоняет база — UNIQUE (model_id, archi_id)")
@@ -89,23 +90,26 @@ class ModelPersistenceIT extends IntegrationTest {
                 ArchiType.ofSimpleName("BusinessActor").value(), "Клиент", null, null, null, null));
         elements.editElement(ARCHITECT, new EditElementCommand(component.id(), null, "Ядро банка",
                 List.of(new PropertyValue("owner", "ИТ"), new PropertyValue("criticality", "high"))));
-        View view = views.create(ARCHITECT, model, "Контекст", null, null);
-        ViewNode c = views.place(ARCHITECT, view.id(), ElementId.of(component.id()), new Bounds(20, 60, 150, 60),
-                null);
-        ViewNode a = views.place(ARCHITECT, view.id(), ElementId.of(actor.id()), new Bounds(300, 60, 150, 60),
-                null);
+        ViewSummaryResponse view = views.createView(ARCHITECT,
+                new CreateViewCommand(model.value(), "Контекст", null, null, null, null));
+        ViewNodeResponse c = views.placeNode(ARCHITECT,
+                new PlaceViewNodeCommand(view.id(), null, component.id(), null, null, 20, 60, 150, 60, null, null,
+                        null)).node();
+        ViewNodeResponse a = views.placeNode(ARCHITECT,
+                new PlaceViewNodeCommand(view.id(), null, actor.id(), null, null, 300, 60, 150, 60, null, null,
+                        null)).node();
         CreateRelationshipResponse serving = relationships.createRelationship(ARCHITECT,
                 new CreateRelationshipCommand(model.value(), ArchiType.ofSimpleName("ServingRelationship").value(),
                         component.id(), actor.id(), "обслуживает", null, null, null, null, null,
-                        new CreateRelationshipCommand.Edge(view.id().value(), c.id().value(), a.id().value(), null,
-                                null),
+                        new CreateRelationshipCommand.Edge(view.id(), c.id(), a.id(), null, null),
                         null));
-        views.saveLayout(ARCHITECT, view.id(), Map.of(a.id(), new Bounds(320, 80, 150, 60)),
-                Map.of(ViewEdgeId.of(Optional.ofNullable(serving.edgeId()).orElseThrow()),
-                        List.of(new Bendpoint(0, 40, -50, 0))));
+        views.saveLayout(ARCHITECT, new SaveViewLayoutCommand(view.id(),
+                List.of(new SaveViewLayoutCommand.NodeBounds(a.id(), 320, 80, 150, 60)),
+                List.of(new SaveViewLayoutCommand.EdgeBendpoints(Optional.ofNullable(serving.edgeId()).orElseThrow(),
+                        List.of(new BendpointValue(0, 40, -50, 0))))));
 
         ModelTreeResponse loaded = queries.getModel(VIEWER, new GetModelQuery(model.value()));
-        View loadedView = viewQueries.openView(VIEWER, view.id());
+        ViewResponse loadedView = viewQueries.getView(VIEWER, new GetViewQuery(view.id()));
 
         ElementResponse reloaded = loaded.elements().stream()
                 .filter(e -> e.id().equals(component.id())).findFirst().orElseThrow();
@@ -114,10 +118,12 @@ class ModelPersistenceIT extends IntegrationTest {
         assertEquals(1000, reloaded.sortOrder());
         assertEquals(1, loaded.relationships().size());
         assertEquals(9, loaded.folders().stream().filter(folder -> folder.parentId() == null).count());
-        assertEquals(new Bounds(320, 80, 150, 60), loadedView.requireNode(a.id()).bounds());
-        assertEquals(List.of(new Bendpoint(0, 40, -50, 0)),
-                loadedView.requireEdge(ViewEdgeId.of(serving.edgeId())).bendpoints());
-        assertTrue(loaded.views().stream().anyMatch(v -> v.id().equals(view.id().value())),
+        ViewNodeResponse moved = loadedView.nodes().stream().filter(n -> n.id().equals(a.id())).findFirst()
+                .orElseThrow();
+        assertEquals(List.of(320, 80, 150, 60), List.of(moved.x(), moved.y(), moved.width(), moved.height()));
+        assertEquals(List.of(new BendpointValue(0, 40, -50, 0)), loadedView.edges().stream()
+                .filter(e -> e.id().equals(serving.edgeId())).findFirst().orElseThrow().bendpoints());
+        assertTrue(loaded.views().stream().anyMatch(v -> v.id().equals(view.id())),
                 "дерево знает о представлении");
     }
 }

@@ -50,6 +50,18 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemRename
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemsDeleteCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemsMoveCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionCommitter;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewCreateCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewEdgeEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewEdgePlaceCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewEdgeRemoveCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewLayoutProposeQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewLayoutSaveCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewLookup;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewNodeEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewNodeMoveCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewNodePlaceCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewNodeRemoveCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceEnsureDefaultCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceListQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceResolveQueryHandler;
@@ -72,6 +84,8 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicati
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.RelationshipApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.TreeApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.AccessListApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ElementApplicationServiceImpl;
@@ -80,12 +94,12 @@ import uz.salvadore.hamkorbank.archi.modeling.application.service.MetamodelAppli
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelImportService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryApplicationServiceImpl;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.RelationshipApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.TreeApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewService;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewQueryApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiIdGenerator;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
@@ -172,8 +186,10 @@ public class ModelingConfiguration {
     }
 
     @Bean
-    ModelQueryService modelQueryService(ModelingKernel kernel) {
-        return new ModelQueryService(kernel);
+    ViewQueryApplicationService viewQueryApplicationService(ModelingKernel kernel) {
+        ViewLookup lookup = new ViewLookup(kernel);
+        return new ViewQueryApplicationServiceImpl(new ViewGetQueryHandler(kernel, lookup),
+                new ViewLayoutProposeQueryHandler(kernel, lookup));
     }
 
     @Bean
@@ -204,8 +220,13 @@ public class ModelingConfiguration {
     }
 
     @Bean
-    ViewService viewService(ModelingKernel kernel) {
-        return new ViewService(kernel);
+    ViewApplicationService viewApplicationService(ModelingKernel kernel) {
+        ViewLookup lookup = new ViewLookup(kernel);
+        return new ViewApplicationServiceImpl(new ViewCreateCommandHandler(kernel),
+                new ViewNodePlaceCommandHandler(kernel, lookup), new ViewEdgePlaceCommandHandler(kernel, lookup),
+                new ViewNodeMoveCommandHandler(kernel, lookup), new ViewNodeEditCommandHandler(kernel, lookup),
+                new ViewEdgeEditCommandHandler(kernel, lookup), new ViewNodeRemoveCommandHandler(kernel, lookup),
+                new ViewEdgeRemoveCommandHandler(kernel, lookup), new ViewLayoutSaveCommandHandler(kernel, lookup));
     }
 
     @Bean

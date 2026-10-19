@@ -24,9 +24,13 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.AcquireLoc
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateElementCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateRelationshipCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateViewCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewNodeCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.LockResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationshipResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewNodeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.AccessListReplaceCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ElementCreateCommandHandler;
@@ -54,6 +58,18 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemRename
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemsDeleteCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.TreeItemsMoveCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionCommitter;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewCreateCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewEdgeEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewEdgePlaceCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewEdgeRemoveCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewLayoutProposeQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewLayoutSaveCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewLookup;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewNodeEditCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewNodeMoveCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewNodePlaceCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ViewNodeRemoveCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.WorkspaceResolveQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.DomainEventPublisher;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.GitBinding;
@@ -78,6 +94,8 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicati
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.RelationshipApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.TreeApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.access.ModelAccessList;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.DomainEvent;
@@ -93,6 +111,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
+import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdge;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
@@ -399,7 +418,14 @@ final class InMemoryPorts {
     final RelationshipApplicationService relationships = new RelationshipApplicationServiceImpl(
             new RelationshipCreateCommandHandler(kernel), new RelationshipEditCommandHandler(kernel, contents),
             new RelationshipDeleteCommandHandler(kernel, contents));
-    final ViewService viewService = new ViewService(kernel);
+    private final ViewLookup viewLookup = new ViewLookup(kernel);
+    final ViewApplicationService viewService = new ViewApplicationServiceImpl(new ViewCreateCommandHandler(kernel),
+            new ViewNodePlaceCommandHandler(kernel, viewLookup), new ViewEdgePlaceCommandHandler(kernel, viewLookup),
+            new ViewNodeMoveCommandHandler(kernel, viewLookup), new ViewNodeEditCommandHandler(kernel, viewLookup),
+            new ViewEdgeEditCommandHandler(kernel, viewLookup), new ViewNodeRemoveCommandHandler(kernel, viewLookup),
+            new ViewEdgeRemoveCommandHandler(kernel, viewLookup), new ViewLayoutSaveCommandHandler(kernel, viewLookup));
+    final ViewQueryApplicationService viewQueries = new ViewQueryApplicationServiceImpl(
+            new ViewGetQueryHandler(kernel, viewLookup), new ViewLayoutProposeQueryHandler(kernel, viewLookup));
     final TreeApplicationService tree = new TreeApplicationServiceImpl(new FolderCreateCommandHandler(kernel),
             new TreeItemRenameCommandHandler(kernel), new TreeItemsMoveCommandHandler(kernel),
             new TreeItemsDeleteCommandHandler(kernel, contents));
@@ -424,6 +450,17 @@ final class InMemoryPorts {
     RelationshipResponse relate(EditorIdentity actor, ModelId model, ArchiType type, UUID source, UUID target) {
         return relationships.createRelationship(actor, new CreateRelationshipCommand(model.value(), type.value(),
                 source, target, null, null, null, null, null, null, null, null)).relationship();
+    }
+
+    /** Новое представление в корне представлений с идентификаторами от сервера — короткий путь. */
+    ViewSummaryResponse view(EditorIdentity actor, ModelId model, String name) {
+        return viewService.createView(actor, new CreateViewCommand(model.value(), name, null, null, null, null));
+    }
+
+    /** Узел элемента с заданными границами и идентификаторами от сервера — короткий путь. */
+    ViewNodeResponse place(EditorIdentity actor, UUID view, UUID element, Bounds bounds) {
+        return viewService.placeNode(actor, new PlaceViewNodeCommand(view, null, element, null, null, bounds.x(),
+                bounds.y(), bounds.width(), bounds.height(), null, null, null)).node();
     }
 
     /** Блокировка модели автором — короткий путь для сценариев, которым нужна запись. */

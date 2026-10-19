@@ -1,13 +1,9 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.rest;
 
 import java.net.URI;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,7 +21,6 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.BendpointDto
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.CreateViewRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EditEdgeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EditNodeRequest;
-import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.LayoutNode;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.LayoutPatch;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.MoveNodeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PlaceEdgeRequest;
@@ -35,32 +30,28 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewEdgeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewNodeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewPayload;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewSummary;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ModelQueryService;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.RequestedIds;
-import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewService;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.BendpointValue;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.StyleValue;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateViewCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EditViewEdgeCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EditViewNodeCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.MoveViewNodeCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewEdgeCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewNodeCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.RemoveViewEdgeCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.RemoveViewNodeCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.SaveViewLayoutCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetViewQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ProposeViewLayoutQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PlaceViewEdgeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PlaceViewNodeResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
-import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bendpoint;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.StyleOverride;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdge;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEndpoint;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeKind;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.layout.LayoutGraph;
 
 /** Представления: payload, геометрия, размещение. */
 @RestController
@@ -73,10 +64,10 @@ public class ViewController {
     private static final String LAYOUT_NODE_ID = "nodes[].id";
     private static final String LAYOUT_EDGE_FIELDS = "edges[].id, edges[].sourceId, edges[].targetId";
 
-    private final ModelQueryService queries;
-    private final ViewService views;
+    private final ViewQueryApplicationService queries;
+    private final ViewApplicationService views;
 
-    public ViewController(ModelQueryService queries, ViewService views) {
+    public ViewController(ViewQueryApplicationService queries, ViewApplicationService views) {
         this.queries = queries;
         this.views = views;
     }
@@ -86,36 +77,34 @@ public class ViewController {
     public ResponseEntity<ViewSummary> create(EditorIdentity actor, @PathVariable UUID id,
                                               @RequestBody CreateViewRequest request,
                                               @RequestHeader(value = "Idempotency-Key", required = false) String key) {
-        View view = views.create(actor, ModelId.of(id), request.name(),
-                request.folderId() == null ? null : FolderId.of(request.folderId()),
-                RequestedIds.of(request.id(), request.archiId()), key);
+        ViewSummaryResponse view = views.createView(actor, new CreateViewCommand(id, request.name(),
+                request.folderId(), request.id(), request.archiId(), key));
         return ResponseEntity.created(URI.create("/api/v1/views/" + view.id())).body(DtoMapper.view(view));
     }
 
     /** Открывает представление: узлы, рёбра и их оформление. */
     @GetMapping("/views/{id}")
     public ViewPayload open(EditorIdentity actor, @PathVariable UUID id) {
-        return DtoMapper.payload(queries.openView(actor, ViewId.of(id)));
+        return DtoMapper.payload(queries.getView(actor, new GetViewQuery(id)));
     }
 
     /** Сохраняет границы узлов и точки перегиба рёбер — {@code 204}. */
     @PutMapping("/views/{id}/layout")
     public ResponseEntity<Void> layout(EditorIdentity actor, @PathVariable UUID id, @RequestBody LayoutPatch patch) {
-        Map<ViewNodeId, Bounds> nodes = new LinkedHashMap<>();
-        Optional.ofNullable(patch.nodes()).orElse(List.of()).forEach(n -> nodes.put(ViewNodeId.of(n.id()),
-                new Bounds(n.x(), n.y(), n.width(), n.height())));
-        Map<ViewEdgeId, List<Bendpoint>> edges = new LinkedHashMap<>();
-        Optional.ofNullable(patch.edges()).orElse(List.of())
-                .forEach(e -> edges.put(ViewEdgeId.of(e.id()), bendpoints(e.bendpoints())));
-        views.saveLayout(actor, ViewId.of(id), nodes, edges);
+        views.saveLayout(actor, new SaveViewLayoutCommand(id,
+                Optional.ofNullable(patch.nodes()).orElse(List.of()).stream()
+                        .map(n -> new SaveViewLayoutCommand.NodeBounds(n.id(), n.x(), n.y(), n.width(), n.height()))
+                        .toList(),
+                Optional.ofNullable(patch.edges()).orElse(List.of()).stream()
+                        .map(e -> new SaveViewLayoutCommand.EdgeBendpoints(e.id(), bendpoints(e.bendpoints())))
+                        .toList()));
         return ResponseEntity.noContent().build();
     }
 
     /** Предложение авторазметки; база не меняется. */
     @PostMapping("/views/{id}/auto-layout")
     public LayoutPatch autoLayout(EditorIdentity actor, @PathVariable UUID id, @RequestBody AutoLayoutRequest request) {
-        return DtoMapper.layoutPatch(views.proposeLayout(actor, ViewId.of(id), request.strategy(),
-                layoutGraph(request)));
+        return DtoMapper.layoutPatch(queries.proposeLayout(actor, layoutQuery(id, request)));
     }
 
     /**
@@ -125,14 +114,10 @@ public class ViewController {
     @PostMapping("/views/{id}/nodes")
     public ResponseEntity<ViewNodeDto> place(EditorIdentity actor, @PathVariable UUID id,
                                              @RequestBody PlaceNodeRequest request) {
-        ArchitectureModel.Created<ViewNode> node = views.placeNode(actor, ViewId.of(id),
-                new ViewService.NewNode(kind(request.kind()),
-                request.elementId() == null ? null : ElementId.of(request.elementId()), request.label(),
-                request.content(), request.x(), request.y(),
-                request.width(), request.height(),
-                request.parentId() == null ? null : ViewNodeId.of(request.parentId()),
-                RequestedIds.of(request.id(), request.archiId())));
-        ViewNodeDto body = DtoMapper.node(node.value());
+        PlaceViewNodeResponse node = views.placeNode(actor, new PlaceViewNodeCommand(id, request.kind(),
+                request.elementId(), request.label(), request.content(), request.x(), request.y(), request.width(),
+                request.height(), request.parentId(), request.id(), request.archiId()));
+        ViewNodeDto body = DtoMapper.node(node.node());
         return node.created()
                 ? ResponseEntity.created(URI.create("/api/v1/view-nodes/" + body.id())).body(body)
                 : ResponseEntity.ok(body);
@@ -142,28 +127,27 @@ public class ViewController {
     @PutMapping("/view-nodes/{id}/parent")
     public ViewNodeDto moveToParent(EditorIdentity actor, @PathVariable UUID id,
                                     @RequestBody MoveNodeRequest request) {
-        return DtoMapper.node(views.moveToParent(actor, ViewNodeId.of(id),
-                request.parentId() == null ? null : ViewNodeId.of(request.parentId()), request.x(), request.y()));
+        return DtoMapper.node(views.moveNode(actor,
+                new MoveViewNodeCommand(id, request.parentId(), request.x(), request.y())));
     }
 
     /** Правит подпись, текст и собственный стиль узла. */
     @PatchMapping("/view-nodes/{id}")
     public ViewNodeDto editNode(EditorIdentity actor, @PathVariable UUID id, @RequestBody EditNodeRequest request) {
-        return DtoMapper.node(views.editNode(actor, ViewNodeId.of(id), request.label(),
-                request.content(), request.style() == null ? null : style(request.style())));
+        return DtoMapper.node(views.editNode(actor, new EditViewNodeCommand(id, request.label(), request.content(),
+                style(request.style()))));
     }
 
     /** Правит собственный стиль ребра. */
     @PatchMapping("/view-edges/{id}")
     public ViewEdgeDto editEdge(EditorIdentity actor, @PathVariable UUID id, @RequestBody EditEdgeRequest request) {
-        return DtoMapper.edge(views.editEdge(actor, ViewEdgeId.of(id),
-                request.style() == null ? StyleOverride.NONE : style(request.style())));
+        return DtoMapper.edge(views.editEdge(actor, new EditViewEdgeCommand(id, style(request.style()))));
     }
 
     /** Удаляет ребро с представления; связь в модели остаётся. */
     @DeleteMapping("/view-edges/{id}")
     public ResponseEntity<Void> removeEdge(EditorIdentity actor, @PathVariable UUID id) {
-        views.removeEdge(actor, ViewEdgeId.of(id));
+        views.removeEdge(actor, new RemoveViewEdgeCommand(id));
         return ResponseEntity.noContent().build();
     }
 
@@ -174,77 +158,49 @@ public class ViewController {
         if (request.relationshipId() == null || request.sourceId() == null || request.targetId() == null) {
             throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELDS_MISSING, EDGE_FIELDS));
         }
-        ArchitectureModel.Created<ViewEdge> edge = views.placeEdge(actor, ViewId.of(id),
-                RelationshipId.of(request.relationshipId()),
-                request.sourceId(), request.targetId(), bendpoints(request.bendpoints()),
-                RequestedIds.of(request.id(), request.archiId()));
-        ViewEdgeDto body = DtoMapper.edge(edge.value());
+        PlaceViewEdgeResponse edge = views.placeEdge(actor, new PlaceViewEdgeCommand(id, request.relationshipId(),
+                request.sourceId(), request.targetId(), bendpoints(request.bendpoints()), request.id(),
+                request.archiId()));
+        ViewEdgeDto body = DtoMapper.edge(edge.edge());
         return edge.created() ? ResponseEntity.status(HttpStatus.CREATED).body(body) : ResponseEntity.ok(body);
     }
 
     /** Удаляет узел с представления; элемент в модели остаётся. */
     @DeleteMapping("/view-nodes/{id}")
     public ResponseEntity<Void> remove(EditorIdentity actor, @PathVariable UUID id) {
-        views.removeNode(actor, ViewNodeId.of(id));
+        views.removeNode(actor, new RemoveViewNodeCommand(id));
         return ResponseEntity.noContent().build();
     }
 
-    private static List<Bendpoint> bendpoints(List<BendpointDto> points) {
+    private static List<BendpointValue> bendpoints(List<BendpointDto> points) {
         return Optional.ofNullable(points).orElse(List.of()).stream()
-                .map(b -> new Bendpoint(b.startX(), b.startY(), b.endX(), b.endY())).toList();
+                .map(b -> new BendpointValue(b.startX(), b.startY(), b.endX(), b.endY())).toList();
     }
 
-    private static LayoutGraph layoutGraph(AutoLayoutRequest request) {
+    private static ProposeViewLayoutQuery layoutQuery(UUID viewId, AutoLayoutRequest request) {
         if (request.nodes() == null) {
             throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_MISSING, LAYOUT_NODES));
         }
-        List<LayoutGraph.Node> nodes = request.nodes().stream().map(n -> {
+        List<ProposeViewLayoutQuery.Node> nodes = request.nodes().stream().map(n -> {
             if (n.id() == null) {
                 throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_MISSING, LAYOUT_NODE_ID));
             }
-            return new LayoutGraph.Node(ViewNodeId.of(n.id()),
-                                        n.parentId() == null ? null : ViewNodeId.of(n.parentId()), 
-                    n.conceptType() == null ? null : archiType(n.conceptType()),
-                    new Bounds(n.x(), n.y(), n.width(), n.height()));
+            return new ProposeViewLayoutQuery.Node(n.id(), n.parentId(), n.conceptType(), n.x(), n.y(), n.width(),
+                    n.height());
         }).toList();
-        Set<UUID> nodeIds = request.nodes().stream().map(LayoutNode::id).collect(Collectors.toSet());
-        List<LayoutGraph.Edge> edges = Optional.ofNullable(request.edges()).orElse(List.of()).stream().map(e -> {
-            if (e.id() == null || e.sourceId() == null || e.targetId() == null) {
-                throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELDS_MISSING, LAYOUT_EDGE_FIELDS));
-            }
-            return new LayoutGraph.Edge(ViewEdgeId.of(e.id()), endpoint(e.sourceId(), nodeIds),
-                    endpoint(e.targetId(), nodeIds));
-        }).toList();
-        return new LayoutGraph(nodes, edges);
+        List<ProposeViewLayoutQuery.Edge> edges = Optional.ofNullable(request.edges()).orElse(List.of()).stream()
+                .map(e -> {
+                    if (e.id() == null || e.sourceId() == null || e.targetId() == null) {
+                        throw ModelingDomainException.invalid(
+                                Message.of(ModelingMessages.FIELDS_MISSING, LAYOUT_EDGE_FIELDS));
+                    }
+                    return new ProposeViewLayoutQuery.Edge(e.id(), e.sourceId(), e.targetId());
+                }).toList();
+        return new ProposeViewLayoutQuery(viewId, request.strategy(), nodes, edges);
     }
 
-    /** Конец ребра в запросе разметки: идентификатор узла из запроса — узел, иначе ребро. */
-    private static ViewEndpoint endpoint(UUID id, Set<UUID> nodeIds) {
-        return nodeIds.contains(id) ? ViewNodeId.of(id) : ViewEdgeId.of(id);
-    }
-
-    /** Вид узла по имени из контракта; нет — узел элемента. */
-    private static ViewNodeKind kind(String value) {
-        if (value == null) {
-            return ViewNodeKind.DIAGRAM_OBJECT;
-        }
-        try {
-            return ViewNodeKind.valueOf(value);
-        } catch (IllegalArgumentException unknown) {
-            throw ModelingDomainException.invalid(Message.of(ModelingMessages.NODE_KIND_REQUESTED, value));
-        }
-    }
-
-    private static StyleOverride style(StyleDto dto) {
-        return new StyleOverride(dto.fillColor(), dto.font(), dto.fontColor(), dto.lineColor(),
-                dto.textAlignment());
-    }
-
-    private static ArchiType archiType(String value) {
-        try {
-            return ArchiType.of(value);
-        } catch (InvalidValueException | NullPointerException invalid) {
-            throw ModelingDomainException.invalid(Message.of(ModelingMessages.ARCHI_TYPE_REQUESTED, value));
-        }
+    private static StyleValue style(StyleDto dto) {
+        return dto == null ? null
+                : new StyleValue(dto.fillColor(), dto.font(), dto.fontColor(), dto.lineColor(), dto.textAlignment());
     }
 }
