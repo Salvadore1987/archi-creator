@@ -11,18 +11,46 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossEntry;
  */
 final class LossReportJson {
 
+    /** Имя файла отчёта внутри архива выгрузки. */
+    static final String FILE_NAME = "loss-report.json";
+
     private LossReportJson() {
+    }
+
+    /** Потери одного представления в пакете картинок: какое представление, в каком файле архива. */
+    record ViewLosses(String archiId, String name, String file, List<LossEntry> entries) {
     }
 
     /** {@code {"format":…,"sourceVersionNo":…,"entries":[…]}} с переводом строки в конце. */
     static String report(String format, long versionNo, List<LossEntry> entries) {
-        StringBuilder out = new StringBuilder("{\"format\":").append(string(format)).append(",\"sourceVersionNo\":")
-                .append(versionNo).append(",\"entries\":");
+        StringBuilder out = header(format, versionNo).append(",\"entries\":");
         entries(out, entries);
         return out.append("}\n").toString();
     }
 
-    static void entries(StringBuilder out, List<LossEntry> entries) {
+    /**
+     * Отчёт пакета картинок: {@code {"format":…,"sourceVersionNo":…,"views":[{"archiId":…,"name":…,
+     * "file":…,"entries":[…]}…]}} с переводом строки в конце; представления — в порядке архива.
+     */
+    static String viewsReport(String format, long versionNo, List<ViewLosses> views) {
+        StringBuilder out = header(format, versionNo).append(",\"views\":[");
+        for (int i = 0; i < views.size(); i++) {
+            ViewLosses view = views.get(i);
+            out.append(i == 0 ? "" : ",").append("{\"archiId\":").append(string(view.archiId()))
+                    .append(",\"name\":").append(string(view.name()))
+                    .append(",\"file\":").append(string(view.file())).append(",\"entries\":");
+            entries(out, view.entries());
+            out.append('}');
+        }
+        return out.append("]}\n").toString();
+    }
+
+    private static StringBuilder header(String format, long versionNo) {
+        return new StringBuilder("{\"format\":").append(string(format)).append(",\"sourceVersionNo\":")
+                .append(versionNo);
+    }
+
+    private static void entries(StringBuilder out, List<LossEntry> entries) {
         out.append('[');
         for (int i = 0; i < entries.size(); i++) {
             LossEntry e = entries.get(i);
@@ -34,7 +62,7 @@ final class LossReportJson {
         out.append(']');
     }
 
-    static String string(String value) {
+    private static String string(String value) {
         StringBuilder out = new StringBuilder("\"");
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);

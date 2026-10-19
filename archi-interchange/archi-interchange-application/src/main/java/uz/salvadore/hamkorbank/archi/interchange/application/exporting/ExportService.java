@@ -1,17 +1,12 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.exporting;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import uz.salvadore.hamkorbank.archi.interchange.application.ExportDefectException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeOperation;
@@ -29,16 +24,12 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportFormat;
-import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportJob;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportOptions;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.FileSlug;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossEntry;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossReport;
-import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ExportJobId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.LossEntryId;
-import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.UuidV7;
-import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetVersionSnapshotQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionSnapshotResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
@@ -57,10 +48,6 @@ public final class ExportService {
 
     /** Тип содержимого файла {@code .archimate} в ответе. */
     public static final String ARCHIMATE_MEDIA_TYPE = "application/xml";
-    /** Имя файла отчёта о потерях внутри архива выгрузки. */
-    public static final String LOSS_REPORT_FILE = "loss-report.json";
-    private static final long FIXED_ENTRY_TIME = 0L;
-
     /** Имена форматов в запросе — как в контракте API; формат по умолчанию — файл модели. */
     public static final String FORMAT_ARCHIMATE = "archimate";
     /** Каталог элементов и связей в CSV. */
@@ -74,10 +61,9 @@ public final class ExportService {
             FORMAT_OEF, ExportFormat.OPEN_EXCHANGE);
 
     private final ModelExchangeApplicationService versions;
-    private final InterchangeEvents events;
     private final InterchangeMetrics metrics;
-    private final Clock clock;
     private final UuidV7 uuids;
+    private final ExportDelivery delivery;
     private final TextCatalog texts;
     private final Notation notation;
     private final OefSchema oefSchema;
@@ -92,10 +78,9 @@ public final class ExportService {
         this.notation = notation;
         this.oefSchema = oefSchema;
         this.versions = versions;
-        this.events = events;
         this.metrics = metrics;
-        this.clock = clock;
         this.uuids = new UuidV7(clock);
+        this.delivery = new ExportDelivery(events, metrics, clock, uuids);
     }
 
     /** Результат выгрузки: файл, версия, из которой он собран, и число записей отчёта о потерях. */
@@ -169,63 +154,36 @@ public final class ExportService {
                     new GetVersionSnapshotQuery(modelId, versionNo));
             OefWriter.Written written = new OefWriter(notation)
                     .write(new StaxArchiDocumentReader().read(new ByteArrayInputStream(snapshot.xml())));
-            ExportJob job = job(actor, snapshot, ExportFormat.OPEN_EXCHANGE, ExportOptions.none());
             Optional<String> violation = oefSchema.violation(written.xml());
             if (violation.isPresent()) {
-                job.fail(violation.get());
                 throw new ExportDefectException(InterchangeCodes.OEF_SCHEMA_VIOLATION,
                         Message.of(InterchangeMessages.OEF_SCHEMA_VIOLATION), violation.get());
             }
             List<LossEntry> entries = written.losses().stream().map(this::entry).toList();
             String inner = FileSlug.slug(snapshot.model().name()) + "-v" + snapshot.versionNo() + ".xml";
-            byte[] zip = zip(inner, written.xml(), LossReportJson.report(ExportFormat.OPEN_EXCHANGE.name(),
-                    snapshot.versionNo(), entries).getBytes(StandardCharsets.UTF_8));
-            return deliver(job, snapshot, Artifact.of(zip, "application/zip", fileName(snapshot, "oef.zip")),
-                    new LossReport(entries, true));
+            byte[] zip = new DeterministicZip().add(inner, written.xml())
+                    .add(LossReportJson.FILE_NAME, LossReportJson.report(ExportFormat.OPEN_EXCHANGE.name(),
+                            snapshot.versionNo(), entries).getBytes(StandardCharsets.UTF_8))
+                    .bytes();
+            return deliver(actor, snapshot, ExportFormat.OPEN_EXCHANGE, ExportOptions.none(),
+                    Artifact.of(zip, "application/zip", fileName(snapshot, "oef.zip")), new LossReport(entries, true));
         });
     }
 
     private Export deliver(EditorIdentity actor, VersionSnapshotResponse snapshot, ExportFormat format,
                            ExportOptions options, Artifact artifact) {
-        return deliver(job(actor, snapshot, format, options), snapshot, artifact, LossReport.lossless());
+        return deliver(actor, snapshot, format, options, artifact, LossReport.lossless());
     }
 
-    private Export deliver(ExportJob job, VersionSnapshotResponse snapshot, Artifact artifact, LossReport report) {
-        job.render(snapshot.versionNo(), artifact, report);
-        job.deliver(clock.instant());
-        events.publish(job.pullEvents());
-        metrics.exportLosses(job.format().name(), report.entries().size());
+    private Export deliver(EditorIdentity actor, VersionSnapshotResponse snapshot, ExportFormat format,
+                           ExportOptions options, Artifact artifact, LossReport report) {
+        delivery.deliver(actor, snapshot, null, format, options, artifact, report);
         return new Export(artifact, snapshot.versionNo(), report.entries().size());
-    }
-
-    private ExportJob job(EditorIdentity actor, VersionSnapshotResponse snapshot, ExportFormat format,
-                          ExportOptions options) {
-        return ExportJob.request(ExportJobId.next(uuids), new WorkspaceId(snapshot.model().workspaceId()),
-                new ModelId(snapshot.model().id()), null, format, options, snapshot.versionNo(),
-                actor.subject(), clock.instant());
     }
 
     private LossEntry entry(OefLoss loss) {
         return new LossEntry(LossEntryId.next(uuids), ArchiId.of(loss.archiId()), loss.objectKind(), loss.aspect(),
                 texts.text(loss.reason()));
-    }
-
-    /** Архив детерминирован: время записей фиксировано, порядок — файл, затем отчёт. */
-    private static byte[] zip(String fileName, byte[] file, byte[] report) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try (ZipOutputStream zip = new ZipOutputStream(out, StandardCharsets.UTF_8)) {
-            for (Map.Entry<String, byte[]> entry
-                    : List.of(Map.entry(fileName, file), Map.entry(LOSS_REPORT_FILE, report))) {
-                ZipEntry zipEntry = new ZipEntry(entry.getKey());
-                zipEntry.setTime(FIXED_ENTRY_TIME);
-                zip.putNextEntry(zipEntry);
-                zip.write(entry.getValue());
-                zip.closeEntry();
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-        return out.toByteArray();
     }
 
     private static String fileName(VersionSnapshotResponse snapshot, String extension) {

@@ -1,9 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.exporting;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,8 +11,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
@@ -50,30 +45,16 @@ public final class CatalogCsvWriter {
     }
 
     private static final byte[] BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
-    private static final long FIXED_ENTRY_TIME = 0L;
     private static final ArchiTypeRegistry REGISTRY = ArchiTypeRegistry.archimate32();
 
     /** Каталог элементов и связей модели в zip из двух файлов CSV. */
     public byte[] write(byte[] archimate, CatalogCsvOptions options) {
         ModelDocument document = new StaxArchiDocumentReader().read(new ByteArrayInputStream(archimate));
         Catalog catalog = new Catalog(document, options);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try (ZipOutputStream zip = new ZipOutputStream(out, StandardCharsets.UTF_8)) {
-            entry(zip, "elements.csv", catalog.elements(options.separator()));
-            entry(zip, "relations.csv", catalog.relations(options.separator()));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-        return out.toByteArray();
-    }
-
-    private static void entry(ZipOutputStream zip, String name, String csv) throws IOException {
-        ZipEntry entry = new ZipEntry(name);
-        entry.setTime(FIXED_ENTRY_TIME);
-        zip.putNextEntry(entry);
-        zip.write(BOM);
-        zip.write(csv.getBytes(StandardCharsets.UTF_8));
-        zip.closeEntry();
+        return new DeterministicZip()
+                .add("elements.csv", BOM, catalog.elements(options.separator()).getBytes(StandardCharsets.UTF_8))
+                .add("relations.csv", BOM, catalog.relations(options.separator()).getBytes(StandardCharsets.UTF_8))
+                .bytes();
     }
 
     /** Разобранный документ в терминах каталога: пути папок, размещения, свойства. */

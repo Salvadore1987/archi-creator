@@ -1,9 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.exporting;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -15,8 +12,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeOperation;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeEvents;
@@ -36,17 +31,13 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportFormat;
-import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportJob;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportOptions;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.FileSlug;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossEntry;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossReport;
-import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ExportJobId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.LossEntryId;
-import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.UuidV7;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ViewId;
-import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetVersionSnapshotQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetViewQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionSnapshotResponse;
@@ -74,8 +65,6 @@ public final class ViewImageService {
     public static final String BACKGROUND_PAPER = "paper";
     /** Прозрачный фон. */
     public static final String BACKGROUND_TRANSPARENT = "transparent";
-    /** Имя файла отчёта о потерях внутри архива картинок. */
-    public static final String LOSS_REPORT_FILE = "loss-report.json";
 
     private static final Map<String, ExportFormat> FORMATS = Map.of(FORMAT_SVG, ExportFormat.SVG,
             FORMAT_PNG, ExportFormat.PNG);
@@ -83,18 +72,16 @@ public final class ViewImageService {
     private static final List<Integer> SCALES_DESCENDING = List.of(4, 2, 1);
     /** Предел стороны PNG: 4 000 логических единиц при плотности 4. */
     public static final int MAX_PNG_SIDE = 16_000;
-    private static final long FIXED_ENTRY_TIME = 0L;
 
     private final ViewQueryApplicationService queries;
     private final ModelExchangeApplicationService versions;
     private final Notation notation;
     private final Typesetter typesetter;
     private final Rasterizer rasterizer;
-    private final InterchangeEvents events;
     private final InterchangeMetrics metrics;
     private final TextCatalog texts;
-    private final Clock clock;
     private final UuidV7 uuids;
+    private final ExportDelivery delivery;
 
     public ViewImageService(ViewQueryApplicationService queries, ModelExchangeApplicationService versions,
                             Notation notation, Typesetter typesetter, Rasterizer rasterizer, InterchangeEvents events,
@@ -104,11 +91,10 @@ public final class ViewImageService {
         this.notation = notation;
         this.typesetter = typesetter;
         this.rasterizer = rasterizer;
-        this.events = events;
         this.metrics = metrics;
         this.texts = texts;
-        this.clock = clock;
         this.uuids = new UuidV7(clock);
+        this.delivery = new ExportDelivery(events, metrics, clock, uuids);
     }
 
     /** Файл картинки, версия, из которой он собран, и число записей отчёта о потерях. */
@@ -155,7 +141,8 @@ public final class ViewImageService {
             Artifact artifact = Artifact.of(picture.bytes(), mediaType(settings),
                     ExportService.safeFileName(name, "view") + "." + settings.extension());
             LossReport report = new LossReport(entries(picture.losses()), true);
-            deliver(actor, snapshot, new ViewId(viewId), settings, artifact, report);
+            delivery.deliver(actor, snapshot, new ViewId(viewId), settings.format(), settings.options(), artifact,
+                    report);
             return new ImageExport(artifact, snapshot.versionNo(), report.entries().size());
         });
     }
@@ -173,37 +160,25 @@ public final class ViewImageService {
                     new GetVersionSnapshotQuery(modelId, request.versionNo()));
             ModelDocument document = read(snapshot);
             List<LossEntry> all = new ArrayList<>();
-            StringBuilder report = new StringBuilder("{\"format\":\"").append(settings.format().name())
-                    .append("\",\"sourceVersionNo\":").append(snapshot.versionNo()).append(",\"views\":[");
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            try (ZipOutputStream zip = new ZipOutputStream(out, StandardCharsets.UTF_8)) {
-                Set<String> names = new HashSet<>();
-                boolean first = true;
-                for (DocumentNode view : document.views()) {
-                    Picture picture = picture(document, view, settings);
-                    String file = unique(names, FileSlug.of(view.attribute("name").orElse(""), view.archiId()),
-                            settings.extension());
-                    entry(zip, file, picture.bytes());
-                    List<LossEntry> entries = entries(picture.losses());
-                    all.addAll(entries);
-                    report.append(first ? "" : ",").append("{\"archiId\":")
-                            .append(LossReportJson.string(view.archiId().value()))
-                            .append(",\"name\":").append(LossReportJson.string(view.attribute("name").orElse("")))
-                            .append(",\"file\":").append(LossReportJson.string(file)).append(",\"entries\":");
-                    LossReportJson.entries(report, entries);
-                    report.append('}');
-                    first = false;
-                }
-                report.append("]}\n");
-                entry(zip, LOSS_REPORT_FILE, report.toString().getBytes(StandardCharsets.UTF_8));
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
+            List<LossReportJson.ViewLosses> report = new ArrayList<>();
+            DeterministicZip zip = new DeterministicZip();
+            Set<String> names = new HashSet<>();
+            for (DocumentNode view : document.views()) {
+                Picture picture = picture(document, view, settings);
+                String name = view.attribute("name").orElse("");
+                String file = unique(names, FileSlug.of(name, view.archiId()), settings.extension());
+                zip.add(file, picture.bytes());
+                List<LossEntry> entries = entries(picture.losses());
+                all.addAll(entries);
+                report.add(new LossReportJson.ViewLosses(view.archiId().value(), name, file, entries));
             }
-            Artifact artifact = Artifact.of(out.toByteArray(), "application/zip",
+            zip.add(LossReportJson.FILE_NAME, LossReportJson.viewsReport(settings.format().name(),
+                    snapshot.versionNo(), report).getBytes(StandardCharsets.UTF_8));
+            Artifact artifact = Artifact.of(zip.bytes(), "application/zip",
                     ExportService.safeFileName(snapshot.model().name(), "model") + "-v" + snapshot.versionNo()
                             + "-" + settings.extension() + ".zip");
             LossReport lossReport = new LossReport(all, true);
-            deliver(actor, snapshot, null, settings, artifact, lossReport);
+            delivery.deliver(actor, snapshot, null, settings.format(), settings.options(), artifact, lossReport);
             return new ImageExport(artifact, snapshot.versionNo(), all.size());
         });
     }
@@ -262,18 +237,6 @@ public final class ViewImageService {
                 l.objectKind(), l.aspect(), texts.text(l.reason()))).toList();
     }
 
-    /** Задание выгрузки доставлено; {@code viewId} — {@code null} у пакета всех представлений. */
-    private void deliver(EditorIdentity actor, VersionSnapshotResponse snapshot, ViewId viewId, Settings settings,
-                         Artifact artifact, LossReport report) {
-        ExportJob job = ExportJob.request(ExportJobId.next(uuids),
-                new WorkspaceId(snapshot.model().workspaceId()), new ModelId(snapshot.model().id()),
-                viewId, settings.format(), settings.options(), snapshot.versionNo(), actor.subject(), clock.instant());
-        job.render(snapshot.versionNo(), artifact, report);
-        job.deliver(clock.instant());
-        events.publish(job.pullEvents());
-        metrics.exportLosses(settings.format().name(), report.entries().size());
-    }
-
     private static ModelDocument read(VersionSnapshotResponse snapshot) {
         return new StaxArchiDocumentReader().read(new ByteArrayInputStream(snapshot.xml()));
     }
@@ -289,13 +252,5 @@ public final class ViewImageService {
             name = base + "-" + i + "." + extension;
         }
         return name;
-    }
-
-    private static void entry(ZipOutputStream zip, String name, byte[] bytes) throws IOException {
-        ZipEntry entry = new ZipEntry(name);
-        entry.setTime(FIXED_ENTRY_TIME);
-        zip.putNextEntry(entry);
-        zip.write(bytes);
-        zip.closeEntry();
     }
 }
