@@ -11,13 +11,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentValue;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
 
@@ -35,6 +38,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
  */
 public final class CatalogCsvWriter {
 
+    private static final byte[] BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
+    private static final ArchiTypeRegistry REGISTRY = ArchiTypeRegistry.archimate32();
+
     private final String yes;
     private final String no;
 
@@ -44,10 +50,11 @@ public final class CatalogCsvWriter {
         this.no = texts.text(Message.of(InterchangeMessages.CSV_NO));
     }
 
-    private static final byte[] BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
-    private static final ArchiTypeRegistry REGISTRY = ArchiTypeRegistry.archimate32();
-
-    /** Каталог элементов и связей модели в zip из двух файлов CSV. */
+    /**
+     * Каталог элементов и связей модели в zip из двух файлов CSV. Папки фильтра нет
+     * в документе — отказ {@code IXC_FOLDER_NOT_IN_VERSION}, а не пустой каталог: пустая
+     * таблица неотличима от пустой папки.
+     */
     public byte[] write(byte[] archimate, CatalogCsvOptions options) {
         ModelDocument document = new StaxArchiDocumentReader().read(new ByteArrayInputStream(archimate));
         Catalog catalog = new Catalog(document, options);
@@ -70,6 +77,12 @@ public final class CatalogCsvWriter {
             document.allNodes().forEach(n -> byId.put(n.archiId().value(), n));
             for (DocumentNode folder : document.folders()) {
                 walkFolder(folder, folder.attribute("name").orElse(""), false, options.folderArchiId());
+            }
+            String filter = options.folderArchiId();
+            if (filter != null && (!byId.containsKey(filter) || byId.get(filter).kind() != DocumentNode.Kind.FOLDER)) {
+                throw new InterchangeException(InterchangeCodes.FOLDER_NOT_IN_VERSION, Failure.NOT_FOUND,
+                        Message.of(InterchangeMessages.CSV_FOLDER_NOT_IN_VERSION, filter),
+                        Map.of("folderArchiId", filter));
             }
             for (DocumentNode view : document.views()) {
                 collectPlacements(view, view.archiId().value());

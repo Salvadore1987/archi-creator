@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.interchange.application.exporting;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -17,8 +18,11 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
 class CatalogCsvWriterTest {
 
@@ -66,12 +70,33 @@ class CatalogCsvWriterTest {
     }
 
     @Test
+    @DisplayName("§5.2: папки нет в версии или это не папка — отказ 404, а не пустой каталог")
+    void unknownFolderIsRejected() throws IOException {
+        byte[] reference = Files.readAllBytes(REFERENCE);
+        String element = "id-" + firstElementId(reference);
+        for (String folder : List.of("id-00000000000000000000000000000000", element)) {
+            InterchangeException failure = assertThrows(InterchangeException.class,
+                    () -> new CatalogCsvWriter(RU).write(reference, CatalogCsvOptions.of(null, folder)));
+            assertEquals(InterchangeCodes.FOLDER_NOT_IN_VERSION, failure.code(), folder);
+            assertEquals(Failure.NOT_FOUND, failure.failure(), folder);
+            assertEquals(Map.of("folderArchiId", folder), failure.details(), folder);
+        }
+    }
+
+    @Test
     @DisplayName("RFC 4180: поле с разделителем, кавычкой или переводом строки — в кавычках")
     void quoting() {
         assertEquals("\"a;b\"", CatalogCsvWriter.quote("a;b", ';'));
         assertEquals("\"он сказал \"\"да\"\"\"", CatalogCsvWriter.quote("он сказал \"да\"", ';'));
         assertEquals("\"строка\nвторая\"", CatalogCsvWriter.quote("строка\nвторая", ';'));
         assertEquals("a,b", CatalogCsvWriter.quote("a,b", ';'));
+    }
+
+    private static String firstElementId(byte[] xml) {
+        String text = new String(xml, StandardCharsets.UTF_8);
+        int at = text.indexOf("xsi:type=\"archimate:ApplicationComponent\"");
+        int idStart = text.indexOf("id=\"id-", at) + 7;
+        return text.substring(idStart, text.indexOf('"', idStart));
     }
 
     private static String firstFolderId(byte[] xml, String type) {

@@ -107,7 +107,7 @@ paths:
         - { in: query, name: version, required: false, schema: { type: integer, format: int64 },
             description: "Номер версии; без него — последняя." }
         - { in: query, name: folder, required: false, schema: { type: string },
-            description: "Только csv: archi_id папки — выгрузка поддерева («каталог приложений»)." }
+            description: "Только csv: archi_id папки — выгрузка поддерева («каталог приложений»); папки нет в версии — 404 IXC_FOLDER_NOT_IN_VERSION." }
         - { in: query, name: sep, required: false, schema: { type: string, enum: [";", ",", "tab"], default: ";" },
             description: "Только csv: разделитель; ';' — для русской локали Excel." }
       responses:
@@ -129,7 +129,9 @@ paths:
         '404':
           headers:
             X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
-          description: Модели нет или она скрыта списком доступа (INV-MDL-011).
+          description: |
+            Модели нет или она скрыта списком доступа (INV-MDL-011). Только csv: папки `folder`
+            нет в версии или это не папка — `IXC_FOLDER_NOT_IN_VERSION`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '409':

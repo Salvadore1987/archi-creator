@@ -142,7 +142,7 @@ public final class DocumentDecomposer {
                     .orElse(ModelHeader.DEFAULT_ARCHI_VERSION);
             ModelHeader header = new ModelHeader(identity.modelId(), identity.workspaceId(),
                     ArchiId.of(document.archiId().value()), document.name(), documentation[0],
-                    version, ModelStatus.ACTIVE, properties, root.encode().orElse(null), identity.createdBy(),
+                    version, ModelStatus.ACTIVE, properties, root.encode(), identity.createdBy(),
                     identity.createdAt(),
                     identity.now(), identity.version());
             ArchitectureModel model = ArchitectureModel.imported(header, folders, elements, relationships,
@@ -178,7 +178,7 @@ public final class DocumentDecomposer {
             }
             folders.add(new ModelFolder(id, parent, archiId(node), node.attribute("name").orElse(""),
                     type.orElse(null),
-                    SortOrder.of(order), residue.encode().orElse(null)));
+                    SortOrder.of(order), residue.encode()));
         }
 
         private void modelObject(DocumentNode node, FolderId folder, long order) {
@@ -201,7 +201,7 @@ public final class DocumentDecomposer {
                     .map(c -> c.supported()).orElse(false);
             elements.add(new Element(ElementId.of(key(node)), folder, archiId(node), type,
                     node.attribute("name").orElse(""), described.documentation(), described.properties(),
-                    SortOrder.of(order), supported, residue.encode().orElse(null)));
+                    SortOrder.of(order), supported, residue.encode()));
         }
 
         private void relationship(DocumentNode node, FolderId folder, long order) {
@@ -225,7 +225,7 @@ public final class DocumentDecomposer {
                     concept(node, "source"), concept(node, "target"), node.attribute("name").orElse(null),
                     described.documentation(), accessType, directed,
                     described.properties(), SortOrder.of(order),
-                    supported, residue.encode().orElse(null)));
+                    supported, residue.encode()));
         }
 
         private ConceptRef concept(DocumentNode node, String attribute) {
@@ -297,7 +297,7 @@ public final class DocumentDecomposer {
             ViewHeader header = new ViewHeader(id, identity.modelId(), folder, archiId(node), type,
                     node.attribute("name").orElse(""), documentation[0],
                     node.attribute("viewpoint").orElse(null), properties,
-                    SortOrder.of(order), residue.encode().orElse(null), 0);
+                    SortOrder.of(order), residue.encode(), 0);
             parts.header = header;
             parts.ref = new ViewRef(id, folder, header.archiId(), type, header.name(), header.sortOrder());
             views.add(parts);
@@ -330,15 +330,18 @@ public final class DocumentDecomposer {
                     case DocumentNode child when child.tag().equals("sourceConnection") ->
                             viewEdge(child, childOrder, view);
                     case DocumentNode child -> throw unexpected(child, Message.of(InterchangeMessages.WHERE_VIEW_NODE));
-                    case DocumentValue value when bounds[0] == null && parseBounds(value).isPresent() -> {
-                        bounds[0] = parseBounds(value).get();
-                        residue.slot(childOrder, value);
+                    case DocumentValue value -> {
+                        Optional<Bounds> parsed = bounds[0] == null ? parseBounds(value) : Optional.empty();
+                        if (parsed.isPresent()) {
+                            bounds[0] = parsed.get();
+                            residue.slot(childOrder, value);
+                        } else if (text[0] == null && isDocumentation(value, "content")) {
+                            text[0] = Objects.requireNonNullElse(value.text(), "");
+                            residue.slot(childOrder, value);
+                        } else {
+                            residue.value(childOrder, value);
+                        }
                     }
-                    case DocumentValue value when text[0] == null && isDocumentation(value, "content") -> {
-                        text[0] = Objects.requireNonNullElse(value.text(), "");
-                        residue.slot(childOrder, value);
-                    }
-                    case DocumentValue value -> residue.value(childOrder, value);
                     case RawXmlFragment raw -> residue.fragment(childOrder, raw);
                 }
             }
@@ -346,7 +349,7 @@ public final class DocumentDecomposer {
                     DiagramType.of(node.archiType().orElseThrow()), element, Optional.ofNullable(bounds[0])
                             .orElse(new Bounds(0, 0, Bounds.DEFAULT_SIZE, Bounds.DEFAULT_SIZE)),
                     style.style(), node.attribute("name").orElse(null), text[0], SortOrder.of(order),
-                    residue.encode().orElse(null)));
+                    residue.encode()));
         }
 
         private void viewEdge(DocumentNode node, long order, ViewParts view) {
@@ -373,18 +376,17 @@ public final class DocumentDecomposer {
                     case DocumentNode child when child.tag().equals("sourceConnection") ->
                             viewEdge(child, childOrder, view);
                     case DocumentNode child -> throw unexpected(child, Message.of(InterchangeMessages.WHERE_VIEW_EDGE));
-                    case DocumentValue value when parseBendpoint(value).isPresent() -> {
-                        bendpoints.add(parseBendpoint(value).get());
+                    case DocumentValue value -> parseBendpoint(value).ifPresentOrElse(bendpoint -> {
+                        bendpoints.add(bendpoint);
                         residue.slot(childOrder, value);
-                    }
-                    case DocumentValue value -> residue.value(childOrder, value);
+                    }, () -> residue.value(childOrder, value));
                     case RawXmlFragment raw -> residue.fragment(childOrder, raw);
                 }
             }
             view.edges.add(new ViewEdge(id, archiId(node), DiagramType.of(node.archiType().orElseThrow()),
                     relationship, endpoint(node, "source"), endpoint(node, "target"), bendpoints,
                     style.style(),
-                    SortOrder.of(order), residue.encode().orElse(null)));
+                    SortOrder.of(order), residue.encode()));
         }
 
         private ViewEndpoint endpoint(DocumentNode edge, String attribute) {
@@ -480,8 +482,8 @@ public final class DocumentDecomposer {
         }
 
         /** Остаток есть у каждой импортированной строки: порядок атрибутов файла — тоже его часть. */
-        Optional<RawXml> encode() {
-            return Optional.of(new RawXml(new NodeResidue(attributes, items).encode()));
+        RawXml encode() {
+            return new RawXml(new NodeResidue(attributes, items).encode());
         }
 
     }

@@ -248,6 +248,8 @@ public final class InterchangeMessages {
     public static final String IMAGE_TOO_LARGE = "interchange.image.too-large";
     /** Представления нет в зафиксированной версии, из которой строится картинка. */
     public static final String IMAGE_VIEW_NOT_IN_VERSION = "interchange.image.view-not-in-version";
+    /** Папки, которой ограничен каталог CSV, нет в выгружаемой версии. */
+    public static final String CSV_FOLDER_NOT_IN_VERSION = "interchange.csv.folder-not-in-version";
     /** Выгрузка в формат с потерями собрана без отчёта о потерях. */
     public static final String EXPORT_LOSS_REPORT_MISSING = "interchange.export.loss-report-missing";
     /** Запись отчёта о потерях называет неизвестный вид объекта. */

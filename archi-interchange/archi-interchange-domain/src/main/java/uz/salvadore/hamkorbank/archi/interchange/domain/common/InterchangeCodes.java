@@ -43,6 +43,8 @@ public final class InterchangeCodes {
     public static final String FILE_TOO_LARGE = "IXC_FILE_TOO_LARGE";
     /** Представления нет в зафиксированной версии — картинка строится только из сохранённого. */
     public static final String VIEW_NOT_IN_VERSION = "IXC_VIEW_NOT_IN_VERSION";
+    /** Папки, которой ограничен каталог, нет в зафиксированной версии. */
+    public static final String FOLDER_NOT_IN_VERSION = "IXC_FOLDER_NOT_IN_VERSION";
     /** Картинка представления при заданной плотности больше предела по стороне. */
     public static final String IMAGE_TOO_LARGE = "IXC_IMAGE_TOO_LARGE";
     /** Параметр выгрузки картинки задан недопустимым значением. */
