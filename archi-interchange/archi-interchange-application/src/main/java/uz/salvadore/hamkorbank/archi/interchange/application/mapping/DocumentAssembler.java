@@ -39,10 +39,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.StyleOverride;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdge;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewEdgeId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNode;
-import uz.salvadore.hamkorbank.archi.modeling.domain.view.ViewNodeId;
 
 /**
  * Агрегаты modeling — обратно в документ {@code .archimate} ({@code ModelDocumentAssembler}).
@@ -66,17 +64,40 @@ public final class DocumentAssembler {
         private final Map<UUID, ArchiId> archiIds = new HashMap<>();
         private final Map<UUID, List<ViewEdge>> incoming = new HashMap<>();
         private final Map<UUID, Integer> edgeRank = new HashMap<>();
+        // Дети по родителю — один проход здесь, а не перебор всей модели на каждую папку и узел.
+        // Списки в порядке хранилища: как раньше их отдавал фильтр по всем объектам.
+        private final Map<FolderId, List<ModelFolder>> subfolders = new HashMap<>();
+        private final Map<FolderId, List<Element>> elementsIn = new HashMap<>();
+        private final Map<FolderId, List<Relationship>> relationshipsIn = new HashMap<>();
+        private final Map<FolderId, List<View>> viewsIn = new HashMap<>();
+        private final Map<UUID, List<ViewNode>> nested = new HashMap<>();
+        private final Map<UUID, List<ViewEdge>> outgoing = new HashMap<>();
 
         Run(ModelContent content) {
             this.model = content.model();
             this.views = content.views();
-            model.elements().values().forEach(e -> archiIds.put(e.id().value(), e.archiId()));
-            model.relationships().values().forEach(r -> archiIds.put(r.id().value(), r.archiId()));
+            model.folders().values().stream().filter(f -> f.parentId() != null)
+                    .forEach(f -> subfolders.computeIfAbsent(f.parentId(), k -> new ArrayList<>()).add(f));
+            model.elements().values().forEach(e -> {
+                archiIds.put(e.id().value(), e.archiId());
+                elementsIn.computeIfAbsent(e.folderId(), k -> new ArrayList<>()).add(e);
+            });
+            model.relationships().values().forEach(r -> {
+                archiIds.put(r.id().value(), r.archiId());
+                relationshipsIn.computeIfAbsent(r.folderId(), k -> new ArrayList<>()).add(r);
+            });
             for (View view : views) {
-                view.nodes().values().forEach(n -> archiIds.put(n.id().value(), n.archiId()));
+                viewsIn.computeIfAbsent(view.header().folderId(), k -> new ArrayList<>()).add(view);
+                view.nodes().values().forEach(n -> {
+                    archiIds.put(n.id().value(), n.archiId());
+                    if (n.parentId() != null) {
+                        nested.computeIfAbsent(n.parentId().value(), k -> new ArrayList<>()).add(n);
+                    }
+                });
                 view.edges().values().forEach(e -> {
                     archiIds.put(e.id().value(), e.archiId());
                     incoming.computeIfAbsent(e.target().value(), k -> new ArrayList<>()).add(e);
+                    outgoing.computeIfAbsent(e.source().value(), k -> new ArrayList<>()).add(e);
                 });
                 rankEdges(view);
             }
@@ -111,14 +132,11 @@ public final class DocumentAssembler {
             typed.put("type", Optional.ofNullable(folder.folderType()).map(t -> t.fileValue()));
             Content content = new Content(residue);
             FolderId id = folder.id();
-            model.folders().values().stream().filter(f -> id.equals(f.parentId()))
-                    .forEach(f -> content.child(f.sortOrder().value(), folder(f)));
-            model.elements().values().stream().filter(e -> e.folderId().equals(id))
-                    .forEach(e -> content.child(e.sortOrder().value(), element(e)));
-            model.relationships().values().stream().filter(r -> r.folderId().equals(id))
+            subfolders.getOrDefault(id, List.of()).forEach(f -> content.child(f.sortOrder().value(), folder(f)));
+            elementsIn.getOrDefault(id, List.of()).forEach(e -> content.child(e.sortOrder().value(), element(e)));
+            relationshipsIn.getOrDefault(id, List.of())
                     .forEach(r -> content.child(r.sortOrder().value(), relationship(r)));
-            views.stream().filter(v -> v.header().folderId().equals(id))
-                    .forEach(v -> content.child(v.header().sortOrder().value(), view(v)));
+            viewsIn.getOrDefault(id, List.of()).forEach(v -> content.child(v.header().sortOrder().value(), view(v)));
             return node("folder", folder.archiId(), attributes(residue, typed, XmlSchema.FOLDER_ORDER, Set.of()),
                     content);
         }
@@ -171,12 +189,12 @@ public final class DocumentAssembler {
                     XmlSchema.DOCUMENTATION_FIRST);
             content.properties(header.properties(), XmlSchema.PROPERTIES_FIRST);
             view.nodes().values().stream().filter(n -> n.parentId() == null)
-                    .forEach(n -> content.child(n.sortOrder().value(), viewNode(view, n)));
+                    .forEach(n -> content.child(n.sortOrder().value(), viewNode(n)));
             return node("element", header.archiId(), attributes(residue, typed, XmlSchema.VIEW_ORDER, Set.of("name")),
                     content);
         }
 
-        private DocumentNode viewNode(View view, ViewNode node) {
+        private DocumentNode viewNode(ViewNode node) {
             NodeResidue residue = residue(node.rawXml());
             Map<String, Optional<String>> typed = new LinkedHashMap<>();
             typed.put(XmlSchema.XSI_TYPE, Optional.of(node.archiType().value()));
@@ -190,15 +208,13 @@ public final class DocumentAssembler {
             content.single("bounds", bounds(node.bounds(), residue), XmlSchema.BOUNDS_FIRST);
             content.single("content", textOrNull("content", node.content()),
                     XmlSchema.CONTENT_AFTER_BOUNDS);
-            ViewNodeId id = node.id();
-            view.nodes().values().stream().filter(n -> id.equals(n.parentId()))
-                    .forEach(n -> content.child(n.sortOrder().value(), viewNode(view, n)));
-            view.edges().values().stream().filter(e -> e.source().equals(id))
-                    .forEach(e -> content.child(e.sortOrder().value(), viewEdge(view, e)));
+            UUID id = node.id().value();
+            nested.getOrDefault(id, List.of()).forEach(n -> content.child(n.sortOrder().value(), viewNode(n)));
+            outgoing.getOrDefault(id, List.of()).forEach(e -> content.child(e.sortOrder().value(), viewEdge(e)));
             return node("child", node.archiId(), attributes(residue, typed, XmlSchema.NODE_ORDER, Set.of()), content);
         }
 
-        private DocumentNode viewEdge(View view, ViewEdge edge) {
+        private DocumentNode viewEdge(ViewEdge edge) {
             NodeResidue residue = residue(edge.rawXml());
             Map<String, Optional<String>> typed = new LinkedHashMap<>();
             typed.put(XmlSchema.XSI_TYPE, Optional.of(edge.archiType().value()));
@@ -217,9 +233,8 @@ public final class DocumentAssembler {
                 content.typed(slot != null ? slot.order() : lastOrder(slots, XmlSchema.BOUNDS_FIRST),
                         bendpoint(points.get(i), slot));
             }
-            ViewEdgeId id = edge.id();
-            view.edges().values().stream().filter(e -> e.source().equals(id))
-                    .forEach(e -> content.child(e.sortOrder().value(), viewEdge(view, e)));
+            outgoing.getOrDefault(edge.id().value(), List.of())
+                    .forEach(e -> content.child(e.sortOrder().value(), viewEdge(e)));
             return node("sourceConnection", edge.archiId(),
                     attributes(residue, typed, XmlSchema.EDGE_ORDER, Set.of()), content);
         }
@@ -236,47 +251,45 @@ public final class DocumentAssembler {
             Set<String> present = new LinkedHashSet<>();
             edges.stream().sorted(Comparator.comparingInt(e -> edgeRank.get(e.id().value())))
                     .forEach(e -> present.add(e.archiId().value()));
-            List<String> ordered = new ArrayList<>();
+            Set<String> ordered = new LinkedHashSet<>();
             residue.attribute(XmlSchema.TARGET_CONNECTIONS).map(ResidueAttribute::value).ifPresent(stored -> {
                 for (String id : stored.trim().split("\\s+")) {
-                    if (present.contains(id) && !ordered.contains(id)) {
+                    if (present.contains(id)) {
                         ordered.add(id);
                     }
                 }
             });
-            present.stream().filter(id -> !ordered.contains(id)).forEach(ordered::add);
+            ordered.addAll(present);
             return Optional.of(String.join(" ", ordered));
         }
 
         /** Порядок рёбер в файле: обход представления — узлы, затем рёбра узла, в порядке содержимого. */
         private void rankEdges(View view) {
             int[] rank = {edgeRank.size()};
-            walk(view, view.nodes().values().stream().filter(n -> n.parentId() == null)
+            walk(view.nodes().values().stream().filter(n -> n.parentId() == null)
                     .sorted(Comparator.comparing(ViewNode::sortOrder)).toList(), rank);
         }
 
-        private void walk(View view, List<ViewNode> nodes, int[] rank) {
+        private void walk(List<ViewNode> nodes, int[] rank) {
             for (ViewNode node : nodes) {
-                List<Object> content = new ArrayList<>();
-                view.nodes().values().stream().filter(n -> node.id().equals(n.parentId()))
-                        .forEach(content::add);
-                view.edges().values().stream().filter(e -> e.source().equals(node.id())).forEach(content::add);
+                List<Object> content = new ArrayList<>(nested.getOrDefault(node.id().value(), List.of()));
+                content.addAll(outgoing.getOrDefault(node.id().value(), List.of()));
                 content.sort(Comparator.comparingLong(o -> o instanceof ViewNode n ? n.sortOrder().value()
                         : ((ViewEdge) o).sortOrder().value()));
                 for (Object item : content) {
                     if (item instanceof ViewNode child) {
-                        walk(view, List.of(child), rank);
+                        walk(List.of(child), rank);
                     } else {
-                        walkEdge(view, (ViewEdge) item, rank);
+                        walkEdge((ViewEdge) item, rank);
                     }
                 }
             }
         }
 
-        private void walkEdge(View view, ViewEdge edge, int[] rank) {
+        private void walkEdge(ViewEdge edge, int[] rank) {
             edgeRank.put(edge.id().value(), rank[0]++);
-            view.edges().values().stream().filter(e -> e.source().equals(edge.id()))
-                    .sorted(Comparator.comparing(ViewEdge::sortOrder)).forEach(e -> walkEdge(view, e, rank));
+            outgoing.getOrDefault(edge.id().value(), List.of()).stream()
+                    .sorted(Comparator.comparing(ViewEdge::sortOrder)).forEach(e -> walkEdge(e, rank));
         }
 
         // ── Значения ────────────────────────────────────────────────
