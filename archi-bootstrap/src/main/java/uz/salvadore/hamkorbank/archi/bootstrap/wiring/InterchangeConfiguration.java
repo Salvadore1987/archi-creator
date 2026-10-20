@@ -9,13 +9,14 @@ import uz.salvadore.hamkorbank.archi.bootstrap.export.BatikRasterizer;
 import uz.salvadore.hamkorbank.archi.bootstrap.export.InterTypesetter;
 import uz.salvadore.hamkorbank.archi.bootstrap.export.SharedNotation;
 import uz.salvadore.hamkorbank.archi.bootstrap.git.GitSettings;
-import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ViewImageService;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingService;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.AllViewImagesExportQueryHandler;
 import uz.salvadore.hamkorbank.archi.interchange.application.handler.ArchimateFileImportCommandHandler;
 import uz.salvadore.hamkorbank.archi.interchange.application.handler.ImportPolicyConfigureCommandHandler;
 import uz.salvadore.hamkorbank.archi.interchange.application.handler.ImportPolicyGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.interchange.application.handler.InterchangeKernel;
 import uz.salvadore.hamkorbank.archi.interchange.application.handler.ModelExportQueryHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.ViewImageExportQueryHandler;
 import uz.salvadore.hamkorbank.archi.interchange.application.oef.OefSchema;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportPolicy;
@@ -28,10 +29,12 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ExportApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportPolicyApplicationService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ViewImageApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation;
 import uz.salvadore.hamkorbank.archi.interchange.application.service.ExportApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.interchange.application.service.ImportApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.interchange.application.service.ImportPolicyApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.interchange.application.service.ViewImageApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
@@ -110,11 +113,13 @@ public class InterchangeConfiguration {
     }
 
     @Bean
-    ViewImageService viewImageService(ViewQueryApplicationService queries, ModelExchangeApplicationService versions,
-                                      Notation notation, Typesetter typesetter, Rasterizer rasterizer,
-                                      InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts,
-                                      Clock clock) {
-        return new ViewImageService(queries, versions, notation, typesetter, rasterizer, events, metrics, texts,
-                clock);
+    ViewImageApplicationService viewImageApplicationService(InterchangeKernel kernel,
+                                                            ViewQueryApplicationService queries,
+                                                            ModelExchangeApplicationService versions,
+                                                            Notation notation, Typesetter typesetter,
+                                                            Rasterizer rasterizer) {
+        return new ViewImageApplicationServiceImpl(
+                new ViewImageExportQueryHandler(kernel, queries, versions, notation, typesetter, rasterizer),
+                new AllViewImagesExportQueryHandler(kernel, versions, notation, typesetter, rasterizer));
     }
 }

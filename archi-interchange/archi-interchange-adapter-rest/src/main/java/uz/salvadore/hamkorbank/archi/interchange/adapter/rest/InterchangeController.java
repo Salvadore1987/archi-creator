@@ -29,17 +29,17 @@ import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportRes
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportSettings;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ConfigureImportPolicyCommand;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ImportArchimateFileCommand;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.query.ExportAllViewImagesQuery;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.query.ExportModelQuery;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.query.ExportViewImageQuery;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.query.GetImportPolicyQuery;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ExportFileResponse;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ImportArchimateFileResponse;
-import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ImageRequest;
-import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ViewImageService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ExportApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportPolicyApplicationService;
-import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ViewImageApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 
 /**
@@ -55,11 +55,12 @@ public class InterchangeController {
     private final ImportApplicationService imports;
     private final ImportPolicyApplicationService policies;
     private final ExportApplicationService exports;
-    private final ViewImageService images;
+    private final ViewImageApplicationService images;
     private final TextCatalog text;
 
     public InterchangeController(ImportApplicationService imports, ImportPolicyApplicationService policies,
-                                 ExportApplicationService exports, ViewImageService images, TextCatalog text) {
+                                 ExportApplicationService exports, ViewImageApplicationService images,
+                                 TextCatalog text) {
         this.text = text;
         this.images = images;
         this.imports = imports;
@@ -101,10 +102,7 @@ public class InterchangeController {
                                          @RequestParam(required = false) Long version,
                                          @RequestParam(required = false) String folder,
                                          @RequestParam(required = false) String sep) {
-        ExportFileResponse file = exports.exportModel(actor, new ExportModelQuery(id, fmt, version, sep, folder));
-        return file(file.mediaType(), file.fileName(), file.contentHash(), file.versionNo())
-                .header(LOSS_COUNT, String.valueOf(file.lossCount()))
-                .body(file.content());
+        return file(exports.exportModel(actor, new ExportModelQuery(id, fmt, version, sep, folder)));
     }
 
     /**
@@ -120,7 +118,8 @@ public class InterchangeController {
                                              @RequestParam(required = false) Boolean outline,
                                              @RequestParam(required = false) String background,
                                              @RequestParam(required = false) Long version) {
-        return image(images.viewImage(actor, id, new ImageRequest(fmt, scale, outline, background, version)));
+        return file(images.exportViewImage(actor,
+                new ExportViewImageQuery(id, fmt, scale, outline, background, version)));
     }
 
     /** Все представления модели одним архивом из одной версии. */
@@ -131,7 +130,8 @@ public class InterchangeController {
                                                  @RequestParam(required = false) Boolean outline,
                                                  @RequestParam(required = false) String background,
                                                  @RequestParam(required = false) Long version) {
-        return image(images.allViewImages(actor, id, new ImageRequest(fmt, scale, outline, background, version)));
+        return file(images.exportAllViewImages(actor,
+                new ExportAllViewImagesQuery(id, fmt, scale, outline, background, version)));
     }
 
     /** Настройка импорта рабочего пространства: включён ли строгий режим. */
@@ -147,22 +147,17 @@ public class InterchangeController {
                 new ConfigureImportPolicyCommand(id, settings.strictImport())).strictImport());
     }
 
-    private static ResponseEntity<byte[]> image(ViewImageService.ImageExport export) {
-        Artifact artifact = export.artifact();
-        return file(artifact.mediaType(), artifact.fileName(), artifact.hash().value(), export.versionNo())
-                .header(LOSS_COUNT, String.valueOf(export.lossCount()))
-                .body(artifact.bytes());
-    }
-
-    private static ResponseEntity.BodyBuilder file(String mediaType, String fileName, String contentHash,
-                                                   long versionNo) {
+    /** Файл выгрузки: тип, имя для сохранения, версия, отпечаток и число записей отчёта о потерях. */
+    private static ResponseEntity<byte[]> file(ExportFileResponse file) {
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(mediaType))
+                .contentType(MediaType.parseMediaType(file.mediaType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                        .filename(fileName, StandardCharsets.UTF_8).build().toString())
-                .header("X-Archi-Version-No", String.valueOf(versionNo))
-                .eTag("\"" + contentHash + "\"")
-                .lastModified(Instant.EPOCH);
+                        .filename(file.fileName(), StandardCharsets.UTF_8).build().toString())
+                .header("X-Archi-Version-No", String.valueOf(file.versionNo()))
+                .header(LOSS_COUNT, String.valueOf(file.lossCount()))
+                .eTag("\"" + file.contentHash() + "\"")
+                .lastModified(Instant.EPOCH)
+                .body(file.content());
     }
 
     private ResponseEntity<ProblemDetail> rejected(HttpStatus status, ImportArchimateFileResponse result,

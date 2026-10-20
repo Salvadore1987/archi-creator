@@ -48,8 +48,6 @@ class ApplicationLayerTest {
      * Git переводится отдельным этапом; остальное уходит из списка по мере перевода.
      */
     private static final Set<String> NOT_YET_MIGRATED = Set.of(
-            INTERCHANGE + ".exporting.ViewImageService",
-            INTERCHANGE + ".exporting.ImageRequest",
             INTERCHANGE + ".git.GitBindingService",
             INTERCHANGE + ".git.GitBindingSettings",
             INTERCHANGE + ".git.GitImportService",

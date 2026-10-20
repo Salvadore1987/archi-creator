@@ -86,7 +86,7 @@ Git (`git/`) — этап 8: его сервисы в этой задаче по
 | 9.3 | Импорт файла: `ImportArchimateFileCommand` с `workspaceId` «не задан» — пространство по умолчанию выбирает handler, контроллер больше не зовёт `resolveWorkspace` (замечание к 12.3 из плана этапа 5); результат с исходом `APPLIED`/`REPLAYED`/`REJECTED_CORRUPT`/`REJECTED_STRICT` и кодом отказа — контроллер переводит исход в статус без своих решений (06-05) | ✅ |
 | 9.4 | Настройка импорта: `ConfigureImportPolicyCommand` отдаёт итоговую настройку; чтение — `GetImportPolicyQuery` с операцией и ролью в `InterchangeOperation` и `spec/nfr/interchange.yaml` (06-06) | ✅ |
 | 9.5 | Выгрузка модели: один сценарий по `ExportModelQuery` с форматом строкой; разбор формата и параметров CSV — в handler'е после роли; недостижимая ветка `IXC_FORMAT_NOT_AVAILABLE` и код — убрать (06-07); результат — DTO без `Artifact` | ✅ |
-| 9.6 | Картинки представлений: `ExportViewImageQuery`, `ExportAllViewImagesQuery`, результат — DTO | ⬜ |
+| 9.6 | Картинки представлений: `ExportViewImageQuery`, `ExportAllViewImagesQuery`, результат — DTO | ✅ |
 | 9.7 | `RestLayerConventionsTest`: контроллер interchange не ссылается на `*Codes`, кроме разбора ввода; `CLAUDE.md` — раскладка application interchange | ⬜ |
 
 ### Задача 10 — подробности
@@ -228,3 +228,9 @@ Git (`git/`) — этап 8: его сервисы в этой задаче по
   пойдёт картинкам в 9.6. Сборочные части выгрузки (`DeterministicZip`, `ExportDelivery`, `LossReportJson`,
   новый `ExportFileNames`) остались в `exporting` и стали публичными — handler'ы их собирают, как
   писатели `oef` и `rendering`.
+- **9.6.** Порт `ViewImageApplicationService`, handler'ы `ViewImageExportQueryHandler`
+  и `AllViewImagesExportQueryHandler`; общее (разбор параметров, отрисовка, записи потерь) — package-private
+  `ViewImages` в `handler`, как `ViewLookup` у modeling. `ViewImageService` и `ImageRequest` удалены, результат —
+  тот же `ExportFileResponse`, что у выгрузки модели, и контроллер собирает ответ одним методом. Константы
+  имён форматов и фонов закрыты: снаружи их никто не читал. Порядок «роль → параметры → чтение» был
+  и раньше, теперь его держит ядро и `ViewImageOrderTest`. В списке не переведённых остался только Git.
