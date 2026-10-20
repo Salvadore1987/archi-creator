@@ -123,7 +123,8 @@ paths:
             application/zip:
               schema: { type: string, format: binary }
               description: |
-                csv: elements.csv и relations.csv, UTF-8 с BOM.
+                csv: elements.csv и relations.csv, UTF-8 с BOM; значение с ведущим `=`, `+`, `-`, `@`,
+                табуляцией или возвратом каретки — с апострофом впереди, чтобы Excel не выполнил его как формулу.
                 oef: `<слаг модели>-v<N>.xml` (слаг в латинице), проверенный по XSD 3.1, и `loss-report.json`;
                 число записей отчёта — в `X-Archi-Loss-Count`.
         '404':

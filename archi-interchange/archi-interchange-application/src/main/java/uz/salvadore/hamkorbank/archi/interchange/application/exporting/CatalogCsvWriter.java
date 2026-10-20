@@ -34,12 +34,17 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
  * Excel запятая полей не делит), {@code \r\n} между строками (RFC 4180), столбцы свойств
  * по частоте ключа — заполненные первыми. Обратной загрузки нет и не будет.
  *
+ * <p>Значение с ведущим {@code =}, {@code +}, {@code -}, {@code @}, табуляцией или возвратом
+ * каретки получает апостроф впереди, иначе Excel выполнит его как формулу.
+ *
  * <p>Zip детерминирован: время записей фиксировано, порядок строк — порядок файла.
  */
 public final class CatalogCsvWriter {
 
     private static final byte[] BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
     private static final ArchiTypeRegistry REGISTRY = ArchiTypeRegistry.archimate32();
+    /** Первые символы, с которых Excel и другие табличные редакторы начинают формулу. */
+    private static final String FORMULA_START = "=+-@\t\r";
 
     private final String yes;
     private final String no;
@@ -207,9 +212,18 @@ public final class CatalogCsvWriter {
     }
 
     private static String render(List<List<String>> rows, char separator) {
-        return rows.stream().map(row -> row.stream().map(v -> quote(v, separator))
+        return rows.stream().map(row -> row.stream().map(v -> quote(neutralize(v), separator))
                         .collect(Collectors.joining(String.valueOf(separator))))
                 .collect(Collectors.joining("\r\n", "", "\r\n"));
+    }
+
+    /**
+     * Значение, которое Excel принял бы за формулу, — с апострофом впереди: имя или свойство
+     * {@code =HYPERLINK(…)} из чужого файла иначе выполнится у получателя каталога. Апостроф Excel
+     * не показывает, а прочие читатели получат его в данных — каталог делается для Excel.
+     */
+    static String neutralize(String value) {
+        return !value.isEmpty() && FORMULA_START.indexOf(value.charAt(0)) >= 0 ? "'" + value : value;
     }
 
     /** RFC 4180: в кавычки — поле с разделителем, кавычкой, переводом строки или краевым пробелом. */

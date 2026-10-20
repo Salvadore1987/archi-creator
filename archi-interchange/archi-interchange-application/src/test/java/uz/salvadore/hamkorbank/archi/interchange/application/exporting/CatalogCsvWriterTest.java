@@ -84,6 +84,42 @@ class CatalogCsvWriterTest {
     }
 
     @Test
+    @DisplayName("§5.2: значение с ведущим =, +, -, @ — с апострофом, Excel не выполнит его как формулу")
+    void formulaPrefixIsEscaped() throws IOException {
+        String xml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" \
+                xmlns:archimate="http://www.archimatetool.com/archimate" name="m" \
+                id="id-08d90f89945db916e45a0ffddcef01b8" version="5.0.0">
+                  <folder name="Business" id="id-26155a74b0630c3744cf809f15e023ec" type="business">
+                    <element xsi:type="archimate:BusinessActor" name="=HYPERLINK(&quot;x&quot;)" \
+                id="id-9e3f08b2827e0cfe7cbf274d9a493294">
+                      <documentation>-1+2</documentation>
+                      <property key="@owner" value="+7 71 200"/>
+                      <property key="owner" value="Отдел - платежи"/>
+                    </element>
+                  </folder>
+                </archimate:model>
+                """;
+        String elements = text(unzip(new CatalogCsvWriter(RU).write(xml.getBytes(StandardCharsets.UTF_8),
+                CatalogCsvOptions.of(null, null))).get("elements.csv"));
+
+        String[] lines = elements.split("\r\n");
+        assertTrue(lines[0].endsWith(";placed;'@owner;owner"), lines[0]);
+        assertEquals("id-9e3f08b2827e0cfe7cbf274d9a493294;Business Actor;\"'=HYPERLINK(\"\"x\"\")\";Business;"
+                + "Business;'-1+2;0;нет;'+7 71 200;Отдел - платежи", lines[1]);
+    }
+
+    @Test
+    @DisplayName("§5.2: табуляция и возврат каретки в начале — тоже начало формулы; в середине — нет")
+    void neutralizeLeadingOnly() {
+        assertEquals("'\t=1", CatalogCsvWriter.neutralize("\t=1"));
+        assertEquals("'\r=1", CatalogCsvWriter.neutralize("\r=1"));
+        assertEquals("a=1", CatalogCsvWriter.neutralize("a=1"));
+        assertEquals("", CatalogCsvWriter.neutralize(""));
+    }
+
+    @Test
     @DisplayName("RFC 4180: поле с разделителем, кавычкой или переводом строки — в кавычках")
     void quoting() {
         assertEquals("\"a;b\"", CatalogCsvWriter.quote("a;b", ';'));
