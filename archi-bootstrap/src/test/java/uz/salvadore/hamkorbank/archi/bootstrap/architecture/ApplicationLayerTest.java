@@ -49,7 +49,6 @@ class ApplicationLayerTest {
      */
     private static final Set<String> NOT_YET_MIGRATED = Set.of(
             INTERCHANGE + ".importing.ImportService",
-            INTERCHANGE + ".importing.ImportReport",
             INTERCHANGE + ".exporting.ExportService",
             INTERCHANGE + ".exporting.ExportRequest",
             INTERCHANGE + ".exporting.ViewImageService",

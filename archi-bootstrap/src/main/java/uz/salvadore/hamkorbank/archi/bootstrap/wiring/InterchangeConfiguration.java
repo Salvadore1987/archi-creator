@@ -12,6 +12,8 @@ import uz.salvadore.hamkorbank.archi.bootstrap.git.GitSettings;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ViewImageService;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingService;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.ArchimateFileImportCommandHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.InterchangeKernel;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.oef.OefSchema;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
@@ -22,11 +24,14 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMet
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Rasterizer;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation;
+import uz.salvadore.hamkorbank.archi.interchange.application.service.ImportApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 
 /** Сценарии interchange — бинами. Транзакция — общая с modeling. */
 @Configuration
@@ -44,12 +49,23 @@ public class InterchangeConfiguration {
     }
 
     @Bean
-    ImportService importService(ImportSessionRepository sessions, ImportPolicy policy,
-                                ModelExchangeApplicationService models, UnitOfWork unitOfWork,
-                                InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts, Clock clock,
-                                InterchangeSettings settings) {
-        return new ImportService(sessions, policy, models, new StaxArchiDocumentReader(), unitOfWork, events, metrics,
-                texts, clock, settings.maxParallelImportsPerWorkspace());
+    InterchangeKernel interchangeKernel(UnitOfWork unitOfWork, InterchangeEvents events, InterchangeMetrics metrics,
+                                        TextCatalog texts, Clock clock) {
+        return new InterchangeKernel(unitOfWork, events, metrics, texts, clock);
+    }
+
+    @Bean
+    ImportApplicationService importApplicationService(InterchangeKernel kernel, ImportSessionRepository sessions,
+                                                      ImportPolicy policy, ModelExchangeApplicationService models,
+                                                      WorkspaceApplicationService workspaces,
+                                                      InterchangeSettings settings) {
+        return new ImportApplicationServiceImpl(new ArchimateFileImportCommandHandler(kernel, sessions, policy, models,
+                workspaces, new StaxArchiDocumentReader(), settings.maxParallelImportsPerWorkspace()));
+    }
+
+    @Bean
+    ImportService importService(ImportPolicy policy, UnitOfWork unitOfWork, InterchangeMetrics metrics) {
+        return new ImportService(policy, unitOfWork, metrics);
     }
 
     @Bean

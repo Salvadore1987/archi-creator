@@ -1,4 +1,4 @@
-package uz.salvadore.hamkorbank.archi.interchange.application.importing;
+package uz.salvadore.hamkorbank.archi.interchange.application.handler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -8,10 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ImportArchimateFileCommand;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ImportArchimateFileResponse;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ImportArchimateFileResponse.Outcome;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
-import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
 
 class ImportTransactionsTest {
 
@@ -30,10 +32,9 @@ class ImportTransactionsTest {
             return new StaxArchiDocumentReader().read(in);
         };
 
-        ImportReport report = service(reader).importFile(ImportFakes.ARCHITECT, ImportFakes.WORKSPACE,
-                "test.archimate", FILE, "key-1");
+        ImportArchimateFileResponse report = importFile(reader, "key-1");
 
-        assertEquals(ImportStatus.APPLIED, report.status());
+        assertEquals(Outcome.APPLIED, report.outcome());
         assertEquals(List.of("none"), parsedIn);
         assertEquals(List.of("write"), models.importedIn);
         assertEquals(1, transactions.opened.stream().filter(t -> t.equals("write")).count(),
@@ -47,22 +48,22 @@ class ImportTransactionsTest {
             @Override
             public ModelDocument read(InputStream in) {
                 ModelDocument document = new StaxArchiDocumentReader().read(in);
-                ImportReport first = service(new StaxArchiDocumentReader()).importFile(ImportFakes.ARCHITECT,
-                        ImportFakes.WORKSPACE, "test.archimate", FILE, "key-2");
-                assertEquals(ImportStatus.APPLIED, first.status());
+                ImportArchimateFileResponse first = importFile(new StaxArchiDocumentReader(), "key-2");
+                assertEquals(Outcome.APPLIED, first.outcome());
                 return document;
             }
         };
 
-        ImportReport second = service(reader).importFile(ImportFakes.ARCHITECT, ImportFakes.WORKSPACE,
-                "test.archimate", FILE, "key-2");
+        ImportArchimateFileResponse second = importFile(reader, "key-2");
 
+        assertEquals(Outcome.REPLAYED, second.outcome());
         assertTrue(second.replayed());
         assertEquals(1, models.importedIn.size());
         assertEquals(1, sessions.rows.size());
     }
 
-    private ImportService service(ArchiDocumentReader reader) {
-        return ImportFakes.service(reader, transactions, sessions, models);
+    private ImportArchimateFileResponse importFile(ArchiDocumentReader reader, String key) {
+        return ImportFakes.handler(reader, transactions, sessions, models).handle(ImportFakes.ARCHITECT,
+                new ImportArchimateFileCommand(ImportFakes.WORKSPACE, "test.archimate", FILE, key));
     }
 }

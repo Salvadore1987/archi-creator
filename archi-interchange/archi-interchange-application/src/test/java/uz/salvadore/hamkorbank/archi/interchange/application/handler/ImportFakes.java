@@ -1,4 +1,4 @@
-package uz.salvadore.hamkorbank.archi.interchange.application.importing;
+package uz.salvadore.hamkorbank.archi.interchange.application.handler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -22,6 +22,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiDocumentReade
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EnsureDefaultWorkspaceCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.RecordGitShaCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceModelContentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetCommittedVersionQuery;
@@ -29,15 +30,19 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetLastPubli
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelContentQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelSummaryQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetVersionSnapshotQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ResolveWorkspaceQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.CommittedVersionResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelContentResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ReplaceModelContentResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ResolveWorkspaceResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionSnapshotResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.WorkspaceResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 
@@ -64,22 +69,75 @@ final class ImportFakes {
                 """.formatted(folderType).getBytes(StandardCharsets.UTF_8);
     }
 
-    /** Сценарий импорта на фейках; строгость выключена и читается только в транзакции. */
-    static ImportService service(ArchiDocumentReader reader, Transactions transactions, Sessions sessions,
-                                 Models models) {
-        ImportPolicy policy = new ImportPolicy() {
-            @Override
-            public boolean strictImport(WorkspaceId workspaceId) {
-                assertEquals("read", transactions.current(), "строгость читается в транзакции");
-                return false;
-            }
+    /** Файл со связью, которую не допускает матрица: назначение от приложения к актору. */
+    static byte[] withMatrixViolation() {
+        return """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" \
+                xmlns:archimate="http://www.archimatetool.com/archimate" name="Нарушение" id="id-m1" version="5.0.0">
+                  <folder name="Business" id="id-f2" type="business">
+                    <element xsi:type="archimate:BusinessActor" name="Клиент" id="id-e1"/>
+                  </folder>
+                  <folder name="Application" id="id-f3" type="application">
+                    <element xsi:type="archimate:ApplicationComponent" name="АБС" id="id-e2"/>
+                  </folder>
+                  <folder name="Relations" id="id-f8" type="relations">
+                    <element xsi:type="archimate:AssignmentRelationship" id="id-r1" source="id-e2" target="id-e1"/>
+                  </folder>
+                </archimate:model>
+                """.getBytes(StandardCharsets.UTF_8);
+    }
 
-            @Override
-            public void setStrictImport(WorkspaceId workspaceId, boolean strict) {
-            }
-        };
-        return new ImportService(sessions, policy, models, reader, transactions, events -> { },
-                InterchangeMetrics.NONE, message -> message.key(), CLOCK, 2);
+    /** Сценарий импорта на фейках; строгость читается только в транзакции. */
+    static ArchimateFileImportCommandHandler handler(ArchiDocumentReader reader, Transactions transactions,
+                                                     Sessions sessions, Models models, Policy policy) {
+        policy.transactions = transactions;
+        return new ArchimateFileImportCommandHandler(new InterchangeKernel(transactions, events -> { },
+                InterchangeMetrics.NONE, message -> message.key(), CLOCK), sessions, policy, models,
+                new Workspaces(), reader, 2);
+    }
+
+    /** То же при выключенной строгости. */
+    static ArchimateFileImportCommandHandler handler(ArchiDocumentReader reader, Transactions transactions,
+                                                     Sessions sessions, Models models) {
+        return handler(reader, transactions, sessions, models, new Policy());
+    }
+
+    /** Строгость пространства; читается только в транзакции. */
+    static final class Policy implements ImportPolicy {
+
+        boolean strict;
+        private Transactions transactions;
+
+        @Override
+        public boolean strictImport(WorkspaceId workspaceId) {
+            assertEquals("read", transactions.current(), "строгость читается в транзакции");
+            return strict;
+        }
+
+        @Override
+        public void setStrictImport(WorkspaceId workspaceId, boolean strict) {
+            this.strict = strict;
+        }
+    }
+
+    /** Пространство по умолчанию — {@link #WORKSPACE}; названное клиентом отдаётся как есть. */
+    static final class Workspaces implements WorkspaceApplicationService {
+
+        @Override
+        public List<WorkspaceResponse> listWorkspaces() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ResolveWorkspaceResponse resolveWorkspace(ResolveWorkspaceQuery query) {
+            return new ResolveWorkspaceResponse(query.workspaceId() == null ? WORKSPACE : query.workspaceId());
+        }
+
+        @Override
+        public WorkspaceResponse ensureDefaultWorkspace(EnsureDefaultWorkspaceCommand command) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     /** Транзакции с видом: вложенная присоединяется к внешней, как у {@code TransactionTemplate}. */

@@ -27,21 +27,16 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportResult;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportSettings;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ImportArchimateFileCommand;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ImportArchimateFileResponse;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ImageRequest;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ViewImageService;
-import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportReport;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
-import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
-import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
-import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
-import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportRequest;
-import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
-import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ResolveWorkspaceQuery;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 
 /**
@@ -54,19 +49,19 @@ public class InterchangeController {
     /** Число записей отчёта о потерях выгрузки; у {@code .archimate} — ноль. */
     static final String LOSS_COUNT = "X-Archi-Loss-Count";
 
-    private final ImportService imports;
+    private final ImportApplicationService imports;
+    private final ImportService policies;
     private final ExportService exports;
     private final ViewImageService images;
-    private final WorkspaceApplicationService workspaces;
     private final TextCatalog text;
 
-    public InterchangeController(ImportService imports, ExportService exports, ViewImageService images,
-                                 WorkspaceApplicationService workspaces, TextCatalog text) {
+    public InterchangeController(ImportApplicationService imports, ImportService policies, ExportService exports,
+                                 ViewImageService images, TextCatalog text) {
         this.text = text;
         this.images = images;
         this.imports = imports;
+        this.policies = policies;
         this.exports = exports;
-        this.workspaces = workspaces;
     }
 
     /**
@@ -79,22 +74,16 @@ public class InterchangeController {
                                         @RequestParam(required = false) UUID workspaceId,
                                         @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                         HttpServletRequest request) {
-        ImportReport report = imports.importFile(actor, workspace(workspaceId),
-                ImportRequest.sourceNameOrDefault(file.getOriginalFilename()),
-                bytes(file), key);
-        ImportResult body = result(report, text);
-        if (report.status() == ImportStatus.APPLIED) {
-            return report.replayed() ? ResponseEntity.ok(body)
-                    : ResponseEntity.created(URI.create("/api/v1/models/" + body.modelId())).body(body);
-        }
-        HttpStatus status = report.rejectedAsCorrupt() ? HttpStatus.BAD_REQUEST : HttpStatus.UNPROCESSABLE_CONTENT;
-        String code = report.rejectedAsCorrupt() ? InterchangeCodes.CORRUPT_DOCUMENT
-                : InterchangeCodes.STRICT_IMPORT_REJECTED;
-        String detail = text.text(Message.of(report.rejectedAsCorrupt()
-                ? InterchangeMessages.REJECTED_CORRUPT : InterchangeMessages.REJECTED_STRICT));
-        ProblemDetail problem = InterchangeProblemHandler.problem(status, code, detail,
-                Map.of("sessionId", body.sessionId(), "findings", body.findings()), request, text);
-        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_PROBLEM_JSON).body(problem);
+        ImportArchimateFileResponse result = imports.importArchimateFile(actor,
+                new ImportArchimateFileCommand(workspaceId, file.getOriginalFilename(), bytes(file), key));
+        ImportResult body = new ImportResult(result.sessionId(), result.status(), result.modelId(),
+                result.versionNo(), result.replayed(), FindingMapper.findings(result.findings()));
+        return switch (result.outcome()) {
+            case APPLIED -> ResponseEntity.created(URI.create("/api/v1/models/" + body.modelId())).body(body);
+            case REPLAYED -> ResponseEntity.ok(body);
+            case REJECTED_CORRUPT -> rejected(HttpStatus.BAD_REQUEST, result, body, request);
+            case REJECTED_STRICT -> rejected(HttpStatus.UNPROCESSABLE_CONTENT, result, body, request);
+        };
     }
 
     /**
@@ -145,14 +134,14 @@ public class InterchangeController {
     /** Настройка импорта рабочего пространства: включён ли строгий режим. */
     @GetMapping("/workspaces/{id}/import-settings")
     public ImportSettings importSettings(@PathVariable UUID id) {
-        return new ImportSettings(imports.strictImport(id));
+        return new ImportSettings(policies.strictImport(id));
     }
 
     /** Включает или выключает строгий режим импорта пространства и отдаёт итоговую настройку. */
     @PutMapping("/workspaces/{id}/import-settings")
     public ImportSettings configure(EditorIdentity actor, @PathVariable UUID id, @RequestBody ImportSettings settings) {
-        imports.configureStrictImport(actor, id, settings.strictImport());
-        return new ImportSettings(imports.strictImport(id));
+        policies.configureStrictImport(actor, id, settings.strictImport());
+        return new ImportSettings(policies.strictImport(id));
     }
 
     private static ResponseEntity<byte[]> image(ViewImageService.ImageExport export) {
@@ -171,8 +160,11 @@ public class InterchangeController {
                 .lastModified(Instant.EPOCH);
     }
 
-    private UUID workspace(UUID requested) {
-        return workspaces.resolveWorkspace(new ResolveWorkspaceQuery(requested)).workspaceId();
+    private ResponseEntity<ProblemDetail> rejected(HttpStatus status, ImportArchimateFileResponse result,
+                                                   ImportResult body, HttpServletRequest request) {
+        ProblemDetail problem = InterchangeProblemHandler.problem(status, result.refusalCode(), result.refusalText(),
+                Map.of("sessionId", body.sessionId(), "findings", body.findings()), request, text);
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_PROBLEM_JSON).body(problem);
     }
 
     private static byte[] bytes(MultipartFile file) {
@@ -181,11 +173,5 @@ public class InterchangeController {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    private static ImportResult result(ImportReport report, TextCatalog text) {
-        return new ImportResult(report.sessionId().value(), report.status().name(), report.modelId(),
-                report.versionNo() > 0 ? report.versionNo() : null, report.replayed(),
-                FindingMapper.findings(report.findings(), text));
     }
 }
