@@ -28,6 +28,7 @@ public enum InterchangeOperation {
     EXPORT_ALL_VIEW_IMAGES("ExportAllViewImages", InterchangeMessages.OPERATION_EXPORT_ALL_VIEW_IMAGES,
             Role.VIEWER, Role.ARCHITECT, Role.ADMIN),
     CONFIGURE_IMPORT_POLICY("ConfigureImportPolicy", InterchangeMessages.OPERATION_CONFIGURE_IMPORT_POLICY, Role.ADMIN),
+    GET_IMPORT_POLICY("GetImportPolicy", InterchangeMessages.OPERATION_GET_IMPORT_POLICY, Role.ARCHITECT, Role.ADMIN),
     PUSH_MODEL_TO_GIT("PushModelToGit", InterchangeMessages.OPERATION_PUSH_MODEL_TO_GIT, Role.ARCHITECT, Role.ADMIN),
     PULL_MODEL_FROM_GIT("PullModelFromGit", InterchangeMessages.OPERATION_PULL_MODEL_FROM_GIT,
             Role.ARCHITECT, Role.ADMIN),

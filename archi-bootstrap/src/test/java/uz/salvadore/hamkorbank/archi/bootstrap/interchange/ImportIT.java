@@ -18,12 +18,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ConfigureImportPolicyCommand;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ImportArchimateFileCommand;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.query.GetImportPolicyQuery;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ImportArchimateFileResponse;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ImportArchimateFileResponse.Outcome;
-import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportSessionRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportApplicationService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportPolicyApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.IllegalImportTransitionException;
@@ -40,13 +42,13 @@ class ImportIT extends IntegrationTest {
     @Autowired
     ImportApplicationService imports;
     @Autowired
-    ImportService policies;
+    ImportPolicyApplicationService policies;
     @Autowired
     ImportSessionRepository sessions;
 
     @AfterEach
     void lenientAgain() {
-        policies.configureStrictImport(ADMIN, workspace().value(), false);
+        strict(ADMIN, false);
     }
 
     @Test
@@ -90,7 +92,7 @@ class ImportIT extends IntegrationTest {
 
         ImportArchimateFileResponse lenient = importFile(ARCHITECT, workspace().value(), "c.archimate", corrupt,
                 null);
-        policies.configureStrictImport(ADMIN, workspace().value(), true);
+        strict(ADMIN, true);
         ImportArchimateFileResponse strict = importFile(ARCHITECT, workspace().value(), "c.archimate", corrupt,
                 null);
 
@@ -105,7 +107,7 @@ class ImportIT extends IntegrationTest {
     void matrixViolationDependsOnStrictMode() {
         ImportArchimateFileResponse lenient = importFile(ARCHITECT, workspace().value(), "v.archimate",
                 Fixtures.withMatrixViolation(), null);
-        policies.configureStrictImport(ADMIN, workspace().value(), true);
+        strict(ADMIN, true);
         ImportArchimateFileResponse strict = importFile(ARCHITECT, workspace().value(), "v.archimate",
                 Fixtures.withMatrixViolation(), null);
 
@@ -117,10 +119,19 @@ class ImportIT extends IntegrationTest {
     }
 
     @Test
-    @DisplayName("FR-49, FR-28: строгость меняет только ADMIN, импорт — не VIEWER")
+    @DisplayName("FR-49: смена строгости отдаёт итоговую настройку, чтение — ту же")
+    void configuredPolicyIsReturnedAndRead() {
+        assertTrue(strict(ADMIN, true));
+        assertTrue(policies.getImportPolicy(ARCHITECT, new GetImportPolicyQuery(workspace().value())).strictImport());
+    }
+
+    @Test
+    @DisplayName("FR-49, FR-28: строгость меняет только ADMIN, читает не VIEWER, импорт — не VIEWER")
     void rolesGuardImport() {
         assertEquals(Failure.FORBIDDEN, assertThrows(InterchangeException.class,
-                () -> policies.configureStrictImport(ARCHITECT, workspace().value(), true)).failure());
+                () -> policies.getImportPolicy(VIEWER, new GetImportPolicyQuery(workspace().value()))).failure());
+        assertEquals(Failure.FORBIDDEN, assertThrows(InterchangeException.class,
+                () -> strict(ARCHITECT, true)).failure());
         assertEquals(Failure.FORBIDDEN, assertThrows(InterchangeException.class, () -> importFile(VIEWER,
                 workspace().value(), "v.archimate", Fixtures.fixture("styled_objects"), null)).failure());
     }
@@ -128,6 +139,11 @@ class ImportIT extends IntegrationTest {
     private ImportArchimateFileResponse importFile(EditorIdentity actor, UUID workspaceId, String name, byte[] file,
                                                    String key) {
         return imports.importArchimateFile(actor, new ImportArchimateFileCommand(workspaceId, name, file, key));
+    }
+
+    private boolean strict(EditorIdentity actor, boolean strict) {
+        return policies.configureImportPolicy(actor, new ConfigureImportPolicyCommand(workspace().value(), strict))
+                .strictImport();
     }
 
     private int models() {

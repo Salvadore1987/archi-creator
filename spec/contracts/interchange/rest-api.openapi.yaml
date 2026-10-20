@@ -259,8 +259,9 @@ paths:
     get:
       tags: [interchange]
       operationId: importSettings
-      summary: Строгость импорта пространства (FR-49)
+      summary: Строгость импорта пространства — читают ARCHITECT и ADMIN (FR-49)
       x-use-case: UC-IXC-001
+      x-operation: GetImportPolicy
       responses:
         '200':
           headers:
@@ -268,6 +269,12 @@ paths:
           description: Текущее значение.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ImportSettings' } }
+        '403':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
+          description: Не ARCHITECT и не ADMIN.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
     put:
       tags: [interchange]
       operationId: configureImportSettings

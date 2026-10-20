@@ -27,15 +27,17 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportResult;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportSettings;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ConfigureImportPolicyCommand;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ImportArchimateFileCommand;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.query.GetImportPolicyQuery;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ImportArchimateFileResponse;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ImageRequest;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ViewImageService;
-import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportApplicationService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportPolicyApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 
@@ -50,13 +52,13 @@ public class InterchangeController {
     static final String LOSS_COUNT = "X-Archi-Loss-Count";
 
     private final ImportApplicationService imports;
-    private final ImportService policies;
+    private final ImportPolicyApplicationService policies;
     private final ExportService exports;
     private final ViewImageService images;
     private final TextCatalog text;
 
-    public InterchangeController(ImportApplicationService imports, ImportService policies, ExportService exports,
-                                 ViewImageService images, TextCatalog text) {
+    public InterchangeController(ImportApplicationService imports, ImportPolicyApplicationService policies,
+                                 ExportService exports, ViewImageService images, TextCatalog text) {
         this.text = text;
         this.images = images;
         this.imports = imports;
@@ -133,15 +135,15 @@ public class InterchangeController {
 
     /** Настройка импорта рабочего пространства: включён ли строгий режим. */
     @GetMapping("/workspaces/{id}/import-settings")
-    public ImportSettings importSettings(@PathVariable UUID id) {
-        return new ImportSettings(policies.strictImport(id));
+    public ImportSettings importSettings(EditorIdentity actor, @PathVariable UUID id) {
+        return new ImportSettings(policies.getImportPolicy(actor, new GetImportPolicyQuery(id)).strictImport());
     }
 
     /** Включает или выключает строгий режим импорта пространства и отдаёт итоговую настройку. */
     @PutMapping("/workspaces/{id}/import-settings")
     public ImportSettings configure(EditorIdentity actor, @PathVariable UUID id, @RequestBody ImportSettings settings) {
-        policies.configureStrictImport(actor, id, settings.strictImport());
-        return new ImportSettings(policies.strictImport(id));
+        return new ImportSettings(policies.configureImportPolicy(actor,
+                new ConfigureImportPolicyCommand(id, settings.strictImport())).strictImport());
     }
 
     private static ResponseEntity<byte[]> image(ViewImageService.ImageExport export) {

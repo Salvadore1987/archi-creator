@@ -76,6 +76,8 @@ public final class InterchangeMessages {
     public static final String OPERATION_EXPORT_ALL_VIEW_IMAGES = "interchange.operation.export-all-view-images";
     /** Название операции в отказе роли: настройка импорта. */
     public static final String OPERATION_CONFIGURE_IMPORT_POLICY = "interchange.operation.configure-import-policy";
+    /** Название операции в отказе роли: чтение настройки импорта. */
+    public static final String OPERATION_GET_IMPORT_POLICY = "interchange.operation.get-import-policy";
     /** Название операции в отказе роли: публикация в Git. */
     public static final String OPERATION_PUSH_MODEL_TO_GIT = "interchange.operation.push-model-to-git";
     /** Название операции в отказе роли: импорт из Git. */

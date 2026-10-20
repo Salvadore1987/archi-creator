@@ -84,7 +84,7 @@ Git (`git/`) — этап 8: его сервисы в этой задаче по
 | 9.1 | Правила `ApplicationLayerTest` распространить на interchange: порт `port.in` без доменных типов, имена и места DTO и handler'ов, адаптеры — только через `port.in`; список не переведённых | ✅ |
 | 9.2 | Ядро interchange: роль, метрика, транзакция; роль — раньше разбора ввода (06-07) | ✅ |
 | 9.3 | Импорт файла: `ImportArchimateFileCommand` с `workspaceId` «не задан» — пространство по умолчанию выбирает handler, контроллер больше не зовёт `resolveWorkspace` (замечание к 12.3 из плана этапа 5); результат с исходом `APPLIED`/`REPLAYED`/`REJECTED_CORRUPT`/`REJECTED_STRICT` и кодом отказа — контроллер переводит исход в статус без своих решений (06-05) | ✅ |
-| 9.4 | Настройка импорта: `ConfigureImportPolicyCommand` отдаёт итоговую настройку; чтение — `GetImportPolicyQuery` с операцией и ролью в `InterchangeOperation` и `spec/nfr/interchange.yaml` (06-06) | ⬜ |
+| 9.4 | Настройка импорта: `ConfigureImportPolicyCommand` отдаёт итоговую настройку; чтение — `GetImportPolicyQuery` с операцией и ролью в `InterchangeOperation` и `spec/nfr/interchange.yaml` (06-06) | ✅ |
 | 9.5 | Выгрузка модели: один сценарий по `ExportModelQuery` с форматом строкой; разбор формата и параметров CSV — в handler'е после роли; недостижимая ветка `IXC_FORMAT_NOT_AVAILABLE` и код — убрать (06-07); результат — DTO без `Artifact` | ⬜ |
 | 9.6 | Картинки представлений: `ExportViewImageQuery`, `ExportAllViewImagesQuery`, результат — DTO | ⬜ |
 | 9.7 | `RestLayerConventionsTest`: контроллер interchange не ссылается на `*Codes`, кроме разбора ввода; `CLAUDE.md` — раскладка application interchange | ⬜ |
@@ -209,3 +209,11 @@ Git (`git/`) — этап 8: его сервисы в этой задаче по
   отказа с `replayed = true`, `REPLAYED` — только у принятой. Находки уходят из handler'а текстом на языке
   запроса (`ImportFindingResponse`); `FindingMapper` по доменным находкам остался для Git. Настройку
   строгости `ImportService` держит до 9.4. `ImportGate` и тесты импорта переехали в `handler`.
+- **9.4.** Порт `ImportPolicyApplicationService`, два handler'а; `ImportService` удалён. Роли чтения
+  (`GetImportPolicy`) — `ARCHITECT` и `ADMIN`: настройка касается тех, кто импортирует, а `VIEWER` импортировать
+  не может. Чтение привязки Git (`ConfigureGitBinding`, только `ADMIN`) образцом не взято: там адрес
+  репозитория и ссылка на секрет, здесь — один флаг. Роли выбраны без отдельного вопроса владельцу —
+  записаны в `spec/nfr/interchange.yaml` и в контракте (`403`). Смена отдаёт итог, перечитанный
+  в той же транзакции записи. Отдельной проверки «публичный сценарий без операции» не заводили:
+  каждый handler зовёт `kernel.run` с операцией, а сверку таблицы ролей со спецификацией держит
+  `OperationTablesTest`.
