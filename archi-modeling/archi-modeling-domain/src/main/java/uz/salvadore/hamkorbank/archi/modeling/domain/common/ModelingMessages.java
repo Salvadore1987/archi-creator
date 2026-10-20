@@ -234,6 +234,8 @@ public final class ModelingMessages {
     public static final String HAS_RELATIONSHIPS = "modeling.relationship.still-attached";
     /** В запросе неизвестный вид доступа связи. */
     public static final String ACCESS_TYPE_REQUESTED = "modeling.request.access-type";
+    /** В строке модели вид доступа связи значением, которого нет в файловой записи Archi. */
+    public static final String ROW_ACCESS_TYPE = "modeling.rows.access-type";
     /** В запросе запись списка доступа с неизвестным типом субъекта или уровнем. */
     public static final String ACL_ENTRY_FORMAT = "modeling.request.acl-entry";
     /** В запросе тип записан не в виде {@code archimate:Имя}. */
