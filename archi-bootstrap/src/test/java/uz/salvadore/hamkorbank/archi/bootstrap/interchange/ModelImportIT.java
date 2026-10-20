@@ -15,10 +15,12 @@ import org.junit.jupiter.params.provider.FieldSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
-import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportService;
-import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportReport;
-import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportService;
-import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ImportArchimateFileCommand;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.query.ExportModelQuery;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ImportArchimateFileResponse;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ImportArchimateFileResponse.Outcome;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ExportApplicationService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportApplicationService;
 
 /**
  * Круг без потерь на уровне сценариев: импорт → таблицы → экспорт даёт
@@ -29,24 +31,23 @@ class ModelImportIT extends IntegrationTest {
     static final List<String> FIXTURES = Fixtures.SYNTHETIC;
 
     @Autowired
-    ImportService imports;
+    ImportApplicationService imports;
     @Autowired
-    ExportService exports;
+    ExportApplicationService exports;
 
     @Test
     @DisplayName("INV-MDL-009, INV-IXC-005: эталон проходит импорт → таблицы → экспорт без потерь")
     void folderTreeSurvivesRoundTrip() {
         byte[] original = Fixtures.reference();
 
-        ImportReport report = imports.importFile(ARCHITECT, workspace().value(), "Hamkorbank.archimate", original,
-                null);
+        ImportArchimateFileResponse report = importFile("Hamkorbank.archimate", original);
 
-        assertEquals(ImportStatus.APPLIED, report.status(), () -> report.findings().toString());
+        assertEquals(Outcome.APPLIED, report.outcome(), () -> report.findings().toString());
         UUID model = report.modelId();
-        assertEquals(1, report.versionNo());
+        assertEquals(1L, report.versionNo());
         assertEquals(402, count("element where model_id = ?", model));
         assertEquals(12, count("view where model_id = ?", model));
-        assertXmlEquivalent(original, exports.archimate(VIEWER, model, null).artifact().bytes());
+        assertXmlEquivalent(original, archimate(model, null));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -55,25 +56,33 @@ class ModelImportIT extends IntegrationTest {
     void fixtureSurvivesDatabaseRoundTrip(String fixture) {
         byte[] original = Fixtures.fixture(fixture);
 
-        ImportReport report = imports.importFile(ARCHITECT, workspace().value(), fixture + ".archimate", original,
-                null);
+        ImportArchimateFileResponse report = importFile(fixture + ".archimate", original);
 
-        assertEquals(ImportStatus.APPLIED, report.status(), () -> report.findings().toString());
+        assertEquals(Outcome.APPLIED, report.outcome(), () -> report.findings().toString());
         assertXmlEquivalent(original,
-                exports.archimate(VIEWER, report.modelId(), 1L).artifact().bytes());
+                archimate(report.modelId(), 1L));
     }
 
     @Test
     @DisplayName("NFR-02: импорт эталонной модели укладывается в 3 секунды")
     void referenceImportsWithinThreeSeconds() {
         byte[] original = Fixtures.reference();
-        imports.importFile(ARCHITECT, workspace().value(), "warm-up.archimate", original, null);
+        importFile("warm-up.archimate", original);
 
         Instant start = Instant.now();
-        imports.importFile(ARCHITECT, workspace().value(), "timed.archimate", original, null);
+        importFile("timed.archimate", original);
         Duration took = Duration.between(start, Instant.now());
 
         assertTrue(took.compareTo(Duration.ofSeconds(3)) <= 0, "импорт занял " + took);
+    }
+
+    private ImportArchimateFileResponse importFile(String name, byte[] file) {
+        return imports.importArchimateFile(ARCHITECT,
+                new ImportArchimateFileCommand(workspace().value(), name, file, null));
+    }
+
+    private byte[] archimate(UUID model, Long versionNo) {
+        return exports.exportModel(VIEWER, new ExportModelQuery(model, null, versionNo, null, null)).content();
     }
 
     private int count(String fromWhere, UUID model) {

@@ -1,4 +1,4 @@
-package uz.salvadore.hamkorbank.archi.interchange.application.importing;
+package uz.salvadore.hamkorbank.archi.interchange.application.handler;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,8 +14,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
 /**
  * Предел одновременных импортов в одно рабочее пространство. Сверх предела — отказ
- * сразу, а не очередь: ждущий импорт держал бы поток запроса и соединение с базой,
- * которые нужны канве. Предел живёт в процессе: приложение — один экземпляр.
+ * сразу, а не очередь: ждущий импорт держал бы поток запроса, который нужен канве,
+ * а разбор большого файла — память. Предел живёт в процессе: приложение — один экземпляр.
  */
 final class ImportGate {
 

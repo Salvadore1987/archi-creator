@@ -142,7 +142,7 @@ final class ViewScene {
 
     private void edge(DocumentNode connection, int position) {
         Optional<DocumentNode> relationship = connection.attribute("archimateRelationship").map(concepts::get)
-                .filter(r -> r.archiType().filter(t -> t.endsWith("Relationship")).isPresent());
+                .filter(r -> r.kind() == DocumentNode.Kind.RELATIONSHIP);
         String archiType = relationship.flatMap(DocumentNode::archiType)
                 .orElse(connection.archiType().orElse(""));
         List<Bendpoint> bendpoints = new ArrayList<>();
@@ -194,6 +194,6 @@ final class ViewScene {
     }
 
     private static boolean isElement(DocumentNode node) {
-        return node.archiType().filter(t -> !t.endsWith("Relationship") && !t.endsWith("Model")).isPresent();
+        return node.kind() == DocumentNode.Kind.ELEMENT && node.archiType().isPresent();
     }
 }

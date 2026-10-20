@@ -107,7 +107,7 @@ paths:
         - { in: query, name: version, required: false, schema: { type: integer, format: int64 },
             description: "Номер версии; без него — последняя." }
         - { in: query, name: folder, required: false, schema: { type: string },
-            description: "Только csv: archi_id папки — выгрузка поддерева («каталог приложений»)." }
+            description: "Только csv: archi_id папки — выгрузка поддерева («каталог приложений»); папки нет в версии — 404 IXC_FOLDER_NOT_IN_VERSION." }
         - { in: query, name: sep, required: false, schema: { type: string, enum: [";", ",", "tab"], default: ";" },
             description: "Только csv: разделитель; ';' — для русской локали Excel." }
       responses:
@@ -123,13 +123,16 @@ paths:
             application/zip:
               schema: { type: string, format: binary }
               description: |
-                csv: elements.csv и relations.csv, UTF-8 с BOM.
+                csv: elements.csv и relations.csv, UTF-8 с BOM; значение с ведущим `=`, `+`, `-`, `@`,
+                табуляцией или возвратом каретки — с апострофом впереди, чтобы Excel не выполнил его как формулу.
                 oef: `<слаг модели>-v<N>.xml` (слаг в латинице), проверенный по XSD 3.1, и `loss-report.json`;
                 число записей отчёта — в `X-Archi-Loss-Count`.
         '404':
           headers:
             X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
-          description: Модели нет или она скрыта списком доступа (INV-MDL-011).
+          description: |
+            Модели нет или она скрыта списком доступа (INV-MDL-011). Только csv: папки `folder`
+            нет в версии или это не папка — `IXC_FOLDER_NOT_IN_VERSION`.
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '409':
@@ -204,6 +207,7 @@ paths:
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '422': { $ref: '#/components/responses/ImageOptionRejected422' }
+        '503': { $ref: '#/components/responses/RasterizerBusy503' }
 
   /models/{id}/views/export:
     get:
@@ -249,6 +253,7 @@ paths:
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '422': { $ref: '#/components/responses/ImageOptionRejected422' }
+        '503': { $ref: '#/components/responses/RasterizerBusy503' }
 
   /workspaces/{id}/import-settings:
     parameters:
@@ -256,8 +261,9 @@ paths:
     get:
       tags: [interchange]
       operationId: importSettings
-      summary: Строгость импорта пространства (FR-49)
+      summary: Строгость импорта пространства — читают ARCHITECT и ADMIN (FR-49)
       x-use-case: UC-IXC-001
+      x-operation: GetImportPolicy
       responses:
         '200':
           headers:
@@ -265,6 +271,12 @@ paths:
           description: Текущее значение.
           content:
             application/json: { schema: { $ref: '#/components/schemas/ImportSettings' } }
+        '403':
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
+          description: Не ARCHITECT и не ADMIN.
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
     put:
       tags: [interchange]
       operationId: configureImportSettings
@@ -1048,8 +1060,18 @@ components:
       description: |
         Недопустимый параметр картинки — `IXC_UNKNOWN_FORMAT` или
         `IXC_INVALID_EXPORT_OPTION`; PNG стороной больше 16 000 px (4 000 × 4 000
-        при `scale=4`) — `IXC_IMAGE_TOO_LARGE`, наибольшая допустимая плотность
-        в поле `maxScale` (0 — не помещается даже при `scale=1`).
+        при `scale=4`) или площадью больше 64 Мпикс — `IXC_IMAGE_TOO_LARGE`, наибольшая
+        допустимая плотность в поле `maxScale` (0 — не помещается даже при `scale=1`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+    RasterizerBusy503:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
+      description: |
+        PNG растеризуется по одному на процесс; растеризатор занят дольше 60 с —
+        `IXC_RASTERIZER_BUSY`, повторить позже. У SVG очереди нет.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }

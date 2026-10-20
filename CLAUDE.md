@@ -105,9 +105,19 @@ Application-слои без Spring: транзакция — порт `UnitOfWor
 и результаты — record'ы `application/dto/command|query|result` из простых значений; агрегат
 наружу не выходит, перевод — `application/mapper/`. Вход других контекстов (выгрузка, Git,
 импорт) — `ModelExchangeApplicationService`: роль у этих операций проверяет вызывающий.
-Держит `ApplicationLayerTest` (ArchUnit); единственное исключение — `ModelContent` во входе
-импорта, до перевода раскладки документа interchange. Interchange и advisor переводятся
-по этому образцу на своих этапах ревью.
+Держит `ApplicationLayerTest` (ArchUnit), исключений нет. Содержимое модели между modeling и раскладкой
+документа ходит строками из простых значений (`dto/ModelRows`): агрегаты из строк и обратно собирает
+`mapper/ModelRowsMapper`, а раскладка спрашивает правила формата у `mapper/ModelRowRules` — так остаток
+XML тот же, а правило одно. Advisor переводится по этому образцу на своём этапе ревью.
+
+**Application-слой interchange — по тому же образцу.** Входные порты `port/in/` — импорт файла,
+настройка импорта, выгрузка модели, картинки представлений; handler'ы — в `handler`, общее у них —
+`InterchangeKernel` (роль до любой работы, метрика, транзакция, часы, ключи; виден только пакету).
+Исход импорта (`APPLIED`, `REPLAYED`, `REJECTED_CORRUPT`, `REJECTED_STRICT`) с кодом и текстом отказа
+решает handler, контроллер лишь переводит его в статус. Сборочные части выгрузки — писатели CSV, OEF,
+SVG, детерминированный zip, отчёт о потерях — в `exporting`, `oef`, `rendering`. Адаптеру из application
+interchange доступны только `port.in`, `dto` и выходные порты (`ApplicationLayerTest`); сервисы Git ещё
+не переведены и перечислены там поимённо — их очередь на этапе ревью Git.
 
 Модули доменов друг от друга **не зависят**: Maven не допускает цикла, а partnership
 в карте контекстов двусторонний. Поэтому у interchange свой `ArchiId`, а проверка
@@ -175,7 +185,7 @@ API и до открытия потока; расход списывается �
 | Что | Где |
 |---|---|
 | Писатель SVG по визуальному языку канвы: силуэты, токены, иконки, маршрут связей, перенос подписи, отчёт о потерях | `archi-interchange-application/.../application/rendering/` (`SvgWriter`, `LabelLayout`, `Routing`) |
-| Сценарии `ExportViewImage`, `ExportAllViewImages` ([`UC-IXC-004`](spec/application/interchange/usecases/export-view-image.md)), порты `Typesetter`, `Rasterizer` | `ViewImageService`; `.../application/port/` |
+| Сценарии `ExportViewImage`, `ExportAllViewImages` ([`UC-IXC-004`](spec/application/interchange/usecases/export-view-image.md)), порты `Typesetter`, `Rasterizer` | `ViewImageExportQueryHandler`, `AllViewImagesExportQueryHandler`; `.../application/port/` |
 | REST: `GET /views/{id}/export`, `GET /models/{id}/views/export` | `InterchangeController` |
 | Нотация из classpath, шрифт Inter на AWT, подмножество глифов (fontbox), растр (Batik) | `archi-bootstrap/.../bootstrap/export/` |
 | Шрифт Inter 4.1 (TTF — сервер, WOFF2 — канва, OFL) | `archi-bootstrap/src/main/resources/ui/fonts/` |
@@ -219,7 +229,7 @@ opaque. Остаток XML у поддержанного и opaque-элемен�
 |---|---|
 | Официальная XSD OEF 3.1 и проверка по ней без сети | `archi-interchange-application/src/main/resources/.../application/oef/*.xsd`, `OefSchema` |
 | Писатель OEF с отчётом о потерях | `archi-interchange-application/.../application/oef/OefWriter` |
-| Сценарий `ExportOpenExchange` ([`UC-IXC-005`](spec/application/interchange/usecases/export-open-exchange.md)), `GET /models/{id}/export?fmt=oef` | `ExportService.openExchange`; `500 IXC_OEF_SCHEMA_VIOLATION` — `ExportDefectException` |
+| Сценарий `ExportOpenExchange` ([`UC-IXC-005`](spec/application/interchange/usecases/export-open-exchange.md)), `GET /models/{id}/export?fmt=oef` | `ModelExportQueryHandler`; `500 IXC_OEF_SCHEMA_VIOLATION` — `ExportDefectException` |
 | Эталоны выгрузки и их отчёты | `archi-bootstrap/src/test/resources/fixtures/oef_export_*.{xml,losses.txt}`, `OefExportFixturesTest` |
 | Пункт меню «Экспорт» | `frontend/src/app/TopBar.tsx`; `e2e/view-export.spec.ts` |
 
@@ -322,7 +332,7 @@ macOS и старый Проводник его не создают. Измен�
 Контуры добавляемых узлов — узлы React Flow вне документа: их изменения размеров
 в состояние канвы не идут, иначе ResizeObserver зацикливается.
 
-Тестов на сервере: 592 юнит-теста (`./mvnw test`) и 96 интеграционных `*IT` на
+Тестов на сервере: 635 юнит-тестов (`./mvnw test`) и 100 интеграционных `*IT` на
 Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
 Во фронтенде: 67 юнит-тестов vitest (`npm test`, гоняется фазой `test` Maven)
 и 87 сценариев Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
@@ -438,10 +448,15 @@ jar'а в репозитории нет.
 | Что | Чем | Когда |
 |---|---|---|
 | Строка ≤ 120, без табуляции; импорты — без `*`, без лишних, статические первым блоком, остальные одним по алфавиту; Javadoc у публичных типов, публичных и protected методов (кроме `@Override`) и публичных констант основного кода | Checkstyle, `config/checkstyle.xml` | `validate` |
-| Сложность метода ≤ 25, нет пустого `catch` (и с комментарием), нет `var`, нет `System.out` и `printStackTrace` — в основном коде и тестах | PMD, `config/pmd-ruleset.xml` | `process-test-classes` |
+| Сложность метода ≤ 25, нет пустого `catch` (и с комментарием), нет `var`, нет `System.out` и `printStackTrace`, не ловятся `NullPointerException`, `RuntimeException`, `Exception`, `Throwable`, `Error` — в основном коде и тестах | PMD, `config/pmd-ruleset.xml` | `process-test-classes` |
 | Параметры публичных методов без `?`; зависимости только конструктором, поля бинов `final`; связи JPA без `EAGER`; `findAll()` порта без предела — только в списке исключений; Jackson 3, не 2; сущности агрегата меняет только агрегат | ArchUnit, `CodingRulesTest` | `test` |
 | Типы домена ([`ADR-0027`](spec/adr/0027-domain-types-and-absence.md)): `Optional` не поле и не параметр (только результат поиска и локальная переменная); ключи `*Id` — `BaseId`; корни агрегатов из раздела `aggregates:` спецификации — `AggregateRoot` без публичных конструкторов; исключения домена — `DomainException` контекста; события — `{Агрегат}{Действие}Event` через тип агрегата | ArchUnit, `CodingRulesTest` | `test` |
 | Покрытие строк: `domain` 90 %, `application` 80 %, адаптеры 50 %, весь код 60 % | JaCoCo + `tools/check-coverage.py` | после `verify` |
+
+Ловится то, что код умеет обработать: исключение разбора значения, отказ контекста.
+Перехват всего допустим только на границе, которая обязана записать или пережить любой отказ
+(журнал попытки, счётчик отказов, фоновый проход, поток клиента), — строкой
+`// NOPMD - причина` на самом `catch`.
 
 Конфигурация Checkstyle и PMD в `<configuration>` родителя сильнее `-D`: чтобы увидеть
 все нарушения сразу, а не первого модуля, — `./mvnw -fae`. Javadoc — по правилу
@@ -526,12 +541,13 @@ jar'а в репозитории нет.
   в порты и хранение, вызывать несколько сценариев подряд.
 
 Умолчание со смыслом живёт рядом с правилом: размер нового узла — `Bounds.ofNewElement`,
-пространство по умолчанию — `WorkspaceService.resolve`, формат выгрузки —
-`ExportService.export` по `ExportRequest`.
+пространство по умолчанию — `WorkspaceResolveQueryHandler`, формат выгрузки —
+`ModelExportQueryHandler` по `ExportModelQuery`.
 
 Проверяют `RestLayerConventionsTest` (ArchUnit: контроллер не создаёт исключений
 контекстов, не вызывает `notFound`, не зависит от портов, кроме `TextCatalog`,
-и от хранения) и `tools/check-string-literals.py` (`case "…"` в контроллере).
+и от хранения) и `tools/check-string-literals.py` (`case "…"` и ссылка на `*Codes` в контроллере:
+код — константа-строка, компилятор подставляет её, и ArchUnit ссылки не видит).
 
 ## Тексты и локализация
 

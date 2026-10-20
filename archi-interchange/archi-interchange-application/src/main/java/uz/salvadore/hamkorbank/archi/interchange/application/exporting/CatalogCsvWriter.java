@@ -1,9 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.exporting;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,15 +11,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentValue;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
 
@@ -36,9 +34,17 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
  * Excel запятая полей не делит), {@code \r\n} между строками (RFC 4180), столбцы свойств
  * по частоте ключа — заполненные первыми. Обратной загрузки нет и не будет.
  *
+ * <p>Значение с ведущим {@code =}, {@code +}, {@code -}, {@code @}, табуляцией или возвратом
+ * каретки получает апостроф впереди, иначе Excel выполнит его как формулу.
+ *
  * <p>Zip детерминирован: время записей фиксировано, порядок строк — порядок файла.
  */
 public final class CatalogCsvWriter {
+
+    private static final byte[] BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
+    private static final ArchiTypeRegistry REGISTRY = ArchiTypeRegistry.archimate32();
+    /** Первые символы, с которых Excel и другие табличные редакторы начинают формулу. */
+    private static final String FORMULA_START = "=+-@\t\r";
 
     private final String yes;
     private final String no;
@@ -49,31 +55,18 @@ public final class CatalogCsvWriter {
         this.no = texts.text(Message.of(InterchangeMessages.CSV_NO));
     }
 
-    private static final byte[] BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
-    private static final long FIXED_ENTRY_TIME = 0L;
-    private static final ArchiTypeRegistry REGISTRY = ArchiTypeRegistry.archimate32();
-
-    /** Каталог элементов и связей модели в zip из двух файлов CSV. */
+    /**
+     * Каталог элементов и связей модели в zip из двух файлов CSV. Папки фильтра нет
+     * в документе — отказ {@code IXC_FOLDER_NOT_IN_VERSION}, а не пустой каталог: пустая
+     * таблица неотличима от пустой папки.
+     */
     public byte[] write(byte[] archimate, CatalogCsvOptions options) {
         ModelDocument document = new StaxArchiDocumentReader().read(new ByteArrayInputStream(archimate));
         Catalog catalog = new Catalog(document, options);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try (ZipOutputStream zip = new ZipOutputStream(out, StandardCharsets.UTF_8)) {
-            entry(zip, "elements.csv", catalog.elements(options.separator()));
-            entry(zip, "relations.csv", catalog.relations(options.separator()));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-        return out.toByteArray();
-    }
-
-    private static void entry(ZipOutputStream zip, String name, String csv) throws IOException {
-        ZipEntry entry = new ZipEntry(name);
-        entry.setTime(FIXED_ENTRY_TIME);
-        zip.putNextEntry(entry);
-        zip.write(BOM);
-        zip.write(csv.getBytes(StandardCharsets.UTF_8));
-        zip.closeEntry();
+        return new DeterministicZip()
+                .add("elements.csv", BOM, catalog.elements(options.separator()).getBytes(StandardCharsets.UTF_8))
+                .add("relations.csv", BOM, catalog.relations(options.separator()).getBytes(StandardCharsets.UTF_8))
+                .bytes();
     }
 
     /** Разобранный документ в терминах каталога: пути папок, размещения, свойства. */
@@ -89,6 +82,12 @@ public final class CatalogCsvWriter {
             document.allNodes().forEach(n -> byId.put(n.archiId().value(), n));
             for (DocumentNode folder : document.folders()) {
                 walkFolder(folder, folder.attribute("name").orElse(""), false, options.folderArchiId());
+            }
+            String filter = options.folderArchiId();
+            if (filter != null && (!byId.containsKey(filter) || byId.get(filter).kind() != DocumentNode.Kind.FOLDER)) {
+                throw new InterchangeException(InterchangeCodes.FOLDER_NOT_IN_VERSION, Failure.NOT_FOUND,
+                        Message.of(InterchangeMessages.CSV_FOLDER_NOT_IN_VERSION, filter),
+                        Map.of("folderArchiId", filter));
             }
             for (DocumentNode view : document.views()) {
                 collectPlacements(view, view.archiId().value());
@@ -189,8 +188,7 @@ public final class CatalogCsvWriter {
     }
 
     private static boolean isElement(DocumentNode node) {
-        return node.tag().equals("element") && node.archiType()
-                .filter(t -> !t.endsWith("Relationship") && !t.endsWith("Model")).isPresent();
+        return node.kind() == DocumentNode.Kind.ELEMENT && node.archiType().isPresent();
     }
 
     /** {@code archimate:ApplicationComponent} → {@code Application Component}. */
@@ -214,9 +212,18 @@ public final class CatalogCsvWriter {
     }
 
     private static String render(List<List<String>> rows, char separator) {
-        return rows.stream().map(row -> row.stream().map(v -> quote(v, separator))
+        return rows.stream().map(row -> row.stream().map(v -> quote(neutralize(v), separator))
                         .collect(Collectors.joining(String.valueOf(separator))))
                 .collect(Collectors.joining("\r\n", "", "\r\n"));
+    }
+
+    /**
+     * Значение, которое Excel принял бы за формулу, — с апострофом впереди: имя или свойство
+     * {@code =HYPERLINK(…)} из чужого файла иначе выполнится у получателя каталога. Апостроф Excel
+     * не показывает, а прочие читатели получат его в данных — каталог делается для Excel.
+     */
+    static String neutralize(String value) {
+        return !value.isEmpty() && FORMULA_START.indexOf(value.charAt(0)) >= 0 ? "'" + value : value;
     }
 
     /** RFC 4180: в кавычки — поле с разделителем, кавычкой, переводом строки или краевым пробелом. */

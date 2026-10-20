@@ -53,8 +53,9 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
  *
  * <p>Повреждённые данные собираются все за один проход и бросаются
  * {@link CorruptDocumentException}: невалидный XML, узел без {@code id} или
- * {@code xsi:type}, дубль идентификатора, ссылка в пустоту, связь без конца,
- * {@code targetConnections}, не совпадающий с соединениями узла. Если разбор
+ * {@code xsi:type}, корневая папка без {@code type}, узел не на своём месте в дереве
+ * (папка в представлении, узел представления в папке), дубль идентификатора, ссылка
+ * в пустоту, связь без конца, {@code targetConnections}, не совпадающий с соединениями узла. Если разбор
  * обрывается — XML ломается, корень не тот, вложенность глубже предела, — отказ
  * несёт дефекты, найденные до места обрыва, и сам обрыв; ссылки дальше обрыва
  * не проверить.
@@ -74,6 +75,22 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
      * а не сообщением парсера.
      */
     static final int MAX_DEPTH = 64;
+
+    /** Какие узлы где лежат в файле Archi: вид родителя → теги детей. */
+    private static final Map<Kind, Set<String>> PLACEMENT = Map.of(
+            Kind.MODEL, Set.of("folder"),
+            Kind.FOLDER, Set.of("folder", "element"),
+            Kind.CONCEPT, Set.of(),
+            Kind.DIAGRAM, Set.of("child"),
+            Kind.DIAGRAM_NODE, Set.of("child", "sourceConnection"),
+            Kind.CONNECTION, Set.of("sourceConnection"));
+
+    /** Вид узла по месту в дереве: элемент и связь узлов не содержат, представление — содержит. */
+    private enum Kind { MODEL, FOLDER, CONCEPT, DIAGRAM, DIAGRAM_NODE, CONNECTION }
+
+    /** Родитель разбираемого узла: его вид и идентификатор ({@code null} — корень модели). */
+    private record Place(Kind kind, String id) {
+    }
 
     @Override
     public ModelDocument read(InputStream in) {
@@ -128,6 +145,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         /** Узел → его {@code targetConnections} как записано. */
         private final Map<String, Listed> listedTargetConnections = new LinkedHashMap<>();
         private int depth;
+        private Place place = new Place(Kind.MODEL, null);
 
         Parse(XMLStreamReader xml) {
             this.xml = xml;
@@ -244,7 +262,48 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             }
             register(id.get(), line);
             inspect(tag, id.get(), attributes, line);
-            return new DocumentNode(tag, order, attributes, content(ArchiId.of(id.get())));
+            placed(tag, id.get(), attributes, line);
+            Place parent = place;
+            place = new Place(kind(tag, attributes), id.get());
+            try {
+                return new DocumentNode(tag, order, attributes, content(ArchiId.of(id.get())));
+            } finally {
+                place = parent;
+            }
+        }
+
+        /** Узел лежит там, где его кладёт Archi; у корневой папки есть тип. */
+        private void placed(String tag, String id, Attributes attributes, int line) {
+            if (!PLACEMENT.get(place.kind()).contains(tag)) {
+                defect(InterchangeCodes.MISPLACED_NODE,
+                        Message.of(InterchangeMessages.UNEXPECTED_NODE, tag, id, where(place)), id, line);
+            }
+            if (place.kind() == Kind.MODEL && tag.equals("folder")
+                    && attributes.get("type").filter(t -> !t.isBlank()).isEmpty()) {
+                defect(InterchangeCodes.MISSING_ATTRIBUTE, Message.of(InterchangeMessages.ROOT_FOLDER_UNTYPED, id),
+                        id, line);
+            }
+        }
+
+        private static Kind kind(String tag, Attributes attributes) {
+            return switch (DocumentNode.kind(tag, attributes)) {
+                case FOLDER -> Kind.FOLDER;
+                case VIEW_NODE -> Kind.DIAGRAM_NODE;
+                case VIEW_EDGE -> Kind.CONNECTION;
+                case VIEW -> Kind.DIAGRAM;
+                case ELEMENT, RELATIONSHIP -> Kind.CONCEPT;
+            };
+        }
+
+        private static Message where(Place place) {
+            return switch (place.kind()) {
+                case MODEL -> Message.of(InterchangeMessages.WHERE_MODEL_ROOT);
+                case FOLDER -> Message.of(InterchangeMessages.WHERE_FOLDER);
+                case CONCEPT -> Message.of(InterchangeMessages.WHERE_INSIDE, place.id());
+                case DIAGRAM -> Message.of(InterchangeMessages.WHERE_VIEW);
+                case DIAGRAM_NODE -> Message.of(InterchangeMessages.WHERE_VIEW_NODE);
+                case CONNECTION -> Message.of(InterchangeMessages.WHERE_VIEW_EDGE);
+            };
         }
 
         /** Обязательные атрибуты и ссылки узла — по тегу. */
@@ -259,7 +318,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             }
             switch (tag) {
                 case "element" -> {
-                    if (type.filter(t -> t.endsWith("Relationship")).isPresent()) {
+                    if (DocumentNode.kind(tag, attributes) == DocumentNode.Kind.RELATIONSHIP) {
                         end(id, attributes, "source", line);
                         end(id, attributes, "target", line);
                     }

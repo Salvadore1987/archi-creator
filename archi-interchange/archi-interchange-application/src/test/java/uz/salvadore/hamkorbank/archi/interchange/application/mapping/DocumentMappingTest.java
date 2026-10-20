@@ -24,6 +24,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
+import uz.salvadore.hamkorbank.archi.modeling.application.mapper.ModelRowsMapper;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiIdGenerator;
@@ -33,6 +34,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
@@ -70,7 +72,7 @@ class DocumentMappingTest {
         ModelDocument original = read(Files.readAllBytes(source));
 
         ModelContent content = decompose(original);
-        ModelDocument assembled = new DocumentAssembler().assemble(content);
+        ModelDocument assembled = assemble(content);
 
         assertEquals(original, assembled);
         assertArrayEquals(write(original), write(assembled), "те же байты писателя");
@@ -107,7 +109,7 @@ class DocumentMappingTest {
 
         View view = styled.views().stream().filter(v -> v.nodes().contains(note.id())).findFirst().orElseThrow();
         view.editNode(note.id(), null, "Первая\r\nвторая", null);
-        String xml = new String(write(new DocumentAssembler().assemble(styled)), StandardCharsets.UTF_8);
+        String xml = new String(write(assemble(styled)), StandardCharsets.UTF_8);
         assertTrue(xml.contains("<content>Первая&#xD;\nвторая</content>"), "столбец сильнее остатка, CR не теряется");
         ModelContent again = decompose(read(xml.getBytes(StandardCharsets.UTF_8)));
         assertEquals("Первая\r\nвторая", again.views().stream()
@@ -127,7 +129,7 @@ class DocumentMappingTest {
         ViewNode note = view.placeAnnotation(ViewNodeKind.NOTE, null, "строка 1\nстрока 2",
                 new Bounds(10, 10, 185, 80), null, ViewNodeId.of(IDS.generate()), archiIds.next());
 
-        String xml = new String(write(new DocumentAssembler().assemble(content)), StandardCharsets.UTF_8);
+        String xml = new String(write(assemble(content)), StandardCharsets.UTF_8);
 
         assertTrue(xml.contains("<child xsi:type=\"archimate:Group\" id=\"" + group.archiId() + "\" name=\"Каналы\">"),
                 xml);
@@ -137,11 +139,17 @@ class DocumentMappingTest {
         assertTrue(bounds > 0 && text > bounds, "текст заметки — после геометрии");
     }
 
+    /** Документ → строки → агрегаты: агрегаты из строк собирает modeling, как при импорте. */
     static ModelContent decompose(ModelDocument document) {
         ArchiIdGenerator archiIds = new ArchiIdGenerator(IDS::generate);
-        return new DocumentDecomposer(IDS::generate, archiIds::next).decompose(document,
-                new DocumentDecomposer.Identity(ModelId.of(IDS.generate()), WorkspaceId.of(IDS.generate()),
-                        "architect", NOW, NOW, 0));
+        return ModelRowsMapper.content(new DocumentDecomposer(IDS::generate).decompose(document),
+                new ModelRowsMapper.Identity(ModelId.of(IDS.generate()), WorkspaceId.of(IDS.generate()),
+                        "architect", NOW, NOW, 0), () -> FolderId.of(IDS.generate()), archiIds::next);
+    }
+
+    /** Агрегаты → строки → документ: строки из агрегатов отдаёт modeling, как при сохранении версии. */
+    static ModelDocument assemble(ModelContent content) {
+        return new DocumentAssembler().assemble(ModelRowsMapper.rows(content));
     }
 
     static ModelDocument read(byte[] xml) {
@@ -172,7 +180,7 @@ class DocumentMappingTest {
         model.addElement(ArchiType.ofSimpleName("BusinessRole"), "Плательщик", client.folderId(),
                 ElementId.of(IDS.generate()), ArchiId.of("id-new"), NOW);
 
-        String xml = new String(write(new DocumentAssembler().assemble(content)), StandardCharsets.UTF_8);
+        String xml = new String(write(assemble(content)), StandardCharsets.UTF_8);
 
         assertTrue(xml.contains("""
                     <element xsi:type="archimate:BusinessActor" name="Клиент банка" \

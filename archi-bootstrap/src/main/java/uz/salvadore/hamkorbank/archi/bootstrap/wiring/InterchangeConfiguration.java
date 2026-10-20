@@ -9,10 +9,15 @@ import uz.salvadore.hamkorbank.archi.bootstrap.export.BatikRasterizer;
 import uz.salvadore.hamkorbank.archi.bootstrap.export.InterTypesetter;
 import uz.salvadore.hamkorbank.archi.bootstrap.export.SharedNotation;
 import uz.salvadore.hamkorbank.archi.bootstrap.git.GitSettings;
-import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportService;
-import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ViewImageService;
+import uz.salvadore.hamkorbank.archi.interchange.application.exporting.RasterGate;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingService;
-import uz.salvadore.hamkorbank.archi.interchange.application.importing.ImportService;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.AllViewImagesExportQueryHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.ArchimateFileImportCommandHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.ImportPolicyConfigureCommandHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.ImportPolicyGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.InterchangeKernel;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.ModelExportQueryHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.ViewImageExportQueryHandler;
 import uz.salvadore.hamkorbank.archi.interchange.application.oef.OefSchema;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportPolicy;
@@ -22,11 +27,20 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMet
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Rasterizer;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ExportApplicationService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportApplicationService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportPolicyApplicationService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ViewImageApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation;
+import uz.salvadore.hamkorbank.archi.interchange.application.service.ExportApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.interchange.application.service.ImportApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.interchange.application.service.ImportPolicyApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.interchange.application.service.ViewImageApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 
 /** Сценарии interchange — бинами. Транзакция — общая с modeling. */
 @Configuration
@@ -44,19 +58,31 @@ public class InterchangeConfiguration {
     }
 
     @Bean
-    ImportService importService(ImportSessionRepository sessions, ImportPolicy policy,
-                                ModelExchangeApplicationService models, UnitOfWork unitOfWork,
-                                InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts, Clock clock,
-                                InterchangeSettings settings) {
-        return new ImportService(sessions, policy, models, new StaxArchiDocumentReader(), unitOfWork, events, metrics,
-                texts, clock, settings.maxParallelImportsPerWorkspace());
+    InterchangeKernel interchangeKernel(UnitOfWork unitOfWork, InterchangeEvents events, InterchangeMetrics metrics,
+                                        TextCatalog texts, Clock clock) {
+        return new InterchangeKernel(unitOfWork, events, metrics, texts, clock);
     }
 
     @Bean
-    ExportService exportService(ModelExchangeApplicationService versions, InterchangeEvents events,
-                                InterchangeMetrics metrics, TextCatalog texts, Notation notation, OefSchema oefSchema,
-                                Clock clock) {
-        return new ExportService(versions, events, metrics, texts, notation, oefSchema, clock);
+    ImportApplicationService importApplicationService(InterchangeKernel kernel, ImportSessionRepository sessions,
+                                                      ImportPolicy policy, ModelExchangeApplicationService models,
+                                                      WorkspaceApplicationService workspaces,
+                                                      InterchangeSettings settings) {
+        return new ImportApplicationServiceImpl(new ArchimateFileImportCommandHandler(kernel, sessions, policy, models,
+                workspaces, new StaxArchiDocumentReader(), settings.maxParallelImportsPerWorkspace()));
+    }
+
+    @Bean
+    ImportPolicyApplicationService importPolicyApplicationService(InterchangeKernel kernel, ImportPolicy policy) {
+        return new ImportPolicyApplicationServiceImpl(new ImportPolicyGetQueryHandler(kernel, policy),
+                new ImportPolicyConfigureCommandHandler(kernel, policy));
+    }
+
+    @Bean
+    ExportApplicationService exportApplicationService(InterchangeKernel kernel,
+                                                      ModelExchangeApplicationService versions, Notation notation,
+                                                      OefSchema oefSchema) {
+        return new ExportApplicationServiceImpl(new ModelExportQueryHandler(kernel, versions, notation, oefSchema));
     }
 
     @Bean
@@ -87,12 +113,21 @@ public class InterchangeConfiguration {
         return new BatikRasterizer();
     }
 
+    /** Очередь растеризации PNG — одна на процесс: её делят картинка представления и пакет картинок. */
     @Bean
-    ViewImageService viewImageService(ViewQueryApplicationService queries, ModelExchangeApplicationService versions,
-                                      Notation notation, Typesetter typesetter, Rasterizer rasterizer,
-                                      InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts,
-                                      Clock clock) {
-        return new ViewImageService(queries, versions, notation, typesetter, rasterizer, events, metrics, texts,
-                clock);
+    RasterGate rasterGate(InterchangeSettings settings) {
+        return new RasterGate(settings.pngMaxAreaPx(), settings.maxParallelRasterizations(),
+                settings.rasterizationWait());
+    }
+
+    @Bean
+    ViewImageApplicationService viewImageApplicationService(InterchangeKernel kernel,
+                                                            ViewQueryApplicationService queries,
+                                                            ModelExchangeApplicationService versions,
+                                                            Notation notation, Typesetter typesetter,
+                                                            Rasterizer rasterizer, RasterGate gate) {
+        return new ViewImageApplicationServiceImpl(
+                new ViewImageExportQueryHandler(kernel, queries, versions, notation, typesetter, rasterizer, gate),
+                new AllViewImagesExportQueryHandler(kernel, versions, notation, typesetter, rasterizer, gate));
     }
 }

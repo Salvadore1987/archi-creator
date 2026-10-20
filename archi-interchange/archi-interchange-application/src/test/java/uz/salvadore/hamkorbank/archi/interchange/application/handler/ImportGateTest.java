@@ -1,4 +1,4 @@
-package uz.salvadore.hamkorbank.archi.interchange.application.importing;
+package uz.salvadore.hamkorbank.archi.interchange.application.handler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;

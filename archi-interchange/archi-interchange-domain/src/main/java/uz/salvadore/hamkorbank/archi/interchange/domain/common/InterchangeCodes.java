@@ -33,8 +33,6 @@ public final class InterchangeCodes {
     public static final String CORRUPT_DOCUMENT = "IXC_CORRUPT_DOCUMENT";
     /** Строгий импорт отклонён: в модели есть связи, которые не допускает матрица ArchiMate. */
     public static final String STRICT_IMPORT_REJECTED = "IXC_STRICT_IMPORT_REJECTED";
-    /** Формат выгрузки известен, но пока не поддерживается. */
-    public static final String FORMAT_NOT_AVAILABLE = "IXC_FORMAT_NOT_AVAILABLE";
     /** Запрошен неизвестный формат выгрузки. */
     public static final String UNKNOWN_FORMAT = "IXC_UNKNOWN_FORMAT";
     /** Находка импорта: тип объекта неизвестен метамодели, объект сохранён как есть. */
@@ -43,8 +41,12 @@ public final class InterchangeCodes {
     public static final String FILE_TOO_LARGE = "IXC_FILE_TOO_LARGE";
     /** Представления нет в зафиксированной версии — картинка строится только из сохранённого. */
     public static final String VIEW_NOT_IN_VERSION = "IXC_VIEW_NOT_IN_VERSION";
+    /** Папки, которой ограничен каталог, нет в зафиксированной версии. */
+    public static final String FOLDER_NOT_IN_VERSION = "IXC_FOLDER_NOT_IN_VERSION";
     /** Картинка представления при заданной плотности больше предела по стороне. */
     public static final String IMAGE_TOO_LARGE = "IXC_IMAGE_TOO_LARGE";
+    /** Растеризатор PNG занят дольше допустимого ожидания: картинки растеризуются по одной. */
+    public static final String RASTERIZER_BUSY = "IXC_RASTERIZER_BUSY";
     /** Параметр выгрузки картинки задан недопустимым значением. */
     public static final String INVALID_EXPORT_OPTION = "IXC_INVALID_EXPORT_OPTION";
     /** Выгрузка в OEF не прошла официальную схему — дефект сервера, файл не отдан. */
@@ -89,6 +91,8 @@ public final class InterchangeCodes {
     public static final String UNEXPECTED_TEXT = "IXC_UNEXPECTED_TEXT";
     /** Узлы вложены глубже предела разбора. */
     public static final String NESTING_TOO_DEEP = "IXC_NESTING_TOO_DEEP";
+    /** Узел не на своём месте в дереве: папка в представлении, узел представления в папке. */
+    public static final String MISPLACED_NODE = "IXC_MISPLACED_NODE";
 
     private InterchangeCodes() {
     }

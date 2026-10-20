@@ -13,7 +13,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import uz.salvadore.hamkorbank.archi.interchange.application.ExportDefectException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.interchange.domain.codec.CorruptDocumentException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeDomainException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 
 /** Отказы interchange — в {@code application/problem+json}, текст — на языке запроса. */
@@ -48,6 +51,21 @@ public class InterchangeProblemHandler {
     ProblemDetail defect(ExportDefectException e, HttpServletRequest request) {
         LOG.error("{} {}: {}", e.code(), request.getRequestURI(), e.detail());
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, e.code(), text.text(e.reason()), Map.of(), request, text);
+    }
+
+    /**
+     * Отказ домена interchange, не переведённый сценарием: повреждённый файл — {@code 400},
+     * недопустимое значение — {@code 422}, прочие правила домена — {@code 409}. Без кода
+     * ответа ни один отказ домена не уходит.
+     */
+    @ExceptionHandler(InterchangeDomainException.class)
+    ProblemDetail domain(InterchangeDomainException e, HttpServletRequest request) {
+        HttpStatus status = switch (e) {
+            case CorruptDocumentException corrupt -> HttpStatus.BAD_REQUEST;
+            case InvalidValueException invalid -> HttpStatus.UNPROCESSABLE_CONTENT;
+            default -> HttpStatus.CONFLICT;
+        };
+        return problem(status, e.code(), text.text(e.reason()), Map.of(), request, text);
     }
 
     static ProblemDetail problem(HttpStatus status, String code, String detail, Map<String, Object> details,

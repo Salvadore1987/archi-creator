@@ -66,7 +66,7 @@ public final class MethodologyCheck {
     private Optional<ArchiType> archiType(String value) {
         try {
             return Optional.of(ArchiType.of(value));
-        } catch (InvalidValueException | NullPointerException notArchimate) {
+        } catch (InvalidValueException notArchimate) {
             return Optional.empty();
         }
     }

@@ -100,7 +100,7 @@ public class GitConfiguration {
         return registrar -> registrar.addFixedDelayTask(() -> {
             try {
                 publishing.publishPending();
-            } catch (RuntimeException e) {
+            } catch (RuntimeException e) { // NOPMD - сбой одного прохода не останавливает расписание
                 LOG.warn("git publishing pass failed", e);
             }
         }, settings.pollInterval());

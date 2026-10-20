@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.handler;
 
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.modeling.application.mapper.ModelRowsMapper;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotArchive;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotReader;
@@ -10,6 +11,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
@@ -61,19 +63,22 @@ public final class VersionContents {
 
     /**
      * Содержимое модели заменяется снимком целиком и фиксируется версией — в транзакции
-     * вызывающего. Общая часть отката к версии и импорта состояния извне.
+     * вызывающего. Общая часть отката к версии и импорта состояния извне. Снимок не раскладывается —
+     * {@code SnapshotUnreadableException}: откат отдаёт его как есть, импорт извне переводит в свой отказ.
      */
     public Replacement replace(ArchitectureModel model, byte[] xml, EditorIdentity actor, String comment) {
-        ModelContent restored = snapshotReader.read(xml, model.header(), kernel.now());
+        ModelHeader current = model.header();
+        ModelContent restored = ModelRowsMapper.content(snapshotReader.read(xml),
+                new ModelRowsMapper.Identity(current.id(), current.workspaceId(), current.createdBy(),
+                        current.createdAt(), kernel.now(), current.version()),
+                () -> FolderId.of(kernel.uuids().next()), kernel.archiIds()::next);
         kernel.models().replaceContent(restored);
-        int opaque = (int) (restored.model().elements().values().stream().filter(e -> !e.supported()).count()
-                + restored.model().relationships().values().stream().filter(r -> !r.supported()).count());
-        return new Replacement(committer.commit(restored.model(), actor, comment), opaque);
+        return new Replacement(committer.commit(restored.model(), actor, comment), restored.model().opaqueCount());
     }
 
     /** Текущее содержимое модели в базе — тем же снимком, который соберёт сохранение. */
     public byte[] currentXml(ModelId modelId) {
-        return snapshotWriter.write(new ModelContent(kernel.models().load(modelId).orElseThrow(),
-                kernel.views().loadAll(modelId)));
+        return snapshotWriter.write(ModelRowsMapper.rows(new ModelContent(
+                kernel.models().load(modelId).orElseThrow(), kernel.views().loadAll(modelId))));
     }
 }

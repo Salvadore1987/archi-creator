@@ -257,7 +257,7 @@ public final class GitYamlWriter {
                 directory = RELATIONS_DIR;
                 String kind = kebab(simple.substring(0, simple.length() - "Relationship".length()));
                 label = node.attribute(A_NAME).filter(n -> !n.isBlank()).map(n -> kind + " " + n).orElse(kind);
-            } else if (simple.endsWith("Model")) {
+            } else if (node.kind() == DocumentNode.Kind.VIEW) {
                 directory = VIEWS_DIR;
                 label = node.attribute(A_NAME).filter(n -> !n.isBlank()).orElse(kebab(simple));
             } else {
@@ -274,7 +274,7 @@ public final class GitYamlWriter {
         }
 
         private boolean isRelationship(DocumentNode node) {
-            return node.archiType().filter(t -> t.endsWith("Relationship")).isPresent();
+            return node.kind() == DocumentNode.Kind.RELATIONSHIP;
         }
     }
 

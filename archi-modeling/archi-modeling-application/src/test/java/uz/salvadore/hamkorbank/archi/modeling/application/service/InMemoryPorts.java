@@ -392,9 +392,9 @@ final class InMemoryPorts {
     };
 
     /** Снимок-заглушка: имена всего содержимого по порядку — меняется, когда меняется модель. */
-    final SnapshotWriter snapshotWriter = content -> (content.model().name() + "|"
-            + content.model().elements().values().stream().map(e -> e.name()).collect(Collectors.joining(","))
-            + "|" + content.model().relationships().size() + "|" + content.views().size())
+    final SnapshotWriter snapshotWriter = rows -> (rows.header().name() + "|"
+            + rows.elements().stream().map(e -> e.name()).collect(Collectors.joining(","))
+            + "|" + rows.relationships().size() + "|" + rows.views().size())
             .getBytes(StandardCharsets.UTF_8);
 
     final DomainEventPublisher events = published::addAll;
@@ -404,7 +404,7 @@ final class InMemoryPorts {
             Message::toString, clock, Duration.ofMinutes(30));
     final VersionCommitter committer = new VersionCommitter(kernel, snapshotWriter);
     private final VersionContents withoutArchive = new VersionContents(kernel, committer, snapshotWriter,
-            (xml, current, now) -> {
+            xml -> {
                 throw new UnsupportedOperationException();
             }, SnapshotArchive.NONE);
     final VersionApplicationService versionService = new VersionApplicationServiceImpl(

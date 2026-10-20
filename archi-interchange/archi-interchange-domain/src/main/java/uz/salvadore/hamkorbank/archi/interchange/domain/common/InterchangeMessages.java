@@ -76,6 +76,8 @@ public final class InterchangeMessages {
     public static final String OPERATION_EXPORT_ALL_VIEW_IMAGES = "interchange.operation.export-all-view-images";
     /** Название операции в отказе роли: настройка импорта. */
     public static final String OPERATION_CONFIGURE_IMPORT_POLICY = "interchange.operation.configure-import-policy";
+    /** Название операции в отказе роли: чтение настройки импорта. */
+    public static final String OPERATION_GET_IMPORT_POLICY = "interchange.operation.get-import-policy";
     /** Название операции в отказе роли: публикация в Git. */
     public static final String OPERATION_PUSH_MODEL_TO_GIT = "interchange.operation.push-model-to-git";
     /** Название операции в отказе роли: импорт из Git. */
@@ -148,8 +150,6 @@ public final class InterchangeMessages {
     public static final String TARGET_CONNECTIONS_MISSING = "interchange.document.target-connections-missing";
     /** В файле встретился текст там, где значения быть не может. */
     public static final String TEXT_OUTSIDE_VALUE = "interchange.document.text-outside-value";
-    /** Выгрузка в запрошенный формат пока не поддерживается. */
-    public static final String FORMAT_NOT_AVAILABLE = "interchange.export.format-not-available";
     /** Отпечаток содержимого модели в запросе недопустим по виду. */
     public static final String GIT_BASE_HASH_INVALID = "interchange.git.base-hash-invalid";
     /** Присланный коммит не общий предок коммита ссылки — отчёт слияния устарел. */
@@ -246,8 +246,14 @@ public final class InterchangeMessages {
     public static final String IMAGE_OPTION_INVALID = "interchange.image.option-invalid";
     /** Картинка при заданной плотности больше предела по стороне. */
     public static final String IMAGE_TOO_LARGE = "interchange.image.too-large";
+    /** Картинка при заданной плотности больше предела по площади. */
+    public static final String IMAGE_AREA_TOO_LARGE = "interchange.image.area-too-large";
+    /** Растеризатор PNG занят дольше допустимого ожидания. */
+    public static final String RASTERIZER_BUSY = "interchange.image.rasterizer-busy";
     /** Представления нет в зафиксированной версии, из которой строится картинка. */
     public static final String IMAGE_VIEW_NOT_IN_VERSION = "interchange.image.view-not-in-version";
+    /** Папки, которой ограничен каталог CSV, нет в выгружаемой версии. */
+    public static final String CSV_FOLDER_NOT_IN_VERSION = "interchange.csv.folder-not-in-version";
     /** Выгрузка в формат с потерями собрана без отчёта о потерях. */
     public static final String EXPORT_LOSS_REPORT_MISSING = "interchange.export.loss-report-missing";
     /** Запись отчёта о потерях называет неизвестный вид объекта. */
@@ -276,6 +282,10 @@ public final class InterchangeMessages {
     public static final String IMPORT_IN_PROGRESS = "interchange.import.in-progress";
     /** Ключ идемпотентности уже использован для другого файла. */
     public static final String IMPORT_KEY_REUSED = "interchange.import.key-reused";
+    /** Файл разобран, но модель из него не собирается; в тексте — причина. */
+    public static final String IMPORT_CONTENT_REJECTED = "interchange.import.content-rejected";
+    /** Модель из файла собрана, но не записана; в тексте — причина отказа modeling. */
+    public static final String IMPORT_APPLY_FAILED = "interchange.import.apply-failed";
     /** В рабочее пространство уже идёт другой импорт. */
     public static final String IMPORT_WORKSPACE_BUSY = "interchange.import.workspace-busy";
     /** Импорт файла отклонён: файл повреждён. */
@@ -358,12 +368,12 @@ public final class InterchangeMessages {
     public static final String TITLE_BAD_FILE = "interchange.problem.bad-file";
     /** Заголовок ответа об ошибке импорта и выгрузки в остальных случаях. */
     public static final String TITLE_INTERCHANGE = "interchange.problem.interchange";
-    /** Запрос импорта не разобран. */
-    public static final String INVALID_REQUEST = "interchange.request.invalid";
     /** Остаток XML в базе не разбирается. */
     public static final String RESIDUE_CORRUPTED = "interchange.residue.corrupted";
     /** В остатке XML на этом месте ожидалась запись другого вида. */
     public static final String RESIDUE_RECORD_EXPECTED = "interchange.residue.record-expected";
+    /** У записи остатка XML нет обязательного атрибута. */
+    public static final String RESIDUE_ATTRIBUTE_MISSING = "interchange.residue.attribute-missing";
     /** В остатке XML встретилась неизвестная запись. */
     public static final String RESIDUE_UNKNOWN_RECORD = "interchange.residue.unknown-record";
     /** У нетипизированного значения остатка нашёлся небуквальный атрибут. */

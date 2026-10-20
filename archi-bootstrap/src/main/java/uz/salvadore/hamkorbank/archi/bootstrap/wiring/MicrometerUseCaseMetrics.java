@@ -35,7 +35,7 @@ public final class MicrometerUseCaseMetrics {
         String outcome = "success";
         try {
             return work.get();
-        } catch (RuntimeException e) {
+        } catch (RuntimeException e) { // NOPMD - счётчик отказов считает любой отказ и пробрасывает его
             outcome = "error";
             Counter.builder(prefix + ".usecase.errors").tag("usecase", useCase).tag("error_code", errorCode.apply(e))
                     .register(registry).increment();

@@ -101,9 +101,10 @@ class EntityMergeTest {
     @Test
     @DisplayName("INV-IXC-010: переименование и перенос в другую папку не конфликтуют с правкой других полей")
     void renameAndMoveDoNotConflict() {
-        String other = "<folder name=\"Прочее\" id=\"id-other\"/>";
+        String other = "<folder name=\"Прочее\" id=\"id-other\" type=\"other\"/>";
         ModelDocument base = document(folder(APP) + other);
-        ModelDocument ours = document(folder("") + "<folder name=\"Прочее\" id=\"id-other\">" + APP + "</folder>");
+        ModelDocument ours = document(folder("")
+                + "<folder name=\"Прочее\" id=\"id-other\" type=\"other\">" + APP + "</folder>");
         ModelDocument theirs = document(folder(APP.replace("АБС", "АБС 2")) + other);
 
         Result result = EntityMerge.merge(base, ours, theirs, Map.of());
@@ -231,7 +232,7 @@ class EntityMergeTest {
     @Test
     @DisplayName("INV-IXC-010: удаление папки, в которую другая ветвь положила элемент, — конфликт папки")
     void removedFolderWithForeignWorkIsConflict() {
-        String scratch = "<folder name=\"Черновик\" id=\"id-tmp\">%s</folder>";
+        String scratch = "<folder name=\"Черновик\" id=\"id-tmp\" type=\"other\">%s</folder>";
         ModelDocument base = document(folder(APP) + scratch.formatted(""));
         ModelDocument ours = document(folder(APP));
         ModelDocument theirs = document(folder(APP) + scratch.formatted(CRM));
@@ -250,8 +251,8 @@ class EntityMergeTest {
     @Test
     @DisplayName("INV-IXC-010: ветви переложили папки друг в друга — перенос «их» откатывается")
     void folderCycleRevertsTheirMove() {
-        String a = "<folder name=\"A\" id=\"id-a\">%s</folder>";
-        String b = "<folder name=\"B\" id=\"id-b\">%s</folder>";
+        String a = "<folder name=\"A\" id=\"id-a\" type=\"other\">%s</folder>";
+        String b = "<folder name=\"B\" id=\"id-b\" type=\"other\">%s</folder>";
         ModelDocument base = document(a.formatted("") + b.formatted(""));
         ModelDocument ours = document(a.formatted(b.formatted("")));
         ModelDocument theirs = document(b.formatted(a.formatted("")));

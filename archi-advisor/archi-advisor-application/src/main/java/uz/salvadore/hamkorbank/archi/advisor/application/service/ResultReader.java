@@ -6,7 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -65,8 +64,7 @@ final class ResultReader {
                     TargetKind.valueOf(text(input, "targetKind")),
                     ElementRef.of(target, names.get(target)),
                     clip(text(input, "suggestion").strip(), Finding.TEXT_MAX)));
-        } catch (InvalidValueException | IllegalArgumentException | ClassCastException
-                 | NullPointerException unreadable) {
+        } catch (InvalidValueException | IllegalArgumentException unreadable) {
             return Optional.empty();
         }
     }
@@ -131,8 +129,12 @@ final class ResultReader {
         return name.strip().toLowerCase(Locale.ROOT);
     }
 
+    /** Обязательное текстовое поле; нет его или оно не строка — вход не разобрался. */
     private static String text(Map<String, Object> input, String field) {
-        return (String) Objects.requireNonNull(input.get(field), field);
+        if (input.get(field) instanceof String value) {
+            return value;
+        }
+        throw new IllegalArgumentException(field);
     }
 
     private static String textOrEmpty(Map<String, Object> input, String field) {

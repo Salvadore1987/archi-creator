@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.modeling.application.handler;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.modeling.application.mapper.ModelRowsMapper;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotWriter;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
@@ -32,7 +33,7 @@ public final class VersionCommitter {
     public ModelVersion commit(ArchitectureModel model, EditorIdentity actor, String comment) {
         ModelContent content = new ModelContent(kernel.models().load(model.id()).orElseThrow(),
                 kernel.views().loadAll(model.id()));
-        byte[] xml = snapshotWriter.write(content);
+        byte[] xml = snapshotWriter.write(ModelRowsMapper.rows(content));
         String hash = Snapshots.sha256(xml);
         Optional<ModelVersion> last = kernel.versions().last(model.id());
         if (last.isPresent() && last.get().contentHash().equals(hash)) {
@@ -50,7 +51,7 @@ public final class VersionCommitter {
 
     /** Текущее содержимое модели в базе — тем же снимком, который соберёт сохранение. */
     public byte[] currentXml(ArchitectureModel model) {
-        return snapshotWriter.write(new ModelContent(kernel.models().load(model.id()).orElseThrow(),
-                kernel.views().loadAll(model.id())));
+        return snapshotWriter.write(ModelRowsMapper.rows(new ModelContent(
+                kernel.models().load(model.id()).orElseThrow(), kernel.views().loadAll(model.id()))));
     }
 }

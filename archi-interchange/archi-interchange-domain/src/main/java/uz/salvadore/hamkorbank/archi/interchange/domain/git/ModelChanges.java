@@ -162,14 +162,12 @@ public record ModelChanges(List<Change> changes) {
     }
 
     static Optional<Kind> kind(DocumentNode node) {
-        return switch (node.tag()) {
-            case "folder" -> Optional.of(Kind.FOLDER);
-            case "element" -> {
-                String type = node.archiType().orElse("");
-                yield Optional.of(type.endsWith("Relationship") ? Kind.RELATIONSHIP
-                        : type.endsWith("Model") ? Kind.VIEW : Kind.ELEMENT);
-            }
-            default -> Optional.empty();
+        return switch (node.kind()) {
+            case FOLDER -> Optional.of(Kind.FOLDER);
+            case ELEMENT -> Optional.of(Kind.ELEMENT);
+            case RELATIONSHIP -> Optional.of(Kind.RELATIONSHIP);
+            case VIEW -> Optional.of(Kind.VIEW);
+            case VIEW_NODE, VIEW_EDGE -> Optional.empty();
         };
     }
 

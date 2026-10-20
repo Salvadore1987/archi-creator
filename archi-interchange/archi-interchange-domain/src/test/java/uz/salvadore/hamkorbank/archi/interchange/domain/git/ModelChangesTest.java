@@ -69,12 +69,12 @@ class ModelChangesTest {
     @Test
     @DisplayName("FR-38: перенос в другую папку — поле folder, а не удаление с добавлением")
     void moveIsFolderChange() {
-        String other = "<folder name=\"Прочее\" id=\"id-other\"/>";
+        String other = "<folder name=\"Прочее\" id=\"id-other\" type=\"other\"/>";
         ModelDocument before = document("""
                 <folder name="Приложения" id="id-apps" type="application">%s</folder>%s""".formatted(APP, other));
         ModelDocument after = document("""
                 <folder name="Приложения" id="id-apps" type="application"/>
-                <folder name="Прочее" id="id-other">%s</folder>""".formatted(APP));
+                <folder name="Прочее" id="id-other" type="other">%s</folder>""".formatted(APP));
 
         Change change = single(ModelChanges.between(before, after));
         assertEquals(id("id-app"), change.archiId());
