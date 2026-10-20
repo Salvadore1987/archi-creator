@@ -106,8 +106,17 @@ Application-слои без Spring: транзакция — порт `UnitOfWor
 наружу не выходит, перевод — `application/mapper/`. Вход других контекстов (выгрузка, Git,
 импорт) — `ModelExchangeApplicationService`: роль у этих операций проверяет вызывающий.
 Держит `ApplicationLayerTest` (ArchUnit); единственное исключение — `ModelContent` во входе
-импорта, до перевода раскладки документа interchange. Interchange и advisor переводятся
-по этому образцу на своих этапах ревью.
+импорта, до перевода раскладки документа interchange. Advisor переводится по этому образцу
+на своём этапе ревью.
+
+**Application-слой interchange — по тому же образцу.** Входные порты `port/in/` — импорт файла,
+настройка импорта, выгрузка модели, картинки представлений; handler'ы — в `handler`, общее у них —
+`InterchangeKernel` (роль до любой работы, метрика, транзакция, часы, ключи; виден только пакету).
+Исход импорта (`APPLIED`, `REPLAYED`, `REJECTED_CORRUPT`, `REJECTED_STRICT`) с кодом и текстом отказа
+решает handler, контроллер лишь переводит его в статус. Сборочные части выгрузки — писатели CSV, OEF,
+SVG, детерминированный zip, отчёт о потерях — в `exporting`, `oef`, `rendering`. Адаптеру из application
+interchange доступны только `port.in`, `dto` и выходные порты (`ApplicationLayerTest`); сервисы Git ещё
+не переведены и перечислены там поимённо — их очередь на этапе ревью Git.
 
 Модули доменов друг от друга **не зависят**: Maven не допускает цикла, а partnership
 в карте контекстов двусторонний. Поэтому у interchange свой `ArchiId`, а проверка
@@ -175,7 +184,7 @@ API и до открытия потока; расход списывается �
 | Что | Где |
 |---|---|
 | Писатель SVG по визуальному языку канвы: силуэты, токены, иконки, маршрут связей, перенос подписи, отчёт о потерях | `archi-interchange-application/.../application/rendering/` (`SvgWriter`, `LabelLayout`, `Routing`) |
-| Сценарии `ExportViewImage`, `ExportAllViewImages` ([`UC-IXC-004`](spec/application/interchange/usecases/export-view-image.md)), порты `Typesetter`, `Rasterizer` | `ViewImageService`; `.../application/port/` |
+| Сценарии `ExportViewImage`, `ExportAllViewImages` ([`UC-IXC-004`](spec/application/interchange/usecases/export-view-image.md)), порты `Typesetter`, `Rasterizer` | `ViewImageExportQueryHandler`, `AllViewImagesExportQueryHandler`; `.../application/port/` |
 | REST: `GET /views/{id}/export`, `GET /models/{id}/views/export` | `InterchangeController` |
 | Нотация из classpath, шрифт Inter на AWT, подмножество глифов (fontbox), растр (Batik) | `archi-bootstrap/.../bootstrap/export/` |
 | Шрифт Inter 4.1 (TTF — сервер, WOFF2 — канва, OFL) | `archi-bootstrap/src/main/resources/ui/fonts/` |
@@ -219,7 +228,7 @@ opaque. Остаток XML у поддержанного и opaque-элемен�
 |---|---|
 | Официальная XSD OEF 3.1 и проверка по ней без сети | `archi-interchange-application/src/main/resources/.../application/oef/*.xsd`, `OefSchema` |
 | Писатель OEF с отчётом о потерях | `archi-interchange-application/.../application/oef/OefWriter` |
-| Сценарий `ExportOpenExchange` ([`UC-IXC-005`](spec/application/interchange/usecases/export-open-exchange.md)), `GET /models/{id}/export?fmt=oef` | `ExportService.openExchange`; `500 IXC_OEF_SCHEMA_VIOLATION` — `ExportDefectException` |
+| Сценарий `ExportOpenExchange` ([`UC-IXC-005`](spec/application/interchange/usecases/export-open-exchange.md)), `GET /models/{id}/export?fmt=oef` | `ModelExportQueryHandler`; `500 IXC_OEF_SCHEMA_VIOLATION` — `ExportDefectException` |
 | Эталоны выгрузки и их отчёты | `archi-bootstrap/src/test/resources/fixtures/oef_export_*.{xml,losses.txt}`, `OefExportFixturesTest` |
 | Пункт меню «Экспорт» | `frontend/src/app/TopBar.tsx`; `e2e/view-export.spec.ts` |
 
@@ -322,7 +331,7 @@ macOS и старый Проводник его не создают. Измен�
 Контуры добавляемых узлов — узлы React Flow вне документа: их изменения размеров
 в состояние канвы не идут, иначе ResizeObserver зацикливается.
 
-Тестов на сервере: 592 юнит-теста (`./mvnw test`) и 96 интеграционных `*IT` на
+Тестов на сервере: 621 юнит-тест (`./mvnw test`) и 100 интеграционных `*IT` на
 Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
 Во фронтенде: 67 юнит-тестов vitest (`npm test`, гоняется фазой `test` Maven)
 и 87 сценариев Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
@@ -531,12 +540,13 @@ jar'а в репозитории нет.
   в порты и хранение, вызывать несколько сценариев подряд.
 
 Умолчание со смыслом живёт рядом с правилом: размер нового узла — `Bounds.ofNewElement`,
-пространство по умолчанию — `WorkspaceService.resolve`, формат выгрузки —
-`ExportService.export` по `ExportRequest`.
+пространство по умолчанию — `WorkspaceResolveQueryHandler`, формат выгрузки —
+`ModelExportQueryHandler` по `ExportModelQuery`.
 
 Проверяют `RestLayerConventionsTest` (ArchUnit: контроллер не создаёт исключений
 контекстов, не вызывает `notFound`, не зависит от портов, кроме `TextCatalog`,
-и от хранения) и `tools/check-string-literals.py` (`case "…"` в контроллере).
+и от хранения) и `tools/check-string-literals.py` (`case "…"` и ссылка на `*Codes` в контроллере:
+код — константа-строка, компилятор подставляет её, и ArchUnit ссылки не видит).
 
 ## Тексты и локализация
 

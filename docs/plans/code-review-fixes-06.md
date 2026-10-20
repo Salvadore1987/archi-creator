@@ -40,7 +40,7 @@
 | 6 | Сборка снимка без квадратичных проходов | 06-13 | round-trip побайтово; замер сборки референсной модели до и после — в «Расхождениях» | ✅ |
 | 7 | Мелочи читаемости; неизвестная папка каталога | 06-14 | `CatalogCsvWriterTest#unknownFolderIsRejected` (после решения — спека §5.2 и контракт) | ✅ |
 | 8 | Каталог CSV и формулы Excel | 06-09 | `CatalogCsvWriterTest#formulaPrefixIsEscaped` | ✅ |
-| 9 | Application interchange (импорт и выгрузка) — входные порты, handler'ы, DTO | 06-03, 06-05, 06-06, 06-07 | `ApplicationLayerTest` на interchange (см. ниже) | ⬜ |
+| 9 | Application interchange (импорт и выгрузка) — входные порты, handler'ы, DTO | 06-03, 06-05, 06-06, 06-07 | `ApplicationLayerTest` на interchange (см. ниже) | ✅ |
 | 10 | Вход импорта и снимки — строки модели простыми значениями | 06-04 | `ApplicationLayerTest` без исключения `INTERCHANGE_INPUT`; round-trip побайтово | ⬜ |
 | 11 | Предел площади PNG — спека, затем код | 06-11 | `ViewImageServiceTest#areaLimit` | ⬜ |
 
@@ -87,7 +87,7 @@ Git (`git/`) — этап 8: его сервисы в этой задаче по
 | 9.4 | Настройка импорта: `ConfigureImportPolicyCommand` отдаёт итоговую настройку; чтение — `GetImportPolicyQuery` с операцией и ролью в `InterchangeOperation` и `spec/nfr/interchange.yaml` (06-06) | ✅ |
 | 9.5 | Выгрузка модели: один сценарий по `ExportModelQuery` с форматом строкой; разбор формата и параметров CSV — в handler'е после роли; недостижимая ветка `IXC_FORMAT_NOT_AVAILABLE` и код — убрать (06-07); результат — DTO без `Artifact` | ✅ |
 | 9.6 | Картинки представлений: `ExportViewImageQuery`, `ExportAllViewImagesQuery`, результат — DTO | ✅ |
-| 9.7 | `RestLayerConventionsTest`: контроллер interchange не ссылается на `*Codes`, кроме разбора ввода; `CLAUDE.md` — раскладка application interchange | ⬜ |
+| 9.7 | `RestLayerConventionsTest`: контроллер interchange не ссылается на `*Codes`, кроме разбора ввода; `CLAUDE.md` — раскладка application interchange | ✅ |
 
 ### Задача 10 — подробности
 
@@ -234,3 +234,12 @@ Git (`git/`) — этап 8: его сервисы в этой задаче по
   тот же `ExportFileResponse`, что у выгрузки модели, и контроллер собирает ответ одним методом. Константы
   имён форматов и фонов закрыты: снаружи их никто не читал. Порядок «роль → параметры → чтение» был
   и раньше, теперь его держит ядро и `ViewImageOrderTest`. В списке не переведённых остался только Git.
+- **9.7.** Правило «контроллер не ссылается на `*Codes`» — в `tools/check-string-literals.py`, а не в
+  `RestLayerConventionsTest`, как было записано: код — `static final String`, компилятор подставляет значение,
+  и в байткоде контроллера ссылки на класс кодов нет — ArchUnit её не видит. Исключение «кроме разбора
+  ввода» не понадобилось: неразборчивый ввод отклоняется `invalid(…)` с ключом сообщения, без кода; правило
+  действует для контроллеров всех контекстов, нарушений вне interchange не нашлось. На контроллере до 9.3
+  скрипт падает дважды (выбор `IXC_CORRUPT_DOCUMENT`/`IXC_STRICT_IMPORT_REJECTED`). `CLAUDE.md` — раздел
+  о раскладке application interchange, имена удалённых сервисов в таблицах этапов 5a и 6a заменены
+  handler'ами, устаревший `WorkspaceService.resolve` — `WorkspaceResolveQueryHandler`; тестов на сервере
+  621 юнит и 100 интеграционных.
