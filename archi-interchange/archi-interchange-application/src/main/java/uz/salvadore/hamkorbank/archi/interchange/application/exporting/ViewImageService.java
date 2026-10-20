@@ -139,7 +139,7 @@ public final class ViewImageService {
             Picture picture = picture(document, node, settings);
             String name = node.attribute("name").orElse("") + "-v" + snapshot.versionNo();
             Artifact artifact = Artifact.of(picture.bytes(), mediaType(settings),
-                    ExportService.safeFileName(name, "view") + "." + settings.extension());
+                    ExportFileNames.safe(name, "view") + "." + settings.extension());
             LossReport report = new LossReport(entries(picture.losses()), true);
             delivery.deliver(actor, snapshot, new ViewId(viewId), settings.format(), settings.options(), artifact,
                     report);
@@ -175,7 +175,7 @@ public final class ViewImageService {
             zip.add(LossReportJson.FILE_NAME, LossReportJson.viewsReport(settings.format().name(),
                     snapshot.versionNo(), report).getBytes(StandardCharsets.UTF_8));
             Artifact artifact = Artifact.of(zip.bytes(), "application/zip",
-                    ExportService.safeFileName(snapshot.model().name(), "model") + "-v" + snapshot.versionNo()
+                    ExportFileNames.safe(snapshot.model().name(), "model") + "-v" + snapshot.versionNo()
                             + "-" + settings.extension() + ".zip");
             LossReport lossReport = new LossReport(all, true);
             delivery.deliver(actor, snapshot, null, settings.format(), settings.options(), artifact, lossReport);

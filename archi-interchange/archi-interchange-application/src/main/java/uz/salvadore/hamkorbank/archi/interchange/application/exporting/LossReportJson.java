@@ -9,20 +9,20 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossEntry;
  * обхода документа, тексты причин — на языке запроса; формат без зависимостей,
  * потому что в application-слое нет JSON-библиотеки.
  */
-final class LossReportJson {
+public final class LossReportJson {
 
     /** Имя файла отчёта внутри архива выгрузки. */
-    static final String FILE_NAME = "loss-report.json";
+    public static final String FILE_NAME = "loss-report.json";
 
     private LossReportJson() {
     }
 
     /** Потери одного представления в пакете картинок: какое представление, в каком файле архива. */
-    record ViewLosses(String archiId, String name, String file, List<LossEntry> entries) {
+    public record ViewLosses(String archiId, String name, String file, List<LossEntry> entries) {
     }
 
     /** {@code {"format":…,"sourceVersionNo":…,"entries":[…]}} с переводом строки в конце. */
-    static String report(String format, long versionNo, List<LossEntry> entries) {
+    public static String report(String format, long versionNo, List<LossEntry> entries) {
         StringBuilder out = header(format, versionNo).append(",\"entries\":");
         entries(out, entries);
         return out.append("}\n").toString();
@@ -32,7 +32,7 @@ final class LossReportJson {
      * Отчёт пакета картинок: {@code {"format":…,"sourceVersionNo":…,"views":[{"archiId":…,"name":…,
      * "file":…,"entries":[…]}…]}} с переводом строки в конце; представления — в порядке архива.
      */
-    static String viewsReport(String format, long versionNo, List<ViewLosses> views) {
+    public static String viewsReport(String format, long versionNo, List<ViewLosses> views) {
         StringBuilder out = header(format, versionNo).append(",\"views\":[");
         for (int i = 0; i < views.size(); i++) {
             ViewLosses view = views.get(i);

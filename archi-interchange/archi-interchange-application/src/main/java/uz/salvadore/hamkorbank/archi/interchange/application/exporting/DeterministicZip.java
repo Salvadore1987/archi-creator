@@ -12,7 +12,7 @@ import java.util.zip.ZipOutputStream;
  * порядок — порядок добавления, имена — в UTF-8. Выгрузку одной версии можно сравнивать
  * по отпечатку и класть рядом с прошлой без ложного диффа.
  */
-final class DeterministicZip {
+public final class DeterministicZip {
 
     private static final long FIXED_ENTRY_TIME = 0L;
 
@@ -20,7 +20,7 @@ final class DeterministicZip {
     private final ZipOutputStream zip = new ZipOutputStream(out, StandardCharsets.UTF_8);
 
     /** Запись архива; её содержимое — части подряд, например метка порядка байтов и текст. */
-    DeterministicZip add(String name, byte[]... parts) {
+    public DeterministicZip add(String name, byte[]... parts) {
         ZipEntry entry = new ZipEntry(name);
         entry.setTime(FIXED_ENTRY_TIME);
         try {
@@ -36,7 +36,7 @@ final class DeterministicZip {
     }
 
     /** Архив целиком; после этого записи не добавляются. */
-    byte[] bytes() {
+    public byte[] bytes() {
         try {
             zip.close();
         } catch (IOException e) {

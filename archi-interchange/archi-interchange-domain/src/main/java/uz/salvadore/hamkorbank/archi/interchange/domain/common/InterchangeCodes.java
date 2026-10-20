@@ -33,8 +33,6 @@ public final class InterchangeCodes {
     public static final String CORRUPT_DOCUMENT = "IXC_CORRUPT_DOCUMENT";
     /** Строгий импорт отклонён: в модели есть связи, которые не допускает матрица ArchiMate. */
     public static final String STRICT_IMPORT_REJECTED = "IXC_STRICT_IMPORT_REJECTED";
-    /** Формат выгрузки известен, но пока не поддерживается. */
-    public static final String FORMAT_NOT_AVAILABLE = "IXC_FORMAT_NOT_AVAILABLE";
     /** Запрошен неизвестный формат выгрузки. */
     public static final String UNKNOWN_FORMAT = "IXC_UNKNOWN_FORMAT";
     /** Находка импорта: тип объекта неизвестен метамодели, объект сохранён как есть. */

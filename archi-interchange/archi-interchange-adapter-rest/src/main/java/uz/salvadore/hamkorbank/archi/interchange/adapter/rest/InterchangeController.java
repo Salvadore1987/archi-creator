@@ -29,13 +29,14 @@ import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportRes
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.ImportSettings;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ConfigureImportPolicyCommand;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ImportArchimateFileCommand;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.query.ExportModelQuery;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.query.GetImportPolicyQuery;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ExportFileResponse;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ImportArchimateFileResponse;
-import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportRequest;
-import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportService;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ImageRequest;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ViewImageService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ExportApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportPolicyApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
@@ -53,12 +54,12 @@ public class InterchangeController {
 
     private final ImportApplicationService imports;
     private final ImportPolicyApplicationService policies;
-    private final ExportService exports;
+    private final ExportApplicationService exports;
     private final ViewImageService images;
     private final TextCatalog text;
 
     public InterchangeController(ImportApplicationService imports, ImportPolicyApplicationService policies,
-                                 ExportService exports, ViewImageService images, TextCatalog text) {
+                                 ExportApplicationService exports, ViewImageService images, TextCatalog text) {
         this.text = text;
         this.images = images;
         this.imports = imports;
@@ -96,14 +97,14 @@ public class InterchangeController {
      */
     @GetMapping("/models/{id}/export")
     public ResponseEntity<byte[]> export(EditorIdentity actor, @PathVariable UUID id,
-                                         @RequestParam(defaultValue = ExportService.FORMAT_ARCHIMATE) String fmt,
+                                         @RequestParam(required = false) String fmt,
                                          @RequestParam(required = false) Long version,
                                          @RequestParam(required = false) String folder,
                                          @RequestParam(required = false) String sep) {
-        ExportService.Export export = exports.export(actor, id, new ExportRequest(fmt, version, sep, folder));
-        return artifact(export.artifact(), export.versionNo())
-                .header(LOSS_COUNT, String.valueOf(export.lossCount()))
-                .body(export.artifact().bytes());
+        ExportFileResponse file = exports.exportModel(actor, new ExportModelQuery(id, fmt, version, sep, folder));
+        return file(file.mediaType(), file.fileName(), file.contentHash(), file.versionNo())
+                .header(LOSS_COUNT, String.valueOf(file.lossCount()))
+                .body(file.content());
     }
 
     /**
@@ -147,18 +148,20 @@ public class InterchangeController {
     }
 
     private static ResponseEntity<byte[]> image(ViewImageService.ImageExport export) {
-        return artifact(export.artifact(), export.versionNo())
+        Artifact artifact = export.artifact();
+        return file(artifact.mediaType(), artifact.fileName(), artifact.hash().value(), export.versionNo())
                 .header(LOSS_COUNT, String.valueOf(export.lossCount()))
-                .body(export.artifact().bytes());
+                .body(artifact.bytes());
     }
 
-    private static ResponseEntity.BodyBuilder artifact(Artifact artifact, long versionNo) {
+    private static ResponseEntity.BodyBuilder file(String mediaType, String fileName, String contentHash,
+                                                   long versionNo) {
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(artifact.mediaType()))
+                .contentType(MediaType.parseMediaType(mediaType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                        .filename(artifact.fileName(), StandardCharsets.UTF_8).build().toString())
+                        .filename(fileName, StandardCharsets.UTF_8).build().toString())
                 .header("X-Archi-Version-No", String.valueOf(versionNo))
-                .eTag("\"" + artifact.hash().value() + "\"")
+                .eTag("\"" + contentHash + "\"")
                 .lastModified(Instant.EPOCH);
     }
 

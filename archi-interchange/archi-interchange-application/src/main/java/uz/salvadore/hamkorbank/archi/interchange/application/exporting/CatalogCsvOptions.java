@@ -14,16 +14,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  */
 public record CatalogCsvOptions(char separator, String folderArchiId) {
 
-    public CatalogCsvOptions {
-        if (separator != ';' && separator != ',' && separator != '\t') {
-            throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE,
-                    Message.of(InterchangeMessages.CSV_SEPARATOR), Map.of());
-        }
-    }
-
     /**
      * Параметры из запроса: разделитель одним символом или словом {@code tab}, по умолчанию {@code ;};
-     * пустая или не заданная ({@code null}) папка — вся модель.
+     * пустая или не заданная ({@code null}) папка — вся модель. Недопустимый разделитель — отказ:
+     * значения проверяются здесь, при разборе запроса, а не в конструкторе.
      */
     public static CatalogCsvOptions of(String separator, String folderArchiId) {
         String value = separator == null ? ";" : separator;
@@ -31,7 +25,12 @@ public record CatalogCsvOptions(char separator, String folderArchiId) {
             throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE,
                     Message.of(InterchangeMessages.CSV_SEPARATOR_LENGTH), Map.of());
         }
-        return new CatalogCsvOptions(value.equals("tab") ? '\t' : value.charAt(0),
+        char separatorChar = value.equals("tab") ? '\t' : value.charAt(0);
+        if (separatorChar != ';' && separatorChar != ',' && separatorChar != '\t') {
+            throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE,
+                    Message.of(InterchangeMessages.CSV_SEPARATOR), Map.of());
+        }
+        return new CatalogCsvOptions(separatorChar,
                 folderArchiId == null || folderArchiId.isBlank() ? null : folderArchiId);
     }
 }

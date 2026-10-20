@@ -150,8 +150,6 @@ public final class InterchangeMessages {
     public static final String TARGET_CONNECTIONS_MISSING = "interchange.document.target-connections-missing";
     /** В файле встретился текст там, где значения быть не может. */
     public static final String TEXT_OUTSIDE_VALUE = "interchange.document.text-outside-value";
-    /** Выгрузка в запрошенный формат пока не поддерживается. */
-    public static final String FORMAT_NOT_AVAILABLE = "interchange.export.format-not-available";
     /** Отпечаток содержимого модели в запросе недопустим по виду. */
     public static final String GIT_BASE_HASH_INVALID = "interchange.git.base-hash-invalid";
     /** Присланный коммит не общий предок коммита ссылки — отчёт слияния устарел. */

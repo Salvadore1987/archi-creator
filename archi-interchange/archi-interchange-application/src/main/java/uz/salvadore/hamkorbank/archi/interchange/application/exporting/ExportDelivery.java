@@ -21,14 +21,15 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
  * проходит {@code REQUESTED → RENDERED → DELIVERED}, событие доставки уходит
  * подписчикам, число потерь — в метрику формата.
  */
-final class ExportDelivery {
+public final class ExportDelivery {
 
     private final InterchangeEvents events;
     private final InterchangeMetrics metrics;
     private final Clock clock;
     private final UuidV7 uuids;
 
-    ExportDelivery(InterchangeEvents events, InterchangeMetrics metrics, Clock clock, UuidV7 uuids) {
+    /** Задание выгрузки: события, метрика потерь, часы и ключи сценария. */
+    public ExportDelivery(InterchangeEvents events, InterchangeMetrics metrics, Clock clock, UuidV7 uuids) {
         this.events = events;
         this.metrics = metrics;
         this.clock = clock;
@@ -40,7 +41,7 @@ final class ExportDelivery {
      *
      * @param viewId {@code null} — выгрузка модели или пакет всех представлений
      */
-    void deliver(EditorIdentity actor, VersionSnapshotResponse snapshot, ViewId viewId, ExportFormat format,
+    public void deliver(EditorIdentity actor, VersionSnapshotResponse snapshot, ViewId viewId, ExportFormat format,
                  ExportOptions options, Artifact artifact, LossReport report) {
         ExportJob job = ExportJob.request(ExportJobId.next(uuids), new WorkspaceId(snapshot.model().workspaceId()),
                 new ModelId(snapshot.model().id()), viewId, format, options, snapshot.versionNo(),

@@ -16,9 +16,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ImportArchimateFileCommand;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.query.ExportModelQuery;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ImportArchimateFileResponse;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ImportArchimateFileResponse.Outcome;
-import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ExportApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportApplicationService;
 
 /**
@@ -32,7 +33,7 @@ class ModelImportIT extends IntegrationTest {
     @Autowired
     ImportApplicationService imports;
     @Autowired
-    ExportService exports;
+    ExportApplicationService exports;
 
     @Test
     @DisplayName("INV-MDL-009, INV-IXC-005: эталон проходит импорт → таблицы → экспорт без потерь")
@@ -46,7 +47,7 @@ class ModelImportIT extends IntegrationTest {
         assertEquals(1L, report.versionNo());
         assertEquals(402, count("element where model_id = ?", model));
         assertEquals(12, count("view where model_id = ?", model));
-        assertXmlEquivalent(original, exports.archimate(VIEWER, model, null).artifact().bytes());
+        assertXmlEquivalent(original, archimate(model, null));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -59,7 +60,7 @@ class ModelImportIT extends IntegrationTest {
 
         assertEquals(Outcome.APPLIED, report.outcome(), () -> report.findings().toString());
         assertXmlEquivalent(original,
-                exports.archimate(VIEWER, report.modelId(), 1L).artifact().bytes());
+                archimate(report.modelId(), 1L));
     }
 
     @Test
@@ -78,6 +79,10 @@ class ModelImportIT extends IntegrationTest {
     private ImportArchimateFileResponse importFile(String name, byte[] file) {
         return imports.importArchimateFile(ARCHITECT,
                 new ImportArchimateFileCommand(workspace().value(), name, file, null));
+    }
+
+    private byte[] archimate(UUID model, Long versionNo) {
+        return exports.exportModel(VIEWER, new ExportModelQuery(model, null, versionNo, null, null)).content();
     }
 
     private int count(String fromWhere, UUID model) {

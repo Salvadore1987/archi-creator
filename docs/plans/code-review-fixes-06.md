@@ -85,7 +85,7 @@ Git (`git/`) — этап 8: его сервисы в этой задаче по
 | 9.2 | Ядро interchange: роль, метрика, транзакция; роль — раньше разбора ввода (06-07) | ✅ |
 | 9.3 | Импорт файла: `ImportArchimateFileCommand` с `workspaceId` «не задан» — пространство по умолчанию выбирает handler, контроллер больше не зовёт `resolveWorkspace` (замечание к 12.3 из плана этапа 5); результат с исходом `APPLIED`/`REPLAYED`/`REJECTED_CORRUPT`/`REJECTED_STRICT` и кодом отказа — контроллер переводит исход в статус без своих решений (06-05) | ✅ |
 | 9.4 | Настройка импорта: `ConfigureImportPolicyCommand` отдаёт итоговую настройку; чтение — `GetImportPolicyQuery` с операцией и ролью в `InterchangeOperation` и `spec/nfr/interchange.yaml` (06-06) | ✅ |
-| 9.5 | Выгрузка модели: один сценарий по `ExportModelQuery` с форматом строкой; разбор формата и параметров CSV — в handler'е после роли; недостижимая ветка `IXC_FORMAT_NOT_AVAILABLE` и код — убрать (06-07); результат — DTO без `Artifact` | ⬜ |
+| 9.5 | Выгрузка модели: один сценарий по `ExportModelQuery` с форматом строкой; разбор формата и параметров CSV — в handler'е после роли; недостижимая ветка `IXC_FORMAT_NOT_AVAILABLE` и код — убрать (06-07); результат — DTO без `Artifact` | ✅ |
 | 9.6 | Картинки представлений: `ExportViewImageQuery`, `ExportAllViewImagesQuery`, результат — DTO | ⬜ |
 | 9.7 | `RestLayerConventionsTest`: контроллер interchange не ссылается на `*Codes`, кроме разбора ввода; `CLAUDE.md` — раскладка application interchange | ⬜ |
 
@@ -217,3 +217,14 @@ Git (`git/`) — этап 8: его сервисы в этой задаче по
   в той же транзакции записи. Отдельной проверки «публичный сценарий без операции» не заводили:
   каждый handler зовёт `kernel.run` с операцией, а сверку таблицы ролей со спецификацией держит
   `OperationTablesTest`.
+- **9.5.** Один вход `ExportApplicationService.exportModel(ExportModelQuery)`, handler —
+  `ModelExportQueryHandler`; `ExportService` и `ExportRequest` удалены. Операция у каждого формата своя
+  (роли у трёх одинаковы, метрики разные), поэтому до роли handler только ищет имя формата в таблице;
+  неизвестное имя отклоняется после роли под операцией `ExportArchimate` — её адрес обслуживает
+  по умолчанию. Формат «не задан» — `archimate`: умолчание ушло из `@RequestParam(defaultValue)`
+  в handler. `CatalogCsvOptions` больше не бросает из конструктора: разделитель проверяет `of`, разбор
+  запроса. `IXC_FORMAT_NOT_AVAILABLE` с ключом и текстами удалены — в контракте и use case'ах кода
+  не было. Результат — `ExportFileResponse` (байты, тип, имя, отпечаток, версия, число потерь); он же
+  пойдёт картинкам в 9.6. Сборочные части выгрузки (`DeterministicZip`, `ExportDelivery`, `LossReportJson`,
+  новый `ExportFileNames`) остались в `exporting` и стали публичными — handler'ы их собирают, как
+  писатели `oef` и `rendering`.
