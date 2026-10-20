@@ -39,11 +39,6 @@ class ApplicationLayerTest {
     /** Личность вызывающего — параметр входного порта рядом с командой, а не её данные. */
     private static final String ACTOR = ROOT + ".modeling.domain.common.EditorIdentity";
     /**
-     * Вход импорта interchange несёт агрегаты, разложенные из документа на его стороне: перевод
-     * этого входа в DTO идёт вместе с раскладкой документа при переводе interchange.
-     */
-    private static final Set<String> INTERCHANGE_INPUT = Set.of(MODELING + ".port.ModelContent");
-    /**
      * Сценарии interchange, ещё не переведённые на входные порты: адаптеры пока зовут их напрямую.
      * Git переводится отдельным этапом; остальное уходит из списка по мере перевода.
      */
@@ -194,8 +189,7 @@ class ApplicationLayerTest {
     /** Тип выходного порта: за ним хранение и агрегаты, сценарий наружу его не отдаёт и не принимает. */
     private static boolean outputPort(JavaClass type) {
         JavaClass base = type.isArray() ? type.getBaseComponentType() : type;
-        return (base.getPackageName().equals(MODELING + ".port") || base.getPackageName().equals(INTERCHANGE + ".port"))
-                && !INTERCHANGE_INPUT.contains(base.getName());
+        return base.getPackageName().equals(MODELING + ".port") || base.getPackageName().equals(INTERCHANGE + ".port");
     }
 
     private static boolean domain(Context context, JavaClass type) {

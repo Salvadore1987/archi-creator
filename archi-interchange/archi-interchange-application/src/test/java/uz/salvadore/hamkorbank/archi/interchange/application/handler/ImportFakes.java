@@ -2,6 +2,8 @@ package uz.salvadore.hamkorbank.archi.interchange.application.handler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
 import com.fasterxml.uuid.UUIDType;
 import com.fasterxml.uuid.impl.UUIDUtil;
 import java.nio.charset.StandardCharsets;
@@ -23,6 +25,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EnsureDefaultWorkspaceCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ImportModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.RecordGitShaCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceModelContentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetCommittedVersionQuery;
@@ -31,7 +34,9 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelCont
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelSummaryQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetVersionSnapshotQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ResolveWorkspaceQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.VerifyModelRowsQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.CommittedVersionResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ImportModelResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelContentResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ReplaceModelContentResponse;
@@ -39,7 +44,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ResolveWork
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionSnapshotResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.WorkspaceResponse;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
@@ -52,6 +56,8 @@ final class ImportFakes {
     static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-19T09:00:00Z"), ZoneOffset.UTC);
     static final EditorIdentity ARCHITECT = EditorIdentity.of("architect", Role.ARCHITECT);
     static final UUID WORKSPACE = UUIDUtil.constructUUID(UUIDType.TIME_BASED_EPOCH, 1L, 1L);
+    /** Ключи фейков — версии 7, из той же библиотеки, что у приложения. */
+    static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
 
     private ImportFakes() {
     }
@@ -207,12 +213,22 @@ final class ImportFakes {
         RuntimeException refusal;
 
         @Override
-        public VersionResponse importModel(EditorIdentity actor, ModelContent content, String comment) {
+        public ImportModelResponse importModel(EditorIdentity actor, ImportModelCommand command) {
             importedIn.add(transactions.current());
             if (refusal != null) {
                 throw refusal;
             }
-            return new VersionResponse(1, actor.subject(), comment, null, null, true, "hash", null);
+            return new ImportModelResponse(IDS.generate(), 1, 0);
+        }
+
+        /** Отказ, которым ответит проверка строк; {@code null} — строки принимаются. */
+        RuntimeException verifyRefusal;
+
+        @Override
+        public void verifyModelRows(VerifyModelRowsQuery query) {
+            if (verifyRefusal != null) {
+                throw verifyRefusal;
+            }
         }
 
         @Override

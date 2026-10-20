@@ -16,6 +16,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.SnapshotPurgeC
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionContents;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionRestoreCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionSnapshotGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.mapper.ModelRowsMapper;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
@@ -30,8 +31,11 @@ class VersionTransactionsTest {
     private final InMemoryPorts ports = new InMemoryPorts();
     /** Был ли каждый внешний вызов сделан внутри транзакции. */
     private final List<Boolean> externalCallsInTransaction = new ArrayList<>();
+    /** Модель, чей снимок вернёт чтение: содержимое отката — её же текущее. */
+    private ModelId current;
     private final VersionContents contents = ports.versionContents(
-            (xml, current, now) -> new ModelContent(ports.modelRepository.load(current.id()).orElseThrow(), List.of()),
+            xml -> ModelRowsMapper.rows(new ModelContent(ports.modelRepository.load(current).orElseThrow(),
+                    List.of())),
             (model, version) -> external(Optional.of("restored".getBytes(StandardCharsets.UTF_8))));
 
     @Test
@@ -74,6 +78,7 @@ class VersionTransactionsTest {
         ModelId model = ports.createModel(ALICE, "Ландшафт");
         ModelVersion first = ports.versions.removeFirst();
         ports.versions.add(first.publishedAs(SHA).snapshotPurged(true));
+        current = model;
         return model;
     }
 

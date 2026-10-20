@@ -55,6 +55,19 @@ class ImportRejectionTest {
     }
 
     @Test
+    @DisplayName("INV-IXC-007: modeling не собирает модель из строк — повреждённый файл в отчёте, записи нет")
+    void rowsRefusedByModelingAreCorrupt() {
+        models.verifyRefusal = new ModelingDomainException("MDL_TEST", Failure.UNPROCESSABLE,
+                Message.of("modeling.test"));
+
+        ImportArchimateFileResponse report = importFile(ImportFakes.file("application"), "key-5");
+
+        assertEquals(Outcome.REJECTED_CORRUPT, report.outcome());
+        assertEquals(InterchangeCodes.CORRUPT_DOCUMENT, report.findings().getFirst().code());
+        assertEquals(List.of(), models.importedIn, "до записи не дошло");
+    }
+
+    @Test
     @DisplayName("FR-49: строгий режим и нарушение матрицы — исход «отклонён строгостью» со своим кодом")
     void strictRejectionHasItsOwnOutcome() {
         policy.strict = true;

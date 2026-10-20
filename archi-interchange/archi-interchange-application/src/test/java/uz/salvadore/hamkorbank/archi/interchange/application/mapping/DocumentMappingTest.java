@@ -24,6 +24,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
+import uz.salvadore.hamkorbank.archi.modeling.application.mapper.ModelRowsMapper;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiIdGenerator;
@@ -33,6 +34,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.Bounds;
 import uz.salvadore.hamkorbank.archi.modeling.domain.view.View;
@@ -137,11 +139,12 @@ class DocumentMappingTest {
         assertTrue(bounds > 0 && text > bounds, "текст заметки — после геометрии");
     }
 
+    /** Документ → строки → агрегаты: агрегаты из строк собирает modeling, как при импорте. */
     static ModelContent decompose(ModelDocument document) {
         ArchiIdGenerator archiIds = new ArchiIdGenerator(IDS::generate);
-        return new DocumentDecomposer(IDS::generate, archiIds::next).decompose(document,
-                new DocumentDecomposer.Identity(ModelId.of(IDS.generate()), WorkspaceId.of(IDS.generate()),
-                        "architect", NOW, NOW, 0));
+        return ModelRowsMapper.content(new DocumentDecomposer(IDS::generate).decompose(document),
+                new ModelRowsMapper.Identity(ModelId.of(IDS.generate()), WorkspaceId.of(IDS.generate()),
+                        "architect", NOW, NOW, 0), () -> FolderId.of(IDS.generate()), archiIds::next);
     }
 
     static ModelDocument read(byte[] xml) {

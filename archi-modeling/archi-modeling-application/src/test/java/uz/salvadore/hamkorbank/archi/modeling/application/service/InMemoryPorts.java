@@ -404,7 +404,7 @@ final class InMemoryPorts {
             Message::toString, clock, Duration.ofMinutes(30));
     final VersionCommitter committer = new VersionCommitter(kernel, snapshotWriter);
     private final VersionContents withoutArchive = new VersionContents(kernel, committer, snapshotWriter,
-            (xml, current, now) -> {
+            xml -> {
                 throw new UnsupportedOperationException();
             }, SnapshotArchive.NONE);
     final VersionApplicationService versionService = new VersionApplicationServiceImpl(

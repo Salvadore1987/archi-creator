@@ -45,6 +45,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelImportCom
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelListQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelPurgeCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelRestoreCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelRowsVerifyQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelSummaryGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelValidateQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelingKernel;
@@ -119,7 +120,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.service.VersionApplica
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.ViewQueryApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceApplicationServiceImpl;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiIdGenerator;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
 
 /** Сценарии modeling — бинами, порты — реализациями из адаптеров и отсюда. */
@@ -162,10 +162,7 @@ public class ModelingConfiguration {
 
     @Bean
     ArchimateSnapshots archimateSnapshots(Clock clock) {
-        UuidV7 uuids = new UuidV7(clock);
-        ArchiIdGenerator archiIds = new ArchiIdGenerator(uuids::next);
-        return new ArchimateSnapshots(new StaxArchiDocumentReader(), new ArchiXmlWriter(), uuids::next,
-                archiIds::next);
+        return new ArchimateSnapshots(new StaxArchiDocumentReader(), new ArchiXmlWriter(), new UuidV7(clock)::next);
     }
 
     @Bean
@@ -204,6 +201,7 @@ public class ModelingConfiguration {
                                                                     VersionCommitter committer,
                                                                     VersionContents contents) {
         return new ModelExchangeApplicationServiceImpl(new ModelImportCommandHandler(kernel, workspaces, committer),
+                new ModelRowsVerifyQueryHandler(kernel),
                 new VersionSnapshotGetQueryHandler(kernel, contents),
                 new ModelSummaryGetQueryHandler(kernel), new ModelContentGetQueryHandler(kernel, contents),
                 new ModelContentReplaceCommandHandler(kernel, contents), new CommittedVersionGetQueryHandler(kernel),

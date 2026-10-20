@@ -1,18 +1,16 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.port;
 
-import java.time.Instant;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.ModelRows;
 
 /**
- * Обратный путь снимка — откат к версии ({@code RollbackToVersion}).
- * Реализует interchange.
+ * Обратный путь снимка — откат к версии и замена содержимого извне. Реализует interchange:
+ * формат файла — его язык; агрегаты из строк собирает modeling.
  */
 public interface SnapshotReader {
 
     /**
-     * Содержимое снимка как новое содержимое существующей модели: ключ, рабочее
-     * пространство, автор и время создания берутся из {@code current}, всё прочее —
-     * из снимка; внутренние ключи содержимого — новые.
+     * Строки модели из снимка; внутренние ключи — новые. Снимок не раскладывается —
+     * {@link SnapshotUnreadableException}.
      */
-    ModelContent read(byte[] xml, ModelHeader current, Instant now);
+    ModelRows read(byte[] xml);
 }

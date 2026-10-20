@@ -2,20 +2,20 @@ package uz.salvadore.hamkorbank.archi.interchange.application.mapping;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.time.Instant;
 import java.util.UUID;
 import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiDocumentWriter;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeDomainException;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.ModelRows;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotReader;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotUnreadableException;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotWriter;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 
 /**
  * Снимок версии modeling — файл {@code .archimate}: сборка из агрегатов и детерминированная
- * запись, а для отката — чтение и раскладка обратно. Формат файла — язык
+ * запись, а для отката — чтение и раскладка обратно в строки. Формат файла — язык
  * interchange, поэтому порты modeling реализованы здесь.
  */
 public final class ArchimateSnapshots implements SnapshotWriter, SnapshotReader {
@@ -24,14 +24,12 @@ public final class ArchimateSnapshots implements SnapshotWriter, SnapshotReader 
     private final ArchiDocumentWriter writer;
     private final DocumentAssembler assembler = new DocumentAssembler();
     private final Supplier<UUID> uuids;
-    private final Supplier<ArchiId> archiIds;
 
-    public ArchimateSnapshots(ArchiDocumentReader reader, ArchiDocumentWriter writer, Supplier<UUID> uuids,
-                              Supplier<ArchiId> archiIds) {
+    /** Внутренние ключи строк при раскладке — из {@code uuids}. */
+    public ArchimateSnapshots(ArchiDocumentReader reader, ArchiDocumentWriter writer, Supplier<UUID> uuids) {
         this.reader = reader;
         this.writer = writer;
         this.uuids = uuids;
-        this.archiIds = archiIds;
     }
 
     @Override
@@ -41,10 +39,13 @@ public final class ArchimateSnapshots implements SnapshotWriter, SnapshotReader 
         return out.toByteArray();
     }
 
+    /** Файл не читается или не раскладывается в строки — отказ порта с причиной от раскладки. */
     @Override
-    public ModelContent read(byte[] xml, ModelHeader current, Instant now) {
-        return new DocumentDecomposer(uuids, archiIds).decompose(reader.read(new ByteArrayInputStream(xml)),
-                new DocumentDecomposer.Identity(current.id(), current.workspaceId(), current.createdBy(),
-                        current.createdAt(), now, current.version()));
+    public ModelRows read(byte[] xml) {
+        try {
+            return new DocumentDecomposer(uuids).decompose(reader.read(new ByteArrayInputStream(xml)));
+        } catch (InterchangeDomainException unreadable) {
+            throw new SnapshotUnreadableException(unreadable);
+        }
     }
 }

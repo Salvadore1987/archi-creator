@@ -105,9 +105,10 @@ Application-слои без Spring: транзакция — порт `UnitOfWor
 и результаты — record'ы `application/dto/command|query|result` из простых значений; агрегат
 наружу не выходит, перевод — `application/mapper/`. Вход других контекстов (выгрузка, Git,
 импорт) — `ModelExchangeApplicationService`: роль у этих операций проверяет вызывающий.
-Держит `ApplicationLayerTest` (ArchUnit); единственное исключение — `ModelContent` во входе
-импорта, до перевода раскладки документа interchange. Advisor переводится по этому образцу
-на своём этапе ревью.
+Держит `ApplicationLayerTest` (ArchUnit), исключений нет. Содержимое модели между modeling и раскладкой
+документа ходит строками из простых значений (`dto/ModelRows`): агрегаты из строк и обратно собирает
+`mapper/ModelRowsMapper`, а раскладка спрашивает правила формата у `mapper/ModelRowRules` — так остаток
+XML тот же, а правило одно. Advisor переводится по этому образцу на своём этапе ревью.
 
 **Application-слой interchange — по тому же образцу.** Входные порты `port/in/` — импорт файла,
 настройка импорта, выгрузка модели, картинки представлений; handler'ы — в `handler`, общее у них —

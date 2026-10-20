@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.service;
 
 import java.util.Optional;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ImportModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.RecordGitShaCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceModelContentCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetCommittedVersionQuery;
@@ -8,7 +9,9 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetLastPubli
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelContentQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelSummaryQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetVersionSnapshotQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.VerifyModelRowsQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.CommittedVersionResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ImportModelResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelContentResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ReplaceModelContentResponse;
@@ -18,11 +21,11 @@ import uz.salvadore.hamkorbank.archi.modeling.application.handler.CommittedVersi
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelContentGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelContentReplaceCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelImportCommandHandler;
+import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelRowsVerifyQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelSummaryGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.PublishedVersionGetQueryHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionGitShaRecordCommandHandler;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.VersionSnapshotGetQueryHandler;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 
@@ -30,6 +33,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 public final class ModelExchangeApplicationServiceImpl implements ModelExchangeApplicationService {
 
     private final ModelImportCommandHandler importModel;
+    private final ModelRowsVerifyQueryHandler verifyRows;
     private final VersionSnapshotGetQueryHandler snapshot;
     private final ModelSummaryGetQueryHandler summary;
     private final ModelContentGetQueryHandler content;
@@ -39,6 +43,7 @@ public final class ModelExchangeApplicationServiceImpl implements ModelExchangeA
     private final VersionGitShaRecordCommandHandler gitSha;
 
     public ModelExchangeApplicationServiceImpl(ModelImportCommandHandler importModel,
+                                               ModelRowsVerifyQueryHandler verifyRows,
                                                VersionSnapshotGetQueryHandler snapshot,
                                                ModelSummaryGetQueryHandler summary,
                                                ModelContentGetQueryHandler content,
@@ -47,6 +52,7 @@ public final class ModelExchangeApplicationServiceImpl implements ModelExchangeA
                                                PublishedVersionGetQueryHandler published,
                                                VersionGitShaRecordCommandHandler gitSha) {
         this.importModel = importModel;
+        this.verifyRows = verifyRows;
         this.snapshot = snapshot;
         this.summary = summary;
         this.content = content;
@@ -57,8 +63,13 @@ public final class ModelExchangeApplicationServiceImpl implements ModelExchangeA
     }
 
     @Override
-    public VersionResponse importModel(EditorIdentity actor, ModelContent content, String comment) {
-        return importModel.handle(actor, content, comment);
+    public ImportModelResponse importModel(EditorIdentity actor, ImportModelCommand command) {
+        return importModel.handle(actor, command);
+    }
+
+    @Override
+    public void verifyModelRows(VerifyModelRowsQuery query) {
+        verifyRows.handle(query);
     }
 
     @Override

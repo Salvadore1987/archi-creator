@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.handler;
 
 import java.io.ByteArrayInputStream;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -24,6 +23,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueExcep
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
+import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.IdempotencyConflictException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
@@ -32,17 +32,17 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.Severity;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.ModelRows;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ImportModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ResolveWorkspaceQuery;
-import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionResponse;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.VerifyModelRowsQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ImportModelResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiIdGenerator;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.RelationViolation;
-import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
 /**
  * Импорт файла {@code .archimate} новой моделью.
@@ -96,7 +96,7 @@ public final class ArchimateFileImportCommandHandler {
                 if (intake.replayed()) {
                     return response(intake.session(), true);
                 }
-                Prepared prepared = prepare(intake.session(), command.content(), actor);
+                Prepared prepared = prepare(intake.session(), command.content());
                 try {
                     return kernel.unitOfWork().write(() -> apply(request, prepared, actor));
                 } catch (ModelingDomainException refused) {
@@ -117,32 +117,31 @@ public final class ArchimateFileImportCommandHandler {
     }
 
     /**
-     * Разобранная попытка до применения: сессия и, если файл принят, модель для записи.
+     * Разобранная попытка до применения: сессия и, если файл принят, строки модели для записи.
      *
-     * @param model {@code null} — сессия отклонена, записывать нечего
+     * @param rows {@code null} — сессия отклонена, записывать нечего
      */
-    private record Prepared(ImportSession session, ModelContent model, Instant now) {
+    private record Prepared(ImportSession session, ModelRows rows) {
     }
 
-    /** Разбор, методология и раскладка — без транзакции. */
-    private Prepared prepare(ImportSession session, byte[] content, EditorIdentity actor) {
+    /**
+     * Разбор, методология и раскладка — без транзакции. Собирается ли модель из строк, modeling
+     * отвечает здесь же: отказ — повреждённый файл в отчёте, а не отказ записи.
+     */
+    private Prepared prepare(ImportSession session, byte[] content) {
         session.parse(reader, new ByteArrayInputStream(content), this::findingId, kernel.now());
         if (session.status() == ImportStatus.REJECTED) {
-            return new Prepared(session, null, null);
+            return new Prepared(session, null);
         }
         ModelDocument document = Objects.requireNonNull(session.document());
         session.validate(methodology.check(document, this::findingId), kernel.now());
         if (session.status() == ImportStatus.REJECTED) {
-            return new Prepared(session, null, null);
+            return new Prepared(session, null);
         }
-        Instant now = kernel.now();
-        ModelId modelId = ModelId.of(kernel.uuids().next());
-        ArchiIdGenerator archiIds = new ArchiIdGenerator(kernel.uuids()::next);
         try {
-            ModelContent model = new DocumentDecomposer(kernel.uuids()::next, archiIds::next).decompose(document,
-                    new DocumentDecomposer.Identity(modelId, uz.salvadore.hamkorbank.archi.modeling.domain.workspace
-                            .WorkspaceId.of(session.workspaceId().value()), actor.subject(), now, now, 0));
-            return new Prepared(session, model, now);
+            ModelRows rows = new DocumentDecomposer(kernel.uuids()::next).decompose(document);
+            models.verifyModelRows(new VerifyModelRowsQuery(rows));
+            return new Prepared(session, rows);
         } catch (InterchangeDomainException unbuildable) {
             return unbuildable(session, unbuildable.reason());
         } catch (ModelingDomainException unbuildable) {
@@ -154,7 +153,7 @@ public final class ArchimateFileImportCommandHandler {
     private Prepared unbuildable(ImportSession session, Object reason) {
         session.reject(List.of(new ImportFinding(findingId(), Severity.ERROR, InterchangeCodes.CORRUPT_DOCUMENT,
                 Message.of(InterchangeMessages.IMPORT_CONTENT_REJECTED, reason), null, null)), kernel.now());
-        return new Prepared(session, null, null);
+        return new Prepared(session, null);
     }
 
     /**
@@ -175,21 +174,17 @@ public final class ArchimateFileImportCommandHandler {
             return response(again.session(), true);
         }
         ImportSession session = prepared.session();
-        if (prepared.model() == null) {
+        if (prepared.rows() == null) {
             sessions.save(session);
             return finished(session);
         }
-        ModelContent model = prepared.model();
-        ModelId modelId = model.model().header().id();
-        VersionResponse version = models.importModel(actor, model,
-                kernel.texts().text(Message.of(InterchangeMessages.COMMENT_IMPORTED, session.sourceName())));
-        int opaque = model.model().opaqueCount();
-        session.apply(
-                new uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId(modelId.value()),
-                version.versionNo(), opaque, prepared.now());
+        ImportModelResponse imported = models.importModel(actor, new ImportModelCommand(
+                session.workspaceId().value(), prepared.rows(),
+                kernel.texts().text(Message.of(InterchangeMessages.COMMENT_IMPORTED, session.sourceName()))));
+        session.apply(new ModelId(imported.modelId()), imported.versionNo(), imported.opaqueObjects(), kernel.now());
         sessions.save(session);
         kernel.events().publish(session.pullEvents());
-        kernel.metrics().opaqueObjects(modelId.value(), opaque);
+        kernel.metrics().opaqueObjects(imported.modelId(), imported.opaqueObjects());
         return finished(session);
     }
 
