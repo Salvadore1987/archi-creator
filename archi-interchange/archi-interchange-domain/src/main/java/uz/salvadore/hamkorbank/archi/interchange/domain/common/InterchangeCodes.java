@@ -45,6 +45,8 @@ public final class InterchangeCodes {
     public static final String FOLDER_NOT_IN_VERSION = "IXC_FOLDER_NOT_IN_VERSION";
     /** Картинка представления при заданной плотности больше предела по стороне. */
     public static final String IMAGE_TOO_LARGE = "IXC_IMAGE_TOO_LARGE";
+    /** Растеризатор PNG занят дольше допустимого ожидания: картинки растеризуются по одной. */
+    public static final String RASTERIZER_BUSY = "IXC_RASTERIZER_BUSY";
     /** Параметр выгрузки картинки задан недопустимым значением. */
     public static final String INVALID_EXPORT_OPTION = "IXC_INVALID_EXPORT_OPTION";
     /** Выгрузка в OEF не прошла официальную схему — дефект сервера, файл не отдан. */

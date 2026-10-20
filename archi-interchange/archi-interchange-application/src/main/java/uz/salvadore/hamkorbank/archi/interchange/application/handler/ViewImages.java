@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
+import uz.salvadore.hamkorbank.archi.interchange.application.exporting.RasterGate;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Rasterizer;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.ImageLoss;
@@ -48,18 +49,22 @@ final class ViewImages {
     private static final Set<Integer> SCALES = Set.of(1, 2, 4);
     private static final List<Integer> SCALES_DESCENDING = List.of(4, 2, 1);
     /** Предел стороны PNG: 4 000 логических единиц при плотности 4. */
-    private static final int MAX_PNG_SIDE = 16_000;
+    static final int MAX_PNG_SIDE = 16_000;
+    private static final long MEGAPIXEL = 1_000_000;
 
     private final InterchangeKernel kernel;
     private final Notation notation;
     private final Typesetter typesetter;
     private final Rasterizer rasterizer;
+    private final RasterGate gate;
 
-    ViewImages(InterchangeKernel kernel, Notation notation, Typesetter typesetter, Rasterizer rasterizer) {
+    ViewImages(InterchangeKernel kernel, Notation notation, Typesetter typesetter, Rasterizer rasterizer,
+               RasterGate gate) {
         this.kernel = kernel;
         this.notation = notation;
         this.typesetter = typesetter;
         this.rasterizer = rasterizer;
+        this.gate = gate;
     }
 
     /** Параметры после проверки: формат, плотность, кривые, прозрачный фон. */
@@ -111,7 +116,10 @@ final class ViewImages {
                 Map.of("parameter", parameter, "value", value));
     }
 
-    /** PNG растеризуется из варианта в кривых: растеризатору не нужны шрифты. */
+    /**
+     * PNG растеризуется из варианта в кривых: растеризатору не нужны шрифты. Растр больше предела
+     * по стороне или площади не строится; растеризация ждёт своей очереди.
+     */
     Picture picture(ModelDocument document, DocumentNode view, Settings settings) {
         SvgWriter writer = new SvgWriter(notation, typesetter, kernel.texts());
         boolean png = settings.format() == ExportFormat.PNG;
@@ -120,17 +128,45 @@ final class ViewImages {
         if (!png) {
             return new Picture(rendered.svg(), rendered.losses());
         }
-        int width = (int) Math.ceil(rendered.width() * settings.scale());
-        int height = (int) Math.ceil(rendered.height() * settings.scale());
-        if (width > MAX_PNG_SIDE || height > MAX_PNG_SIDE) {
-            int maxScale = SCALES_DESCENDING.stream()
-                    .filter(s -> rendered.width() * s <= MAX_PNG_SIDE && rendered.height() * s <= MAX_PNG_SIDE)
-                    .findFirst().orElse(0);
-            throw new InterchangeException(InterchangeCodes.IMAGE_TOO_LARGE, Failure.UNPROCESSABLE,
-                    Message.of(InterchangeMessages.IMAGE_TOO_LARGE, width, height, MAX_PNG_SIDE),
-                    Map.of("maxScale", maxScale, "viewArchiId", view.archiId().value()));
+        Raster raster = raster(rendered.width(), rendered.height(), settings.scale(), gate.maxAreaPx(),
+                view.archiId().value());
+        return new Picture(gate.through(() -> rasterizer.png(rendered.svg(), raster.width(), raster.height())),
+                rendered.losses());
+    }
+
+    /** Размер растра в пикселях. */
+    record Raster(int width, int height) {
+    }
+
+    /**
+     * Растр картинки {@code width × height} логических единиц при плотности {@code scale}. Больше
+     * {@link #MAX_PNG_SIDE} по стороне или {@code maxAreaPx} по площади — отказ
+     * {@code IXC_IMAGE_TOO_LARGE} с наибольшей плотностью, при которой растр помещается
+     * ({@code 0} — не помещается и при плотности 1).
+     */
+    static Raster raster(double width, double height, int scale, long maxAreaPx, String viewArchiId) {
+        Raster raster = sized(width, height, scale);
+        boolean sideFits = raster.width() <= MAX_PNG_SIDE && raster.height() <= MAX_PNG_SIDE;
+        if (sideFits && fits(raster, maxAreaPx)) {
+            return raster;
         }
-        return new Picture(rasterizer.png(rendered.svg(), width, height), rendered.losses());
+        int maxScale = SCALES_DESCENDING.stream().filter(s -> fits(sized(width, height, s), maxAreaPx))
+                .findFirst().orElse(0);
+        Message reason = sideFits
+                ? Message.of(InterchangeMessages.IMAGE_AREA_TOO_LARGE, raster.width(), raster.height(),
+                        maxAreaPx / MEGAPIXEL)
+                : Message.of(InterchangeMessages.IMAGE_TOO_LARGE, raster.width(), raster.height(), MAX_PNG_SIDE);
+        throw new InterchangeException(InterchangeCodes.IMAGE_TOO_LARGE, Failure.UNPROCESSABLE, reason,
+                Map.of("maxScale", maxScale, "viewArchiId", viewArchiId));
+    }
+
+    private static Raster sized(double width, double height, int scale) {
+        return new Raster((int) Math.ceil(width * scale), (int) Math.ceil(height * scale));
+    }
+
+    private static boolean fits(Raster raster, long maxAreaPx) {
+        return raster.width() <= MAX_PNG_SIDE && raster.height() <= MAX_PNG_SIDE
+                && (long) raster.width() * raster.height() <= maxAreaPx;
     }
 
     /** Потери картинки — записи отчёта с причинами на языке запроса. */

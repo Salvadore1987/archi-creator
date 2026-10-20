@@ -12,6 +12,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.exporting.Determini
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportDelivery;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportFileNames;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.LossReportJson;
+import uz.salvadore.hamkorbank.archi.interchange.application.exporting.RasterGate;
 import uz.salvadore.hamkorbank.archi.interchange.application.mapper.ExportDataMapper;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Rasterizer;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter;
@@ -39,10 +40,11 @@ public final class AllViewImagesExportQueryHandler {
     private final ExportDelivery delivery;
 
     public AllViewImagesExportQueryHandler(InterchangeKernel kernel, ModelExchangeApplicationService versions,
-                                           Notation notation, Typesetter typesetter, Rasterizer rasterizer) {
+                                           Notation notation, Typesetter typesetter, Rasterizer rasterizer,
+                                           RasterGate gate) {
         this.kernel = kernel;
         this.versions = versions;
-        this.images = new ViewImages(kernel, notation, typesetter, rasterizer);
+        this.images = new ViewImages(kernel, notation, typesetter, rasterizer, gate);
         this.delivery = new ExportDelivery(kernel.events(), kernel.metrics(), kernel.clock(), kernel.uuids());
     }
 

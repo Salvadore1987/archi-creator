@@ -9,6 +9,7 @@ import uz.salvadore.hamkorbank.archi.bootstrap.export.BatikRasterizer;
 import uz.salvadore.hamkorbank.archi.bootstrap.export.InterTypesetter;
 import uz.salvadore.hamkorbank.archi.bootstrap.export.SharedNotation;
 import uz.salvadore.hamkorbank.archi.bootstrap.git.GitSettings;
+import uz.salvadore.hamkorbank.archi.interchange.application.exporting.RasterGate;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingService;
 import uz.salvadore.hamkorbank.archi.interchange.application.handler.AllViewImagesExportQueryHandler;
 import uz.salvadore.hamkorbank.archi.interchange.application.handler.ArchimateFileImportCommandHandler;
@@ -112,14 +113,21 @@ public class InterchangeConfiguration {
         return new BatikRasterizer();
     }
 
+    /** Очередь растеризации PNG — одна на процесс: её делят картинка представления и пакет картинок. */
+    @Bean
+    RasterGate rasterGate(InterchangeSettings settings) {
+        return new RasterGate(settings.pngMaxAreaPx(), settings.maxParallelRasterizations(),
+                settings.rasterizationWait());
+    }
+
     @Bean
     ViewImageApplicationService viewImageApplicationService(InterchangeKernel kernel,
                                                             ViewQueryApplicationService queries,
                                                             ModelExchangeApplicationService versions,
                                                             Notation notation, Typesetter typesetter,
-                                                            Rasterizer rasterizer) {
+                                                            Rasterizer rasterizer, RasterGate gate) {
         return new ViewImageApplicationServiceImpl(
-                new ViewImageExportQueryHandler(kernel, queries, versions, notation, typesetter, rasterizer),
-                new AllViewImagesExportQueryHandler(kernel, versions, notation, typesetter, rasterizer));
+                new ViewImageExportQueryHandler(kernel, queries, versions, notation, typesetter, rasterizer, gate),
+                new AllViewImagesExportQueryHandler(kernel, versions, notation, typesetter, rasterizer, gate));
     }
 }

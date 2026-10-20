@@ -246,6 +246,10 @@ public final class InterchangeMessages {
     public static final String IMAGE_OPTION_INVALID = "interchange.image.option-invalid";
     /** Картинка при заданной плотности больше предела по стороне. */
     public static final String IMAGE_TOO_LARGE = "interchange.image.too-large";
+    /** Картинка при заданной плотности больше предела по площади. */
+    public static final String IMAGE_AREA_TOO_LARGE = "interchange.image.area-too-large";
+    /** Растеризатор PNG занят дольше допустимого ожидания. */
+    public static final String RASTERIZER_BUSY = "interchange.image.rasterizer-busy";
     /** Представления нет в зафиксированной версии, из которой строится картинка. */
     public static final String IMAGE_VIEW_NOT_IN_VERSION = "interchange.image.view-not-in-version";
     /** Папки, которой ограничен каталог CSV, нет в выгружаемой версии. */

@@ -207,6 +207,7 @@ paths:
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '422': { $ref: '#/components/responses/ImageOptionRejected422' }
+        '503': { $ref: '#/components/responses/RasterizerBusy503' }
 
   /models/{id}/views/export:
     get:
@@ -252,6 +253,7 @@ paths:
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
         '422': { $ref: '#/components/responses/ImageOptionRejected422' }
+        '503': { $ref: '#/components/responses/RasterizerBusy503' }
 
   /workspaces/{id}/import-settings:
     parameters:
@@ -1058,8 +1060,18 @@ components:
       description: |
         Недопустимый параметр картинки — `IXC_UNKNOWN_FORMAT` или
         `IXC_INVALID_EXPORT_OPTION`; PNG стороной больше 16 000 px (4 000 × 4 000
-        при `scale=4`) — `IXC_IMAGE_TOO_LARGE`, наибольшая допустимая плотность
-        в поле `maxScale` (0 — не помещается даже при `scale=1`).
+        при `scale=4`) или площадью больше 64 Мпикс — `IXC_IMAGE_TOO_LARGE`, наибольшая
+        допустимая плотность в поле `maxScale` (0 — не помещается даже при `scale=1`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+    RasterizerBusy503:
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
+      description: |
+        PNG растеризуется по одному на процесс; растеризатор занят дольше 60 с —
+        `IXC_RASTERIZER_BUSY`, повторить позже. У SVG очереди нет.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
