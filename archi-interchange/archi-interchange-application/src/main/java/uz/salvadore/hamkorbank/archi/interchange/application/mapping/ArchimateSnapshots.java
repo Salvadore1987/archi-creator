@@ -8,13 +8,12 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiDocumentReade
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiDocumentWriter;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.ModelRows;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotReader;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotUnreadableException;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotWriter;
 
 /**
- * Снимок версии modeling — файл {@code .archimate}: сборка из агрегатов и детерминированная
+ * Снимок версии modeling — файл {@code .archimate}: сборка из строк модели и детерминированная
  * запись, а для отката — чтение и раскладка обратно в строки. Формат файла — язык
  * interchange, поэтому порты modeling реализованы здесь.
  */
@@ -33,9 +32,9 @@ public final class ArchimateSnapshots implements SnapshotWriter, SnapshotReader 
     }
 
     @Override
-    public byte[] write(ModelContent content) {
+    public byte[] write(ModelRows rows) {
         ByteArrayOutputStream out = new ByteArrayOutputStream(64 * 1024);
-        writer.write(assembler.assemble(content), out);
+        writer.write(assembler.assemble(rows), out);
         return out.toByteArray();
     }
 

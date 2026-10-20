@@ -78,7 +78,7 @@ public final class VersionContents {
 
     /** Текущее содержимое модели в базе — тем же снимком, который соберёт сохранение. */
     public byte[] currentXml(ModelId modelId) {
-        return snapshotWriter.write(new ModelContent(kernel.models().load(modelId).orElseThrow(),
-                kernel.views().loadAll(modelId)));
+        return snapshotWriter.write(ModelRowsMapper.rows(new ModelContent(
+                kernel.models().load(modelId).orElseThrow(), kernel.views().loadAll(modelId))));
     }
 }

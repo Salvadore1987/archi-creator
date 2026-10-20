@@ -51,7 +51,7 @@
 | 7 | Мелочи читаемости; неизвестная папка каталога | 06-14 | `CatalogCsvWriterTest#unknownFolderIsRejected` (после решения — спека §5.2 и контракт) | ✅ |
 | 8 | Каталог CSV и формулы Excel | 06-09 | `CatalogCsvWriterTest#formulaPrefixIsEscaped` | ✅ |
 | 9 | Application interchange (импорт и выгрузка) — входные порты, handler'ы, DTO | 06-03, 06-05, 06-06, 06-07 | `ApplicationLayerTest` на interchange (см. ниже) | ✅ |
-| 10 | Вход импорта и снимки — строки модели простыми значениями | 06-04 | `ApplicationLayerTest` без исключения `INTERCHANGE_INPUT`; round-trip побайтово | ⬜ |
+| 10 | Вход импорта и снимки — строки модели простыми значениями | 06-04 | `ApplicationLayerTest` без исключения `INTERCHANGE_INPUT`; round-trip побайтово | ✅ |
 | 11 | Предел площади PNG — спека, затем код | 06-11 | `ViewImageServiceTest#areaLimit` | ⬜ |
 
 ### Задача 1 — подробности
@@ -105,7 +105,7 @@ Git (`git/`) — этап 8: его сервисы в этой задаче по
 |---|---|---|
 | 10.1 | `dto/ModelRows`, фасад правил формата, перевод строк в агрегаты и обратно в modeling | ✅ |
 | 10.2 | Раскладка выдаёт `ModelRows`; `importModel` и порт чтения снимка — на строках; отказ раскладки — по вызывающему (10-б) | ✅ |
-| 10.3 | Сборщик принимает `ModelRows`; порт записи снимка — на строках | ⬜ |
+| 10.3 | Сборщик принимает `ModelRows`; порт записи снимка — на строках | ✅ |
 
 
 - Строки модели — DTO application modeling (`dto/command/ModelRows`: заголовок, папки, элементы, связи,
@@ -287,3 +287,9 @@ Git (`git/`) — этап 8: его сервисы в этой задаче по
   Раньше этот отказ доходил до клиента исключением домена interchange, а журнал попытки Git писал код
   `IXC_GIT_IMPORT`; теперь — `IXC_CORRUPT_DOCUMENT`. Исключение `INTERCHANGE_INPUT` из `ApplicationLayerTest`
   удалено здесь, а не в 10.3: входной порт больше не отдаёт агрегатов; порт записи снимка — выходной.
+- **10.3.** Сборщик обходит строки так же, как раньше агрегаты, — в порядке строк, который `ModelRowsMapper.rows`
+  берёт из хранилища; документ тот же (`DocumentMappingTest`, `RoundTripGoldenFileTest`, `GitRoundTripIT`).
+  Порт записи снимка принимает `ModelRows`; перевод агрегатов в строки — в `VersionCommitter` и `VersionContents`.
+  Ни раскладка, ни сборка больше не импортируют `modeling.domain`; полные имена `ArchiId` двух контекстов
+  из сборщика ушли вместе с доменным типом modeling. `ModelContent` остался внутренним типом modeling:
+  репозиторий, handler'ы и перевод в строки.
