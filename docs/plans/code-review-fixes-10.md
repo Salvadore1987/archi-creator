@@ -64,3 +64,10 @@
   приводит текст к `jsonb` (`@ColumnTransformer`). `@JdbcTypeCode(SqlTypes.JSON)` не взят: он
   меняет путь записи значения через сериализатор JSON, а `columnDefinition` — только сверку схемы. Остальные столбцы
   (`text` против `varchar`, `bytea`, `timestamptz`) диалект Postgres признаёт равными.
+
+## Итог
+
+Все девять задач закрыты 2026-10-21. `./mvnw -P '!frontend' verify` зелёный: 112 интеграционных тестов
+(было 100 до этапа ревью 9, из них новые этого этапа — `ForeignKeyIndexIT`, `SchemaValidationIT` и пять
+случаев в `ModelPersistenceIT`, `ModelAclIT`, `ImportIT`, `GitBindingIT`), покрытие строк 92,3 %.
+Миграции `V9`, `V10` новые и в `FROZEN` `tools/check-comment-refs.py` попадут, когда их применят на базе.
