@@ -10,11 +10,14 @@ import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
@@ -26,11 +29,18 @@ import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.ImportAr
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportSessionRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.in.ImportPolicyApplicationService;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
+import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.IllegalImportTransitionException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
+import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
+import uz.salvadore.hamkorbank.archi.interchange.domain.importing.Severity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
@@ -45,6 +55,8 @@ class ImportIT extends IntegrationTest {
     ImportPolicyApplicationService policies;
     @Autowired
     ImportSessionRepository sessions;
+    @Autowired
+    PlatformTransactionManager transactions;
 
     @AfterEach
     void lenientAgain() {
@@ -69,6 +81,23 @@ class ImportIT extends IntegrationTest {
                 ARCHITECT, workspace().value(), "x.archimate", Fixtures.fixture("nested_containment"),
                 "retry-1"));
         assertEquals(Failure.CONFLICT, otherFile.failure());
+    }
+
+    @Test
+    @DisplayName("INV-IXC-003: повторная запись сессии в той же транзакции не дублирует находки и не отказывает")
+    void savingSessionTwiceInOneTransactionKeepsFindings() {
+        ImportSessionId id = new ImportSessionId(IDS.generate());
+        new TransactionTemplate(transactions).executeWithoutResult(status -> {
+            ImportSession session = ImportSession.receive(id, ImportRequest.of(new WorkspaceId(workspace().value()),
+                    null, "twice.archimate", new byte[] {1}, "twice-" + id.value(), false, "architect-it"),
+                    Instant.now());
+            session.reject(List.of(new ImportFinding(new FindingId(IDS.generate()), Severity.ERROR, "IXC_TEST",
+                    Message.of(InterchangeMessages.IMPORT_IN_PROGRESS), null, null)), Instant.now());
+            sessions.save(session);
+            sessions.save(session);
+        });
+
+        assertEquals(1, sessions.find(id).orElseThrow().findings().size());
     }
 
     @Test

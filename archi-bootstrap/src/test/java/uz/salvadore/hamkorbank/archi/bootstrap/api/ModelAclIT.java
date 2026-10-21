@@ -47,4 +47,24 @@ class ModelAclIT extends ApiTest {
         mvc.perform(get("/api/v1/models/" + model).with(auditor)).andExpect(status().isOk());
         mvc.perform(get("/api/v1/models/" + model).with(admin())).andExpect(status().isOk());
     }
+
+    @Test
+    @DisplayName("UC-MDL-007: повторная замена списка с той же записью — новый список, а не отказ")
+    void replacingListKeepsSurvivingEntry() throws Exception {
+        UUID model = lockedModel(as("owner", "ARCHITECT"), "Дважды закрытая");
+        String owner = "{\"principalType\":\"USER\",\"principal\":\"owner\",\"access\":\"WRITE\"}";
+        String audit = "{\"principalType\":\"GROUP\",\"principal\":\"audit\",\"access\":\"READ\"}";
+        mvc.perform(put("/api/v1/models/" + model + "/acl").with(as("owner", "ARCHITECT"))
+                        .contentType(MediaType.APPLICATION_JSON).content("[" + owner + "," + audit + "]"))
+                .andExpect(status().isOk());
+
+        mvc.perform(put("/api/v1/models/" + model + "/acl").with(as("owner", "ARCHITECT"))
+                        .contentType(MediaType.APPLICATION_JSON).content("[" + owner + "]"))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/v1/models/" + model + "/acl").with(as("owner", "ARCHITECT")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].principal").value("owner"));
+    }
 }

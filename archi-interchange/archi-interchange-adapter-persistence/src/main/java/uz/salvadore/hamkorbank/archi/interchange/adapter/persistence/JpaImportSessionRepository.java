@@ -28,6 +28,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 /**
  * Сессии импорта и их ключи идемпотентности. Документ не хранится — только статус,
  * отчёт и результат: повтор по ключу отдаёт их, а не применяет файл снова.
+ *
+ * <p>Находки заменяются через контекст, а не массовым {@code delete}: прочитанные или уже
+ * записанные строки с теми же ключами остались бы управляемыми и не дали бы вставить новые.
  */
 @Repository
 public class JpaImportSessionRepository implements ImportSessionRepository {
@@ -80,8 +83,9 @@ public class JpaImportSessionRepository implements ImportSessionRepository {
             if (fresh) {
                 em.persist(entity);
             }
-            em.createQuery("delete from ImportFindingEntity f where f.sessionId = :s")
-                    .setParameter("s", session.id().value()).executeUpdate();
+            em.createQuery("select f from ImportFindingEntity f where f.sessionId = :s", ImportFindingEntity.class)
+                    .setParameter("s", session.id().value()).getResultList().forEach(em::remove);
+            em.flush();
             List<ImportFinding> findings = session.findings();
             for (int i = 0; i < findings.size(); i++) {
                 ImportFinding finding = findings.get(i);
