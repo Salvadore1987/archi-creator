@@ -21,7 +21,7 @@
 | 1 | Роли из `realm_access.roles` — свойством `authorities-claim-expressions` и префиксом `ROLE_`; конвертер и его бин удалить | 12-07 | `KeycloakIT` (роли из токена Keycloak); `CodingRulesTest`: в основном коде нет `Converter<Jwt, …>` | ✅ |
 | 2 | `@Configuration(proxyBeanMethods = false)` у всех конфигураций | 12-05 | `CodingRulesTest#configurationsDoNotProxyBeanMethods` | ✅ |
 | 3 | Заглушка — `dev & !prod`, настоящая цепочка — `!dev \| prod` | 12-09 | `SecurityProfilesTest`: при `dev,prod` — настоящая цепочка, при `dev` — заглушка, без профиля — настоящая | ✅ |
-| 4 | Три цепочки: Actuator (`EndpointRequest`), API, UI; открытое — списком, остальное — отказ | 12-01, 12-02 | `PublicSurfaceIT`: статика, `/ui-config`, пробы — открыты; адрес вне списка и Actuator без токена — не `200` | ⬜ |
+| 4 | Три цепочки: Actuator (`EndpointRequest`), API, UI; открытое — списком, остальное — отказ | 12-01, 12-02 | `PublicSurfaceIT`: статика, `/ui-config`, пробы — открыты; адрес вне списка и Actuator без токена — не `200` | ✅ |
 | 5 | `traceId` и `modelId` — фильтром до цепочки безопасности, субъект — после | 12-03 | `PublicSurfaceIT`: `401` несёт `X-Trace-Id` | ⬜ |
 | 6 | Контроллер сессии: перевод — `SessionDtoMapper`, роли и субъект — из `CurrentEditorResolver`, `401` — цепочка; `@EnableConfigurationProperties(UiSettings)` — в конфигурацию | 12-08 | `RestLayerConventionsTest#controllersDoNotBuildDtos` охватывает DTO bootstrap | ⬜ |
 | 7 | `spring-boot-configuration-processor` в `annotationProcessorPaths` модуля `archi-bootstrap` | 12-06 | `ConfigurationMetadataTest`: метаданные есть у каждого префикса `@ConfigurationProperties` | ⬜ |
@@ -47,3 +47,8 @@
   `application-dev.yaml`), следует из устройства Spring Security и тестом не закреплено — для этого
   пришлось бы поднимать контекст с базой ради одного отказа. На старом коде два случая из пяти
   (`dev,prod` и `prod,dev`) включали заглушку.
+- **Задача 4.** Проверка — не «не `200`», а отказ доступа: на старом коде адрес вне `/api` без токена
+  отвечал `404` (обработчика нет), и «не `200`» прошло бы и там. Теперь — `403` цепочки UI. Открыта
+  `/error`: на неё контейнер переадресует отказ, и без неё ответ об ошибке сам упирался бы в отказ доступа.
+  Статика SPA — ровно то, что кладёт сборка Vite: `index.html` и `assets/`; других путей у собранного
+  интерфейса нет. Actuator адресуется `EndpointRequest` по идентификаторам (`health`, `info`), а не путём.

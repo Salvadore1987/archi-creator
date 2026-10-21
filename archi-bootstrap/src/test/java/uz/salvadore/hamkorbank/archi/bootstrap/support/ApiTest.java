@@ -21,7 +21,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 /**
  * Основа тестов REST: MockMvc поверх полного контекста, токен — {@code spring-security-test}
- * с ролями в {@code ROLE_*}, как их отдаёт конвертер Keycloak.
+ * с ролями в {@code ROLE_*}, как их отдаёт разбор ролей Keycloak.
  */
 @AutoConfigureMockMvc
 public abstract class ApiTest extends IntegrationTest {
