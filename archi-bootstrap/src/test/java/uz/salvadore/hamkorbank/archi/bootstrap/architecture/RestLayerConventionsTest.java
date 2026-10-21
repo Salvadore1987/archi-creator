@@ -61,6 +61,14 @@ class RestLayerConventionsTest {
                     || c.getPackageName().startsWith(ROOT + ".interchange")
                     || c.getPackageName().startsWith(ROOT + ".advisor")));
 
+    /**
+     * Исключение, кроме исключений JDK: обёртка ошибки чтения тела ({@code UncheckedIOException})
+     * и {@code MatchException}, которую компилятор ставит в {@code switch}, — не отказ сценария.
+     */
+    private static final DescribedPredicate<JavaClass> FRAMEWORK_OR_OWN_FAILURE = DescribedPredicate.describe(
+            "исключение не из JDK",
+            c -> c.isAssignableTo(Throwable.class) && !c.getPackageName().startsWith("java."));
+
     /** Порт сценария, кроме каталога текстов: перевод сообщения — работа адаптера. */
     private static final DescribedPredicate<JavaClass> PORT_BUT_TEXTS = DescribedPredicate.describe(
             "выходной порт application-слоя, кроме TextCatalog; входной порт port.in — сам сценарий",
@@ -71,6 +79,7 @@ class RestLayerConventionsTest {
     private static final DescribedPredicate<JavaClass> REST_DTO_OR_PART_OF_COMMAND = DescribedPredicate.describe(
             "DTO REST-слоя, значение DTO сценария или вложенный тип его команды и запроса",
             c -> c.getPackageName().contains(".adapter.rest.dto")
+                    || c.getPackageName().startsWith(ROOT + ".bootstrap.") && c.getPackageName().endsWith(".dto")
                     || c.getPackageName().endsWith(".application.dto")
                     || c.getPackageName().contains(".application.dto.") && c.getEnclosingClass().isPresent());
 
@@ -164,6 +173,17 @@ class RestLayerConventionsTest {
                 })
                 .because("поле, не заданное в теле, или null в списке иначе доходят до сценария и домена "
                         + "и падают там 500-м вместо отказа формы");
+
+        rule.check(classes);
+    }
+
+    @Test
+    @DisplayName("контроллер не бросает исключений сам: отказ входа — цепочка безопасности, правила — сценарий")
+    void controllersDoNotConstructExceptions() {
+        ArchRule rule = noClasses().that(CONTROLLER)
+                .should().callConstructorWhere(target(owner(FRAMEWORK_OR_OWN_FAILURE)))
+                .because("контроллер разбирает запрос и вызывает сценарий; отказ, собранный в нём, не видит "
+                        + "второй вход в тот же сценарий");
 
         rule.check(classes);
     }

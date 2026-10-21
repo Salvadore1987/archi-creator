@@ -56,7 +56,11 @@ public final class CurrentEditorResolver implements HandlerMethodArgumentResolve
                 .collect(Collectors.toSet()), editor.groups());
     }
 
-    static EditorIdentity of(Authentication authentication) {
+    /**
+     * Автор по аутентификации: субъект — {@code sub} токена, иначе имя аутентификации; роли — только
+     * роли модели доступа.
+     */
+    public static EditorIdentity of(Authentication authentication) {
         Set<String> groups = Set.of();
         String subject = authentication.getName();
         if (authentication instanceof JwtAuthenticationToken jwt) {
