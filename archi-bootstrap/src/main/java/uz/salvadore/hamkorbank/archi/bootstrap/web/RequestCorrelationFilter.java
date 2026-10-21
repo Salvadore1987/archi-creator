@@ -10,21 +10,19 @@ import java.util.HexFormat;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.MDC;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
  * Корреляция логов запроса:
  * {@code traceId} — из заголовка W3C {@code traceparent} ({@code correlation_id:
- * from_traceparent}) или новый, {@code user} — subject токена, {@code modelId} — из пути.
+ * from_traceparent}) или новый, {@code modelId} — из пути; субъект добавляет {@link RequestUserFilter}.
  * В профиле {@code prod} логи — JSON (ECS), и поля MDC выходят отдельными полями.
  *
- * <p>Персональных данных в контексте нет: subject — не имя и не почта
- * ({@code pii_fields: []}). Маскирование сводится к тому, что маскировать нечего,
- * и это держит именно этот фильтр: в MDC не кладётся ничего, кроме трёх ключей.
+ * <p>Персональных данных в контексте нет: в MDC не кладётся ничего, кроме трёх ключей,
+ * и субъект — не имя и не почта ({@code pii_fields: []}).
  *
- * <p>Стоит после цепочки безопасности: subject известен только там.
+ * <p>Стоит до цепочки безопасности: её отказы ({@code 401}, {@code 403}) и её журнал
+ * несут тот же {@code traceId}, что и обработанный запрос.
  */
 public final class RequestCorrelationFilter extends OncePerRequestFilter {
 
@@ -41,10 +39,6 @@ public final class RequestCorrelationFilter extends OncePerRequestFilter {
         String traceId = traceId(request.getHeader("traceparent"));
         MDC.put("traceId", traceId);
         response.setHeader(TRACE_HEADER, traceId);
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated()) {
-            MDC.put("user", CurrentEditorResolver.of(authentication).subject());
-        }
         Matcher model = MODEL_PATH.matcher(request.getRequestURI());
         if (model.matches()) {
             MDC.put("modelId", model.group(1));
@@ -53,7 +47,6 @@ public final class RequestCorrelationFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
         } finally {
             MDC.remove("traceId");
-            MDC.remove("user");
             MDC.remove("modelId");
         }
     }

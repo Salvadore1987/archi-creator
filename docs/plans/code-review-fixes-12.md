@@ -22,7 +22,7 @@
 | 2 | `@Configuration(proxyBeanMethods = false)` у всех конфигураций | 12-05 | `CodingRulesTest#configurationsDoNotProxyBeanMethods` | ✅ |
 | 3 | Заглушка — `dev & !prod`, настоящая цепочка — `!dev \| prod` | 12-09 | `SecurityProfilesTest`: при `dev,prod` — настоящая цепочка, при `dev` — заглушка, без профиля — настоящая | ✅ |
 | 4 | Три цепочки: Actuator (`EndpointRequest`), API, UI; открытое — списком, остальное — отказ | 12-01, 12-02 | `PublicSurfaceIT`: статика, `/ui-config`, пробы — открыты; адрес вне списка и Actuator без токена — не `200` | ✅ |
-| 5 | `traceId` и `modelId` — фильтром до цепочки безопасности, субъект — после | 12-03 | `PublicSurfaceIT`: `401` несёт `X-Trace-Id` | ⬜ |
+| 5 | `traceId` и `modelId` — фильтром до цепочки безопасности, субъект — после | 12-03 | `PublicSurfaceIT`: `401` несёт `X-Trace-Id` | ✅ |
 | 6 | Контроллер сессии: перевод — `SessionDtoMapper`, роли и субъект — из `CurrentEditorResolver`, `401` — цепочка; `@EnableConfigurationProperties(UiSettings)` — в конфигурацию | 12-08 | `RestLayerConventionsTest#controllersDoNotBuildDtos` охватывает DTO bootstrap | ⬜ |
 | 7 | `spring-boot-configuration-processor` в `annotationProcessorPaths` модуля `archi-bootstrap` | 12-06 | `ConfigurationMetadataTest`: метаданные есть у каждого префикса `@ConfigurationProperties` | ⬜ |
 | 8 | `@Validated` и ограничения на всех шести настройках; умолчания `InterchangeSettings`; одно умолчание каталога кэша Git | 12-04 | `SettingsValidationTest`: недопустимые значения роняют контекст; `CodingRulesTest`: `@ConfigurationProperties` — с `@Validated` | ⬜ |
@@ -52,3 +52,7 @@
   `/error`: на неё контейнер переадресует отказ, и без неё ответ об ошибке сам упирался бы в отказ доступа.
   Статика SPA — ровно то, что кладёт сборка Vite: `index.html` и `assets/`; других путей у собранного
   интерфейса нет. Actuator адресуется `EndpointRequest` по идентификаторам (`health`, `info`), а не путём.
+- **Задача 5.** Фильтр разделён на два: `RequestCorrelationFilter` (`traceId`, `modelId`) стоит
+  на 10 раньше цепочки безопасности (`SecurityFilterProperties.DEFAULT_FILTER_ORDER - 10`),
+  `RequestUserFilter` (субъект) — на прежнем месте после неё. Проверены `401` API по `traceparent`
+  и `403` Actuator. На старом коде `401` уходил без `X-Trace-Id`.
