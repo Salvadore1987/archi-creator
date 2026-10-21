@@ -38,4 +38,10 @@ class ContextJsonTest {
         assertEquals("{\"task\":\"EXPLAIN\",\"truncated\":false,\"list\":[\"a\",\"b\"],\"model\":{}}",
                 ContextJson.object(fields));
     }
+
+    @Test
+    @DisplayName("Ключ объекта экранируется, как строка")
+    void keysAreEscaped() {
+        assertEquals("{\"a\\\"b\":1}", ContextJson.object(Map.of("a\"b", 1)));
+    }
 }

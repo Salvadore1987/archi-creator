@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 
@@ -16,6 +17,7 @@ import java.util.Optional;
 public final class RateLimiter {
 
     static final Duration WINDOW = Duration.ofMinutes(1);
+    private static final Deque<Instant> EMPTY = new ArrayDeque<>(0);
 
     private final Clock clock;
     private final Map<String, Deque<Instant>> windows = new HashMap<>();
@@ -32,12 +34,10 @@ public final class RateLimiter {
      */
     public synchronized Optional<Duration> acquire(Map<String, Integer> limits) {
         Instant now = clock.instant();
+        expire(now);
         Duration wait = Duration.ZERO;
         for (Map.Entry<String, Integer> limit : limits.entrySet()) {
-            Deque<Instant> window = windows.computeIfAbsent(limit.getKey(), k -> new ArrayDeque<>());
-            while (!window.isEmpty() && !window.peekFirst().isAfter(now.minus(WINDOW))) {
-                window.pollFirst();
-            }
+            Deque<Instant> window = windows.getOrDefault(limit.getKey(), EMPTY);
             if (window.size() >= limit.getValue()) {
                 Duration until = Duration.between(now, window.peekFirst().plus(WINDOW));
                 wait = until.compareTo(wait) > 0 ? until : wait;
@@ -46,7 +46,30 @@ public final class RateLimiter {
         if (!wait.isZero()) {
             return Optional.of(wait);
         }
-        limits.keySet().forEach(key -> windows.get(key).addLast(now));
+        limits.keySet().forEach(key -> windows.computeIfAbsent(key, k -> new ArrayDeque<>()).addLast(now));
         return Optional.empty();
+    }
+
+    /** Ключей с непустым окном — сколько авторов и пространств обращались за последнюю минуту. */
+    synchronized int trackedKeys() {
+        return windows.size();
+    }
+
+    /**
+     * Снять из окон обращения старше минуты, а опустевшие окна — целиком: иначе карта росла бы
+     * на каждого автора и пространство за всё время жизни процесса.
+     */
+    private void expire(Instant now) {
+        Instant edge = now.minus(WINDOW);
+        Iterator<Deque<Instant>> all = windows.values().iterator();
+        while (all.hasNext()) {
+            Deque<Instant> window = all.next();
+            while (!window.isEmpty() && !window.peekFirst().isAfter(edge)) {
+                window.pollFirst();
+            }
+            if (window.isEmpty()) {
+                all.remove();
+            }
+        }
     }
 }

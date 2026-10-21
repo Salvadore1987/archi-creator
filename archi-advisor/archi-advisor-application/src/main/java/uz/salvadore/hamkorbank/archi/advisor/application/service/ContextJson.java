@@ -103,7 +103,7 @@ final class ContextJson {
     }
 
     private ContextJson key(String name) {
-        out.append('"').append(name).append("\":");
+        out.append(quote(name)).append(':');
         return this;
     }
 

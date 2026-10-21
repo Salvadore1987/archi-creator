@@ -52,4 +52,19 @@ class RateLimiterTest {
         now = now.plusSeconds(51);
         assertEquals(Optional.empty(), limiter.acquire(limits));
     }
+
+    @Test
+    @DisplayName("FR-52: окно, опустевшее за минуту, снимается — карта не растёт на каждого автора")
+    void emptyWindowsAreDropped() {
+        RateLimiter limiter = new RateLimiter(clock);
+        for (int i = 0; i < 100; i++) {
+            limiter.acquire(Map.of("user:" + i, 5));
+        }
+        assertEquals(100, limiter.trackedKeys());
+
+        now = now.plusSeconds(61);
+        limiter.acquire(Map.of("user:late", 5));
+
+        assertEquals(1, limiter.trackedKeys());
+    }
 }
