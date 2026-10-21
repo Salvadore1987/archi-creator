@@ -90,10 +90,10 @@ public final class DocumentAssembler {
         ModelDocument assemble() {
             ModelRows.Header header = rows.header();
             NodeResidue residue = residue(header.rawXml());
-            Map<String, Optional<String>> typed = new LinkedHashMap<>();
-            typed.put("name", Optional.of(header.name()));
-            typed.put("id", Optional.of(header.archiId()));
-            typed.put("version", Optional.of(header.archiVersion()));
+            Map<String, String> typed = new LinkedHashMap<>();
+            typed.put("name", header.name());
+            typed.put("id", header.archiId());
+            typed.put("version", header.archiVersion());
             List<Attribute> attributes = residue.empty() ? newModelAttributes(typed)
                     : attributes(residue, typed, Set.of("name"));
             Content content = new Content(residue);
@@ -110,10 +110,10 @@ public final class DocumentAssembler {
 
         private DocumentNode folder(ModelRows.Folder folder) {
             NodeResidue residue = residue(folder.rawXml());
-            Map<String, Optional<String>> typed = new LinkedHashMap<>();
-            typed.put("name", Optional.of(folder.name()));
-            typed.put("id", Optional.of(folder.archiId()));
-            typed.put("type", Optional.ofNullable(folder.type()));
+            Map<String, String> typed = new LinkedHashMap<>();
+            typed.put("name", folder.name());
+            typed.put("id", folder.archiId());
+            typed.put("type", folder.type());
             Content content = new Content(residue);
             UUID id = folder.id();
             subfolders.getOrDefault(id, List.of()).forEach(f -> content.child(f.sortOrder(), folder(f)));
@@ -127,10 +127,10 @@ public final class DocumentAssembler {
 
         private DocumentNode element(ModelRows.Element element) {
             NodeResidue residue = residue(element.rawXml());
-            Map<String, Optional<String>> typed = new LinkedHashMap<>();
-            typed.put(XmlSchema.XSI_TYPE, Optional.of(element.archiType()));
-            typed.put("name", Optional.of(element.name()));
-            typed.put("id", Optional.of(element.archiId()));
+            Map<String, String> typed = new LinkedHashMap<>();
+            typed.put(XmlSchema.XSI_TYPE, element.archiType());
+            typed.put("name", element.name());
+            typed.put("id", element.archiId());
             Content content = new Content(residue);
             content.single("documentation", textOrNull("documentation", element.documentation()),
                     XmlSchema.DOCUMENTATION_FIRST);
@@ -141,14 +141,14 @@ public final class DocumentAssembler {
 
         private DocumentNode relationship(ModelRows.Relationship relationship) {
             NodeResidue residue = residue(relationship.rawXml());
-            Map<String, Optional<String>> typed = new LinkedHashMap<>();
-            typed.put(XmlSchema.XSI_TYPE, Optional.of(relationship.archiType()));
-            typed.put("name", Optional.ofNullable(relationship.name()));
-            typed.put("id", Optional.of(relationship.archiId()));
-            typed.put("source", Optional.of(archiIds.get(relationship.sourceId())));
-            typed.put("target", Optional.of(archiIds.get(relationship.targetId())));
-            typed.put("accessType", Optional.ofNullable(relationship.accessType()));
-            typed.put("directed", Optional.ofNullable(relationship.directed()).map(String::valueOf));
+            Map<String, String> typed = new LinkedHashMap<>();
+            typed.put(XmlSchema.XSI_TYPE, relationship.archiType());
+            typed.put("name", relationship.name());
+            typed.put("id", relationship.archiId());
+            typed.put("source", archiIds.get(relationship.sourceId()));
+            typed.put("target", archiIds.get(relationship.targetId()));
+            typed.put("accessType", relationship.accessType());
+            typed.put("directed", relationship.directed() == null ? null : String.valueOf(relationship.directed()));
             Content content = new Content(residue);
             content.single("documentation", textOrNull("documentation", relationship.documentation()),
                     XmlSchema.DOCUMENTATION_FIRST);
@@ -161,11 +161,11 @@ public final class DocumentAssembler {
 
         private DocumentNode view(ModelRows.View view) {
             NodeResidue residue = residue(view.rawXml());
-            Map<String, Optional<String>> typed = new LinkedHashMap<>();
-            typed.put(XmlSchema.XSI_TYPE, Optional.of(view.archiType()));
-            typed.put("name", Optional.of(view.name()));
-            typed.put("id", Optional.of(view.archiId()));
-            typed.put("viewpoint", Optional.ofNullable(view.viewpoint()));
+            Map<String, String> typed = new LinkedHashMap<>();
+            typed.put(XmlSchema.XSI_TYPE, view.archiType());
+            typed.put("name", view.name());
+            typed.put("id", view.archiId());
+            typed.put("viewpoint", view.viewpoint());
             Content content = new Content(residue);
             content.single("documentation", textOrNull("documentation", view.documentation()),
                     XmlSchema.DOCUMENTATION_FIRST);
@@ -178,13 +178,13 @@ public final class DocumentAssembler {
 
         private DocumentNode viewNode(ModelRows.Node node) {
             NodeResidue residue = residue(node.rawXml());
-            Map<String, Optional<String>> typed = new LinkedHashMap<>();
-            typed.put(XmlSchema.XSI_TYPE, Optional.of(node.archiType()));
-            typed.put("id", Optional.of(node.archiId()));
-            typed.put(XmlSchema.TARGET_CONNECTIONS, targetConnections(node.id(), residue));
-            typed.put("name", Optional.ofNullable(node.label()));
+            Map<String, String> typed = new LinkedHashMap<>();
+            typed.put(XmlSchema.XSI_TYPE, node.archiType());
+            typed.put("id", node.archiId());
+            typed.put(XmlSchema.TARGET_CONNECTIONS, targetConnections(node.id(), residue).orElse(null));
+            typed.put("name", node.label());
             style(typed, node.style());
-            typed.put("archimateElement", Optional.ofNullable(node.elementId()).map(archiIds::get));
+            typed.put("archimateElement", node.elementId() == null ? null : archiIds.get(node.elementId()));
             Content content = new Content(residue);
             content.single("bounds", bounds(node.bounds(), residue), XmlSchema.BOUNDS_FIRST);
             content.single("content", textOrNull("content", node.content()),
@@ -197,14 +197,15 @@ public final class DocumentAssembler {
 
         private DocumentNode viewEdge(ModelRows.Edge edge) {
             NodeResidue residue = residue(edge.rawXml());
-            Map<String, Optional<String>> typed = new LinkedHashMap<>();
-            typed.put(XmlSchema.XSI_TYPE, Optional.of(edge.archiType()));
-            typed.put("id", Optional.of(edge.archiId()));
-            typed.put(XmlSchema.TARGET_CONNECTIONS, targetConnections(edge.id(), residue));
+            Map<String, String> typed = new LinkedHashMap<>();
+            typed.put(XmlSchema.XSI_TYPE, edge.archiType());
+            typed.put("id", edge.archiId());
+            typed.put(XmlSchema.TARGET_CONNECTIONS, targetConnections(edge.id(), residue).orElse(null));
             style(typed, edge.style());
-            typed.put("source", Optional.of(archiIds.get(edge.sourceId())));
-            typed.put("target", Optional.of(archiIds.get(edge.targetId())));
-            typed.put("archimateRelationship", Optional.ofNullable(edge.relationshipId()).map(archiIds::get));
+            typed.put("source", archiIds.get(edge.sourceId()));
+            typed.put("target", archiIds.get(edge.targetId()));
+            typed.put("archimateRelationship",
+                    edge.relationshipId() == null ? null : archiIds.get(edge.relationshipId()));
             Content content = new Content(residue);
             List<ResidueItem.Slot> slots = residue.slots("bendpoint");
             List<BendpointValue> points = edge.bendpoints();
@@ -317,12 +318,12 @@ public final class DocumentAssembler {
             return attributes;
         }
 
-        private static void style(Map<String, Optional<String>> typed, StyleValue style) {
-            typed.put("fillColor", Optional.ofNullable(style.fillColor()));
-            typed.put("font", Optional.ofNullable(style.font()));
-            typed.put("fontColor", Optional.ofNullable(style.fontColor()));
-            typed.put("lineColor", Optional.ofNullable(style.lineColor()));
-            typed.put("textAlignment", Optional.ofNullable(style.textAlignment()).map(String::valueOf));
+        private static void style(Map<String, String> typed, StyleValue style) {
+            typed.put("fillColor", style.fillColor());
+            typed.put("font", style.font());
+            typed.put("fontColor", style.fontColor());
+            typed.put("lineColor", style.lineColor());
+            typed.put("textAlignment", style.textAlignment() == null ? null : String.valueOf(style.textAlignment()));
         }
 
         /**
@@ -344,22 +345,26 @@ public final class DocumentAssembler {
      * буквальный — как был. Типизированные без метки дописываются в конец: значение
      * появилось после импорта. Без остатка — порядок Archi.
      *
+     * @param typed         значения типизированных атрибутов; {@code null} — атрибут типизирован,
+     *                      но значения нет, и он не пишется
      * @param skipWhenEmpty строковые атрибуты, которые без метки и пустыми не пишутся
      */
-    private static List<Attribute> attributes(NodeResidue residue, Map<String, Optional<String>> typed,
+    private static List<Attribute> attributes(NodeResidue residue, Map<String, String> typed,
                                               List<String> canonical, Set<String> skipWhenEmpty) {
         if (residue.empty()) {
             List<Attribute> attributes = new ArrayList<>();
             for (String name : canonical) {
-                typed.getOrDefault(name, Optional.empty()).filter(v -> !v.isEmpty() || !skipWhenEmpty.contains(name))
-                        .ifPresent(v -> attributes.add(new Attribute(name, v)));
+                String value = typed.get(name);
+                if (written(name, value, skipWhenEmpty)) {
+                    attributes.add(new Attribute(name, value));
+                }
             }
             return attributes;
         }
         return attributes(residue, typed, skipWhenEmpty);
     }
 
-    private static List<Attribute> attributes(NodeResidue residue, Map<String, Optional<String>> typed,
+    private static List<Attribute> attributes(NodeResidue residue, Map<String, String> typed,
                                               Set<String> skipWhenEmpty) {
         List<Attribute> attributes = new ArrayList<>();
         Set<String> placed = new LinkedHashSet<>();
@@ -367,25 +372,35 @@ public final class DocumentAssembler {
             placed.add(attribute.name());
             if (typed.containsKey(attribute.name()) && (attribute.typed()
                     || attribute.name().equals(XmlSchema.TARGET_CONNECTIONS))) {
-                typed.get(attribute.name()).ifPresent(v -> attributes.add(new Attribute(attribute.name(), v)));
+                String value = typed.get(attribute.name());
+                if (value != null) {
+                    attributes.add(new Attribute(attribute.name(), value));
+                }
             } else if (attribute.value() != null) {
                 attributes.add(new Attribute(attribute.name(), attribute.value()));
             }
         }
         typed.forEach((name, value) -> {
-            if (!placed.contains(name)) {
-                value.filter(v -> !v.isEmpty() || !skipWhenEmpty.contains(name))
-                        .ifPresent(v -> attributes.add(new Attribute(name, v)));
+            if (!placed.contains(name) && written(name, value, skipWhenEmpty)) {
+                attributes.add(new Attribute(name, value));
             }
         });
         return attributes;
     }
 
-    private static List<Attribute> newModelAttributes(Map<String, Optional<String>> typed) {
+    /** Типизированное значение без метки пишется, если оно есть и не пустое там, где пустое не пишется. */
+    private static boolean written(String name, String value, Set<String> skipWhenEmpty) {
+        return value != null && (!value.isEmpty() || !skipWhenEmpty.contains(name));
+    }
+
+    private static List<Attribute> newModelAttributes(Map<String, String> typed) {
         List<Attribute> attributes = new ArrayList<>();
         XmlSchema.NEW_MODEL_NAMESPACES.forEach(ns -> attributes.add(new Attribute(ns[0], ns[1])));
         for (String name : XmlSchema.ROOT_ORDER) {
-            typed.get(name).ifPresent(v -> attributes.add(new Attribute(name, v)));
+            String value = typed.get(name);
+            if (value != null) {
+                attributes.add(new Attribute(name, value));
+            }
         }
         return attributes;
     }
