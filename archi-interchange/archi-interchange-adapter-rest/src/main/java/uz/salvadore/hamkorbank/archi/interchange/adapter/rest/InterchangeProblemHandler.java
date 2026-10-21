@@ -6,6 +6,8 @@ import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -19,8 +21,12 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessag
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 
-/** Отказы interchange — в {@code application/problem+json}, текст — на языке запроса. */
+/**
+ * Отказы interchange — в {@code application/problem+json}, текст — на языке запроса.
+ * Стоит раньше общего обработчика: у того последняя линия на любое исключение.
+ */
 @RestControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class InterchangeProblemHandler {
 
     private static final String TYPE_BASE = "https://archi-creator/errors/";

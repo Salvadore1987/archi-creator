@@ -7,6 +7,10 @@ public final class BootstrapMessages {
 
     /** Запрос не разобран: тело или параметр не того формата. */
     public static final String BAD_REQUEST = "bootstrap.problem.bad-request";
+    /** Метод, тип тела или адрес запроса здесь не обслуживаются: метод и путь запроса. */
+    public static final String REQUEST_NOT_SUPPORTED = "bootstrap.problem.request-not-supported";
+    /** Неожиданный сбой сервера: подробностей клиенту нет, они в журнале. */
+    public static final String INTERNAL_ERROR = "bootstrap.problem.internal-error";
     /** Модель изменил параллельный писатель — нужно перечитать состояние и повторить. */
     public static final String CONCURRENT_MODIFICATION = "bootstrap.problem.concurrent-modification";
     /** Загружаемый файл больше допустимого размера. */

@@ -1102,7 +1102,12 @@ components:
         instance: { type: string }
         code:
           type: string
-          description: Код инварианта (`INV-MDL-NNN`, domain/modeling/invariants.md) или иной бизнес-ошибки.
+          description: |
+            Код инварианта (`INV-MDL-NNN`, domain/modeling/invariants.md) или иной бизнес-ошибки.
+            Общие для всех адресов трёх контрактов: `BAD_REQUEST` (400, запрос не разобран),
+            `REQUEST_NOT_SUPPORTED` (405, 406, 415, 404 — метод, тип тела или адрес не обслуживаются),
+            `INTEGRITY_CONFLICT` (409), `INTERNAL_ERROR` (500, неожиданный сбой; подробности — в журнале
+            по `X-Trace-Id`).
           examples: ["INV-MDL-004", "INV-MDL-006", "RELATION_NOT_PERMITTED", "MDL_ID_TAKEN"]
         lockOwner:     { type: string }
         relationships: { type: array, items: { type: string, format: uuid } }
