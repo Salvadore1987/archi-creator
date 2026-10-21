@@ -6,7 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportLoss;
@@ -65,6 +67,26 @@ class SvgWriterTest {
         assertEquals(List.of("fillColor", "lineColor"), rendered.losses().stream()
                 .filter(l -> l.archiId().equals("id-n1") && l.aspect().equals("style"))
                 .map(l -> l.reason().args().getFirst().toString()).toList(), rendered.losses().toString());
+    }
+
+    @Test
+    @DisplayName("UI-009: кегль, высота строки и начертания подписей — из токенов, а не числами в писателе")
+    void typographyComesFromTokens() {
+        Notation base = RenderingFixtures.NOTATION;
+        Map<String, String> values = new HashMap<>(base.values());
+        values.put("node_font", "20px/1.5 \"Inter\", system-ui, sans-serif");
+        values.put("node_font_weight", "600");
+        values.put("edge_label_font", "9px/1.2 \"Inter\", system-ui, sans-serif");
+        values.put("group_tab_font_weight", "800");
+        Notation tokens = new Notation(base.defaultSize(), base.defaultSizeByType(), base.shapes(), base.fallback(),
+                base.layers(), values, base.icons(), base.family());
+        ModelDocument document = RenderingFixtures.document(RenderingFixtures.MODEL);
+        String svg = svg(new SvgWriter(tokens, RenderingFixtures.MONO, RenderingFixtures.TEXTS)
+                .write(document, document.views().getFirst(), TEXT));
+
+        assertTrue(svg.contains("font-size=\"20\" font-weight=\"600\""), "имя узла: " + svg);
+        assertTrue(svg.contains("font-size=\"9\" font-weight=\"400\""), "подпись связи: " + svg);
+        assertTrue(svg.contains("font-size=\"11\" font-weight=\"800\""), "ярлык группы: " + svg);
     }
 
     @Test

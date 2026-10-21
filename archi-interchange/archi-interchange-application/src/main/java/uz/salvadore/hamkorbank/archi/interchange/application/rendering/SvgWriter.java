@@ -21,6 +21,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter.Met
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.EdgeNotation.Marker;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.Box;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.CornerIcon;
+import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.FontToken;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.ShapeEntry;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.Size;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Link;
@@ -59,6 +60,9 @@ public final class SvgWriter {
     /** Сколько звеньев «связь к связи» пройти до узла, чтобы найти уровень отрисовки ребра. */
     private static final int LEVEL_DEPTH = 16;
     private static final int NAME_LINES = 2;
+    /** Начертания сокращённой записи {@code font} CSS: {@code normal} и {@code bold}. */
+    private static final int NORMAL_WEIGHT = 400;
+    private static final int BOLD_WEIGHT = 700;
     private static final double PT = 4.0 / 3.0;
     private static final Pattern CUTOUT = Pattern.compile("var\\(--icon-cutout(?:,[^)]*)?\\)");
     private static final String FALLBACK_STACK = ", system-ui, sans-serif";
@@ -224,10 +228,12 @@ public final class SvgWriter {
             String color;
             String text = node.label();
             int maxLines;
+            FontToken subtitleFont = notation.font("node_subtitle");
             if (tab) {
                 // Ярлык группы — всегда шрифтом подписей, капителью: свой шрифт объекта его не меняет.
-                face = new Face(notation.family(), 11, 600, false, 0.04);
-                lineHeight = layoutUnit(11 * 1.2);
+                face = new Face(notation.family(), subtitleFont.size(), notation.weight("group_tab_font_weight"),
+                        false, notation.ems("group_tab_letter_spacing"));
+                lineHeight = layoutUnit(subtitleFont.size() * subtitleFont.lineHeight());
                 color = notation.value("node_subtitle_color");
                 text = text.toUpperCase(Locale.forLanguageTag("ru"));
                 maxLines = 1;
@@ -238,10 +244,12 @@ public final class SvgWriter {
                             Message.of(InterchangeMessages.IMAGE_LOSS_FONT, family)));
                     family = notation.family();
                 }
-                double fontSize = own.map(f -> f.sizePt() * PT).orElse(13.0);
-                int weight = own.filter(ArchiFont::bold).isPresent() ? 700 : note ? 400 : 500;
+                FontToken nodeFont = notation.font("node_font");
+                double fontSize = own.map(f -> f.sizePt() * PT).orElse(nodeFont.size());
+                int weight = own.filter(ArchiFont::bold).isPresent() ? BOLD_WEIGHT
+                        : notation.weight(note ? "note_font_weight" : "node_font_weight");
                 face = new Face(family, fontSize, weight, own.filter(ArchiFont::italic).isPresent(), 0);
-                lineHeight = layoutUnit(fontSize * 1.3);
+                lineHeight = layoutUnit(fontSize * nodeFont.lineHeight());
                 color = paint.text();
                 maxLines = note ? 0 : NAME_LINES;
             }
@@ -250,8 +258,8 @@ public final class SvgWriter {
                     ? Optional.of(texts.text(Message.of(InterchangeMessages.IMAGE_OPAQUE_SUBTITLE,
                     shortType(node.shapeType()))))
                     : Optional.empty();
-            Face subtitleFace = new Face(notation.family(), 11, 400, false, 0);
-            double subtitleHeight = layoutUnit(11 * 1.2);
+            Face subtitleFace = new Face(notation.family(), subtitleFont.size(), NORMAL_WEIGHT, false, 0);
+            double subtitleHeight = layoutUnit(subtitleFont.size() * subtitleFont.lineHeight());
             double content = lines.lines().size() * lineHeight + subtitle.map(s -> SUBTITLE_GAP + subtitleHeight)
                     .orElse(0.0);
             double top = tab || note ? box.y() : box.y() + (box.height() - content) / 2;
@@ -401,12 +409,13 @@ public final class SvgWriter {
         }
 
         private void edgeLabel(String label, Point at, Style style) {
-            Face face = new Face(notation.family(), 10, 400, false, 0);
+            FontToken labelFont = notation.font("edge_label_font");
+            Face face = new Face(notation.family(), labelFont.size(), NORMAL_WEIGHT, false, 0);
             String line = label.replaceAll("\\s+", " ").strip();
             double width = layout.width(line, face);
             double x = at.x() - width / 2;
             double baseline = at.y() - EDGE_LABEL_LIFT;
-            include(x, baseline - 10);
+            include(x, baseline - labelFont.size());
             include(x + width, baseline + 3);
             String paper = notation.value("paper");
             if (options.outline()) {

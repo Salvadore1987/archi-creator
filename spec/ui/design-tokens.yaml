@@ -1,6 +1,6 @@
 ---
-version: 1.0
-last_modified: 2026-10-09
+version: 1.1
+last_modified: 2026-10-21
 layer: ui
 requirements: [FR-19, FR-20, FR-21]
 anchors: [UI-009, UI-010, UI-011]
@@ -54,6 +54,10 @@ typography:
   node_font_weight:     { value: "500", css: "--node-font-weight" }
   node_subtitle:        { value: '11px/1.2 "Inter", system-ui, sans-serif', css: "--node-subtitle" }
   node_subtitle_color:  { value: "#667085", css: "--node-subtitle-color" }
+  # Ярлык группы — шрифтом подзаголовка, полужирно и вразрядку; текст заметки — обычным начертанием.
+  group_tab_font_weight:    { value: "600",    css: "--group-tab-font-weight" }
+  group_tab_letter_spacing: { value: "0.04em", css: "--group-tab-letter-spacing" }
+  note_font_weight:         { value: "400",    css: "--note-font-weight" }
 
 edges:
   edge_color:          { value: "#667085", css: "--edge-color" }
