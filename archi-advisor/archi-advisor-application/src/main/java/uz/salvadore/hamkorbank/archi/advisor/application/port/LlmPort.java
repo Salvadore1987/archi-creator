@@ -8,6 +8,6 @@ package uz.salvadore.hamkorbank.archi.advisor.application.port;
  */
 public interface LlmPort {
 
-    /** Отправить запрос и дождаться начала ответа. */
-    LlmStream open(LlmRequest request) throws LlmUnavailableException;
+    /** Отправить запрос и дождаться начала ответа; недоступность — {@link LlmUnavailableException}. */
+    LlmStream open(LlmRequest request);
 }

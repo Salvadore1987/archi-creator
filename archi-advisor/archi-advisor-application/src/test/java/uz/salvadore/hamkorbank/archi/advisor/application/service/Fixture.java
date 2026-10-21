@@ -283,7 +283,7 @@ final class Fixture {
         }
 
         @Override
-        public void consume(LlmListener listener) throws LlmUnavailableException {
+        public void consume(LlmListener listener) {
             try {
                 script.accept(listener);
             } catch (Broken broken) {

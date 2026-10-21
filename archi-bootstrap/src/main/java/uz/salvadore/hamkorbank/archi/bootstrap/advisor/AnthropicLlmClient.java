@@ -60,7 +60,7 @@ public final class AnthropicLlmClient implements LlmPort {
     }
 
     @Override
-    public LlmStream open(LlmRequest request) throws LlmUnavailableException {
+    public LlmStream open(LlmRequest request) {
         if (client == null) {
             throw new LlmUnavailableException(new IllegalStateException());
         }
@@ -107,7 +107,7 @@ public final class AnthropicLlmClient implements LlmPort {
         }
 
         @Override
-        public void consume(LlmListener listener) throws LlmUnavailableException {
+        public void consume(LlmListener listener) {
             Map<Long, String> toolNames = new HashMap<>();
             Map<Long, StringBuilder> toolInputs = new HashMap<>();
             long input = 0;

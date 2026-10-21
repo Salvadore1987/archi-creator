@@ -372,7 +372,7 @@ public final class AdvisorService {
                     }
                 }
                 sink.meta(SessionMeta.of(session));
-            } catch (LlmUnavailableException | RuntimeException broken) { // NOPMD - расход пишется при любом обрыве
+            } catch (RuntimeException broken) { // NOPMD - расход пишется при любом обрыве, внешнего API и клиента
                 upstream.cancel();
                 LOG.log(System.Logger.Level.WARNING, "advisor stream broken: session {0}, {1}", session.id(),
                         broken.getClass().getName());
