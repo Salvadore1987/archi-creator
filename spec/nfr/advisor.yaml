@@ -102,18 +102,24 @@ upstream_calls:
     endpoint_owner: external
     model: claude-sonnet-5
     timeout: 180s
+    connect_timeout: 10s
     streaming: true
     retries:
+      # Повторяет SDK Anthropic: пауза 0,5 s вдвое до 8 s, джиттер до 25 %,
+      # заголовок retry-after сильнее расчёта.
       count: 2
       backoff: exponential
-      initial_interval: 2s
-      retry_on: [429, 500, 502, 503, 504, connection_error]
+      initial_interval: 500ms
+      max_interval: 8s
+      retry_on: [408, 409, 429, 5xx, connection_error]
       never_retry_after_first_token: true
     circuit_breaker:
       failure_rate_threshold: 50
       slow_call_threshold: 60s
       sliding_window_size: 10
       wait_duration_in_open_state: 60s
+      # Медленное — открытие потока дольше порога, а не длинный ответ; отмена
+      # клиентом — не исход. Медленные открывают предохранитель той же долей.
     fallback: fail_fast
     note: |
       Повтор после первого полученного токена запрещён: пользователь уже
@@ -122,20 +128,13 @@ upstream_calls:
       помощника что-либо своё хуже, чем не ответить.
 
   modeling_read_port:
-    timeout: 10s
-    retries:
-      count: 1
-      backoff: exponential
-      initial_interval: 200ms
-    circuit_breaker:
-      failure_rate_threshold: 50
-      slow_call_threshold: 5s
-      sliding_window_size: 20
-      wait_duration_in_open_state: 30s
-    fallback: fail_fast
+    in_process: true
     note: |
       Единственный порт в modeling — на чтение. Порта записи нет
       (INV-ADV-004), и его отсутствие проверяется arch-тестом.
+      Вызов идёт в том же процессе, без сети: таймаут, повтор и предохранитель
+      ему не нужны, предел времени — таймаут запроса к базе modeling
+      (spec/nfr/modeling.yaml#storage).
 
 storage:
   database: relational / PostgreSQL 16
@@ -201,9 +200,10 @@ observability:
     - { name: advisor_usecase_errors_total,     type: counter,   labels: [usecase, error_code] }
     - { name: advisor_first_token_seconds,      type: histogram, labels: [function], buckets: [0.5, 1, 2, 3, 5, 10] }
     - { name: advisor_sessions_total,           type: counter,   labels: [function, outcome, rejection_reason] }
-    - { name: advisor_tokens_consumed,          type: counter,   labels: [workspace, function, kind] }
-    - { name: advisor_budget_utilization_ratio, type: gauge,     labels: [workspace, period] }
+    - { name: advisor_tokens_consumed_total,    type: counter,   labels: [workspace, function, kind] }
+    - { name: advisor_budget_utilization_ratio, type: gauge,     labels: [workspace, period], note: "один на пространство — текущего месяца" }
     - { name: advisor_context_truncated_total,  type: counter,   labels: [function] }
+    - { name: resilience4j_circuitbreaker_state, type: gauge,    labels: [name, state], note: "предохранитель anthropic_api" }
 
   alerts:
     - name: SlowFirstTokenP95
@@ -235,7 +235,7 @@ observability:
         «помощник не работает».
 
     - name: UpstreamCircuitOpen
-      expr: resilience_circuitbreaker_state{name="anthropic_api",state="open"} == 1
+      expr: resilience4j_circuitbreaker_state{name="anthropic_api",state="open"} == 1
       for: 5m
       severity: ticket
 

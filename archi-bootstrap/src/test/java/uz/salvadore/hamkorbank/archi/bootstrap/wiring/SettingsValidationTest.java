@@ -49,7 +49,9 @@ class SettingsValidationTest {
         "archi.ai.min-coverage=2",
         "archi.ai.base-url=api.anthropic.com",
         "archi.modeling.retention-cron=",
-        "archi.git.committer-name="})
+        "archi.ai.circuit-breaker.failure-rate-threshold=101",
+        "archi.git.committer-name=",
+        "archi.git.timeout=500ms"})
     @DisplayName("недопустимое значение — отказ старта")
     void invalidValueFailsStartup(String property) {
         runner.withPropertyValues(property).run(context -> assertNotNull(context.getStartupFailure(), property));

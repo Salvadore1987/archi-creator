@@ -92,3 +92,10 @@ groups:
         labels: { severity: ticket }
         annotations:
           summary: Каждое пятое обращение к помощнику отклоняется — исчерпан бюджет или сработала частота.
+
+      - alert: UpstreamCircuitOpen
+        expr: resilience4j_circuitbreaker_state{name="anthropic_api",state="open"} == 1
+        for: 5m
+        labels: { severity: ticket }
+        annotations:
+          summary: Предохранитель Anthropic API открыт дольше пяти минут — помощник отвечает «недоступен».

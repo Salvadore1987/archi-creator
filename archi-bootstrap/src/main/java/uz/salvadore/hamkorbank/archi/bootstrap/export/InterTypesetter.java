@@ -100,15 +100,13 @@ public final class InterTypesetter implements Typesetter {
 
     @Override
     public byte[] subset(Face face, String characters) {
-        try {
-            TrueTypeFont font = new TTFParser().parse(new RandomAccessReadBuffer(weight(face).file()));
+        try (TrueTypeFont font = new TTFParser().parse(new RandomAccessReadBuffer(weight(face).file()))) {
             TTFSubsetter subsetter = new TTFSubsetter(font, SUBSET_TABLES);
             Set<Integer> codePoints = characters.codePoints().boxed().collect(Collectors.toSet());
             codePoints.add((int) ' ');
             subsetter.addAll(codePoints);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             subsetter.writeToStream(out);
-            font.close();
             return out.toByteArray();
         } catch (IOException e) {
             throw new UncheckedIOException(e);

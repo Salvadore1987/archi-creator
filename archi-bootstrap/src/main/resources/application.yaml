@@ -147,6 +147,11 @@ archi:
     committer-name: ${ARCHI_GIT_COMMITTER_NAME:Archi Creator}
     committer-email: ${ARCHI_GIT_COMMITTER_EMAIL:archi-creator@localhost}
     poll-interval: 10s
+    # Предел одного сетевого обращения к репозиторию; повтор публикации — очередью,
+    # пауза от retry-base вдвое до retry-max.
+    timeout: 30s
+    retry-base: 5s
+    retry-max: 10m
     # Закрытые записи очереди публикации: версия уже несёт git_sha, запись нужна только для разбора.
     outbox-retention: 30d
     # Репозиторий в файловой системе сервера (file://) — только в тестах: иначе администратор
@@ -161,6 +166,7 @@ archi:
     # Глубина рассуждения: меньше — быстрее первые токены.
     effort: medium
     timeout: 180s
+    connect-timeout: 10s
     # Повторы только до первого токена: после него пользователь уже видит ответ.
     max-retries: 2
     max-output-tokens: 16000
@@ -174,6 +180,13 @@ archi:
     workspace-requests-per-minute: 20
     # Месяц бюджета начинается с первого числа по этому поясу.
     budget-zone: ${ARCHI_AI_BUDGET_ZONE:Asia/Tashkent}
+    # Предохранитель: половина отказов или медленных открытий потока среди последних
+    # десяти обращений — минуту обращения отклоняются сразу, без похода в API.
+    circuit-breaker:
+      failure-rate-threshold: 50
+      slow-call-threshold: 60s
+      sliding-window-size: 10
+      wait-in-open-state: 60s
   web:
     cors:
       # Пустой список = CORS закрыт. В dev список расширяется

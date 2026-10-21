@@ -1,7 +1,6 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.advisor;
 
 import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -11,7 +10,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.AdvisorMetrics;
+import uz.salvadore.hamkorbank.archi.advisor.domain.budget.BudgetPeriod;
 import uz.salvadore.hamkorbank.archi.advisor.domain.budget.TokenBudget;
+import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorFunction;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.RejectionReason;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.SessionStatus;
@@ -22,12 +23,18 @@ import uz.salvadore.hamkorbank.archi.bootstrap.wiring.MicrometerUseCaseMetrics;
 /**
  * Метрики помощника на Micrometer: исходы сессий, время до первого токена, расход
  * и заполнение бюджета. Ни содержимое контекста, ни текст ответа в метки не попадают.
+ *
+ * <p>Заполнение бюджета — один датчик на пространство, с меткой текущего месяца: с новым месяцем
+ * датчик прошлого снимается, иначе он висел бы с последним значением и держал алерт заполнения.
  */
 public final class AdvisorMicrometerMetrics implements AdvisorMetrics {
 
     private final MeterRegistry registry;
     private final MicrometerUseCaseMetrics useCases;
-    private final Map<String, AtomicReference<Double>> utilization = new ConcurrentHashMap<>();
+    private final Map<WorkspaceId, Utilization> utilization = new ConcurrentHashMap<>();
+
+    private record Utilization(BudgetPeriod period, AtomicReference<Double> value, Gauge gauge) {
+    }
 
     public AdvisorMicrometerMetrics(MeterRegistry registry) {
         this.registry = registry;
@@ -55,24 +62,33 @@ public final class AdvisorMicrometerMetrics implements AdvisorMetrics {
 
     @Override
     public void tokens(AdvisorFunction function, String workspace, TokenUsage usage) {
-        DistributionSummary.builder("advisor.tokens.consumed").tag("workspace", workspace)
+        Counter.builder("advisor.tokens.consumed").tag("workspace", workspace)
                 .tag("function", function.name()).tag("kind", "prompt").register(registry)
-                .record(usage.promptTokens());
-        DistributionSummary.builder("advisor.tokens.consumed").tag("workspace", workspace)
+                .increment(usage.promptTokens());
+        Counter.builder("advisor.tokens.consumed").tag("workspace", workspace)
                 .tag("function", function.name()).tag("kind", "completion").register(registry)
-                .record(usage.completionTokens());
+                .increment(usage.completionTokens());
     }
 
     @Override
     public void budget(TokenBudget budget) {
-        String key = budget.workspaceId() + "/" + budget.period();
-        utilization.computeIfAbsent(key, k -> {
-            AtomicReference<Double> value = new AtomicReference<>(0.0);
-            Gauge.builder("advisor.budget.utilization.ratio", value, AtomicReference::get)
-                    .tag("workspace", budget.workspaceId().toString()).tag("period", budget.period().value())
+        utilization.compute(budget.workspaceId(), (workspace, current) -> {
+            if (current != null && current.period().month().isAfter(budget.period().month())) {
+                return current;
+            }
+            if (current != null && current.period().equals(budget.period())) {
+                current.value().set(budget.utilization());
+                return current;
+            }
+            if (current != null) {
+                registry.remove(current.gauge());
+            }
+            AtomicReference<Double> value = new AtomicReference<>(budget.utilization());
+            Gauge gauge = Gauge.builder("advisor.budget.utilization.ratio", value, AtomicReference::get)
+                    .tag("workspace", workspace.toString()).tag("period", budget.period().value())
                     .register(registry);
-            return value;
-        }).set(budget.utilization());
+            return new Utilization(budget.period(), value, gauge);
+        });
     }
 
     @Override
