@@ -9,6 +9,9 @@ public record TokenUsage(long promptTokens, long completionTokens) {
     /** Нулевой расход — у сессии, не дошедшей до внешнего API. */
     public static final TokenUsage NONE = new TokenUsage(0, 0);
 
+    /** Символов текста на токен — оценка там, где точного счёта нет: размер контекста, оборванный ответ. */
+    public static final int CHARS_PER_TOKEN = 4;
+
     public TokenUsage {
         if (promptTokens < 0 || completionTokens < 0) {
             throw new InvalidValueException(AdvisorMessages.USAGE_NEGATIVE);
@@ -28,6 +31,11 @@ public record TokenUsage(long promptTokens, long completionTokens) {
             tooLarge.initCause(e);
             throw tooLarge;
         }
+    }
+
+    /** Оценка токенов текста из {@code chars} символов — с округлением вверх: недооценка дешевле расходу. */
+    public static long estimate(long chars) {
+        return chars <= 0 ? 0 : (chars - 1) / CHARS_PER_TOKEN + 1;
     }
 
     /** Входные и выходные токены вместе. */

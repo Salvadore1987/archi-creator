@@ -47,7 +47,8 @@ public final class FakeAnthropic {
             exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
             exchange.sendResponseHeaders(200, 0);
             try (OutputStream out = exchange.getResponseBody()) {
-                for (String frame : reply.frames("msg_" + messageIds.incrementAndGet())) {
+                List<String> frames = reply.frames("msg_" + messageIds.incrementAndGet());
+                for (String frame : frames.subList(0, Math.min(frames.size(), reply.framesLimit))) {
                     out.write(frame.getBytes(StandardCharsets.UTF_8));
                     out.flush();
                     pause(reply.frameDelayMs);
@@ -103,6 +104,7 @@ public final class FakeAnthropic {
         private long inputTokens = 120;
         private long outputTokens = 30;
         private long frameDelayMs;
+        private int framesLimit = Integer.MAX_VALUE;
 
         public static Reply text(String text) {
             return new Reply().withText(text);
@@ -122,6 +124,12 @@ public final class FakeAnthropic {
         /** Пауза после каждого кадра — модель пишет не мгновенно. */
         public Reply slowly(long millis) {
             this.frameDelayMs = millis;
+            return this;
+        }
+
+        /** Поток обрывается после {@code frames} кадров — до {@code message_delta} с расходом выхода. */
+        public Reply cutAfter(int frames) {
+            this.framesLimit = frames;
             return this;
         }
 
