@@ -21,7 +21,7 @@
 | 3 | Предохранитель Resilience4j на Anthropic API, метрика, алерт `UpstreamCircuitOpen` | 13-01 | `AnthropicLlmClientTest`: после серии отказов вызов не доходит до сервера, отмена клиентом предохранитель не открывает; `check-nfr-config.py`: параметры предохранителя | ✅ |
 | 4 | Датчик бюджета — один на пространство, новый месяц снимает прежний; расход — `Counter` | 13-03 | `AdvisorMicrometerMetricsTest` | ✅ |
 | 5 | Мост помощника: из modeling — домен, запросы, результаты и перечисленные методы чтения; Javadoc теста | 13-04 | `AdvisorArchitectureTest` | ✅ |
-| 6 | Таймаут Git — не меньше секунды | 13-06 | `SettingsValidationTest` | ⬜ |
+| 6 | Таймаут Git — не меньше секунды | 13-06 | `SettingsValidationTest` | ✅ |
 | 7 | Подмножество шрифта — `try-with-resources` | 13-07 | `ViewImageRenderingTest`, сверка экспорта | ⬜ |
 
 ## Расхождения плана с фактом
@@ -53,3 +53,6 @@
   от порта разрешена, тип команды при `null` не упоминается), новое правило `advisorCallsOnlyReadMethodsOfModeling`
   на нём падает. Правило вызовов смотрит только на порты (`modeling.application.port..`): методы записей-результатов
   (`tree.elements()`) — чтение данных, первая версия правила ловила их 29 раз.
+- **Задача 6.** `@DurationMin` — ограничение Hibernate Validator, он уже на classpath как реализация
+  Bean Validation. В тот же тест добавлен случай вложенных настроек предохранителя (доля 101 %) —
+  `@Valid` на вложенной записи работает. На старом коде падал случай `archi.git.timeout=500ms`.
