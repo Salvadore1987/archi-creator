@@ -51,6 +51,7 @@ PAIRS = [
     ("archi.git.retry-base", "duration", "interchange", "upstream_calls.git_remote.retries.initial_interval"),
     ("archi.git.retry-max", "duration", "interchange", "upstream_calls.git_remote.retries.max_interval"),
     ("archi.ai.timeout", "duration", "advisor", "upstream_calls.anthropic_api.timeout"),
+    ("archi.ai.connect-timeout", "duration", "advisor", "upstream_calls.anthropic_api.connect_timeout"),
     ("archi.ai.max-retries", "number", "advisor", "upstream_calls.anthropic_api.retries.count"),
     ("archi.ai.max-context-tokens", "number", "advisor", "rate_limits.context.max_tokens"),
     ("archi.ai.min-coverage", "number", "advisor", "rate_limits.context.min_coverage"),

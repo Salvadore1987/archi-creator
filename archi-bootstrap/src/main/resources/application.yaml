@@ -166,6 +166,7 @@ archi:
     # Глубина рассуждения: меньше — быстрее первые токены.
     effort: medium
     timeout: 180s
+    connect-timeout: 10s
     # Повторы только до первого токена: после него пользователь уже видит ответ.
     max-retries: 2
     max-output-tokens: 16000

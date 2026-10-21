@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.advisor;
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.core.JsonValue;
+import com.anthropic.core.Timeout;
 import com.anthropic.core.http.StreamResponse;
 import com.anthropic.errors.AnthropicException;
 import com.anthropic.models.messages.InputJsonDelta;
@@ -56,7 +57,8 @@ public final class AnthropicLlmClient implements LlmPort {
                 ? AnthropicOkHttpClient.builder()
                         .apiKey(settings.apiKey())
                         .baseUrl(settings.baseUrl())
-                        .timeout(settings.timeout())
+                        .timeout(Timeout.builder().connect(settings.connectTimeout()).request(settings.timeout())
+                                .build())
                         .maxRetries(settings.maxRetries())
                         .build()
                 : null;

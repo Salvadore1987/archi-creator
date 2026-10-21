@@ -102,6 +102,7 @@ upstream_calls:
     endpoint_owner: external
     model: claude-sonnet-5
     timeout: 180s
+    connect_timeout: 10s
     streaming: true
     retries:
       # Повторяет SDK Anthropic: пауза 0,5 s вдвое до 8 s, джиттер до 25 %,

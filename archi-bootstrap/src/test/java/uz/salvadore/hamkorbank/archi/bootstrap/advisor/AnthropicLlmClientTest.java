@@ -24,8 +24,8 @@ class AnthropicLlmClientTest {
 
     private final FakeAnthropic anthropic = FakeAnthropic.get();
     private final AnthropicLlmClient client = new AnthropicLlmClient(new AiSettings("sk-test", "claude-sonnet-5",
-            anthropic.baseUrl(), "medium", Duration.ofSeconds(10), 0, 1024, 120_000, 0.25, 5_000_000, 5, 20,
-            ZoneId.of("UTC")));
+            anthropic.baseUrl(), "medium", Duration.ofSeconds(10), Duration.ofSeconds(2), 0, 1024, 120_000, 0.25,
+            5_000_000, 5, 20, ZoneId.of("UTC")));
     private final LlmRequest request = new LlmRequest("system", "user", List.of(), 1024);
 
     @BeforeEach

@@ -17,7 +17,7 @@
 | № | Задача | Находки | Проверка | Статус |
 |---|---|---|---|---|
 | 1 | `spec/nfr`: Git — повтор очередью (5 s вдвое до 10 min), без предохранителя; порт чтения modeling — вызов в процессе; повторы Anthropic — как у SDK; числа Git — в сверке | 13-05 | `check-nfr-config.py`: `archi.git.timeout`, `retry-base`, `retry-max` против `spec/nfr/interchange.yaml` | ✅ |
-| 2 | `archi.ai.connect-timeout` и таймаут соединения клиента Anthropic | 13-02 | `check-nfr-config.py`: `archi.ai.connect-timeout` | ⬜ |
+| 2 | `archi.ai.connect-timeout` и таймаут соединения клиента Anthropic | 13-02 | `check-nfr-config.py`: `archi.ai.connect-timeout` | ✅ |
 | 3 | Предохранитель Resilience4j на Anthropic API, метрика, алерт `UpstreamCircuitOpen` | 13-01 | `AnthropicLlmClientTest`: после серии отказов вызов не доходит до сервера, отмена клиентом предохранитель не открывает; `check-nfr-config.py`: параметры предохранителя | ⬜ |
 | 4 | Датчик бюджета — один на пространство, новый месяц снимает прежний; расход — `Counter` | 13-03 | `AdvisorMicrometerMetricsTest` | ⬜ |
 | 5 | Мост помощника: из modeling — домен, запросы, результаты и перечисленные методы чтения; Javadoc теста | 13-04 | `AdvisorArchitectureTest` | ⬜ |
@@ -31,3 +31,6 @@
   падала трижды: настроек в YAML не было. Повтор Git без джиттера записан в спеку с причиной — очередь
   проходит один планировщик. Вне объёма: `spec/nfr/modeling.yaml` `keycloak_jwks` тоже обещает предохранитель
   и повторы, которых у декодера JWT Spring Security нет, — это граница безопасности, этап 14.
+- **Задача 2.** Предел соединения — 10 s, число записано в `spec/nfr/advisor.yaml` (`connect_timeout`)
+  и сверяется. Таймаут чтения не задан отдельно: у SDK он равен пределу вызова, и для потока это предел
+  паузы между кадрами. На старом коде сверка падала: настройки не было.

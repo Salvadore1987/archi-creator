@@ -22,6 +22,7 @@ import org.springframework.validation.annotation.Validated;
  * @param baseUrl                    адрес API; тесты подменяют его локальным сервером
  * @param effort                     глубина рассуждения модели: меньше — быстрее первые токены
  * @param timeout                    предел одного обращения целиком
+ * @param connectTimeout             предел установки соединения: недоступный адрес — отказ, а не минута ожидания
  * @param maxRetries                 повторы до первого токена; после него повторов нет
  * @param maxOutputTokens            предел ответа одного обращения
  * @param maxContextTokens           верхняя граница контекста одного запроса
@@ -38,6 +39,7 @@ public record AiSettings(String apiKey,
                          @DefaultValue("https://api.anthropic.com") @Pattern(regexp = "^https?://.+") String baseUrl,
                          @DefaultValue("medium") @NotBlank String effort,
                          @DefaultValue("180s") @NotNull Duration timeout,
+                         @DefaultValue("10s") @NotNull Duration connectTimeout,
                          @DefaultValue("2") @PositiveOrZero int maxRetries,
                          @DefaultValue("16000") @Positive int maxOutputTokens,
                          @DefaultValue("120000") @Positive int maxContextTokens,
@@ -56,8 +58,9 @@ public record AiSettings(String apiKey,
     @Override
     public String toString() {
         return "AiSettings[apiKey=" + (configured() ? "***" : "") + ", model=" + model + ", baseUrl=" + baseUrl
-                + ", effort=" + effort + ", timeout=" + timeout + ", maxRetries=" + maxRetries + ", maxOutputTokens="
-                + maxOutputTokens + ", maxContextTokens=" + maxContextTokens + ", minCoverage=" + minCoverage
+                + ", effort=" + effort + ", timeout=" + timeout + ", connectTimeout=" + connectTimeout
+                + ", maxRetries=" + maxRetries + ", maxOutputTokens=" + maxOutputTokens + ", maxContextTokens="
+                + maxContextTokens + ", minCoverage=" + minCoverage
                 + ", defaultMonthlyTokenLimit=" + defaultMonthlyTokenLimit + ", userRequestsPerMinute="
                 + userRequestsPerMinute + ", workspaceRequestsPerMinute=" + workspaceRequestsPerMinute
                 + ", budgetZone=" + budgetZone + "]";
