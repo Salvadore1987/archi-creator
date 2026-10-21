@@ -1,8 +1,11 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.git;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -50,12 +53,13 @@ class GitBindingIT extends ApiTest {
     }
 
     @Test
-    @DisplayName("NFR-06: вместо ссылки на секрет сам токен — 422, в базу не попадает")
+    @DisplayName("NFR-06: вместо ссылки на секрет сам токен — 422, ни в базу, ни в ответ не попадает")
     void rawTokenIsRejected() throws Exception {
         mvc.perform(put(binding()).with(admin()).contentType(MediaType.APPLICATION_JSON)
                         .content(SETTINGS.replace("env:ARCHI_GIT_TOKEN", "glpat-abcdef123456")))
                 .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.code").value("IXC_INVALID_REQUEST"));
+                .andExpect(jsonPath("$.code").value("IXC_INVALID_REQUEST"))
+                .andExpect(content().string(not(containsString("glpat-abcdef123456"))));
         mvc.perform(get(binding()).with(admin())).andExpect(status().isNotFound());
     }
 
