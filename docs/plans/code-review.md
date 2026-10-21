@@ -290,6 +290,8 @@ Javadoc (checkstyle `InvalidJavadocPosition`). Этапу 4 они уже дей
 падает `ConcurrentModificationException` на цепочке связей к связи — вложенный `computeIfAbsent`
 на `HashMap` (07-02); точка крепления связи к связи в OEF считается иначе, чем на канве и в SVG (07-03).
 
+**Находки исправлены 2026-10-21** — план [`code-review-fixes-07.md`](code-review-fixes-07.md).
+
 Стандарт: §2.6–§2.7 (470–672), §2.11 (781–900), §3.3.7 (2132–2353).
 
 ### Этап 8. Application interchange: Git ⬜
