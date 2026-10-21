@@ -18,6 +18,7 @@ import java.util.UUID;
 public class RelationshipEntity {
 
     @Id
+    @Column(name = "id")
     public UUID id;
 
     @Column(name = "model_id", nullable = false, updatable = false)
@@ -44,19 +45,22 @@ public class RelationshipEntity {
     @Column(name = "target_relationship_id")
     public UUID targetRelationshipId;
 
+    @Column(name = "name")
     public String name;
 
+    @Column(name = "documentation")
     public String documentation;
 
     @Column(name = "access_type")
     public String accessType;
 
+    @Column(name = "directed")
     public Boolean directed;
 
     @Column(name = "sort_order", nullable = false)
     public long sortOrder;
 
-    @Column(nullable = false)
+    @Column(name = "supported", nullable = false)
     public boolean supported;
 
     @Column(name = "raw_xml")

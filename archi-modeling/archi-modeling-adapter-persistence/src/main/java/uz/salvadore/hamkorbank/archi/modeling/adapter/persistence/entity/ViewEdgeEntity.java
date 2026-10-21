@@ -13,6 +13,7 @@ import org.hibernate.annotations.ColumnTransformer;
 public class ViewEdgeEntity {
 
     @Id
+    @Column(name = "id")
     public UUID id;
 
     @Column(name = "model_id", nullable = false, updatable = false)
@@ -43,13 +44,14 @@ public class ViewEdgeEntity {
     public UUID targetEdgeId;
 
     /** {@code [[startX,startY,endX,endY], …]}; разбирает {@code Bendpoints}. */
-    @Column(nullable = false)
+    @Column(name = "bendpoints", nullable = false, columnDefinition = "jsonb")
     @ColumnTransformer(write = "?::jsonb")
     public String bendpoints;
 
     @Column(name = "fill_color")
     public String fillColor;
 
+    @Column(name = "font")
     public String font;
 
     @Column(name = "font_color")

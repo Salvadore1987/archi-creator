@@ -13,8 +13,14 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.hibernate.annotations.DynamicUpdate;
 
-/** Строка привязки рабочего пространства к Git-репозиторию: адрес, ветка, ссылка на секрет и авторы. */
+/**
+ * Строка привязки рабочего пространства к Git-репозиторию: адрес, ветка, ссылка на секрет и авторы.
+ * Голову ветки пишет публикация, остальное — администратор и проверка доступности, поэтому запись
+ * обновляет только изменённые столбцы и не откатывает чужой.
+ */
+@DynamicUpdate
 @Entity
 @Table(name = "git_binding")
 public class GitBindingEntity {
@@ -26,13 +32,13 @@ public class GitBindingEntity {
     @Column(name = "repo_url", nullable = false)
     public String repoUrl;
 
-    @Column(nullable = false)
+    @Column(name = "branch", nullable = false)
     public String branch;
 
     @Column(name = "token_ref", nullable = false)
     public String tokenRef;
 
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false)
     public String status;
 
     @Column(name = "last_commit_sha")
@@ -50,13 +56,13 @@ public class GitBindingEntity {
     @Embeddable
     public static class Author {
 
-        @Column(nullable = false)
+        @Column(name = "subject", nullable = false)
         public String subject;
 
-        @Column(nullable = false)
+        @Column(name = "name", nullable = false)
         public String name;
 
-        @Column(nullable = false)
+        @Column(name = "email", nullable = false)
         public String email;
     }
 }

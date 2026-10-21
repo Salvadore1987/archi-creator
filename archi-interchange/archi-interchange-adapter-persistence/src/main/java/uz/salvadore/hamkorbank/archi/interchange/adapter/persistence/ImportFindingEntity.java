@@ -12,21 +12,22 @@ import java.util.UUID;
 public class ImportFindingEntity {
 
     @Id
+    @Column(name = "id")
     public UUID id;
 
     @Column(name = "session_id", nullable = false)
     public UUID sessionId;
 
-    @Column(nullable = false)
+    @Column(name = "ordinal", nullable = false)
     public int ordinal;
 
-    @Column(nullable = false)
+    @Column(name = "severity", nullable = false)
     public String severity;
 
-    @Column(nullable = false)
+    @Column(name = "code", nullable = false)
     public String code;
 
-    @Column(nullable = false)
+    @Column(name = "message", nullable = false)
     public String message;
 
     @Column(name = "archi_id")

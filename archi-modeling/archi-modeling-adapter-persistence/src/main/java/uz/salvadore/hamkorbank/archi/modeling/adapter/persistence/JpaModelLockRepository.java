@@ -14,7 +14,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
 /**
  * Блокировки: первичный ключ {@code model_id} — одна на модель. Два одновременных захвата
- * свободной модели сходятся на вставке, второй получает нарушение ключа, то есть {@code 409}.
+ * свободной модели сходятся на вставке, второй получает нарушение ключа, то есть {@code 409};
+ * захват, продление и снятие существующей строки сверяют её версию — проигравший получает тот же отказ.
  */
 @Repository
 public class JpaModelLockRepository implements ModelLockRepository {
@@ -48,6 +49,9 @@ public class JpaModelLockRepository implements ModelLockRepository {
             }
             em.flush();
         } catch (PersistenceException e) {
+            if (!WriteConflicts.isConflict(e)) {
+                throw e;
+            }
             throw new ConcurrentUpdateException(Message.of(ModelingMessages.MODEL_LOCK, lock.modelId()));
         }
     }
@@ -57,7 +61,14 @@ public class JpaModelLockRepository implements ModelLockRepository {
         ModelLockEntity entity = em.find(ModelLockEntity.class, modelId.value());
         if (entity != null) {
             em.remove(entity);
-            em.flush();
+            try {
+                em.flush();
+            } catch (PersistenceException e) {
+                if (!WriteConflicts.isConflict(e)) {
+                    throw e;
+                }
+                throw new ConcurrentUpdateException(Message.of(ModelingMessages.MODEL_LOCK, modelId));
+            }
         }
     }
 }

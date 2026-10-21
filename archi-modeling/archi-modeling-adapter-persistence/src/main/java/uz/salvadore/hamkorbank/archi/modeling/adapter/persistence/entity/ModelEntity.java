@@ -20,6 +20,7 @@ import java.util.UUID;
 public class ModelEntity {
 
     @Id
+    @Column(name = "id")
     public UUID id;
 
     @Column(name = "workspace_id", nullable = false, updatable = false)
@@ -28,15 +29,16 @@ public class ModelEntity {
     @Column(name = "archi_id", nullable = false, updatable = false)
     public String archiId;
 
-    @Column(nullable = false)
+    @Column(name = "name", nullable = false)
     public String name;
 
+    @Column(name = "documentation")
     public String documentation;
 
     @Column(name = "archi_version", nullable = false)
     public String archiVersion;
 
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false)
     public String status;
 
     @Column(name = "raw_xml")
@@ -53,6 +55,7 @@ public class ModelEntity {
 
     /** Оптимистичная блокировка строки. */
     @Version
+    @Column(name = "version")
     public long version;
 
     @ElementCollection

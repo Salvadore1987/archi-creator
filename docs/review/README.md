@@ -35,3 +35,4 @@
 | 7. Application interchange: SVG, PNG, OEF | [`07-svg-png-oef.md`](07-svg-png-oef.md) | 10 |
 | 8. Application interchange: Git | [`08-git.md`](08-git.md) | 26 |
 | 9. Application advisor | [`09-application-advisor.md`](09-application-advisor.md) | 10 |
+| 10. Адаптеры хранения и миграции | [`10-persistence.md`](10-persistence.md) | 9 |

@@ -18,6 +18,7 @@ import java.util.UUID;
 public class ElementEntity {
 
     @Id
+    @Column(name = "id")
     public UUID id;
 
     @Column(name = "model_id", nullable = false, updatable = false)
@@ -32,18 +33,19 @@ public class ElementEntity {
     @Column(name = "archi_type", nullable = false, updatable = false)
     public String archiType;
 
-    @Column(nullable = false)
+    @Column(name = "layer", nullable = false)
     public String layer;
 
-    @Column(nullable = false)
+    @Column(name = "name", nullable = false)
     public String name;
 
+    @Column(name = "documentation")
     public String documentation;
 
     @Column(name = "sort_order", nullable = false)
     public long sortOrder;
 
-    @Column(nullable = false)
+    @Column(name = "supported", nullable = false)
     public boolean supported;
 
     @Column(name = "raw_xml")

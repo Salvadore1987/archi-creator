@@ -50,10 +50,15 @@ public class JpaModelAccessListRepository implements ModelAccessListRepository {
         return result;
     }
 
+    /**
+     * Старые строки удаляются через контекст, а не массовым {@code delete}: сценарий их уже прочёл,
+     * и управляемая копия с тем же ключом не дала бы вставить запись, оставшуюся в списке.
+     */
     @Override
     public void save(ModelAccessList list) {
-        em.createQuery("delete from AccessEntryEntity a where a.modelId = :m")
-                .setParameter("m", list.modelId().value()).executeUpdate();
+        em.createQuery("select a from AccessEntryEntity a where a.modelId = :m", AccessEntryEntity.class)
+                .setParameter("m", list.modelId().value()).getResultList().forEach(em::remove);
+        em.flush();
         int order = 0;
         for (AclEntry entry : list.entries()) {
             AccessEntryEntity row = new AccessEntryEntity();

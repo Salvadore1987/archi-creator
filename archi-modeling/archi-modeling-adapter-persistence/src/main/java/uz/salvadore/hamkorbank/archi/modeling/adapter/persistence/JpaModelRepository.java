@@ -81,10 +81,11 @@ public class JpaModelRepository implements ModelRepository {
         return Optional.ofNullable(em.find(ModelEntity.class, id.value())).map(EntityMapper::toHeader);
     }
 
+    /** Заголовки со свойствами одним запросом: ленивая коллекция дала бы запрос на каждую модель. */
     @Override
     public List<ModelHeader> list(WorkspaceId workspaceId) {
-        return em.createQuery("select m from ModelEntity m where m.workspaceId = :w order by m.name, m.id",
-                        ModelEntity.class)
+        return em.createQuery("select distinct m from ModelEntity m left join fetch m.properties "
+                                + "where m.workspaceId = :w order by m.name, m.id", ModelEntity.class)
                 .setParameter("w", workspaceId.value()).getResultList().stream().map(EntityMapper::toHeader).toList();
     }
 

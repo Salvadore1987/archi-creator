@@ -24,9 +24,10 @@ public class AccessEntryEntity {
     public String principalType;
 
     @Id
+    @Column(name = "principal")
     public String principal;
 
-    @Column(nullable = false)
+    @Column(name = "access", nullable = false)
     public String access;
 
     @Column(name = "sort_order", nullable = false)

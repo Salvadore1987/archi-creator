@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -16,7 +17,7 @@ public class ModelLockEntity {
     @Column(name = "model_id")
     public UUID modelId;
 
-    @Column(nullable = false)
+    @Column(name = "owner", nullable = false)
     public String owner;
 
     @Column(name = "acquired_at", nullable = false)
@@ -24,4 +25,9 @@ public class ModelLockEntity {
 
     @Column(name = "expires_at", nullable = false)
     public Instant expiresAt;
+
+    /** Оптимистичная блокировка строки: два одновременных захвата не перезаписывают друг друга. */
+    @Version
+    @Column(name = "version", nullable = false)
+    public long version;
 }

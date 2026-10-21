@@ -13,12 +13,13 @@ import java.util.UUID;
 public class TokenBudgetEntity {
 
     @Id
+    @Column(name = "id")
     public UUID id;
 
     @Column(name = "workspace_id", nullable = false, updatable = false)
     public UUID workspaceId;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "period", nullable = false, updatable = false)
     public String period;
 
     @Column(name = "consumed_tokens", nullable = false)
@@ -27,10 +28,10 @@ public class TokenBudgetEntity {
     @Column(name = "warning_threshold_percent", nullable = false)
     public int warningThresholdPercent;
 
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false)
     public String status;
 
-    @Column(nullable = false)
+    @Column(name = "version", nullable = false)
     public long version;
 
     @Column(name = "updated_at", nullable = false)

@@ -47,7 +47,7 @@ Workspace 1──* Model 1──* ModelFolder ──* ModelFolder (вложен�
 | `ViewEdge` | `id`, `model_id`, `view_id`, `archi_id`, `archi_type`, `relationship_id`, `source_node_id` \| `source_edge_id`, `target_node_id` \| `target_edge_id`, `bendpoints` (jsonb), `fill_color`, `font`, `font_color`, `line_color`, `text_alignment`, `sort_order` (позиция в содержимом источника), `raw_xml` |
 | `ModelProperty` / `ElementProperty` / `RelationshipProperty` / `ViewProperty` | `owner_id`, `sort_order`, `key`, `value` |
 | `ModelVersion` | `id`, `model_id`, `version_no`, `author`, `comment`, `label` (метка релиза, nullable), `created_at`, `snapshot` (сжатый `.archimate`, **nullable** — может быть очищен, §4.4), `content_hash` (SHA-256 несжатого снимка), `git_sha` (nullable, §11.6) |
-| `ModelLock` | `model_id` (PK), `owner`, `acquired_at`, `expires_at` |
+| `ModelLock` | `model_id` (PK), `owner`, `acquired_at`, `expires_at`, `version` (оптимистичная блокировка: два захвата просроченной не перезаписывают друг друга) |
 | `ModelAccessEntry` | `model_id`, `principal_type` (`USER`/`GROUP`), `principal`, `access` (`READ`/`WRITE`) — FR-29, `INV-MDL-011` |
 | `IdempotencyRecord` | `scope`, `actor`, `idem_key`, `fingerprint`, `result_ref`, `created_at` — `INV-MDL-003` |
 | `ImportSession` / `ImportFinding` | сессия импорта и её находки (`INV-IXC-002`, `INV-IXC-003`) |
@@ -60,6 +60,7 @@ Workspace 1──* Model 1──* ModelFolder ──* ModelFolder (вложен�
 - `UNIQUE (model_id, archi_id)` на `Element`, `Relationship`, `View`, `ViewNode`, `ViewEdge`, `ModelFolder` — гарантия уникальности идентификаторов внутри модели.
 - `INDEX (model_id, archi_type)` — выборка по типу для палитры и валидации.
 - `INDEX (view_id, parent_id, sort_order)` — сборка дерева представления одним запросом.
+- У каждого внешнего ключа — индекс с ведущим столбцом ключа (частичный — у концов ребра): удаление строки, на которую ссылаются, ищет ссылки по индексу, а не просмотром таблицы. Индексы дерева начинаются с модели или представления и этой проверке не помогают. Держит `ForeignKeyIndexIT`.
 - Концы связи — `ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED`: удаление элемента требует явного удаления его связей (как в Archi). По смыслу это `RESTRICT`, но проверка в конце транзакции: импорт пишет тысячи строк одной транзакцией, а связь может ссылаться на связь, вставленную позже. Отказ при удалении даёт домен раньше базы (`INV-MDL-004`), база — страховка.
 - `raw_xml` — остаток XML объекта ([`ADR-0017`](../spec/adr/0017-xml-residue.md)): всё, что не легло в столбцы, с позициями. Столбцы сильнее остатка.
 - Снимок `ModelVersion.snapshot` — `bytea`, gzip.

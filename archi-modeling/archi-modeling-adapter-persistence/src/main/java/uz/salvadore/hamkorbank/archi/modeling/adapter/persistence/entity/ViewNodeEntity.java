@@ -12,6 +12,7 @@ import java.util.UUID;
 public class ViewNodeEntity {
 
     @Id
+    @Column(name = "id")
     public UUID id;
 
     @Column(name = "model_id", nullable = false, updatable = false)
@@ -29,20 +30,25 @@ public class ViewNodeEntity {
     @Column(name = "archi_type", nullable = false, updatable = false)
     public String archiType;
 
-    @Column(nullable = false)
+    @Column(name = "kind", nullable = false)
     public String kind;
 
     @Column(name = "element_id")
     public UUID elementId;
 
+    @Column(name = "x")
     public int x;
+    @Column(name = "y")
     public int y;
+    @Column(name = "width")
     public int width;
+    @Column(name = "height")
     public int height;
 
     @Column(name = "fill_color")
     public String fillColor;
 
+    @Column(name = "font")
     public String font;
 
     @Column(name = "font_color")
@@ -54,8 +60,10 @@ public class ViewNodeEntity {
     @Column(name = "text_alignment")
     public Integer textAlignment;
 
+    @Column(name = "label")
     public String label;
 
+    @Column(name = "content")
     public String content;
 
     @Column(name = "sort_order", nullable = false)
