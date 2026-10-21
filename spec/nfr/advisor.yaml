@@ -118,6 +118,8 @@ upstream_calls:
       slow_call_threshold: 60s
       sliding_window_size: 10
       wait_duration_in_open_state: 60s
+      # Медленное — открытие потока дольше порога, а не длинный ответ; отмена
+      # клиентом — не исход. Медленные открывают предохранитель той же долей.
     fallback: fail_fast
     note: |
       Повтор после первого полученного токена запрещён: пользователь уже
@@ -232,7 +234,7 @@ observability:
         «помощник не работает».
 
     - name: UpstreamCircuitOpen
-      expr: resilience_circuitbreaker_state{name="anthropic_api",state="open"} == 1
+      expr: resilience4j_circuitbreaker_state{name="anthropic_api",state="open"} == 1
       for: 5m
       severity: ticket
 

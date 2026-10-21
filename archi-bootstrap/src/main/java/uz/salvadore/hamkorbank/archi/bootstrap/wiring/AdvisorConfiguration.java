@@ -1,5 +1,7 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.wiring;
 
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.micrometer.tagged.TaggedCircuitBreakerMetrics;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.util.function.Supplier;
@@ -80,8 +82,10 @@ public class AdvisorConfiguration {
     }
 
     @Bean
-    LlmPort llmPort(AiSettings settings) {
-        return new AnthropicLlmClient(settings);
+    LlmPort llmPort(AiSettings settings, MeterRegistry meters) {
+        CircuitBreakerRegistry breakers = CircuitBreakerRegistry.ofDefaults();
+        TaggedCircuitBreakerMetrics.ofCircuitBreakerRegistry(breakers).bindTo(meters);
+        return new AnthropicLlmClient(settings, breakers);
     }
 
     @Bean

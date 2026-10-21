@@ -180,6 +180,13 @@ archi:
     workspace-requests-per-minute: 20
     # Месяц бюджета начинается с первого числа по этому поясу.
     budget-zone: ${ARCHI_AI_BUDGET_ZONE:Asia/Tashkent}
+    # Предохранитель: половина отказов или медленных открытий потока среди последних
+    # десяти обращений — минуту обращения отклоняются сразу, без похода в API.
+    circuit-breaker:
+      failure-rate-threshold: 50
+      slow-call-threshold: 60s
+      sliding-window-size: 10
+      wait-in-open-state: 60s
   web:
     cors:
       # Пустой список = CORS закрыт. В dev список расширяется

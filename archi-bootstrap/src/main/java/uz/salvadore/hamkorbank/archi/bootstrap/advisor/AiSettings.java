@@ -1,7 +1,9 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.advisor;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -31,6 +33,7 @@ import org.springframework.validation.annotation.Validated;
  * @param userRequestsPerMinute      частота обращений автора
  * @param workspaceRequestsPerMinute частота обращений пространства
  * @param budgetZone                 часовой пояс, по которому месяц бюджета начинается с первого числа
+ * @param circuitBreaker             предохранитель: пока API отказывает, обращения отклоняются сразу
  */
 @ConfigurationProperties("archi.ai")
 @Validated
@@ -47,7 +50,24 @@ public record AiSettings(String apiKey,
                          @DefaultValue("5000000") @PositiveOrZero long defaultMonthlyTokenLimit,
                          @DefaultValue("5") @Positive int userRequestsPerMinute,
                          @DefaultValue("20") @Positive int workspaceRequestsPerMinute,
-                         @DefaultValue("Asia/Tashkent") @NotNull ZoneId budgetZone) {
+                         @DefaultValue("Asia/Tashkent") @NotNull ZoneId budgetZone,
+                         @DefaultValue @Valid @NotNull Breaker circuitBreaker) {
+
+    /**
+     * Предохранитель на Anthropic API ({@code archi.ai.circuit-breaker.*}). Окно — последние обращения
+     * по счёту; оценка начинается, когда окно заполнено.
+     *
+     * @param failureRateThreshold доля отказов и медленных обращений в окне, в процентах, при которой
+     *                             предохранитель открывается
+     * @param slowCallThreshold    обращение медленнее этого — как отказ: считается время до открытия потока
+     * @param slidingWindowSize    сколько последних обращений в окне
+     * @param waitInOpenState      сколько предохранитель открыт до пробных обращений
+     */
+    public record Breaker(@DefaultValue("50") @Positive @Max(100) int failureRateThreshold,
+                          @DefaultValue("60s") @NotNull Duration slowCallThreshold,
+                          @DefaultValue("10") @Positive int slidingWindowSize,
+                          @DefaultValue("60s") @NotNull Duration waitInOpenState) {
+    }
 
     /** Задан ли ключ API: без него помощник отвечает «недоступен», остальное приложение работает. */
     public boolean configured() {
@@ -63,6 +83,6 @@ public record AiSettings(String apiKey,
                 + maxContextTokens + ", minCoverage=" + minCoverage
                 + ", defaultMonthlyTokenLimit=" + defaultMonthlyTokenLimit + ", userRequestsPerMinute="
                 + userRequestsPerMinute + ", workspaceRequestsPerMinute=" + workspaceRequestsPerMinute
-                + ", budgetZone=" + budgetZone + "]";
+                + ", budgetZone=" + budgetZone + ", circuitBreaker=" + circuitBreaker + "]";
     }
 }

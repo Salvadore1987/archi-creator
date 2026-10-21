@@ -95,6 +95,15 @@
             <groupId>com.anthropic</groupId>
             <artifactId>anthropic-java</artifactId>
         </dependency>
+        <!-- Предохранитель на Anthropic API и его состояние в метриках. -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-circuitbreaker</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-micrometer</artifactId>
+        </dependency>
 
         <!--
             Экспорт картинок: Batik растеризует SVG в PNG (порт Rasterizer), fontbox

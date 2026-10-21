@@ -15,12 +15,18 @@ import com.anthropic.models.messages.RawContentBlockStartEvent;
 import com.anthropic.models.messages.RawMessageStreamEvent;
 import com.anthropic.models.messages.TextDelta;
 import com.anthropic.models.messages.Tool;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.SlidingWindowType;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.io.EOFException;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
@@ -40,6 +46,10 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
  * потока повторов нет — пользователь уже видит часть ответа. Инструменты — строгие:
  * вход вызова приходит валидным по схеме и разбирается целиком на конце блока.
  *
+ * <p>Предохранитель считает исход каждого обращения: отказ API, обрыв потока и медленное открытие
+ * потока — неудача, отмена клиентом — не исход вовсе. Пока он открыт, обращение отклоняется сразу,
+ * не дожидаясь соединения и повторов SDK.
+ *
  * <p>Содержимое запроса и ответа не логируется: в журнал идёт только класс сбоя.
  */
 public final class AnthropicLlmClient implements LlmPort {
@@ -48,11 +58,16 @@ public final class AnthropicLlmClient implements LlmPort {
     private static final TypeReference<Map<String, Object>> MAP = new TypeReference<>() {
     };
 
+    /** Имя предохранителя — метка {@code name} его метрик. */
+    public static final String BREAKER = "anthropic_api";
+
     private final AiSettings settings;
     private final AnthropicClient client;
+    private final CircuitBreaker breaker;
 
-    public AnthropicLlmClient(AiSettings settings) {
+    public AnthropicLlmClient(AiSettings settings, CircuitBreakerRegistry breakers) {
         this.settings = settings;
+        this.breaker = breakers.circuitBreaker(BREAKER, breakerConfig(settings.circuitBreaker()));
         this.client = settings.configured()
                 ? AnthropicOkHttpClient.builder()
                         .apiKey(settings.apiKey())
@@ -76,10 +91,63 @@ public final class AnthropicLlmClient implements LlmPort {
                 .addUserMessage(request.user())
                 .outputConfig(OutputConfig.builder().effort(OutputConfig.Effort.of(settings.effort())).build());
         request.tools().forEach(tool -> params.addTool(tool(tool)));
+        if (!breaker.tryAcquirePermission()) {
+            throw new LlmUnavailableException(CallNotPermittedException.createCallNotPermittedException(breaker));
+        }
+        long started = breaker.getCurrentTimestamp();
         try {
-            return new Stream(client.messages().createStreaming(params.build()));
+            StreamResponse<RawMessageStreamEvent> response = client.messages().createStreaming(params.build());
+            return new Stream(response, new Outcome(breaker, breaker.getCurrentTimestamp() - started));
         } catch (AnthropicException | UncheckedIOException e) {
+            breaker.onError(breaker.getCurrentTimestamp() - started, breaker.getTimestampUnit(), e);
             throw new LlmUnavailableException(e);
+        }
+    }
+
+    /** Окно по счёту обращений; медленные обращения открывают предохранитель той же долей, что отказы. */
+    private static CircuitBreakerConfig breakerConfig(AiSettings.Breaker settings) {
+        return CircuitBreakerConfig.custom()
+                .slidingWindowType(SlidingWindowType.COUNT_BASED)
+                .slidingWindowSize(settings.slidingWindowSize())
+                .minimumNumberOfCalls(settings.slidingWindowSize())
+                .failureRateThreshold(settings.failureRateThreshold())
+                .slowCallRateThreshold(settings.failureRateThreshold())
+                .slowCallDurationThreshold(settings.slowCallThreshold())
+                .waitDurationInOpenState(settings.waitInOpenState())
+                .build();
+    }
+
+    /**
+     * Исход обращения для предохранителя — ровно один: успех, неудача или отмена. Длительность —
+     * время до открытия потока: длинный ответ модели — не медленное обращение.
+     */
+    private static final class Outcome {
+
+        private final CircuitBreaker breaker;
+        private final long openedIn;
+        private final AtomicBoolean settled = new AtomicBoolean();
+
+        Outcome(CircuitBreaker breaker, long openedIn) {
+            this.breaker = breaker;
+            this.openedIn = openedIn;
+        }
+
+        void success() {
+            if (settled.compareAndSet(false, true)) {
+                breaker.onSuccess(openedIn, breaker.getTimestampUnit());
+            }
+        }
+
+        void failure(Throwable cause) {
+            if (settled.compareAndSet(false, true)) {
+                breaker.onError(openedIn, breaker.getTimestampUnit(), cause);
+            }
+        }
+
+        void cancelled() {
+            if (settled.compareAndSet(false, true)) {
+                breaker.releasePermission();
+            }
         }
     }
 
@@ -111,6 +179,7 @@ public final class AnthropicLlmClient implements LlmPort {
     private static final class Stream implements LlmStream {
 
         private final StreamResponse<RawMessageStreamEvent> response;
+        private final Outcome outcome;
         private final Map<Long, String> toolNames = new HashMap<>();
         private final Map<Long, StringBuilder> toolInputs = new HashMap<>();
         private long input;
@@ -118,8 +187,9 @@ public final class AnthropicLlmClient implements LlmPort {
         private long outputChars;
         private boolean stopped;
 
-        Stream(StreamResponse<RawMessageStreamEvent> response) {
+        Stream(StreamResponse<RawMessageStreamEvent> response, Outcome outcome) {
             this.response = response;
+            this.outcome = outcome;
         }
 
         @Override
@@ -135,6 +205,7 @@ public final class AnthropicLlmClient implements LlmPort {
             if (!stopped) {
                 throw broken(listener, new EOFException());
             }
+            outcome.success();
         }
 
         private void accept(RawMessageStreamEvent event, LlmListener listener) {
@@ -182,12 +253,14 @@ public final class AnthropicLlmClient implements LlmPort {
 
         /** Сообщить израсходованное к обрыву и вернуть отказ для сценария. */
         private LlmUnavailableException broken(LlmListener listener, Exception cause) {
+            outcome.failure(cause);
             listener.usage(new TokenUsage(input, Math.max(output, TokenUsage.estimate(outputChars))));
             return new LlmUnavailableException(cause);
         }
 
         @Override
         public void cancel() {
+            outcome.cancelled();
             response.close();
         }
 
