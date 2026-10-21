@@ -7,12 +7,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
+import jakarta.persistence.EntityManagerFactory;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +36,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.SaveVersio
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.SaveViewLayoutCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetViewQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ListModelsQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.CreateRelationshipResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelTreeResponse;
@@ -82,6 +86,8 @@ class ModelPersistenceIT extends IntegrationTest {
     ModelVersionRepository versionRows;
     @Autowired
     PlatformTransactionManager transactions;
+    @Autowired
+    EntityManagerFactory entityManagers;
 
     @Test
     @DisplayName("INV-MDL-001: дубль archi_id в модели отклоняет база — UNIQUE (model_id, archi_id)")
@@ -152,6 +158,35 @@ class ModelPersistenceIT extends IntegrationTest {
 
         assertEquals(List.of(sha + " релиз"), column(
                 "select git_sha || ' ' || label from model_version where model_id = ?", String.class, model.value()));
+    }
+
+    @Test
+    @DisplayName("FR-04: список моделей читается числом запросов, не зависящим от числа моделей")
+    void modelListQueryCountDoesNotGrowWithModels() {
+        createModels(2, "Список-а");
+        long few = statementsOf(() -> queries.listModels(ARCHITECT, new ListModelsQuery(workspace().value())));
+        createModels(4, "Список-б");
+        long many = statementsOf(() -> queries.listModels(ARCHITECT, new ListModelsQuery(workspace().value())));
+
+        assertEquals(few, many);
+    }
+
+    private void createModels(int count, String prefix) {
+        for (int i = 0; i < count; i++) {
+            lifecycle.createModel(ARCHITECT, new CreateModelCommand(workspace().value(), prefix + " " + i, null));
+        }
+    }
+
+    private long statementsOf(Runnable work) {
+        Statistics statistics = entityManagers.unwrap(SessionFactory.class).getStatistics();
+        statistics.setStatisticsEnabled(true);
+        try {
+            statistics.clear();
+            work.run();
+            return statistics.getPrepareStatementCount();
+        } finally {
+            statistics.setStatisticsEnabled(false);
+        }
     }
 
     @Test
