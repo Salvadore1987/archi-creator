@@ -5,6 +5,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import java.util.Set;
@@ -18,20 +19,30 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceAppli
  * Помощник не изменяет модель — и держится это не только формой типов результата,
  * но и границей модулей: у помощника нет пути к записи в modeling.
  *
- * <p>Модули advisor не видят modeling вовсе. Мост в {@code bootstrap.advisor} видит,
- * но только сценарий запросов, пространства и запись размещений — ни одного сервиса
- * записи и ни одного порта хранения.
+ * <p>Модули advisor не видят modeling вовсе. Мост в {@code bootstrap.advisor} видит из modeling
+ * только домен, запросы и результаты сценариев и два входных порта, а из них зовёт лишь методы
+ * чтения: в {@code WorkspaceApplicationService} есть и запись. Ни сервиса записи, ни порта
+ * и адаптера хранения.
  */
 class AdvisorArchitectureTest {
 
     private static final String ROOT = "uz.salvadore.hamkorbank.archi";
 
-    /** Входные порты modeling, которые мосту помощника можно звать: только запросы. */
-    private static final Set<String> READ_ONLY_MODELING = Set.of(ModelQueryApplicationService.class.getName(),
+    private static final String BRIDGE = ROOT + ".bootstrap.advisor..";
+
+    /** Входные порты modeling, которые мосту помощника можно видеть. */
+    private static final Set<String> READ_PORTS = Set.of(ModelQueryApplicationService.class.getName(),
             WorkspaceApplicationService.class.getName());
-    /** Запросы и результаты сценариев — данные, а не путь к записи; команды сюда не входят. */
-    private static final Set<String> READ_ONLY_DTO = Set.of(ROOT + ".modeling.application.dto.query",
-            ROOT + ".modeling.application.dto.result");
+    /** Методы этих портов, которые мосту можно звать, — только чтение. */
+    private static final Set<String> READ_METHODS = Set.of(
+            ModelQueryApplicationService.class.getName() + ".getModel",
+            ModelQueryApplicationService.class.getName() + ".listModels",
+            ModelQueryApplicationService.class.getName() + ".validateModel",
+            WorkspaceApplicationService.class.getName() + ".resolveWorkspace",
+            WorkspaceApplicationService.class.getName() + ".listWorkspaces");
+    /** Домен, запросы и результаты сценариев — данные, а не путь к записи; команды сюда не входят. */
+    private static final Set<String> READ_ONLY_PACKAGES = Set.of(ROOT + ".modeling.domain",
+            ROOT + ".modeling.application.dto.query", ROOT + ".modeling.application.dto.result");
 
     private static JavaClasses classes;
 
@@ -56,13 +67,27 @@ class AdvisorArchitectureTest {
     @DisplayName("INV-ADV-004: у моста помощника нет порта записи в modeling")
     void advisorHasNoWritePortToModeling() {
         DescribedPredicate<JavaClass> modelingWrite = DescribedPredicate.describe(
-                "сервис или порт application-слоя modeling, кроме чтения",
-                c -> c.getPackageName().startsWith(ROOT + ".modeling.application")
-                        && !READ_ONLY_MODELING.contains(c.getName())
-                        && !READ_ONLY_DTO.contains(c.getPackageName()));
-        noClasses().that().resideInAPackage(ROOT + ".bootstrap.advisor..")
+                "класс modeling вне домена, запросов, результатов и портов чтения",
+                c -> c.getPackageName().startsWith(ROOT + ".modeling.")
+                        && !READ_PORTS.contains(c.getName())
+                        && READ_ONLY_PACKAGES.stream().noneMatch(p -> c.getPackageName().equals(p)
+                                || c.getPackageName().startsWith(p + ".")));
+        noClasses().that().resideInAPackage(BRIDGE)
                 .should().dependOnClassesThat(modelingWrite)
                 .because("помощник не изменяет модель: мост берёт из modeling только сценарий запросов")
+                .check(classes);
+    }
+
+    @Test
+    @DisplayName("INV-ADV-004: мост помощника зовёт у портов modeling только методы чтения")
+    void advisorCallsOnlyReadMethodsOfModeling() {
+        DescribedPredicate<JavaMethodCall> writeCall = DescribedPredicate.describe(
+                "вызов метода входного порта modeling, кроме чтения",
+                call -> call.getTargetOwner().getPackageName().startsWith(ROOT + ".modeling.application.port")
+                        && !READ_METHODS.contains(call.getTargetOwner().getName() + "." + call.getName()));
+        noClasses().that().resideInAPackage(BRIDGE)
+                .should().callMethodWhere(writeCall)
+                .because("в порте пространств есть запись: видеть порт не значит звать всё")
                 .check(classes);
     }
 }
