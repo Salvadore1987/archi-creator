@@ -87,7 +87,7 @@ public class JpaGitOutbox implements GitOutbox {
     @Override
     public void diverged(UUID id, String reason, Instant at) {
         em.createNativeQuery("update outbox_event set status = 'DIVERGED', attempts = attempts + 1, "
-                        + "last_error = :reason, next_attempt_at = null where id = :id")
+                        + "last_error = :reason, next_attempt_at = null where id = :id and " + OPEN)
                 .setParameter("reason", reason).setParameter("id", id).executeUpdate();
     }
 
@@ -103,15 +103,22 @@ public class JpaGitOutbox implements GitOutbox {
     @Override
     public void retryLater(UUID id, String reason, Instant next) {
         em.createNativeQuery("update outbox_event set status = 'PENDING', attempts = attempts + 1, "
-                        + "last_error = :reason, next_attempt_at = :next where id = :id")
+                        + "last_error = :reason, next_attempt_at = :next where id = :id and " + OPEN)
                 .setParameter("reason", String.valueOf(reason)).setParameter("next", next)
                 .setParameter("id", id).executeUpdate();
     }
 
     private void close(UUID id, String status, Instant at) {
         em.createNativeQuery("update outbox_event set status = :status, processed_at = :at, next_attempt_at = null "
-                        + "where id = :id")
+                        + "where id = :id and " + OPEN)
                 .setParameter("status", status).setParameter("at", at).setParameter("id", id).executeUpdate();
+    }
+
+    @Override
+    public int purgeClosed(Instant before) {
+        return em.createNativeQuery("delete from outbox_event where event_type = :type "
+                        + "and status in ('DONE', 'SKIPPED') and processed_at < :before")
+                .setParameter("type", EVENT_TYPE).setParameter("before", before).executeUpdate();
     }
 
     private static Entry entry(Object row) {

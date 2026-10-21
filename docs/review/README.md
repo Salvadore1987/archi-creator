@@ -33,3 +33,4 @@
 | 5. Application modeling | [`05-application-modeling.md`](05-application-modeling.md) | 12 |
 | 6. Application interchange: импорт, экспорт, раскладка | [`06-application-interchange.md`](06-application-interchange.md) | 14 |
 | 7. Application interchange: SVG, PNG, OEF | [`07-svg-png-oef.md`](07-svg-png-oef.md) | 10 |
+| 8. Application interchange: Git | [`08-git.md`](08-git.md) | 26 |

@@ -11,19 +11,16 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
-import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeOperation;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.CommitRequest;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Person;
-import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.PushResult;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Pushed;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Rejected;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Remote;
@@ -60,7 +57,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  *
  * <p>Сеть — вне транзакции; запись {@code git_sha} в версию, закрытие записи outbox
  * и новая голова привязки — одной транзакцией после push. Падение между ними
- * повтор находит по трейлерам коммита и не создаёт второго.
+ * повтор находит по трейлерам коммита и не создаёт второго — если после нашего коммита
+ * в ветку легло не больше коммитов, чем просматривает поиск адаптера.
  *
  * <p>Чужой коммит, тронувший каталог модели, или переписанная история — расхождение:
  * сервер ничего не перезаписывает, очередь модели встаёт до импорта или слияния.
@@ -69,8 +67,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  * модели, или каталог в голове уже несёт содержимое версии — тогда версия получает голову.
  * Не расхождение и правка, принятая слиянием: она входит в слитый коммит модели. Слитого
  * коммита нет в голове ветки — он второй родитель нашего коммита.
+ *
+ * <p>Шаги сценария, а не сценарий целиком: роль и метрику даёт handler, который зовёт этот класс.
  */
-public final class GitPublishingService {
+public final class GitPublisher {
 
     /** Трейлер коммита с идентификатором модели — по нему узнаётся свой коммит при повторе. */
     public static final String TRAILER_MODEL = "Archi-Model-Id";
@@ -80,10 +80,15 @@ public final class GitPublishingService {
     static final String GITATTRIBUTES = ".gitattributes";
     private static final String GITATTRIBUTES_RESOURCE = "gitattributes";
     private static final int MAX_ATTEMPTS_SHIFT = 10;
+    private static final System.Logger LOG = System.getLogger(GitPublisher.class.getName());
 
-    /** Кто коммитит и как выглядит автор, которого нет в привязке. */
+    /**
+     * Кто коммитит и как выглядит автор, которого нет в привязке; паузы повтора.
+     *
+     * @param closedRetention сколько хранятся закрытые записи очереди
+     */
     public record Settings(String committerName, String committerEmail, String authorEmailDomain,
-                           Duration retryBase, Duration retryMax) {
+                           Duration retryBase, Duration retryMax, Duration closedRetention) {
     }
 
     /**
@@ -119,7 +124,7 @@ public final class GitPublishingService {
     private final Map<ModelId, Object> modelLocks = new ConcurrentHashMap<>();
     private final byte[] gitattributes;
 
-    public GitPublishingService(GitOutbox outbox, GitBindingRepository bindings, PublishedVersions versions,
+    public GitPublisher(GitOutbox outbox, GitBindingRepository bindings, PublishedVersions versions,
                                 ModelMerges merges, GitRepositoryPort repository, SecretResolver secrets,
                                 UnitOfWork unitOfWork,
                                 InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts, Clock clock,
@@ -141,7 +146,8 @@ public final class GitPublishingService {
 
     /**
      * Проход очереди фоновым обработчиком: каждая модель — пока версии публикуются;
-     * отказ сети откладывает модель, расхождение останавливает её до ручного разбора.
+     * отказ сети или иной сбой откладывает модель, расхождение останавливает её до ручного разбора.
+     * В конце прохода закрытые записи старше срока хранения удаляются.
      *
      * @return сколько записей закрыто
      */
@@ -154,6 +160,8 @@ public final class GitPublishingService {
             }
             closed += drain(head.model(), false);
         }
+        Instant before = clock.instant().minus(settings.closedRetention());
+        unitOfWork.write(() -> outbox.purgeClosed(before));
         return closed;
     }
 
@@ -162,22 +170,18 @@ public final class GitPublishingService {
      * как расхождение разобрали руками. Версию не создаёт.
      */
     public ModelGitStatus push(EditorIdentity actor, ModelId model) {
-        InterchangeOperation operation = InterchangeOperation.PUSH_MODEL_TO_GIT;
-        return metrics.observe(operation.useCase(), () -> {
-            operation.require(actor);
-            WorkspaceId workspace = versions.visibleWorkspace(actor, model);
-            GitBinding binding = unitOfWork.read(() -> bindings.find(workspace)).filter(GitBinding::writable)
-                    .orElseThrow(() -> new InterchangeException(InterchangeCodes.GIT_NOT_BOUND, Failure.CONFLICT,
-                            Message.of(InterchangeMessages.GIT_BINDING_MISSING, workspace), Map.of()));
-            drain(model, true);
-            Optional<GitOutbox.Entry> head = unitOfWork.read(() -> outbox.head(model));
-            GitBinding after = unitOfWork.read(() -> bindings.find(workspace)).orElse(binding);
-            if (head.filter(h -> h.status() == GitOutbox.Status.PENDING).isPresent() && !after.reachable()) {
-                throw new InterchangeException(InterchangeCodes.GIT_UNREACHABLE, Failure.UNAVAILABLE,
-                        Message.of(InterchangeMessages.GIT_UNREACHABLE, after.repoUrl()), Map.of());
-            }
-            return status(model);
-        });
+        WorkspaceId workspace = versions.visibleWorkspace(actor, model);
+        GitBinding binding = unitOfWork.read(() -> bindings.find(workspace)).filter(GitBinding::writable)
+                .orElseThrow(() -> new InterchangeException(InterchangeCodes.GIT_NOT_BOUND, Failure.CONFLICT,
+                        Message.of(InterchangeMessages.GIT_BINDING_MISSING, workspace), Map.of()));
+        drain(model, true);
+        Optional<GitOutbox.Entry> head = unitOfWork.read(() -> outbox.head(model));
+        GitBinding after = unitOfWork.read(() -> bindings.find(workspace)).orElse(binding);
+        if (head.filter(h -> h.status() == GitOutbox.Status.PENDING).isPresent() && !after.reachable()) {
+            throw new InterchangeException(InterchangeCodes.GIT_UNREACHABLE, Failure.UNAVAILABLE,
+                    Message.of(InterchangeMessages.GIT_UNREACHABLE, after.repoUrl()), Map.of());
+        }
+        return status(model);
     }
 
     /** Состояние публикации модели: очередь, последняя опубликованная версия, расхождение. */
@@ -268,7 +272,26 @@ public final class GitPublishingService {
         }
     }
 
+    /**
+     * Одна попытка записи. Сбой, кроме недоступной сети, откладывает только эту запись с отсрочкой:
+     * иначе сбойная запись первой в очереди останавливала бы публикацию всех моделей за ней.
+     */
     private Outcome publish(GitOutbox.Entry entry) {
+        try {
+            return attemptEntry(entry);
+        } catch (RuntimeException failure) { // NOPMD - сбой одной записи не останавливает очередь других моделей
+            LOG.log(System.Logger.Level.WARNING, "git publishing of model " + entry.model().value() + " version "
+                    + entry.versionNo() + " failed, retry later", failure);
+            Instant at = clock.instant();
+            unitOfWork.write(() -> {
+                outbox.retryLater(entry.id(), failure.getClass().getSimpleName(), at.plus(backoff(entry.attempts())));
+                return null;
+            });
+            return Outcome.RETRY;
+        }
+    }
+
+    private Outcome attemptEntry(GitOutbox.Entry entry) {
         Instant now = clock.instant();
         Optional<GitBinding> binding = unitOfWork.read(() -> bindings.find(entry.workspace()))
                 .filter(GitBinding::writable);
@@ -284,8 +307,7 @@ public final class GitPublishingService {
         long started = System.nanoTime();
         Outcome outcome = null;
         try {
-            outcome = metrics.observe(InterchangeOperation.PUSH_MODEL_TO_GIT.useCase(),
-                    () -> attempt(entry, binding.get(), version.get()));
+            outcome = attempt(entry, binding.get(), version.get());
             return outcome;
         } catch (Unreachable e) {
             outcome = Outcome.RETRY;
@@ -303,58 +325,91 @@ public final class GitPublishingService {
         }
     }
 
+    /** Попытка публикации одной версии: голова ветки, проверка истории, затем коммит. */
     private Outcome attempt(GitOutbox.Entry entry, GitBinding binding, PublishedVersions.Version version) {
         Remote remote = remote(binding);
         GitSha head = repository.fetch(remote).orElse(null);
         Map<String, String> trailers = Map.of(TRAILER_MODEL, entry.model().value().toString(),
                 TRAILER_VERSION, Long.toString(entry.versionNo()));
-        if (binding.lastCommitSha() != null
-                && (head == null || !repository.contains(remote, binding.lastCommitSha(), head))) {
-            return diverged(entry, binding, head);
-        }
-        Optional<GitSha> already = head == null ? Optional.empty() : repository.findByTrailers(remote, head, trailers);
-        if (already.isPresent()) {
-            return recorded(entry, binding, version, already.get(), Objects.requireNonNull(head), 0);
-        }
         String directory = directory(remote, head, entry.model(), version.modelName());
         GitSha merged = unitOfWork.read(() -> merges.last(entry.model())).orElse(null);
-        if (head != null) {
-            Optional<GitRepositoryPort.Commit> last = repository.lastChange(remote, head, directory);
-            if (last.isPresent() && !entry.model().value().toString().equals(last.get().trailers().get(TRAILER_MODEL))
-                    && !accepted(remote, entry.model(), last.get().sha(), merged)) {
-                if (carries(remote, head, directory, version)) {
-                    return recorded(entry, binding, version, head, head, 0);
-                }
-                return diverged(entry, binding, head);
-            }
+        Push push = new Push(entry, binding, version, remote, head, directory, merged);
+        return settled(push, trailers).orElseGet(() -> commit(push, trailers));
+    }
+
+    /** Что известно о попытке до коммита: запись, привязка, версия, адрес, голова ветки, каталог, слитый коммит. */
+    private record Push(GitOutbox.Entry entry, GitBinding binding, PublishedVersions.Version version, Remote remote,
+                        GitSha head, String directory, GitSha merged) {
+    }
+
+    /**
+     * Исход без нового коммита: история переписана или каталог тронут чужим — расхождение; наш коммит
+     * уже есть по трейлерам или голова уже несёт содержимое версии — версия получает его. Пусто — коммит нужен.
+     */
+    private Optional<Outcome> settled(Push push, Map<String, String> trailers) {
+        GitSha head = push.head();
+        GitBinding binding = push.binding();
+        if (binding.lastCommitSha() != null
+                && (head == null || !repository.contains(push.remote(), binding.lastCommitSha(), head))) {
+            return Optional.of(diverged(push.entry(), binding, head));
         }
-        SortedMap<String, byte[]> previous = head == null ? new TreeMap<>() : repository.read(remote, head, directory);
-        GitPositions positions;
-        try {
-            positions = previous.isEmpty() ? GitPositions.none() : reader.positions(previous);
-        } catch (InvalidValueException unreadable) {
-            positions = GitPositions.none();
+        if (head == null) {
+            return Optional.empty();
         }
-        ModelDocument document = new StaxArchiDocumentReader().read(new ByteArrayInputStream(version.xml()));
-        SortedMap<String, byte[]> files = writer.write(document, positions);
+        Optional<GitSha> already = repository.findByTrailers(push.remote(), head, trailers);
+        if (already.isPresent()) {
+            return Optional.of(recorded(push.entry(), binding, push.version(), already.get(), head, 0));
+        }
+        Optional<GitRepositoryPort.Commit> last = repository.lastChange(push.remote(), head, push.directory());
+        String model = push.entry().model().value().toString();
+        if (last.isEmpty() || model.equals(last.get().trailers().get(TRAILER_MODEL))
+                || accepted(push.remote(), push.entry().model(), last.get().sha(), push.merged())) {
+            return Optional.empty();
+        }
+        return Optional.of(carries(push.remote(), head, push.directory(), push.version())
+                ? recorded(push.entry(), binding, push.version(), head, head, 0)
+                : diverged(push.entry(), binding, head));
+    }
+
+    /** Новый коммит версии поверх головы; ветка ушла вперёд — повтор позже. */
+    private Outcome commit(Push push, Map<String, String> trailers) {
+        GitSha head = push.head();
+        ModelDocument document = new StaxArchiDocumentReader().read(new ByteArrayInputStream(push.version().xml()));
+        SortedMap<String, byte[]> files = writer.write(document, positions(push));
         SortedMap<String, byte[]> rootFiles = new TreeMap<>();
         rootFiles.put(GITATTRIBUTES, gitattributes(head == null ? null
-                : repository.file(remote, head, GITATTRIBUTES).orElse(null)));
-        CommitRequest request = new CommitRequest(directory, files, rootFiles, message(version, trailers),
-                author(binding, version), new Person(settings.committerName(), settings.committerEmail(),
-                clock.instant()), merged);
-        PushResult result = repository.push(remote, head, request);
-        return switch (result) {
-            case Pushed pushed -> recorded(entry, binding, version, pushed.sha(), pushed.sha(), pushed.changedFiles());
-            case Unchanged unchanged -> recorded(entry, binding, version, unchanged.head(), unchanged.head(), 0);
+                : repository.file(push.remote(), head, GITATTRIBUTES).orElse(null)));
+        CommitRequest request = new CommitRequest(push.directory(), files, rootFiles,
+                message(push.version(), trailers), author(push.binding(), push.version()),
+                new Person(settings.committerName(), settings.committerEmail(), clock.instant()), push.merged());
+        return switch (repository.push(push.remote(), head, request)) {
+            case Pushed pushed -> recorded(push.entry(), push.binding(), push.version(), pushed.sha(), pushed.sha(),
+                    pushed.changedFiles());
+            case Unchanged unchanged -> recorded(push.entry(), push.binding(), push.version(), unchanged.head(),
+                    unchanged.head(), 0);
             case Rejected rejected -> {
                 unitOfWork.write(() -> {
-                    outbox.retryLater(entry.id(), rejected.toString(), clock.instant());
+                    outbox.retryLater(push.entry().id(), rejected.getClass().getSimpleName(), clock.instant());
                     return null;
                 });
                 yield Outcome.RETRY;
             }
         };
+    }
+
+    /** Позиции каталога в голове ветки; нечитаемые — запись в журнал и нумерация заново. */
+    private GitPositions positions(Push push) {
+        if (push.head() == null) {
+            return GitPositions.none();
+        }
+        SortedMap<String, byte[]> previous = repository.read(push.remote(), push.head(), push.directory());
+        try {
+            return previous.isEmpty() ? GitPositions.none() : reader.positions(previous);
+        } catch (InvalidValueException unreadable) {
+            LOG.log(System.Logger.Level.WARNING, "git positions of model " + push.entry().model().value()
+                    + " in commit " + push.head() + " are unreadable, the directory is renumbered", unreadable);
+            return GitPositions.none();
+        }
     }
 
     /**
@@ -385,10 +440,8 @@ public final class GitPublishingService {
         unitOfWork.write(() -> {
             versions.recordGitSha(entry.model(), entry.versionNo(), sha);
             outbox.done(entry.id(), at);
-            GitBinding current = bindings.find(entry.workspace()).orElse(binding);
-            if (current.writable()) {
-                bindings.save(current.committed(newHead, at));
-            }
+            bindings.find(entry.workspace()).filter(GitBinding::writable).filter(b -> b.sameRemote(binding))
+                    .ifPresent(current -> bindings.save(current.committed(newHead, at)));
             return null;
         });
         events.publish(List.of(new GitBindingSnapshotCommittedEvent(version.workspace(), entry.model(),
@@ -456,7 +509,7 @@ public final class GitPublishingService {
     }
 
     private static byte[] resource(String name) {
-        try (InputStream in = GitPublishingService.class.getResourceAsStream(name)) {
+        try (InputStream in = GitPublisher.class.getResourceAsStream(name)) {
             if (in == null) {
                 throw new IllegalStateException(name);
             }

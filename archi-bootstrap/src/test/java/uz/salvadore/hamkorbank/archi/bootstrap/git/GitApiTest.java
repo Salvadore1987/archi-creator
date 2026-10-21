@@ -34,9 +34,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingService;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingSettings;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ConfigureGitBindingCommand;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.GitBindingApplicationService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.GitPublishingApplicationService;
 
 /**
  * Основа интеграционных тестов выгрузки в Git: настоящая база, настоящий JGit
@@ -51,9 +51,9 @@ abstract class GitApiTest extends ApiTest {
     protected Path temp;
 
     @Autowired
-    protected GitBindingService bindings;
+    protected GitBindingApplicationService bindings;
     @Autowired
-    protected GitPublishingService publishing;
+    protected GitPublishingApplicationService publishing;
 
     protected Path remote;
 
@@ -62,9 +62,9 @@ abstract class GitApiTest extends ApiTest {
         jdbc.update("update outbox_event set status = 'SKIPPED' where status in ('PENDING', 'DIVERGED')");
         remote = temp.resolve("landscape.git");
         Git.init().setBare(true).setDirectory(remote.toFile()).setInitialBranch("main").call().close();
-        bindings.configure(ADMIN, workspace().value(), new GitBindingSettings(remote.toUri().toString(),
-                null, "env:ARCHI_GIT_TOKEN_IT",
-                List.of(new GitBindingSettings.Author("architect-api", "Архитектор", "architect@bank.uz"))));
+        bindings.configureGitBinding(ADMIN, new ConfigureGitBindingCommand(workspace().value(),
+                remote.toUri().toString(), null, "env:ARCHI_GIT_TOKEN_IT",
+                List.of(new ConfigureGitBindingCommand.Author("architect-api", "Архитектор", "architect@bank.uz"))));
     }
 
     @AfterEach

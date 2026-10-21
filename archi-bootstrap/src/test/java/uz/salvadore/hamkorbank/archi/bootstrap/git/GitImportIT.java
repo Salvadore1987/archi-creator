@@ -26,7 +26,7 @@ class GitImportIT extends GitApiTest {
     @DisplayName("INV-IXC-012: отчёт до применения и без записи; применение — новая версия; повтор отчёта — 409")
     void reportPrecedesApply() throws Exception {
         UUID model = importModel(Fixtures.fixture("styled_objects"));
-        publishing.publishPending();
+        publishing.publishPendingVersions();
         lock(model);
         RevCommit proposal = externalCommit("proposal", text -> text.replace("\nname: АБС\n", "\nname: АБС «Ядро»\n"));
         byte[] before = export(model);
@@ -72,7 +72,7 @@ class GitImportIT extends GitApiTest {
     @DisplayName("INV-IXC-012: отказ применения (нет блокировки) — модель не тронута, в журнале сессия REJECTED")
     void failedApplyLeavesOnlyRejectedSession() throws Exception {
         UUID model = importModel(Fixtures.fixture("styled_objects"));
-        publishing.publishPending();
+        publishing.publishPendingVersions();
         RevCommit proposal = externalCommit("proposal", text -> text.replace("\nname: АБС\n", "\nname: АБС-2\n"));
         String baseHash = read(preview(model, "proposal").andExpect(status().isOk()).andReturn(), "$.baseHash");
         byte[] before = export(model);
@@ -91,12 +91,12 @@ class GitImportIT extends GitApiTest {
     @DisplayName("FR-37, UC-IXC-006: импорт головы ветки снимает расхождение, публикация идёт дальше fast-forward")
     void importOfHeadResolvesDivergence() throws Exception {
         UUID model = importModel(Fixtures.fixture("styled_objects"));
-        publishing.publishPending();
+        publishing.publishPendingVersions();
         lock(model);
         RevCommit foreign = externalCommit("main", text -> text.replace("\nname: АБС\n", "\nname: АБС «Git»\n"));
         rename(model, "АБС", "АБС «API»");
         save(model, "правка мимо ветки");
-        publishing.publishPending();
+        publishing.publishPendingVersions();
         assertThat(gitSha(model, 2)).as("чужая правка каталога — расхождение").isEmpty();
 
         String baseHash = read(preview(model, "main").andExpect(status().isOk())
@@ -108,7 +108,7 @@ class GitImportIT extends GitApiTest {
         assertThat(column("select status from outbox_event where partition_key = ? "
                 + "and (payload ->> 'versionNo')::bigint = 2", String.class, model)).containsExactly("SKIPPED");
         assertThat(column("select last_commit_sha from git_binding", String.class)).containsExactly(foreign.name());
-        publishing.publishPending();
+        publishing.publishPendingVersions();
         assertThat(gitSha(model, 3)).as("версия из головы получает голову").contains(foreign.name());
         assertThat(history()).hasSize(2);
         mvc.perform(post("/api/v1/models/" + model + "/git/push").with(architect())).andExpect(status().isOk())
@@ -116,7 +116,7 @@ class GitImportIT extends GitApiTest {
 
         rename(model, "АБС «Git»", "АБС «Ядро»");
         save(model, "после импорта");
-        publishing.publishPending();
+        publishing.publishPendingVersions();
 
         List<RevCommit> history = history();
         assertThat(history).hasSize(3);
@@ -128,7 +128,7 @@ class GitImportIT extends GitApiTest {
     @DisplayName("UC-IXC-006: неизвестная ссылка — 404, пустая — 422, VIEWER — 403")
     void refusals() throws Exception {
         UUID model = importModel(Fixtures.fixture("styled_objects"));
-        publishing.publishPending();
+        publishing.publishPendingVersions();
 
         preview(model, "nope").andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("IXC_GIT_REF_NOT_FOUND"));

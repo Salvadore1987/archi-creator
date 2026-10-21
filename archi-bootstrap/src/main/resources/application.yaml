@@ -136,6 +136,8 @@ archi:
     committer-name: ${ARCHI_GIT_COMMITTER_NAME:Archi Creator}
     committer-email: ${ARCHI_GIT_COMMITTER_EMAIL:archi-creator@localhost}
     poll-interval: 10s
+    # Закрытые записи очереди публикации: версия уже несёт git_sha, запись нужна только для разбора.
+    outbox-retention: 30d
     # Репозиторий в файловой системе сервера (file://) — только в тестах: иначе администратор
     # привязал бы любой каталог сервера.
     allow-local-repositories: false

@@ -5,9 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
-import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeOperation;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort;
@@ -30,7 +28,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ModelChanges;
-import uz.salvadore.hamkorbank.archi.interchange.domain.git.RefKind;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
@@ -59,11 +56,11 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  * <p>Применённый коммит, который в этот момент — голова ветки привязки, разрешает
  * расхождение: старые версии модели в очереди публикации пропускаются, голова становится
  * последним коммитом привязки, а версия без изменений сразу получает её идентификатор.
+ *
+ * <p>Шаги сценария, а не сценарий целиком: роль и метрику даёт handler, который зовёт этот класс.
  */
-public final class GitImportService {
+public final class GitPull {
 
-    private static final Pattern BASE_HASH = Pattern.compile("^[0-9a-f]{64}$");
-    private static final int SHORT_SHA = 7;
 
     /**
      * Что подтверждает архитектор: ссылка и коммит из отчёта, отпечаток содержимого, комментарий.
@@ -101,8 +98,13 @@ public final class GitImportService {
         }
     }
 
-    /** Прочитанный коммит: сессия после разбора и проверки, документ и снимок, если собрались, иначе {@code null}. */
-    private record Candidate(ResolvedRef ref, ImportSession session, ModelDocument document, byte[] xml) {
+    /**
+     * Прочитанный коммит: сессия после разбора и проверки, документ и снимок, если приняты, иначе {@code null}.
+     *
+     * @param corrupt каталог не собрался или снимок не разобрался; отказ строгого режима — не повреждение
+     */
+    private record Candidate(ResolvedRef ref, ImportSession session, ModelDocument document, byte[] xml,
+                             boolean corrupt) {
     }
 
     private final GitBindingRepository bindings;
@@ -115,17 +117,16 @@ public final class GitImportService {
     private final UnitOfWork unitOfWork;
     private final InterchangeEvents events;
     private final InterchangeMetrics metrics;
-    private final TextCatalog texts;
     private final Clock clock;
 
-    public GitImportService(GitBindingRepository bindings, GitRepositoryPort repository, SecretResolver secrets,
+    public GitPull(GitBindingRepository bindings, GitRepositoryPort repository, SecretResolver secrets,
                             ModelStates states, ImportSessionRepository sessions, ImportPolicy policy,
                             GitOutbox outbox, PublishedVersions versions, UnitOfWork unitOfWork,
                             InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts, Clock clock) {
         this.bindings = bindings;
         this.repository = repository;
-        this.attempts = new GitAttempts(bindings, repository, secrets, sessions, policy, unitOfWork, metrics, texts,
-                clock);
+        this.attempts = new GitAttempts(bindings, repository, secrets, sessions, policy, outbox, versions, unitOfWork,
+                metrics, texts, clock);
         this.states = states;
         this.sessions = sessions;
         this.outbox = outbox;
@@ -133,96 +134,77 @@ public final class GitImportService {
         this.unitOfWork = unitOfWork;
         this.events = events;
         this.metrics = metrics;
-        this.texts = texts;
         this.clock = clock;
     }
 
     /** Отчёт об изменениях по ссылке ({@code null} — не задана, отказ). В базе ничего не меняется. */
     public Preview preview(EditorIdentity actor, ModelId model, String ref) {
-        InterchangeOperation operation = InterchangeOperation.PULL_MODEL_FROM_GIT;
-        return metrics.observe(operation.useCase(), () -> {
-            operation.require(actor);
-            GitRef requested = GitAttempts.parse(() -> GitRef.of(GitAttempts.required(ref, "ref")));
-            ModelStates.Current current = states.current(actor, model);
-            GitBinding binding = attempts.binding(current.workspace());
-            Candidate candidate = attempts.network(binding, remote -> {
-                ResolvedRef resolved = repository.resolve(remote, requested)
-                        .orElseThrow(() -> GitAttempts.refNotFound(requested));
-                return read(remote, resolved, current.workspace(), model, actor);
-            });
-            ModelChanges changes = candidate.document() == null ? new ModelChanges(List.of())
-                    : ModelChanges.between(GitAttempts.document(current.xml()), candidate.document());
-            return new Preview(model, candidate.ref(), current.versionNo(), current.hash(),
-                    candidate.session().sourceHash().value(), changes,
-                    candidate.session().findings(), candidate.session().status() == ImportStatus.VALIDATED);
+        GitRef requested = GitAttempts.parse(() -> GitRef.of(GitAttempts.required(ref, "ref")));
+        ModelStates.Current current = states.current(actor, model);
+        GitBinding binding = attempts.binding(current.workspace());
+        Candidate candidate = attempts.network(binding, remote -> {
+            ResolvedRef resolved = repository.resolve(remote, requested)
+                    .orElseThrow(() -> GitAttempts.refNotFound(requested));
+            return read(remote, resolved, current.workspace(), model, actor);
         });
+        ModelChanges changes = candidate.document() == null ? new ModelChanges(List.of())
+                : ModelChanges.between(GitAttempts.document(current.xml()), candidate.document());
+        return new Preview(model, candidate.ref(), current.versionNo(), current.hash(),
+                candidate.session().sourceHash().value(), changes,
+                candidate.session().findings(), candidate.session().status() == ImportStatus.VALIDATED);
     }
 
     /**
-     * Применение коммита из отчёта новой версией. Модель изменилась после отчёта —
-     * {@code 409}; разбор или строгий режим отклонили — {@code 422} с находками; отказ
-     * при записи — откат и сессия {@code REJECTED}.
+     * Применение коммита из отчёта новой версией. Нет привязки — {@code 409}; коммита или каталога
+     * модели в нём нет — {@code 404}; репозиторий недоступен — {@code 503}. Модель изменилась после
+     * отчёта или не заблокирована — {@code 409}; разбор или строгий режим отклонили — {@code 422}
+     * с находками. Любой отказ после чтения коммита — откат и сессия {@code REJECTED}.
      */
     public Pulled apply(EditorIdentity actor, ModelId model, PullRequest request) {
-        InterchangeOperation operation = InterchangeOperation.PULL_MODEL_FROM_GIT;
-        return metrics.observe(operation.useCase(), () -> {
-            operation.require(actor);
-            GitRef ref = GitAttempts.parse(() -> GitRef.of(GitAttempts.required(request.ref(), "ref")));
-            GitSha sha = GitAttempts.parse(() -> GitSha.of(GitAttempts.required(request.commitSha(), "commitSha")));
-            String baseHash = GitAttempts.required(request.baseHash(), "baseHash");
-            if (!BASE_HASH.matcher(baseHash).matches()) {
-                throw GitAttempts.invalid(Message.of(InterchangeMessages.GIT_BASE_HASH_INVALID, baseHash));
-            }
-            WorkspaceId workspace = states.current(actor, model).workspace();
-            GitBinding binding = attempts.binding(workspace);
-            Fetched fetched = attempts.network(binding, remote -> {
-                GitSha head = repository.fetch(remote).orElse(null);
-                ResolvedRef commit = repository.resolve(remote, GitRef.of(sha.value()))
-                        .filter(r -> r.kind() == RefKind.COMMIT && r.sha().equals(sha))
-                        .orElseThrow(() -> GitAttempts.refNotFound(GitRef.of(sha.value())));
-                return new Fetched(head, read(remote, new ResolvedRef(ref, commit.kind(), sha), workspace, model,
-                        actor));
-            });
-            Candidate candidate = fetched.candidate();
-            ImportSession session = candidate.session();
-            if (session.status() == ImportStatus.REJECTED) {
-                attempts.saveRejected(session, candidate.document() == null);
-                throw rejected(session, candidate.document() == null);
-            }
-            boolean adopt = sha.equals(fetched.head());
-            String comment = request.comment() != null && !request.comment().isBlank() ? request.comment()
-                    : texts.text(Message.of(InterchangeMessages.GIT_PULL_COMMENT, ref.value(),
-                            sha.value().substring(0, SHORT_SHA)));
-            byte[] xml = Objects.requireNonNull(candidate.xml());
-            Applied applied;
-            try {
-                applied = unitOfWork.write(() -> {
-                    ModelStates.Current now = states.current(actor, model);
-                    if (!now.hash().equals(baseHash)) {
-                        throw new InterchangeException(InterchangeCodes.GIT_IMPORT, Failure.CONFLICT,
-                                Message.of(InterchangeMessages.GIT_REPORT_STALE, model.value()), Map.of());
-                    }
-                    ModelStates.Replaced replaced = states.replace(actor, model, xml, comment);
-                    Instant at = clock.instant();
-                    session.apply(model, replaced.versionNo(), replaced.opaqueObjects(), at);
-                    sessions.save(session);
-                    if (adopt) {
-                        adopt(binding, model, replaced, sha, at);
-                    }
-                    return new Applied(replaced, session.pullEvents());
-                });
-            } catch (RuntimeException failure) { // NOPMD - любой отказ записи — в журнал попыток, и дальше
-                attempts.recordFailure(session, failure);
-                throw failure;
-            }
-            events.publish(applied.events());
-            metrics.importFinished("applied", session.strictMode(), session.findings());
-            if (applied.replaced().created()) {
-                metrics.opaqueObjects(model.value(), applied.replaced().opaqueObjects());
-            }
-            return new Pulled(session.id(), model, applied.replaced().versionNo(), applied.replaced().created(), sha,
-                    session.findings());
+        GitRef ref = GitAttempts.parse(() -> GitRef.of(GitAttempts.required(request.ref(), "ref")));
+        GitSha sha = GitAttempts.parse(() -> GitSha.of(GitAttempts.required(request.commitSha(), "commitSha")));
+        String baseHash = GitAttempts.baseHash(request.baseHash());
+        WorkspaceId workspace = states.current(actor, model).workspace();
+        GitBinding binding = attempts.binding(workspace);
+        Fetched fetched = attempts.network(binding, remote -> {
+            GitSha head = repository.fetch(remote).orElse(null);
+            ResolvedRef commit = attempts.commit(remote, sha);
+            return new Fetched(head, read(remote, new ResolvedRef(ref, commit.kind(), sha), workspace, model,
+                    actor));
         });
+        Candidate candidate = fetched.candidate();
+        ImportSession session = candidate.session();
+        if (session.status() == ImportStatus.REJECTED) {
+            attempts.saveRejected(session, candidate.corrupt());
+            throw rejected(session, candidate.corrupt());
+        }
+        boolean adopt = sha.equals(fetched.head());
+        String comment = attempts.comment(request.comment(), InterchangeMessages.GIT_PULL_COMMENT, ref, sha);
+        byte[] xml = Objects.requireNonNull(candidate.xml());
+        Applied applied;
+        try {
+            applied = unitOfWork.write(() -> {
+                GitAttempts.requireUnchanged(states.current(actor, model), baseHash, model);
+                ModelStates.Replaced replaced = states.replace(actor, model, xml, comment);
+                Instant at = clock.instant();
+                session.apply(model, replaced.versionNo(), replaced.opaqueObjects(), at);
+                sessions.save(session);
+                if (adopt) {
+                    attempts.adopt(binding, model, replaced, sha, at);
+                }
+                return new Applied(replaced, session.pullEvents());
+            });
+        } catch (RuntimeException failure) { // NOPMD - любой отказ записи — в журнал попыток, и дальше
+            attempts.recordFailure(session, failure);
+            throw failure;
+        }
+        events.publish(applied.events());
+        metrics.importFinished("applied", session.strictMode(), session.findings());
+        if (applied.replaced().created()) {
+            metrics.opaqueObjects(model.value(), applied.replaced().opaqueObjects());
+        }
+        return new Pulled(session.id(), model, applied.replaced().versionNo(), applied.replaced().created(), sha,
+                session.findings());
     }
 
     /** Голова ветки привязки в момент применения ({@code null} — ветки нет) и прочитанный коммит. */
@@ -230,20 +212,6 @@ public final class GitImportService {
     }
 
     private record Applied(ModelStates.Replaced replaced, List<DomainEvent> events) {
-    }
-
-    /**
-     * Принятая голова ветки: старые версии модели в очереди пропускаются, голова — последний
-     * коммит привязки. Версия без изменений получает идентификатор головы сразу; новую
-     * публикация признает по содержимому каталога.
-     */
-    private void adopt(GitBinding binding, ModelId model, ModelStates.Replaced replaced, GitSha head, Instant at) {
-        long through = replaced.created() ? replaced.versionNo() - 1 : replaced.versionNo();
-        outbox.supersede(model, through, at);
-        if (!replaced.created()) {
-            versions.recordGitSha(model, replaced.versionNo(), head);
-        }
-        bindings.save(bindings.find(binding.workspaceId()).orElse(binding).committed(head, at));
     }
 
     /** Коммит в сессию импорта: каталог модели — документ — снимок, разбор и проверка методологии. */
@@ -254,13 +222,13 @@ public final class GitImportService {
                 xml != null ? xml : GitAttempts.concatenated(tree.files()), actor);
         if (tree.defect() != null) {
             attempts.corrupt(session, tree.defect());
-            return new Candidate(ref, session, null, null);
+            return new Candidate(ref, session, null, null, true);
         }
         attempts.check(session, Objects.requireNonNull(xml));
         if (session.status() == ImportStatus.REJECTED) {
-            return new Candidate(ref, session, null, null);
+            return new Candidate(ref, session, null, null, session.document() == null);
         }
-        return new Candidate(ref, session, session.document(), xml);
+        return new Candidate(ref, session, session.document(), xml, false);
     }
 
     private static InterchangeException rejected(ImportSession session, boolean corrupt) {

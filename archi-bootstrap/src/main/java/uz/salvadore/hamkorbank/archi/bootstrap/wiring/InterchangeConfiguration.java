@@ -8,9 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import uz.salvadore.hamkorbank.archi.bootstrap.export.BatikRasterizer;
 import uz.salvadore.hamkorbank.archi.bootstrap.export.InterTypesetter;
 import uz.salvadore.hamkorbank.archi.bootstrap.export.SharedNotation;
-import uz.salvadore.hamkorbank.archi.bootstrap.git.GitSettings;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.RasterGate;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingService;
 import uz.salvadore.hamkorbank.archi.interchange.application.handler.AllViewImagesExportQueryHandler;
 import uz.salvadore.hamkorbank.archi.interchange.application.handler.ArchimateFileImportCommandHandler;
 import uz.salvadore.hamkorbank.archi.interchange.application.handler.ImportPolicyConfigureCommandHandler;
@@ -19,7 +17,6 @@ import uz.salvadore.hamkorbank.archi.interchange.application.handler.Interchange
 import uz.salvadore.hamkorbank.archi.interchange.application.handler.ModelExportQueryHandler;
 import uz.salvadore.hamkorbank.archi.interchange.application.handler.ViewImageExportQueryHandler;
 import uz.salvadore.hamkorbank.archi.interchange.application.oef.OefSchema;
-import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportPolicy;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportSessionRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeEvents;
@@ -83,12 +80,6 @@ public class InterchangeConfiguration {
                                                       ModelExchangeApplicationService versions, Notation notation,
                                                       OefSchema oefSchema) {
         return new ExportApplicationServiceImpl(new ModelExportQueryHandler(kernel, versions, notation, oefSchema));
-    }
-
-    @Bean
-    GitBindingService gitBindingService(GitBindingRepository bindings, UnitOfWork unitOfWork,
-                                        InterchangeMetrics metrics, Clock clock, GitSettings settings) {
-        return new GitBindingService(bindings, unitOfWork, metrics, clock, settings.allowLocalRepositories());
     }
 
     /** Схема OEF компилируется один раз при старте: она неизменяема и потокобезопасна. */

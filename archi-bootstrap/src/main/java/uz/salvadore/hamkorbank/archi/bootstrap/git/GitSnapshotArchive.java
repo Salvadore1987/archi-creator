@@ -2,14 +2,13 @@ package uz.salvadore.hamkorbank.archi.bootstrap.git;
 
 import java.util.Optional;
 import java.util.function.Supplier;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService;
-import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
-import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
-import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.query.RestoreGitSnapshotQuery;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.GitPublishingApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.GitBinding;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotArchive;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelHeader;
 import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
+import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 
 /**
  * Порты modeling, которые закрывает Git: доступен ли репозиторий пространства
@@ -18,21 +17,21 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
  */
 public final class GitSnapshotArchive implements SnapshotArchive, GitBinding {
 
-    private final Supplier<GitPublishingService> publishing;
+    private final Supplier<GitPublishingApplicationService> publishing;
 
-    public GitSnapshotArchive(Supplier<GitPublishingService> publishing) {
+    public GitSnapshotArchive(Supplier<GitPublishingApplicationService> publishing) {
         this.publishing = publishing;
     }
 
     @Override
     public Optional<byte[]> restore(ModelHeader model, ModelVersion version) {
-        return publishing.get().restore(new WorkspaceId(model.workspaceId().value()), new ModelId(model.id().value()),
-                version.versionNo(), GitSha.of(Optional.ofNullable(version.gitSha()).orElseThrow()),
-                version.contentHash());
+        return publishing.get().restoreSnapshot(new RestoreGitSnapshotQuery(model.workspaceId().value(),
+                model.id().value(), version.versionNo(), Optional.ofNullable(version.gitSha()).orElseThrow(),
+                version.contentHash()));
     }
 
     @Override
-    public boolean boundAndReachable(uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId workspaceId) {
-        return publishing.get().reachable(new WorkspaceId(workspaceId.value()));
+    public boolean boundAndReachable(WorkspaceId workspaceId) {
+        return publishing.get().repositoryReachable(workspaceId.value());
     }
 }

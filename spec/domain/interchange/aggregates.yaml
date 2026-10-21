@@ -105,7 +105,7 @@ aggregates:
       (FR-47, INV-MDL-010).
     fields:
       - { name: workspaceId,  type: WorkspaceId,   constraints: [not_null, immutable] }
-      - { name: repoUrl,      type: String,        constraints: [not_null, max: 1000] }
+      - { name: repoUrl,      type: String,        constraints: [not_null, max: 1000], note: "без учётных данных: пароля до @, у http(s) — без части до @ вовсе; токен — только ссылкой tokenRef (ревью 2026-10-21, 08-04)" }
       - { name: branch,       type: String,        constraints: [not_null, max: 200], default: "main" }
       - { name: tokenRef,     type: SecretRef,     constraints: [not_null] }
       - { name: status,       type: GitBindingStatus, constraints: [not_null], default: CONFIGURED }
@@ -282,9 +282,13 @@ value_objects:
 
   SecretRef:
     underlying: String
+    constraints: [pattern: "^env:ARCHI_GIT_[A-Z0-9_]{1,180}$"]
     note: |
       Ссылка на секрет во внешнем хранилище, не сам токен. Значение секрета
-      в домене не появляется (docs/archi-creator.md §10.3).
+      в домене не появляется (docs/archi-creator.md §10.3). Только переменные
+      токена Git: токен уходит паролем на адрес привязки, ссылка на любой секрет
+      сервера отправила бы туда ключ API или пароль БД (ревью 2026-10-21, 08-02).
+      Отказ формата значение не повторяет (08-03).
 
   Artifact:
     composite:

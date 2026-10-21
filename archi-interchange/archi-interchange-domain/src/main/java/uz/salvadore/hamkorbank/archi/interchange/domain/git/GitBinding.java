@@ -81,17 +81,48 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
 
     /**
      * Новая привязка: {@code CONFIGURED}, коммитов сервера ещё нет. Ветка не задана ({@code null}
-     * или пустая) — {@code main}.
+     * или пустая) — {@code main}. Учётные данные в адресе — отказ без повтора адреса: токен задаётся
+     * ссылкой, а адрес хранится, отдаётся клиенту и попадает в тексты отказов сети.
      */
     public static GitBinding configure(WorkspaceId workspaceId, String repoUrl, String branch,
                                        SecretRef tokenRef, List<GitAuthor> authors) {
+        if (repoUrl != null && carriesCredentials(repoUrl)) {
+            throw new InvalidValueException(InterchangeMessages.GIT_URL_CREDENTIALS);
+        }
         return new GitBinding(workspaceId, repoUrl, branch == null || branch.isBlank() ? DEFAULT_BRANCH : branch,
                 tokenRef, GitBindingStatus.CONFIGURED, null, null, authors);
+    }
+
+    /**
+     * Есть ли в адресе учётные данные: пароль в части до {@code @}, а у {@code http(s)} — любая такая
+     * часть, потому что токен там часто идёт именем пользователя. Имя у {@code ssh://git@host} — не секрет.
+     */
+    private static boolean carriesCredentials(String url) {
+        int scheme = url.indexOf("://");
+        if (scheme < 0) {
+            return false;
+        }
+        String rest = url.substring(scheme + "://".length());
+        int slash = rest.indexOf('/');
+        String authority = slash < 0 ? rest : rest.substring(0, slash);
+        int at = authority.lastIndexOf('@');
+        if (at < 0) {
+            return false;
+        }
+        return url.regionMatches(true, 0, "http", 0, "http".length()) || authority.substring(0, at).contains(":");
     }
 
     /** Репозиторий в файловой системе сервера, а не по сети: адрес {@code file://}. */
     public boolean local() {
         return repoUrl.startsWith("file:");
+    }
+
+    /**
+     * Тот же репозиторий и та же ветка: голова ветки, прочитанная по одной привязке, принадлежит
+     * другой, только если они смотрят в одно место.
+     */
+    public boolean sameRemote(GitBinding other) {
+        return repoUrl.equals(other.repoUrl) && branch.equals(other.branch);
     }
 
     /** Можно ли публиковать: снятая привязка — нет. */
@@ -102,6 +133,15 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
     /** Настроена и отвечала при последнем обращении — условие очистки снимков версий. */
     public boolean reachable() {
         return status == GitBindingStatus.CONFIGURED;
+    }
+
+    /**
+     * Последний коммит сервера переносится в новую настройку того же адреса и ветки:
+     * состояние и отметка проверки доступности не меняются — проверки не было.
+     */
+    public GitBinding withHead(GitSha sha) {
+        return new GitBinding(workspaceId(), repoUrl, branch, tokenRef, status, Objects.requireNonNull(sha, "sha"),
+                lastCheckedAt, authors);
     }
 
     /** Репозиторий ответил. */
@@ -133,11 +173,6 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
     /** Автор коммитов для данного субъекта Keycloak, если он есть в привязке. */
     public Optional<GitAuthor> authorOf(String subject) {
         return authors.stream().filter(a -> a.subject().equals(subject)).findFirst();
-    }
-
-    private GitBinding withHead(GitSha sha) {
-        return new GitBinding(workspaceId(), repoUrl, branch, tokenRef, status, Objects.requireNonNull(sha, "sha"),
-                lastCheckedAt, authors);
     }
 
     private void requireWritable() {

@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -11,18 +12,23 @@ import java.util.Optional;
 import java.util.SortedMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.MethodologyCheck;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Remote;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Unreachable;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportPolicy;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportSessionRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMetrics;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.ModelStates;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.PublishedVersions;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.SecretResolver;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.DomainException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
@@ -31,6 +37,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.RefKind;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId;
@@ -56,9 +63,15 @@ final class GitAttempts {
 
     private final GitBindingRepository bindings;
     private final GitRepositoryPort repository;
+    private static final Pattern BASE_HASH = Pattern.compile("^[0-9a-f]{64}$");
+    private static final int SHORT_SHA = 7;
+
     private final GitRemotes remotes;
+    private final TextCatalog texts;
     private final ImportSessionRepository sessions;
     private final ImportPolicy policy;
+    private final GitOutbox outbox;
+    private final PublishedVersions versions;
     private final UnitOfWork unitOfWork;
     private final InterchangeMetrics metrics;
     private final Clock clock;
@@ -67,11 +80,14 @@ final class GitAttempts {
     private final MethodologyCheck methodology = new MethodologyCheck();
 
     GitAttempts(GitBindingRepository bindings, GitRepositoryPort repository, SecretResolver secrets,
-                ImportSessionRepository sessions, ImportPolicy policy, UnitOfWork unitOfWork,
-                InterchangeMetrics metrics, TextCatalog texts, Clock clock) {
+                ImportSessionRepository sessions, ImportPolicy policy, GitOutbox outbox, PublishedVersions versions,
+                UnitOfWork unitOfWork, InterchangeMetrics metrics, TextCatalog texts, Clock clock) {
         this.bindings = bindings;
+        this.outbox = outbox;
+        this.versions = versions;
         this.repository = repository;
         this.remotes = new GitRemotes(secrets, texts);
+        this.texts = texts;
         this.sessions = sessions;
         this.policy = policy;
         this.unitOfWork = unitOfWork;
@@ -128,8 +144,59 @@ final class GitAttempts {
                           EditorIdentity actor) {
         String name = ref.ref().value() + "@" + ref.sha().value();
         return ImportSession.receive(new ImportSessionId(uuids.next()), ImportRequest.of(workspace,
-                model, name, source, uuids.next().toString(), policy.strictImport(workspace),
+                model, name, source, uuids.next().toString(), unitOfWork.read(() -> policy.strictImport(workspace)),
                 actor.subject()), clock.instant());
+    }
+
+    /**
+     * Принятая голова ветки — внутри транзакции записи: старые версии модели в очереди пропускаются,
+     * голова — последний коммит привязки. Версия без изменений получает идентификатор головы сразу;
+     * новую публикация признает по содержимому каталога. Привязку сменили, пока шла сеть, — голова
+     * чужого теперь репозитория не принимается, очередь не трогается.
+     *
+     * @param used привязка, по которой читалась голова
+     */
+    void adopt(GitBinding used, ModelId model, ModelStates.Replaced replaced, GitSha head, Instant at) {
+        Optional<GitBinding> current = bindings.find(used.workspaceId()).filter(b -> b.sameRemote(used));
+        if (current.isEmpty()) {
+            return;
+        }
+        long through = replaced.created() ? replaced.versionNo() - 1 : replaced.versionNo();
+        outbox.supersede(model, through, at);
+        if (!replaced.created()) {
+            versions.recordGitSha(model, replaced.versionNo(), head);
+        }
+        bindings.save(current.get().committed(head, at));
+    }
+
+    /** Коммит из отчёта по полному идентификатору; нет такого коммита — {@code 404}. */
+    ResolvedRef commit(Remote remote, GitSha sha) {
+        return repository.resolve(remote, GitRef.of(sha.value()))
+                .filter(r -> r.kind() == RefKind.COMMIT && r.sha().equals(sha))
+                .orElseThrow(() -> refNotFound(GitRef.of(sha.value())));
+    }
+
+    /** Комментарий версии: заданный, а без него — по умолчанию со ссылкой и коротким коммитом. */
+    String comment(String given, String defaultKey, GitRef ref, GitSha sha) {
+        return given != null && !given.isBlank() ? given
+                : texts.text(Message.of(defaultKey, ref.value(), sha.value().substring(0, SHORT_SHA)));
+    }
+
+    /** Отпечаток содержимого из отчёта: обязателен и в виде SHA-256. */
+    static String baseHash(String value) {
+        String baseHash = required(value, "baseHash");
+        if (!BASE_HASH.matcher(baseHash).matches()) {
+            throw invalid(Message.of(InterchangeMessages.GIT_BASE_HASH_INVALID, baseHash));
+        }
+        return baseHash;
+    }
+
+    /** Модель с отчёта не менялась — иначе применять нечего видимого: {@code 409}, нужен новый отчёт. */
+    static void requireUnchanged(ModelStates.Current now, String baseHash, ModelId model) {
+        if (!now.hash().equals(baseHash)) {
+            throw new InterchangeException(InterchangeCodes.GIT_IMPORT, Failure.CONFLICT,
+                    Message.of(InterchangeMessages.GIT_REPORT_STALE, model.value()), Map.of());
+        }
     }
 
     /** Нечитаемое дерево — сразу {@code REJECTED} с находкой. */
@@ -147,7 +214,7 @@ final class GitAttempts {
         }
     }
 
-    /** Отклонённая до записи попытка — в журнал. */
+    /** Отклонённая до записи попытка — в журнал; метрика — по виду отказа: повреждение или строгий режим. */
     void saveRejected(ImportSession session, boolean corrupt) {
         unitOfWork.write(() -> {
             sessions.save(session);
@@ -160,12 +227,22 @@ final class GitAttempts {
     /**
      * Попытка, сорвавшаяся при записи, — в журнал отдельной транзакцией после отката:
      * новой сессией, потому что прежняя могла успеть перейти в {@code APPLIED} в памяти.
+     * Сбой самого журнала прикладывается к отказу: клиент получает исходный отказ, а не сбой журнала.
      */
     void recordFailure(ImportSession attempt, RuntimeException failure) {
+        try {
+            journal(attempt, failure);
+        } catch (RuntimeException journal) { // NOPMD - журнал попытки не заменяет собой отказ, ради которого пишется
+            failure.addSuppressed(journal);
+        }
+    }
+
+    private void journal(ImportSession attempt, RuntimeException failure) {
         String code = switch (failure) {
             case InterchangeException e -> e.code();
             case ModelingDomainException e -> e.code();
-            default -> InterchangeCodes.GIT_IMPORT;
+            case DomainException e -> e.code();
+            default -> InterchangeCodes.GIT_APPLY_FAILED;
         };
         ImportRequest request = new ImportRequest(attempt.workspaceId(), attempt.targetModelId(),
                 attempt.sourceName(), attempt.sourceHash(), attempt.sourceSize(), uuids.next().toString(),

@@ -26,7 +26,7 @@ class MergeRequestIT extends GitApiTest {
     @DisplayName("INV-IXC-010: конфликт разрешается по полю, непересекающаяся правка сливается сама")
     void conflictIsResolvedPerField() throws Exception {
         UUID model = importModel(Fixtures.fixture("styled_objects"));
-        publishing.publishPending();
+        publishing.publishPendingVersions();
         lock(model);
         RevCommit proposal = externalCommit("proposal", text -> text
                 .replace("\nname: АБС\n", "\nname: АБС «Предложение»\n")
@@ -76,13 +76,13 @@ class MergeRequestIT extends GitApiTest {
     @DisplayName("FR-39, INV-IXC-009: слитая ветка предложения — второй родитель коммита публикации")
     void disjointProposalIsMergedAndPublished() throws Exception {
         UUID model = importModel(Fixtures.fixture("styled_objects"));
-        publishing.publishPending();
+        publishing.publishPendingVersions();
         lock(model);
         RevCommit proposal = externalCommit("proposal",
                 text -> text.replace("\nname: HamkorMobile\n", "\nname: HamkorMobile 2\n"));
         rename(model, "АБС", "АБС «API»");
         save(model, "наша правка");
-        publishing.publishPending();
+        publishing.publishPendingVersions();
 
         MvcResult report = preview(model, "proposal", "{}").andExpect(status().isOk())
                 .andExpect(jsonPath("$.applicable").value(true))
@@ -91,7 +91,7 @@ class MergeRequestIT extends GitApiTest {
                 .andReturn();
         merge(model, proposal.name(), read(report, "$.mergeBaseSha"), read(report, "$.baseHash"), "{}")
                 .andExpect(status().isOk()).andExpect(jsonPath("$.versionNo").value(3));
-        publishing.publishPending();
+        publishing.publishPendingVersions();
 
         List<RevCommit> history = history();
         RevCommit top = history.getFirst();

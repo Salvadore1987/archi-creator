@@ -67,6 +67,8 @@ public final class InterchangeCodes {
     public static final String GIT_MODEL_NOT_IN_REF = "IXC_GIT_MODEL_NOT_IN_REF";
     /** Сливать не с чем: нет опубликованной версии, общего предка или каталога модели в нём. */
     public static final String GIT_NO_MERGE_BASE = "IXC_GIT_NO_MERGE_BASE";
+    /** Применение импорта или слияния сорвалось по сбою сервера, а не по правилу: находка журнала попытки. */
+    public static final String GIT_APPLY_FAILED = "IXC_GIT_APPLY_FAILED";
     /** Слияние применяется только с выбором по каждому конфликту. */
     public static final String MERGE_CONFLICTS_UNRESOLVED = "IXC_MERGE_CONFLICTS_UNRESOLVED";
 

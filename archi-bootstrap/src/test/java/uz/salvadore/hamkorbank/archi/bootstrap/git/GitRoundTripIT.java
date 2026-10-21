@@ -24,7 +24,7 @@ class GitRoundTripIT extends GitApiTest {
     void databaseToGitToDatabaseIsLossless() throws Exception {
         byte[] original = Fixtures.reference();
         UUID first = importModel(original);
-        publishing.publishPending();
+        publishing.publishPendingVersions();
         byte[] exportedFirst = export(first);
 
         byte[] fromGit = new ArchiXmlWriter().write(new GitYamlReader().read(modelDirectory(history().getFirst())));

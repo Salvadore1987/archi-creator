@@ -17,6 +17,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param timeout           предел одного сетевого обращения к репозиторию
  * @param retryBase         первая пауза после отказа сети; дальше — вдвое
  * @param retryMax          предел паузы
+ * @param outboxRetention   сколько хранятся закрытые записи очереди публикации
  * @param allowLocalRepositories можно ли привязать репозиторий в файловой системе сервера ({@code file://}) —
  *                          только для тестов
  */
@@ -30,5 +31,6 @@ public record GitSettings(Path cacheDir,
                           @DefaultValue("30s") Duration timeout,
                           @DefaultValue("5s") Duration retryBase,
                           @DefaultValue("10m") Duration retryMax,
+                          @DefaultValue("30d") Duration outboxRetention,
                           @DefaultValue("false") boolean allowLocalRepositories) {
 }

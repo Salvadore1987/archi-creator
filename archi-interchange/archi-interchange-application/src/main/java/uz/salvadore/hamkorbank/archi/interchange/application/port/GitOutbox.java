@@ -10,6 +10,9 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 /**
  * Очередь версий на публикацию — записи {@code ModelVersionCommittedEvent} в outbox.
  * Пишется той же транзакцией, что версия; читается по порядку версий внутри модели.
+ *
+ * <p>Переходы записи — только из открытых состояний: закрытую запись второй исполнитель
+ * (ручной push рядом с фоновым проходом, вторая реплика) не переоткрывает и не перезакрывает.
  */
 public interface GitOutbox {
 
@@ -42,6 +45,14 @@ public interface GitOutbox {
 
     /** Сбой сети или сервера: запись повторится не раньше {@code next}. */
     void retryLater(UUID id, String reason, Instant next);
+
+    /**
+     * Закрытые записи — опубликованные и пропущенные — старше {@code before} удаляются:
+     * версия уже несёт {@code git_sha}, запись больше ни на что не отвечает.
+     *
+     * @return сколько записей удалено
+     */
+    int purgeClosed(Instant before);
 
     /** Состояние открытой записи: ждёт публикации или встала на расхождении. */
     enum Status { PENDING, DIVERGED }

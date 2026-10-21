@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
 import java.io.ByteArrayInputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,8 +40,8 @@ import org.junit.jupiter.api.io.TempDir;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPositions;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService.ModelGitStatus;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublisher;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublisher.ModelGitStatus;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
@@ -96,14 +98,28 @@ class GitPublisherTest {
     };
     private final List<Object> events = new ArrayList<>();
     private Path remote;
+    /** Что случается сразу после push — например, администратор перепривязывает пространство. */
+    private Runnable afterPush = () -> { };
     private GitRepositoryPort repository;
-    private GitPublishingService publishing;
+    private GitPublisher publishing;
 
     @BeforeEach
     void setUp() throws Exception {
         remote = temp.resolve("remote.git");
         Git.init().setBare(true).setDirectory(remote.toFile()).setInitialBranch("main").call().close();
-        repository = new JGitRepository(temp.resolve("cache"), "oauth2", Duration.ofSeconds(10));
+        GitRepositoryPort jgit = new JGitRepository(temp.resolve("cache"), "oauth2", Duration.ofSeconds(10));
+        repository = (GitRepositoryPort) Proxy.newProxyInstance(GitRepositoryPort.class.getClassLoader(),
+                new Class<?>[] {GitRepositoryPort.class}, (proxy, method, args) -> {
+                    try {
+                        Object result = method.invoke(jgit, args);
+                        if (method.getName().equals("push")) {
+                            afterPush.run();
+                        }
+                        return result;
+                    } catch (InvocationTargetException e) {
+                        throw e.getCause();
+                    }
+                });
         UnitOfWork direct = new UnitOfWork() {
             @Override
             public <T> T write(Supplier<T> work) {
@@ -115,11 +131,11 @@ class GitPublisherTest {
                 return work.get();
             }
         };
-        publishing = new GitPublishingService(outbox, bindings, versions, merges, repository, ref -> Optional.empty(),
+        publishing = new GitPublisher(outbox, bindings, versions, merges, repository, ref -> Optional.empty(),
                 direct,
                 events::addAll, InterchangeMetrics.NONE, message -> message.key() + message.args(), clock,
-                new GitPublishingService.Settings("Archi Creator", "archi@test", "users.test", Duration.ofSeconds(5),
-                        Duration.ofMinutes(10)));
+                new GitPublisher.Settings("Archi Creator", "archi@test", "users.test", Duration.ofSeconds(5),
+                        Duration.ofMinutes(10), Duration.ofDays(30)));
         bindings.save(GitBinding.configure(workspace, remote.toUri().toString(), null,
                 SecretRef.of("env:ARCHI_GIT_TOKEN"),
                 List.of(new GitAuthor("architect-git", "Архитектор Тестов", "architect@bank.uz"))));
@@ -351,6 +367,36 @@ class GitPublisherTest {
         assertThat(bindings.find(workspace).orElseThrow().status()).isEqualTo(GitBindingStatus.CONFIGURED);
     }
 
+    @Test
+    @DisplayName("FR-37: привязку сменили, пока шёл push, — новая привязка не получает голову старого репозитория")
+    void rebindingDuringPushKeepsNewBindingHead() {
+        GitBinding rebound = GitBinding.configure(workspace, temp.resolve("other.git").toUri().toString(), null,
+                SecretRef.of("env:ARCHI_GIT_TOKEN"), List.of());
+        afterPush = () -> bindings.save(rebound);
+        commitVersion(1, Fixtures.fixture("unknown_extension"), "Первая");
+
+        assertThat(publishing.publishPending()).isEqualTo(1);
+
+        assertThat(bindings.find(workspace).orElseThrow().lastCommitSha()).isNull();
+        assertThat(versions.sha(1)).isPresent();
+    }
+
+    @Test
+    @DisplayName("Сбой одной модели откладывает только её запись — очередь остальных моделей идёт дальше")
+    void failingModelDoesNotStopTheQueue() throws Exception {
+        ModelId broken = new ModelId(IDS.generate());
+        versions.failing = broken;
+        outbox.enqueue(workspace, broken, 1, clock.instant());
+        commitVersion(1, Fixtures.fixture("unknown_extension"), "Первая");
+
+        assertThat(publishing.publishPending()).isEqualTo(1);
+
+        assertThat(history()).hasSize(1);
+        GitOutbox.Entry deferred = outbox.head(broken).orElseThrow();
+        assertThat(deferred.attempts()).isEqualTo(1);
+        assertThat(deferred.nextAttemptAt()).isAfter(clock.instant());
+    }
+
     private void commitVersion(long versionNo, byte[] xml, String comment) {
         versions.add(new PublishedVersions.Version(workspace, "Неизвестные узлы и атрибуты", versionNo,
                 "architect-git", comment, clock.instant(), "0".repeat(64), xml));
@@ -565,6 +611,11 @@ class GitPublisherTest {
             rows.get(id).next = next;
         }
 
+        @Override
+        public int purgeClosed(Instant before) {
+            return 0;
+        }
+
         private static Entry entry(Row r) {
             return new Entry(r.id, r.workspace, r.model, r.versionNo, Status.valueOf(r.status), r.attempts,
                     r.next);
@@ -595,6 +646,7 @@ class GitPublisherTest {
 
         private final Map<Long, Version> versions = new HashMap<>();
         private final Map<Long, GitSha> shas = new HashMap<>();
+        private ModelId failing;
 
         void add(Version version) {
             versions.put(version.versionNo(), version);
@@ -610,6 +662,9 @@ class GitPublisherTest {
 
         @Override
         public Optional<Version> version(ModelId m, long versionNo) {
+            if (m.equals(failing)) {
+                throw new IllegalStateException("snapshot store failed");
+            }
             return Optional.ofNullable(versions.get(versionNo));
         }
 

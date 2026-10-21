@@ -68,6 +68,7 @@ final class GitFakes {
 
         private final List<Store<?>> stores;
         private int depth;
+        private int reads;
 
         RollbackUnitOfWork(List<Store<?>> stores) {
             this.stores = stores;
@@ -99,7 +100,17 @@ final class GitFakes {
 
         @Override
         public <T> T read(Supplier<T> work) {
-            return work.get();
+            reads++;
+            try {
+                return work.get();
+            } finally {
+                reads--;
+            }
+        }
+
+        /** Идёт ли сейчас транзакция — чтения или записи. */
+        boolean active() {
+            return depth > 0 || reads > 0;
         }
     }
 
@@ -129,6 +140,7 @@ final class GitFakes {
 
         State state;
         boolean failAfterReplace;
+        RuntimeException failure;
         final Map<Long, String> comments = new HashMap<>();
 
         List<Long> versionNos() {
@@ -158,6 +170,9 @@ final class GitFakes {
             if (failAfterReplace) {
                 throw new IllegalStateException("сбой при записи");
             }
+            if (failure != null) {
+                throw failure;
+            }
             return new Replaced(state.lastVersionNo(), true, 0);
         }
 
@@ -175,6 +190,7 @@ final class GitFakes {
     static final class MemorySessions implements ImportSessionRepository, Store<Map<ImportSessionId, ImportSession>> {
 
         Map<ImportSessionId, ImportSession> rows = new LinkedHashMap<>();
+        boolean failSaves;
 
         @Override
         public Optional<ImportSession> find(ImportSessionId id) {
@@ -183,6 +199,9 @@ final class GitFakes {
 
         @Override
         public void save(ImportSession session) {
+            if (failSaves) {
+                throw new IllegalStateException("журнал недоступен");
+            }
             rows.put(session.id(), session);
         }
 
@@ -269,6 +288,11 @@ final class GitFakes {
 
         @Override
         public void retryLater(UUID id, String reason, Instant next) {
+        }
+
+        @Override
+        public int purgeClosed(Instant before) {
+            return 0;
         }
 
         @Override
@@ -359,6 +383,8 @@ final class GitFakes {
         private final Map<GitSha, List<GitSha>> parents = new HashMap<>();
         private final Map<String, GitSha> branches = new HashMap<>();
         final Map<String, GitSha> tags = new HashMap<>();
+        /** Что случается сразу после чтения головы ветки — например, администратор перепривязывает пространство. */
+        Runnable afterFetch = () -> { };
         private int counter;
 
         MemoryRepository(ModelId model) {
@@ -400,7 +426,9 @@ final class GitFakes {
 
         @Override
         public Optional<GitSha> fetch(Remote remote) {
-            return Optional.ofNullable(branches.get(remote.branch()));
+            Optional<GitSha> head = Optional.ofNullable(branches.get(remote.branch()));
+            afterFetch.run();
+            return head;
         }
 
         @Override

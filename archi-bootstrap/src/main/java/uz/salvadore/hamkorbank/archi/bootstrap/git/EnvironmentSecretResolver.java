@@ -6,8 +6,10 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.SecretResolver
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.SecretRef;
 
 /**
- * Секрет по ссылке {@code env:ИМЯ} — из окружения процесса (через {@link Environment}:
- * переменная окружения, а в тестах — свойство). Значение не кэшируется и не логируется.
+ * Секрет по ссылке {@code env:ARCHI_GIT_ИМЯ} — из окружения процесса (через {@link Environment}:
+ * переменная окружения, а в тестах — свойство). Других имён ссылка не допускает, поэтому
+ * свойства приложения и чужие секреты сервера отсюда не читаются. Значение не кэшируется
+ * и не логируется.
  */
 public final class EnvironmentSecretResolver implements SecretResolver {
 

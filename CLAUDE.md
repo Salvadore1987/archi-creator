@@ -111,13 +111,16 @@ Application-слои без Spring: транзакция — порт `UnitOfWor
 XML тот же, а правило одно. Advisor переводится по этому образцу на своём этапе ревью.
 
 **Application-слой interchange — по тому же образцу.** Входные порты `port/in/` — импорт файла,
-настройка импорта, выгрузка модели, картинки представлений; handler'ы — в `handler`, общее у них —
+настройка импорта, выгрузка модели, картинки представлений, привязка к Git, публикация, импорт
+по ссылке и слияние; handler'ы — в `handler`, общее у них —
 `InterchangeKernel` (роль до любой работы, метрика, транзакция, часы, ключи; виден только пакету).
 Исход импорта (`APPLIED`, `REPLAYED`, `REJECTED_CORRUPT`, `REJECTED_STRICT`) с кодом и текстом отказа
 решает handler, контроллер лишь переводит его в статус. Сборочные части выгрузки — писатели CSV, OEF,
 SVG, детерминированный zip, отчёт о потерях — в `exporting`, `oef`, `rendering`. Адаптеру из application
-interchange доступны только `port.in`, `dto` и выходные порты (`ApplicationLayerTest`); сервисы Git ещё
-не переведены и перечислены там поимённо — их очередь на этапе ревью Git.
+interchange доступны только `port.in`, `dto` и выходные порты (`ApplicationLayerTest`). Шаги сценариев
+Git — сеть между транзакциями, журнал попыток, очередь — в `git` (`GitPull`, `GitMerge`, `GitPublisher`);
+роль, метрику и перевод в DTO даёт handler. Проход очереди, проверка доступности и восстановление снимка —
+системные входы `GitPublishingApplicationService` без актора: роль у них проверяет вызывающий.
 
 Модули доменов друг от друга **не зависят**: Maven не допускает цикла, а partnership
 в карте контекстов двусторонний. Поэтому у interchange свой `ArchiId`, а проверка
@@ -252,8 +255,8 @@ macOS и старый Проводник его не создают. Измен�
 | Что | Где |
 |---|---|
 | Разложенный YAML: писатель, обратная сборка, наследуемые позиции, эталоны | `archi-interchange-application/.../application/git/` (`GitYamlWriter`, `GitYamlReader`, `PositionPlan`); `fixtures/git_roundtrip/` |
-| Привязка пространства к репозиторию: агрегат, `SecretRef`, авторы | `archi-interchange-domain/.../domain/git/`, миграция `V6__git_binding.sql`, `GitBindingService` |
-| Публикация версии коммитом ([`UC-IXC-003`](spec/application/interchange/usecases/commit-version-to-git.md)), расхождение, повтор по трейлерам | `GitPublishingService`; порты `GitRepositoryPort`, `GitOutbox`, `PublishedVersions`, `SecretResolver` |
+| Привязка пространства к репозиторию: агрегат, `SecretRef`, авторы | `archi-interchange-domain/.../domain/git/`, миграция `V6__git_binding.sql`, handler'ы `GitBinding*Handler` |
+| Публикация версии коммитом ([`UC-IXC-003`](spec/application/interchange/usecases/commit-version-to-git.md)), расхождение, повтор по трейлерам | `GitPublisher`; порты `GitRepositoryPort`, `GitOutbox`, `PublishedVersions`, `SecretResolver` |
 | Outbox зафиксированных версий ([`ADR-0003`](spec/adr/0003-event-publishing.md)) | `outbox_event` (`V7__outbox.sql`), `JpaGitOutbox`, `bootstrap/wiring/OutboxEventPublisher` |
 | JGit, секреты из окружения, мост к версиям, проход очереди | `archi-bootstrap/.../bootstrap/git/`, `wiring/GitConfiguration`; `archi.git.*` |
 | REST: `PUT/GET/DELETE /workspaces/{id}/git-binding`, `POST /models/{id}/git/push` | `GitController` |
@@ -286,10 +289,10 @@ macOS и старый Проводник его не создают. Измен�
 |---|---|
 | Отчёт об изменениях по объектам и полям | `archi-interchange-domain/.../domain/git/ModelChanges`; `ModelChangesTest` |
 | Ссылка: ветка, тег, коммит (`GitRef`, `ResolvedRef`), разрешение на JGit | `GitRepositoryPort.resolve`, `JGitRepository`; `GitRefResolutionTest` |
-| Сценарий импорта по ссылке ([`UC-IXC-006`](spec/application/interchange/usecases/pull-model-from-git.md)): отчёт и применение | `GitImportService`; порт `ModelStates`, мост `bootstrap/git/ModelingModelStates` |
+| Сценарий импорта по ссылке ([`UC-IXC-006`](spec/application/interchange/usecases/pull-model-from-git.md)): отчёт и применение | `GitPull`; порт `ModelStates`, мост `bootstrap/git/ModelingModelStates` |
 | Замена содержимого модели новой версией (общая часть с откатом) | `ModelContentGetQueryHandler`/`ModelContentReplaceCommandHandler`, `VersionContents.replace` |
 | REST: `POST /models/{id}/git/pull/preview`, `POST /models/{id}/git/pull` | `GitController`, `GitDtoMapper`, `FindingMapper` |
-| Расхождение снимается импортом головы ветки | `GitImportService.adopt`, `GitOutbox.supersede`; правила `accepted`/`carries` в `GitPublishingService` |
+| Расхождение снимается импортом головы ветки | `GitAttempts.adopt`, `GitOutbox.supersede`; правила `accepted`/`carries` в `GitPublisher` |
 | Тесты | `GitImportTest` (фейки с откатом), `GitImportIT`, новые случаи `GitPublisherTest` |
 
 **Импорт по ссылке — два вызова, и второй принимает только то, что показал первый.**
@@ -308,10 +311,10 @@ macOS и старый Проводник его не создают. Измен�
 | Что | Где |
 |---|---|
 | Слияние трёх состояний по объектам и полям: конфликты, порядок, каскад | `archi-interchange-domain/.../domain/git/EntityMerge`; `EntityMergeTest` |
-| Сценарий слияния ([`UC-IXC-007`](spec/application/interchange/usecases/merge-model-branch.md)): отчёт с выборами и применение | `GitMergeService`; общее с импортом по ссылке — `GitAttempts` |
+| Сценарий слияния ([`UC-IXC-007`](spec/application/interchange/usecases/merge-model-branch.md)): отчёт с выборами и применение | `GitMerge`; общее с импортом по ссылке — `GitAttempts` |
 | Слитый коммит модели | порт `ModelMerges`, `JpaModelMerges`, миграция `V8__git_model_merge.sql` |
 | Общий предок, слитый коммит вторым родителем | `GitRepositoryPort.mergeBase`, `CommitRequest.merged`; `GitMergeParentsTest` |
-| Публикация признаёт слитый коммит | `GitPublishingService.accepted`; `GitPublisherTest#mergedForeignChangeIsNotDivergence` |
+| Публикация признаёт слитый коммит | `GitPublisher.accepted`; `GitPublisherTest#mergedForeignChangeIsNotDivergence` |
 | REST: `POST /models/{id}/git/merge/preview`, `POST /models/{id}/git/merge` | `GitController`, `GitDtoMapper`; `MergeRequestIT` |
 | Панель слияния, отметки и контуры на холсте ([`UI-022`](spec/ui/rules.md#ui-022--слияние-видно-на-холсте-до-применения)) | `frontend/src/merge/`, `ArchiNode`/`ArchiEdge` (`data-merge`); `e2e/merge.spec.ts` |
 | Тесты | `GitMergeTest` (фейки — `GitFakes`, общие с `GitImportTest`), `MergeRequestIT` |

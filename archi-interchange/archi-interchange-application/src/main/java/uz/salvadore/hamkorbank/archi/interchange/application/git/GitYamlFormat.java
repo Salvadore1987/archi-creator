@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.interchange.application.git;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attribute;
 
 /**
@@ -46,6 +47,9 @@ final class GitYamlFormat {
     static final String K_FOLDERS = "folders";
     static final String K_KEY = "key";
     static final String K_VALUE = "value";
+    /** Атрибуты свойства в XML — те же имена, что ключи YAML. */
+    static final String A_KEY = K_KEY;
+    static final String A_VALUE = K_VALUE;
     static final String K_TEXT = "text";
 
     static final String A_ID = "id";
@@ -66,46 +70,49 @@ final class GitYamlFormat {
     static final String TAG_BENDPOINT = "bendpoint";
     static final String TAG_CONTENT = "content";
 
+    /**
+     * Ключ записи контейнера без идентификатора: вид и порядковый номер среди записей этого вида,
+     * например {@code documentation#1}. Идентификатор Archi {@code #} не содержит, поэтому ключи не пересекаются.
+     */
+    static String itemKey(Kind kind, int ordinal) {
+        return kind.token() + "#" + ordinal;
+    }
+
     /** Виды содержимого узла: ключ YAML и порядок по умолчанию. */
     enum Kind {
-        PURPOSE("purpose"),
-        DOCUMENTATION("documentation"),
-        PROPERTY("properties"),
-        BOUNDS("bounds"),
-        BENDPOINT("bendpoints"),
-        TEXT("text"),
-        CONNECTION("connections"),
-        CHILD("children"),
-        NODE("nodes"),
-        VALUE("values"),
-        RAW("raw_xml");
+        PURPOSE("purpose", "purpose"),
+        DOCUMENTATION("documentation", "documentation"),
+        PROPERTY("properties", "property"),
+        BOUNDS("bounds", "bounds"),
+        BENDPOINT("bendpoints", "bendpoint"),
+        TEXT("text", "text"),
+        CONNECTION("connections", "connection"),
+        CHILD("children", "child"),
+        NODE("nodes", "node"),
+        VALUE("values", "value"),
+        RAW("raw_xml", "raw_xml");
 
         final String key;
+        private final String token;
 
-        Kind(String key) {
+        Kind(String key, String token) {
             this.key = key;
+            this.token = token;
         }
 
-        /** Имя в {@code content_order} — единственное число ключа. */
+        /** Имя в {@code content_order} и в ключе записи контейнера — единственное число ключа. */
         String token() {
-            return switch (this) {
-                case PROPERTY -> "property";
-                case BENDPOINT -> "bendpoint";
-                case CONNECTION -> "connection";
-                case CHILD -> "child";
-                case NODE -> "node";
-                case VALUE -> "value";
-                default -> key;
-            };
+            return token;
         }
 
-        static Kind ofToken(String token) {
+        /** Вид по имени из {@code content_order}; незнакомое имя — пусто. */
+        static Optional<Kind> ofToken(String token) {
             for (Kind kind : values()) {
-                if (kind.token().equals(token)) {
-                    return kind;
+                if (kind.token.equals(token)) {
+                    return Optional.of(kind);
                 }
             }
-            return null;
+            return Optional.empty();
         }
 
         /** Вид, который бывает у узла не больше одного раза. */
