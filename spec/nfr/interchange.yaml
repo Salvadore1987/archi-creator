@@ -115,19 +115,23 @@ upstream_calls:
   git_remote:
     timeout: 30s
     retries:
-      count: 3
+      # Публикация повторяется очередью: запись outbox ждёт следующего прохода,
+      # пауза растёт вдвое до предела, число попыток не ограничено — версия
+      # обязана попасть в Git, когда репозиторий вернётся. Джиттера нет: очередь
+      # проходит один планировщик по моделям подряд, одновременных повторов нет.
+      via: outbox
       backoff: exponential
-      initial_interval: 1s
-    circuit_breaker:
-      failure_rate_threshold: 50
-      slow_call_threshold: 20s
-      sliding_window_size: 10
-      wait_duration_in_open_state: 60s
+      initial_interval: 5s
+      max_interval: 10m
     fallback: queue_for_retry
     note: |
       Недоступный репозиторий не должен ломать сохранение модели: база —
       источник правды, выгрузка догоняет. При переходе GitBinding в
       UNREACHABLE очистка снимков версий приостанавливается (FR-47).
+      Предохранителя нет: его роль играет очередь — пока репозиторий
+      недоступен, обращаются к нему только проходы очереди с растущей паузой.
+      Интерактивные операции (импорт по ссылке, слияние, проверка привязки)
+      не повторяются: недоступный репозиторий — сразу 503 IXC_GIT_UNREACHABLE.
 
 storage:
   database: relational / PostgreSQL 16

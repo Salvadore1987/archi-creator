@@ -16,7 +16,7 @@
 
 | № | Задача | Находки | Проверка | Статус |
 |---|---|---|---|---|
-| 1 | `spec/nfr`: Git — повтор очередью (5 s вдвое до 10 min), без предохранителя; порт чтения modeling — вызов в процессе; повторы Anthropic — как у SDK; числа Git — в сверке | 13-05 | `check-nfr-config.py`: `archi.git.timeout`, `retry-base`, `retry-max` против `spec/nfr/interchange.yaml` | ⬜ |
+| 1 | `spec/nfr`: Git — повтор очередью (5 s вдвое до 10 min), без предохранителя; порт чтения modeling — вызов в процессе; повторы Anthropic — как у SDK; числа Git — в сверке | 13-05 | `check-nfr-config.py`: `archi.git.timeout`, `retry-base`, `retry-max` против `spec/nfr/interchange.yaml` | ✅ |
 | 2 | `archi.ai.connect-timeout` и таймаут соединения клиента Anthropic | 13-02 | `check-nfr-config.py`: `archi.ai.connect-timeout` | ⬜ |
 | 3 | Предохранитель Resilience4j на Anthropic API, метрика, алерт `UpstreamCircuitOpen` | 13-01 | `AnthropicLlmClientTest`: после серии отказов вызов не доходит до сервера, отмена клиентом предохранитель не открывает; `check-nfr-config.py`: параметры предохранителя | ⬜ |
 | 4 | Датчик бюджета — один на пространство, новый месяц снимает прежний; расход — `Counter` | 13-03 | `AdvisorMicrometerMetricsTest` | ⬜ |
@@ -25,3 +25,9 @@
 | 7 | Подмножество шрифта — `try-with-resources` | 13-07 | `ViewImageRenderingTest`, сверка экспорта | ⬜ |
 
 ## Расхождения плана с фактом
+
+- **Задача 1.** Числа Git (`timeout`, `retry-base`, `retry-max`) жили только умолчаниями записи `GitSettings`;
+  по `ADR-0026` они вынесены в `application.yaml` — иначе сверять было бы не с чем. На старом коде сверка
+  падала трижды: настроек в YAML не было. Повтор Git без джиттера записан в спеку с причиной — очередь
+  проходит один планировщик. Вне объёма: `spec/nfr/modeling.yaml` `keycloak_jwks` тоже обещает предохранитель
+  и повторы, которых у декодера JWT Spring Security нет, — это граница безопасности, этап 14.

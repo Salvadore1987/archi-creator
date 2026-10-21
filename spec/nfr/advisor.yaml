@@ -104,10 +104,13 @@ upstream_calls:
     timeout: 180s
     streaming: true
     retries:
+      # Повторяет SDK Anthropic: пауза 0,5 s вдвое до 8 s, джиттер до 25 %,
+      # заголовок retry-after сильнее расчёта.
       count: 2
       backoff: exponential
-      initial_interval: 2s
-      retry_on: [429, 500, 502, 503, 504, connection_error]
+      initial_interval: 500ms
+      max_interval: 8s
+      retry_on: [408, 409, 429, 5xx, connection_error]
       never_retry_after_first_token: true
     circuit_breaker:
       failure_rate_threshold: 50
@@ -122,20 +125,13 @@ upstream_calls:
       помощника что-либо своё хуже, чем не ответить.
 
   modeling_read_port:
-    timeout: 10s
-    retries:
-      count: 1
-      backoff: exponential
-      initial_interval: 200ms
-    circuit_breaker:
-      failure_rate_threshold: 50
-      slow_call_threshold: 5s
-      sliding_window_size: 20
-      wait_duration_in_open_state: 30s
-    fallback: fail_fast
+    in_process: true
     note: |
       Единственный порт в modeling — на чтение. Порта записи нет
       (INV-ADV-004), и его отсутствие проверяется arch-тестом.
+      Вызов идёт в том же процессе, без сети: таймаут, повтор и предохранитель
+      ему не нужны, предел времени — таймаут запроса к базе modeling
+      (spec/nfr/modeling.yaml#storage).
 
 storage:
   database: relational / PostgreSQL 16

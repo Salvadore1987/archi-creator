@@ -147,6 +147,11 @@ archi:
     committer-name: ${ARCHI_GIT_COMMITTER_NAME:Archi Creator}
     committer-email: ${ARCHI_GIT_COMMITTER_EMAIL:archi-creator@localhost}
     poll-interval: 10s
+    # Предел одного сетевого обращения к репозиторию; повтор публикации — очередью,
+    # пауза от retry-base вдвое до retry-max.
+    timeout: 30s
+    retry-base: 5s
+    retry-max: 10m
     # Закрытые записи очереди публикации: версия уже несёт git_sha, запись нужна только для разбора.
     outbox-retention: 30d
     # Репозиторий в файловой системе сервера (file://) — только в тестах: иначе администратор
