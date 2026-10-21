@@ -74,6 +74,25 @@ class GitValuesTest {
         assertFalse(String.valueOf(e.getMessage()).contains("ghp_secret"));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"https://user:glpat-secret@git.example.com/archi.git",
+        "https://glpat-secret@git.example.com/a.git", "HTTP://x:y@git.example.com/a.git",
+        "ssh://git:pass@git.example.com/a.git"})
+    @DisplayName("учётные данные в адресе — отказ, и адрес с ними в текст отказа не попадает")
+    void credentialsInUrlAreRejected(String url) {
+        InvalidValueException e = assertThrows(InvalidValueException.class, () -> GitBinding.configure(WORKSPACE, url,
+                null, SecretRef.of("env:ARCHI_GIT_TOKEN"), List.of()));
+        assertFalse(e.reason().args().stream().anyMatch(a -> String.valueOf(a).contains("secret")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ssh://git@git.example.com/a.git", "git@git.example.com:ea/a.git",
+        "https://git.example.com/a@b.git", "https://git.example.com:8443/a.git"})
+    void urlsWithoutCredentialsAreAccepted(String url) {
+        assertDoesNotThrow(() -> GitBinding.configure(WORKSPACE, url, null, SecretRef.of("env:ARCHI_GIT_TOKEN"),
+                List.of()));
+    }
+
     private static GitBinding binding(String branch) {
         return GitBinding.configure(WORKSPACE, "https://git.example.com/archi.git", branch,
                 SecretRef.of("env:ARCHI_GIT_TOKEN"), List.of());
