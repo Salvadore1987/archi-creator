@@ -7,6 +7,18 @@ public final class BootstrapMessages {
 
     /** Запрос не разобран: тело или параметр не того формата. */
     public static final String BAD_REQUEST = "bootstrap.problem.bad-request";
+    /** Значение параметра пути или запроса не того формата: имя параметра. */
+    public static final String UNREADABLE_PARAMETER = "bootstrap.problem.unreadable-parameter";
+    /** Обязательный параметр запроса не задан: имя параметра. */
+    public static final String MISSING_PARAMETER = "bootstrap.problem.missing-parameter";
+    /** Обязательная часть формы не задана: имя части. */
+    public static final String MISSING_PART = "bootstrap.problem.missing-part";
+    /** Форма {@code multipart} не разобрана. */
+    public static final String UNREADABLE_FORM = "bootstrap.problem.unreadable-form";
+    /** Значение поля тела не того формата: путь поля. */
+    public static final String UNREADABLE_FIELD = "bootstrap.problem.unreadable-field";
+    /** Тело запроса не разобрано как JSON. */
+    public static final String UNREADABLE_BODY = "bootstrap.problem.unreadable-body";
     /** Метод, тип тела или адрес запроса здесь не обслуживаются: метод и путь запроса. */
     public static final String REQUEST_NOT_SUPPORTED = "bootstrap.problem.request-not-supported";
     /** Неожиданный сбой сервера: подробностей клиенту нет, они в журнале. */

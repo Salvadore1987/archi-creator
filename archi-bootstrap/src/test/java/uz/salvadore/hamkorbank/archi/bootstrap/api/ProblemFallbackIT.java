@@ -76,6 +76,29 @@ class ProblemFallbackIT extends ApiTest {
     }
 
     @Test
+    @DisplayName("ADR-0022: неверный UUID в пути — 400 с именем параметра, без типов Java")
+    void unreadableParameterNamesParameter() throws Exception {
+        mvc.perform(get("/api/v1/models/zzz").with(architect()).header(HttpHeaders.ACCEPT_LANGUAGE, "en"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(ErrorCodes.BAD_REQUEST))
+                .andExpect(jsonPath("$.detail").value(
+                        "Bad request: the value of the parameter «id» could not be read"));
+    }
+
+    @Test
+    @DisplayName("ADR-0022: неверный UUID в теле — 400 с путём поля, без текста парсера")
+    void unreadableFieldNamesPath() throws Exception {
+        mvc.perform(post("/api/v1/models").with(architect()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"М\",\"workspaceId\":\"nope\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Некорректный запрос: значение поля «workspaceId» не разобрано"));
+        mvc.perform(post("/api/v1/models").with(architect()).contentType(MediaType.APPLICATION_JSON).content("{"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value(Matchers.not(Matchers.containsString("java"))))
+                .andExpect(jsonPath("$.detail").value(Matchers.not(Matchers.containsString("JSON parse"))));
+    }
+
+    @Test
     @DisplayName("FR-28: запрос без входа по-прежнему 401 — отказ безопасности последняя линия не глотает")
     void unauthenticatedStays401() throws Exception {
         mvc.perform(get("/api/v1/models")).andExpect(status().isUnauthorized());

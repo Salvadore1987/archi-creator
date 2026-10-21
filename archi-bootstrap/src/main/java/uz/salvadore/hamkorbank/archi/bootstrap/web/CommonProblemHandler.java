@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.util.Locale;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
@@ -28,6 +29,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import tools.jackson.core.JacksonException;
 import uz.salvadore.hamkorbank.archi.bootstrap.wiring.ErrorCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
@@ -75,13 +77,17 @@ public class CommonProblemHandler {
                 text(BootstrapMessages.FILE_TOO_LARGE), request);
     }
 
-    /** Причину разбора отдаёт Spring — технический текст, он идёт аргументом без перевода. */
+    /**
+     * Неразборчивый запрос: в ответе — что не разобрано, именем из запроса (параметр, часть формы,
+     * путь поля в теле). Текст Spring и парсера JSON несёт типы Java — он уходит в журнал.
+     */
     @ExceptionHandler({HttpMessageNotReadableException.class, MissingServletRequestParameterException.class,
             MissingServletRequestPartException.class, MethodArgumentTypeMismatchException.class,
             MultipartException.class})
     ProblemDetail badRequest(Exception e, HttpServletRequest request) {
+        LOG.debug("request not parsed: {} {}: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
         return problem(HttpStatus.BAD_REQUEST, ErrorCodes.BAD_REQUEST,
-                text(BootstrapMessages.BAD_REQUEST, e.getMessage()), request);
+                text(BootstrapMessages.BAD_REQUEST, unreadable(e)), request);
     }
 
     /** Отказ аутентификации и доступа — не ответ, а сигнал фильтру безопасности: он и отвечает. */
@@ -123,6 +129,38 @@ public class CommonProblemHandler {
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", code);
         return problem;
+    }
+
+    private String unreadable(Exception e) {
+        return switch (e) {
+            case MethodArgumentTypeMismatchException mismatch ->
+                    text(BootstrapMessages.UNREADABLE_PARAMETER, mismatch.getName());
+            case MissingServletRequestParameterException missing ->
+                    text(BootstrapMessages.MISSING_PARAMETER, missing.getParameterName());
+            case MissingServletRequestPartException missing ->
+                    text(BootstrapMessages.MISSING_PART, missing.getRequestPartName());
+            case MultipartException form -> text(BootstrapMessages.UNREADABLE_FORM);
+            default -> field(e).map(path -> text(BootstrapMessages.UNREADABLE_FIELD, path))
+                    .orElseGet(() -> text(BootstrapMessages.UNREADABLE_BODY));
+        };
+    }
+
+    /** Путь поля тела, на котором споткнулся разбор JSON: {@code nodes[2].id}. */
+    private static Optional<String> field(Throwable failure) {
+        for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+            if (cause instanceof JacksonException json) {
+                StringBuilder path = new StringBuilder();
+                for (JacksonException.Reference step : json.getPath()) {
+                    if (step.getPropertyName() != null) {
+                        path.append(path.isEmpty() ? "" : ".").append(step.getPropertyName());
+                    } else if (step.getIndex() >= 0) {
+                        path.append('[').append(step.getIndex()).append(']');
+                    }
+                }
+                return path.isEmpty() ? Optional.empty() : Optional.of(path.toString());
+            }
+        }
+        return Optional.empty();
     }
 
     private static String reason(HttpStatusCode status) {
