@@ -55,6 +55,12 @@ spring:
           # Keycloak 26, realm archi. Проверка подписи идёт по
           # кэшированному JWKS, вызова на запрос нет.
           issuer-uri: ${ARCHI_OIDC_ISSUER_URI:http://localhost:8081/realms/archi}
+          # Keycloak кладёт роли realm'а вложенным объектом realm_access.roles; выражение
+          # SpEL над claim'ами достаёт их, префикс делает из них роли Spring Security.
+          # Роли вне VIEWER, ARCHITECT, ADMIN в сценарии не попадают: их отбрасывает
+          # разбор автора команды.
+          authorities-claim-expressions: "[realm_access][roles]"
+          authority-prefix: ROLE_
 
   jackson:
     default-property-inclusion: non_null
@@ -123,6 +129,9 @@ archi:
     # Очистка снимков версий: только в пространстве с доступным Git —
     # без него снимок единственная копия содержимого.
     retention-enabled: true
+    # Пояс очистки: по нему версии делятся по месяцам и по нему идёт расписание.
+    # Пояс JVM не годится — в контейнере он UTC.
+    retention-zone: ${ARCHI_RETENTION_ZONE:Asia/Tashkent}
   interchange:
     # Импорт в одно пространство последователен: параллельные сессии конкурировали
     # бы за модель и создавали версии в непредсказуемом порядке. Следующий — отказ 409.

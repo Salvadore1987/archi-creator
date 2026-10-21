@@ -23,11 +23,15 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  * платить отказывается. Обратная сторона названа прямо: правила доступа
  * в dev не проверяются, и ошибка в них видна только на профиле {@code prod}
  * или в интеграционном тесте.
+ *
+ * <p>Профиль {@code prod} рядом с {@code dev} заглушку не включает: лишний профиль в окружении
+ * не должен открыть сервер. Включается настоящая цепочка, а без ресурс-сервера, которого
+ * в {@code dev} нет, приложение не стартует.
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @EnableConfigurationProperties(CorsSettings.class)
-@Profile("dev")
+@Profile("dev & !prod")
 public class DevSecurityConfig {
 
     @Bean

@@ -1,6 +1,5 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.wiring;
 
-import java.nio.file.Path;
 import java.time.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +52,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 
 /** Git: адаптеры портов, публикация с проходом очереди по расписанию и импорт по ссылке. */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(GitSettings.class)
 public class GitConfiguration {
 
@@ -61,9 +60,7 @@ public class GitConfiguration {
 
     @Bean
     GitRepositoryPort gitRepository(GitSettings settings) {
-        Path cache = settings.cacheDir() != null ? settings.cacheDir()
-                : Path.of(System.getProperty("java.io.tmpdir"), "archi-git");
-        return new JGitRepository(cache, settings.username(), settings.timeout());
+        return new JGitRepository(settings.cacheDir(), settings.username(), settings.timeout());
     }
 
     @Bean

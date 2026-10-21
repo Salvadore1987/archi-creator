@@ -17,8 +17,9 @@
 Бэкенд своего клиента не заводит: он ресурс-сервер и только проверяет
 подпись токена по JWKS, ничего не запрашивая от своего имени.
 
-Роли лежат в токене как `realm_access.roles` — оттуда их достаёт
-`KeycloakRealmRolesConverter`.
+Роли лежат в токене как `realm_access.roles` — оттуда их достаёт Spring Boot
+по выражению `spring.security.oauth2.resourceserver.jwt.authorities-claim-expressions`
+в `application.yaml`.
 
 ## Демонстрационные пользователи
 

@@ -36,6 +36,8 @@ public abstract class IntegrationTest {
         registry.add("spring.datasource.password", Containers.POSTGRES::getPassword);
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> "");
         registry.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", () -> "http://localhost:1/jwks");
+        // Без issuer адрес входа для браузера не выводится, а включённый вход без адреса — отказ старта.
+        registry.add("archi.ui.oidc.authority", () -> "http://localhost:1/realms/archi");
         registry.add("archi.git.allow-local-repositories", () -> "true");
     }
 

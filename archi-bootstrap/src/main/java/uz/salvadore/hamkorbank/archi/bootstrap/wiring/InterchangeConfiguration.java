@@ -40,7 +40,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryAppli
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceApplicationService;
 
 /** Сценарии interchange — бинами. Транзакция — общая с modeling. */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(InterchangeSettings.class)
 public class InterchangeConfiguration {
 

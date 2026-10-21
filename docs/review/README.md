@@ -37,3 +37,4 @@
 | 9. Application advisor | [`09-application-advisor.md`](09-application-advisor.md) | 10 |
 | 10. Адаптеры хранения и миграции | [`10-persistence.md`](10-persistence.md) | 9 |
 | 11. REST-адаптеры | [`11-rest.md`](11-rest.md) | 9 |
+| 12. Bootstrap: проводка, конфигурация, безопасность | [`12-bootstrap-security.md`](12-bootstrap-security.md) | 12 |

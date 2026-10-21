@@ -1,9 +1,17 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.advisor;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import java.time.Duration;
 import java.time.ZoneId;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * Настройки помощника ({@code archi.ai.*}).
@@ -24,19 +32,20 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param budgetZone                 часовой пояс, по которому месяц бюджета начинается с первого числа
  */
 @ConfigurationProperties("archi.ai")
+@Validated
 public record AiSettings(String apiKey,
-                         @DefaultValue("claude-sonnet-5") String model,
-                         @DefaultValue("https://api.anthropic.com") String baseUrl,
-                         @DefaultValue("medium") String effort,
-                         @DefaultValue("180s") Duration timeout,
-                         @DefaultValue("2") int maxRetries,
-                         @DefaultValue("16000") int maxOutputTokens,
-                         @DefaultValue("120000") int maxContextTokens,
-                         @DefaultValue("0.25") double minCoverage,
-                         @DefaultValue("5000000") long defaultMonthlyTokenLimit,
-                         @DefaultValue("5") int userRequestsPerMinute,
-                         @DefaultValue("20") int workspaceRequestsPerMinute,
-                         @DefaultValue("Asia/Tashkent") ZoneId budgetZone) {
+                         @DefaultValue("claude-sonnet-5") @NotBlank String model,
+                         @DefaultValue("https://api.anthropic.com") @Pattern(regexp = "^https?://.+") String baseUrl,
+                         @DefaultValue("medium") @NotBlank String effort,
+                         @DefaultValue("180s") @NotNull Duration timeout,
+                         @DefaultValue("2") @PositiveOrZero int maxRetries,
+                         @DefaultValue("16000") @Positive int maxOutputTokens,
+                         @DefaultValue("120000") @Positive int maxContextTokens,
+                         @DefaultValue("0.25") @DecimalMin("0") @DecimalMax("1") double minCoverage,
+                         @DefaultValue("5000000") @PositiveOrZero long defaultMonthlyTokenLimit,
+                         @DefaultValue("5") @Positive int userRequestsPerMinute,
+                         @DefaultValue("20") @Positive int workspaceRequestsPerMinute,
+                         @DefaultValue("Asia/Tashkent") @NotNull ZoneId budgetZone) {
 
     /** Задан ли ключ API: без него помощник отвечает «недоступен», остальное приложение работает. */
     public boolean configured() {

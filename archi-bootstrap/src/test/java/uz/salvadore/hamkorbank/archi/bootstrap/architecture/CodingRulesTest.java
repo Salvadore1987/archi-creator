@@ -29,10 +29,13 @@ import jakarta.persistence.PersistenceContext;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TimeZone;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLOutputFactory;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,7 +43,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * Правила кода, которые видны по байткоду основного кода всех модулей: сигнатуры
@@ -422,6 +429,74 @@ class CodingRulesTest {
                                 place + " constructs " + call.getTargetOwner().getSimpleName())));
             }
         };
+    }
+
+    @Test
+    @DisplayName("Класс запуска называет корень сканирования явно")
+    void applicationNamesScanRoot() {
+        classes().that().areAnnotatedWith(SpringBootApplication.class)
+                .should(new ArchCondition<>("объявлять scanBasePackages = корень проекта") {
+                    @Override
+                    public void check(JavaClass item, ConditionEvents events) {
+                        String[] roots = item.getAnnotationOfType(SpringBootApplication.class).scanBasePackages();
+                        events.add(new SimpleConditionEvent(item, List.of(roots).equals(List.of(ROOT)),
+                                item.getName() + " сканирует " + List.of(roots)));
+                    }
+                })
+                .because("перенос класса запуска иначе молча меняет набор бинов")
+                .check(classes);
+    }
+
+    @Test
+    @DisplayName("Пояс времени — из настроек или часов приложения, а не пояс JVM")
+    void noSystemTimeZone() {
+        noClasses().should().callMethod(ZoneId.class, "systemDefault")
+                .orShould().callMethod(TimeZone.class, "getDefault")
+                .orShould().callMethod(Clock.class, "systemDefaultZone")
+                .because("пояс JVM — свойство образа, а не установки: в контейнере он UTC, и граница месяца "
+                        + "или ночное расписание сдвигаются на часы")
+                .check(classes);
+    }
+
+    @Test
+    @DisplayName("Настройки проверяются на старте: @ConfigurationProperties — с @Validated")
+    void settingsAreValidated() {
+        classes().that().areAnnotatedWith(ConfigurationProperties.class)
+                .should().beAnnotatedWith(Validated.class)
+                .because("ошибка конфигурации роняет приложение на старте, а не первый запрос под нагрузкой")
+                .check(classes);
+    }
+
+    @Test
+    @DisplayName("Конфигурации — без прокси методов бинов: зависимость бина — параметр метода")
+    void configurationsDoNotProxyBeanMethods() {
+        classes().that().areAnnotatedWith(Configuration.class)
+                .should(new ArchCondition<>("объявлять @Configuration(proxyBeanMethods = false)") {
+                    @Override
+                    public void check(JavaClass item, ConditionEvents events) {
+                        boolean proxied = item.getAnnotationOfType(Configuration.class).proxyBeanMethods();
+                        events.add(new SimpleConditionEvent(item, !proxied,
+                                item.getName() + " проксирует методы бинов"));
+                    }
+                })
+                .because("прокси CGLIB нужен только вызову одного метода бина из другого; без него конфигурация "
+                        + "легче, а зависимость видна в сигнатуре")
+                .check(classes);
+    }
+
+    @Test
+    @DisplayName("Роли из токена — свойством Spring Boot, без своего конвертера JWT")
+    void noHandWrittenJwtConverters() {
+        noClasses().that().implement("org.springframework.core.convert.converter.Converter")
+                .should().dependOnClassesThat().haveFullyQualifiedName("org.springframework.security.oauth2.jwt.Jwt")
+                .because("роли из нестандартного claim достаёт authorities-claim-expressions; свой конвертер — "
+                        + "второй разбор токена, который расходится с настройкой")
+                .allowEmptyShould(true)
+                .check(classes);
+        noClasses().should().dependOnClassesThat().haveFullyQualifiedName(
+                        "org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter")
+                .because("конвертер аутентификации собирает Spring Boot по настройкам ресурс-сервера")
+                .check(classes);
     }
 
     @Test

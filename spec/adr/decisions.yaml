@@ -430,3 +430,18 @@ decisions:
       sections: ['§4.1.4']
     note: |
       История версий отдаётся страницами (size, before); модели и пространства — целиком, пока их число ограничено устройством продукта. Найдено на этапе 11 ревью кода (D-16).
+
+  - id: ADR-0031
+    title: Роль операции проверяет ядро сценария, а не @PreAuthorize
+    status: accepted
+    date: 2026-10-21
+    kind: architecture
+    adr_file: 0031-role-check-in-use-case-kernel.md
+    affects: [modeling, interchange, advisor]
+    requirements: [FR-28]
+    implemented: 2026-10-21
+    deviates_from:
+      standard: java-spring-code-guidelines-v2@97bce16
+      sections: ['§4.13.2', '§6.11']
+    note: |
+      Роль проверяет ядро контекста по перечню операций, совпадающему с таблицей authorization спецификации; в application-слоях Spring нет. Цепочка безопасности отвечает только на «вошёл ли». Найдено на этапе 12 ревью кода (D-21).

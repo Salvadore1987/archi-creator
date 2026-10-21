@@ -225,6 +225,24 @@
             </resource>
         </resources>
         <plugins>
+            <!--
+                Метаданные настроек archi.* для IDE и проверки ключей: процессор пишет
+                META-INF/spring-configuration-metadata.json. JDK 25 не находит процессоры
+                в classpath сам — путь задаётся явно.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-configuration-processor</artifactId>
+                            <version>${spring-boot.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
