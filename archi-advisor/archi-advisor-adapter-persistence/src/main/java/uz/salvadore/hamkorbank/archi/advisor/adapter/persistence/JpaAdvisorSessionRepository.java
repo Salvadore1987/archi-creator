@@ -37,6 +37,22 @@ public class JpaAdvisorSessionRepository implements AdvisorSessionRepository {
                 .getResultStream().findFirst().map(this::toDomain);
     }
 
+    /**
+     * Блокировка ключа до конца транзакции: параллельный {@code claim} того же ключа ждёт коммита
+     * и находит уже записанную сессию. Уникальность ключа в схеме остаётся последней защитой.
+     */
+    @Override
+    public boolean claim(AdvisorSession session) {
+        em.createNativeQuery("select 1 from (select pg_advisory_xact_lock(hashtextextended(:key, 0))) claimed")
+                .setParameter("key", session.requestedBy() + "\n" + session.idempotencyKey())
+                .getSingleResult();
+        if (findByKey(session.requestedBy(), session.idempotencyKey()).isPresent()) {
+            return false;
+        }
+        save(session);
+        return true;
+    }
+
     @Override
     public void save(AdvisorSession session) {
         AdvisorSessionEntity row = em.find(AdvisorSessionEntity.class, session.id().value());

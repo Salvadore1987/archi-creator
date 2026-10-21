@@ -8,7 +8,10 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
+import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AdvisorSessionId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorRequest;
+import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorSession;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
 
 class AdvisorIdempotencyTest {
@@ -62,5 +65,22 @@ class AdvisorIdempotencyTest {
         service.ask(Fixture.VIEWER, review, "k", RU).run(new Fixture.Recorded());
 
         assertEquals(2, fixture.upstreamCalls.size());
+    }
+
+    @Test
+    @DisplayName("INV-ADV-003: ключ, занятый параллельным обращением, пока читалась модель, — конфликт без потока")
+    void concurrentSameKeyDoesNotOpenSecondStream() {
+        Fixture fixture = new Fixture();
+        AdvisorRequest review = AdvisorRequest.review(Fixture.MODEL, null);
+        fixture.duringRead = () -> fixture.sessions.putIfAbsent("alice/k", AdvisorSession.request(
+                AdvisorSessionId.of("00000000-0000-7000-8000-0000000000cc"), Fixture.WORKSPACE, review, "k", "alice",
+                Fixture.NOW));
+
+        AdvisorDomainException conflict = assertThrows(AdvisorDomainException.class,
+                () -> fixture.service().ask(Fixture.ALICE, review, "k", RU));
+
+        assertEquals("INV-ADV-003", conflict.code());
+        assertEquals(AdvisorMessages.SESSION_IN_PROGRESS, conflict.reason().key());
+        assertEquals(0, fixture.upstreamCalls.size(), "второго потока у внешнего API нет");
     }
 }

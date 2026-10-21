@@ -58,7 +58,9 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
  * а порядок у всех один.
  *
  * <ol>
- *   <li>Роль. Повтор ключа — результат существующей сессии без нового обращения.</li>
+ *   <li>Роль. Повтор ключа — результат существующей сессии без нового обращения. Новая сессия
+ *       занимает ключ записью до любого отказа и до внешнего API: параллельный повтор того же
+ *       ключа не открывает второй поток.</li>
  *   <li>Отказы — до внешнего API: выключатель, бюджет, частота, размер контекста.
  *       Отказ записывается сессией {@code REJECTED} с аудитом.</li>
  *   <li>Открытие потока у внешнего API синхронно: его недоступность — честный
@@ -133,6 +135,11 @@ public final class AdvisorService {
             Instant now = clock.instant();
             AdvisorSession session = AdvisorSession.request(AdvisorSessionId.next(uuids), model.workspaceId(), request,
                     idempotencyKey, requester.subject(), now);
+            if (!unitOfWork.write(() -> sessions.claim(session))) {
+                // Ключ занят параллельным обращением, пока читалась модель: ответ — как на повтор.
+                return replay(unitOfWork.read(() -> sessions.findByKey(requester.subject(), idempotencyKey))
+                        .orElseThrow(), request);
+            }
             if (model.deleted()) {
                 throw reject(session, RejectionReason.MODEL_DELETED, Map.of());
             }

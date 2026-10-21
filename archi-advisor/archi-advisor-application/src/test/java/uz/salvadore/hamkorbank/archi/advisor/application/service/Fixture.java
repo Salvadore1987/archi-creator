@@ -80,6 +80,9 @@ final class Fixture {
     ModelGraph graph = graph();
     AdvisorPolicy policy = new AdvisorPolicy(120_000, 0.25, 5_000_000, 4096, 5, 20, ZoneId.of("UTC"));
     final List<FakeStream> opened = new ArrayList<>();
+    /** Что случается, пока сценарий читает модель, — например, параллельное обращение. */
+    Runnable duringRead = () -> {
+    };
 
     static ModelGraph graph() {
         return new ModelGraph(
@@ -110,7 +113,10 @@ final class Fixture {
     }
 
     ModelContextReader reader() {
-        return (requester, modelId) -> new ModelContextReader.ReadModel(WORKSPACE, deleted, graph);
+        return (requester, modelId) -> {
+            duringRead.run();
+            return new ModelContextReader.ReadModel(WORKSPACE, deleted, graph);
+        };
     }
 
     static MetamodelCatalog metamodel() {
@@ -143,6 +149,11 @@ final class Fixture {
             @Override
             public Optional<AdvisorSession> findByKey(String requestedBy, String idempotencyKey) {
                 return Optional.ofNullable(sessions.get(requestedBy + "/" + idempotencyKey));
+            }
+
+            @Override
+            public boolean claim(AdvisorSession session) {
+                return sessions.putIfAbsent(session.requestedBy() + "/" + session.idempotencyKey(), session) == null;
             }
 
             @Override
