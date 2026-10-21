@@ -82,9 +82,13 @@ public final class GitPublishingService {
     private static final int MAX_ATTEMPTS_SHIFT = 10;
     private static final System.Logger LOG = System.getLogger(GitPublishingService.class.getName());
 
-    /** Кто коммитит и как выглядит автор, которого нет в привязке. */
+    /**
+     * Кто коммитит и как выглядит автор, которого нет в привязке; паузы повтора.
+     *
+     * @param closedRetention сколько хранятся закрытые записи очереди
+     */
     public record Settings(String committerName, String committerEmail, String authorEmailDomain,
-                           Duration retryBase, Duration retryMax) {
+                           Duration retryBase, Duration retryMax, Duration closedRetention) {
     }
 
     /**
@@ -143,6 +147,7 @@ public final class GitPublishingService {
     /**
      * Проход очереди фоновым обработчиком: каждая модель — пока версии публикуются;
      * отказ сети или иной сбой откладывает модель, расхождение останавливает её до ручного разбора.
+     * В конце прохода закрытые записи старше срока хранения удаляются.
      *
      * @return сколько записей закрыто
      */
@@ -155,6 +160,8 @@ public final class GitPublishingService {
             }
             closed += drain(head.model(), false);
         }
+        Instant before = clock.instant().minus(settings.closedRetention());
+        unitOfWork.write(() -> outbox.purgeClosed(before));
         return closed;
     }
 

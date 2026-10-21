@@ -291,6 +291,11 @@ final class GitFakes {
         }
 
         @Override
+        public int purgeClosed(Instant before) {
+            return 0;
+        }
+
+        @Override
         public Map<UUID, String> snapshot() {
             return new LinkedHashMap<>(statuses);
         }

@@ -135,7 +135,7 @@ class GitPublisherTest {
                 direct,
                 events::addAll, InterchangeMetrics.NONE, message -> message.key() + message.args(), clock,
                 new GitPublishingService.Settings("Archi Creator", "archi@test", "users.test", Duration.ofSeconds(5),
-                        Duration.ofMinutes(10)));
+                        Duration.ofMinutes(10), Duration.ofDays(30)));
         bindings.save(GitBinding.configure(workspace, remote.toUri().toString(), null,
                 SecretRef.of("env:ARCHI_GIT_TOKEN"),
                 List.of(new GitAuthor("architect-git", "Архитектор Тестов", "architect@bank.uz"))));
@@ -609,6 +609,11 @@ class GitPublisherTest {
         public void retryLater(UUID id, String reason, Instant next) {
             rows.get(id).attempts++;
             rows.get(id).next = next;
+        }
+
+        @Override
+        public int purgeClosed(Instant before) {
+            return 0;
         }
 
         private static Entry entry(Row r) {

@@ -64,9 +64,9 @@ public class GitConfiguration {
                                               InterchangeMetrics metrics, TextCatalog texts, Clock clock,
                                               GitSettings settings) {
         return new GitPublishingService(outbox, bindings, versions, merges, repository, secrets, unitOfWork, events,
-                metrics,
-                texts, clock, new GitPublishingService.Settings(settings.committerName(), settings.committerEmail(),
-                settings.authorEmailDomain(), settings.retryBase(), settings.retryMax()));
+                metrics, texts, clock, new GitPublishingService.Settings(settings.committerName(),
+                settings.committerEmail(), settings.authorEmailDomain(), settings.retryBase(), settings.retryMax(),
+                settings.outboxRetention()));
     }
 
     @Bean
