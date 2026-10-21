@@ -248,8 +248,6 @@ public final class ModelingMessages {
     public static final String FIELD_MISSING = "modeling.request.field-missing";
     /** В запросе не задано несколько обязательных полей. */
     public static final String FIELDS_MISSING = "modeling.request.fields-missing";
-    /** В запросе пустой список объектов. */
-    public static final String ITEMS_EMPTY = "modeling.request.items-empty";
     /** Остаток XML передан пустой строкой, а не отсутствием. */
     public static final String RESIDUE_EMPTY = "modeling.residue.empty";
     /** Цвет стиля записан не как {@code #rrggbb}. */

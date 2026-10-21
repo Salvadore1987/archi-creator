@@ -102,6 +102,8 @@ public final class AdvisorMessages {
     public static final String DOCUMENT_TARGET_AMBIGUOUS = "advisor.request.document-target-ambiguous";
     /** Обязательное поле запроса не задано. */
     public static final String FIELD_REQUIRED = "advisor.request.field-required";
+    /** Не заданы обязательные поля запроса: их перечень. */
+    public static final String FIELDS_REQUIRED = "advisor.request.fields-required";
     /** Период бюджета не в формате год-месяц. */
     public static final String PERIOD_INVALID = "advisor.budget.period-invalid";
     /** Порог предупреждения вне допустимого диапазона процентов. */

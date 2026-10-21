@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.adapter.rest;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -142,7 +143,8 @@ public class InterchangeController {
 
     /** Включает или выключает строгий режим импорта пространства и отдаёт итоговую настройку. */
     @PutMapping("/workspaces/{id}/import-settings")
-    public ImportSettings configure(EditorIdentity actor, @PathVariable UUID id, @RequestBody ImportSettings settings) {
+    public ImportSettings configure(EditorIdentity actor, @PathVariable UUID id,
+                                    @Valid @RequestBody ImportSettings settings) {
         return new ImportSettings(policies.configureImportPolicy(actor,
                 new ConfigureImportPolicyCommand(id, settings.strictImport())).strictImport());
     }

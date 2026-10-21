@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.rest;
 
+import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
@@ -49,20 +50,11 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummary
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /** Представления: payload, геометрия, размещение. */
 @RestController
 @RequestMapping("/api/v1")
 public class ViewController {
-
-    /** Поля запроса по их именам в JSON — в сообщении о том, чего не хватает. */
-    private static final String EDGE_FIELDS = "relationshipId, sourceId, targetId";
-    private static final String LAYOUT_NODES = "nodes";
-    private static final String LAYOUT_NODE_ID = "nodes[].id";
-    private static final String LAYOUT_EDGE_FIELDS = "edges[].id, edges[].sourceId, edges[].targetId";
 
     private final ViewQueryApplicationService queries;
     private final ViewApplicationService views;
@@ -75,7 +67,7 @@ public class ViewController {
     /** Создаёт представление — {@code 201} с адресом. */
     @PostMapping("/models/{id}/views")
     public ResponseEntity<ViewSummary> create(EditorIdentity actor, @PathVariable UUID id,
-                                              @RequestBody CreateViewRequest request,
+                                              @Valid @RequestBody CreateViewRequest request,
                                               @RequestHeader(value = "Idempotency-Key", required = false) String key) {
         ViewSummaryResponse view = views.createView(actor, new CreateViewCommand(id, request.name(),
                 request.folderId(), request.id(), request.archiId(), key));
@@ -90,7 +82,8 @@ public class ViewController {
 
     /** Сохраняет границы узлов и точки перегиба рёбер — {@code 204}. */
     @PutMapping("/views/{id}/layout")
-    public ResponseEntity<Void> layout(EditorIdentity actor, @PathVariable UUID id, @RequestBody LayoutPatch patch) {
+    public ResponseEntity<Void> layout(EditorIdentity actor, @PathVariable UUID id,
+                                       @Valid @RequestBody LayoutPatch patch) {
         views.saveLayout(actor, new SaveViewLayoutCommand(id,
                 Optional.ofNullable(patch.nodes()).orElse(List.of()).stream()
                         .map(n -> new SaveViewLayoutCommand.NodeBounds(n.id(), n.x(), n.y(), n.width(), n.height()))
@@ -103,7 +96,8 @@ public class ViewController {
 
     /** Предложение авторазметки; база не меняется. */
     @PostMapping("/views/{id}/auto-layout")
-    public LayoutPatch autoLayout(EditorIdentity actor, @PathVariable UUID id, @RequestBody AutoLayoutRequest request) {
+    public LayoutPatch autoLayout(EditorIdentity actor, @PathVariable UUID id,
+                                  @Valid @RequestBody AutoLayoutRequest request) {
         return DtoMapper.layoutPatch(queries.proposeLayout(actor, layoutQuery(id, request)));
     }
 
@@ -113,7 +107,7 @@ public class ViewController {
      */
     @PostMapping("/views/{id}/nodes")
     public ResponseEntity<ViewNodeDto> place(EditorIdentity actor, @PathVariable UUID id,
-                                             @RequestBody PlaceNodeRequest request) {
+                                             @Valid @RequestBody PlaceNodeRequest request) {
         PlaceViewNodeResponse node = views.placeNode(actor, new PlaceViewNodeCommand(id, request.kind(),
                 request.elementId(), request.label(), request.content(), request.x(), request.y(), request.width(),
                 request.height(), request.parentId(), request.id(), request.archiId()));
@@ -126,21 +120,23 @@ public class ViewController {
     /** Переносит узел в другой родительский узел или на верхний уровень представления. */
     @PutMapping("/view-nodes/{id}/parent")
     public ViewNodeDto moveToParent(EditorIdentity actor, @PathVariable UUID id,
-                                    @RequestBody MoveNodeRequest request) {
+                                    @Valid @RequestBody MoveNodeRequest request) {
         return DtoMapper.node(views.moveNode(actor,
                 new MoveViewNodeCommand(id, request.parentId(), request.x(), request.y())));
     }
 
     /** Правит подпись, текст и собственный стиль узла. */
     @PatchMapping("/view-nodes/{id}")
-    public ViewNodeDto editNode(EditorIdentity actor, @PathVariable UUID id, @RequestBody EditNodeRequest request) {
+    public ViewNodeDto editNode(EditorIdentity actor, @PathVariable UUID id,
+                                @Valid @RequestBody EditNodeRequest request) {
         return DtoMapper.node(views.editNode(actor, new EditViewNodeCommand(id, request.label(), request.content(),
                 style(request.style()))));
     }
 
     /** Правит собственный стиль ребра. */
     @PatchMapping("/view-edges/{id}")
-    public ViewEdgeDto editEdge(EditorIdentity actor, @PathVariable UUID id, @RequestBody EditEdgeRequest request) {
+    public ViewEdgeDto editEdge(EditorIdentity actor, @PathVariable UUID id,
+                                @Valid @RequestBody EditEdgeRequest request) {
         return DtoMapper.edge(views.editEdge(actor, new EditViewEdgeCommand(id, style(request.style()))));
     }
 
@@ -154,10 +150,7 @@ public class ViewController {
     /** Новое ребро — {@code 201}; такое же ребро между теми же концами уже есть — {@code 200} с ним. */
     @PostMapping("/views/{id}/edges")
     public ResponseEntity<ViewEdgeDto> placeEdge(EditorIdentity actor, @PathVariable UUID id,
-                                                 @RequestBody PlaceEdgeRequest request) {
-        if (request.relationshipId() == null || request.sourceId() == null || request.targetId() == null) {
-            throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELDS_MISSING, EDGE_FIELDS));
-        }
+                                                 @Valid @RequestBody PlaceEdgeRequest request) {
         PlaceViewEdgeResponse edge = views.placeEdge(actor, new PlaceViewEdgeCommand(id, request.relationshipId(),
                 request.sourceId(), request.targetId(), bendpoints(request.bendpoints()), request.id(),
                 request.archiId()));
@@ -178,24 +171,13 @@ public class ViewController {
     }
 
     private static ProposeViewLayoutQuery layoutQuery(UUID viewId, AutoLayoutRequest request) {
-        if (request.nodes() == null) {
-            throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_MISSING, LAYOUT_NODES));
-        }
-        List<ProposeViewLayoutQuery.Node> nodes = request.nodes().stream().map(n -> {
-            if (n.id() == null) {
-                throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_MISSING, LAYOUT_NODE_ID));
-            }
-            return new ProposeViewLayoutQuery.Node(n.id(), n.parentId(), n.conceptType(), n.x(), n.y(), n.width(),
-                    n.height());
-        }).toList();
+        List<ProposeViewLayoutQuery.Node> nodes = request.nodes().stream()
+                .map(n -> new ProposeViewLayoutQuery.Node(n.id(), n.parentId(), n.conceptType(), n.x(), n.y(),
+                        n.width(), n.height()))
+                .toList();
         List<ProposeViewLayoutQuery.Edge> edges = Optional.ofNullable(request.edges()).orElse(List.of()).stream()
-                .map(e -> {
-                    if (e.id() == null || e.sourceId() == null || e.targetId() == null) {
-                        throw ModelingDomainException.invalid(
-                                Message.of(ModelingMessages.FIELDS_MISSING, LAYOUT_EDGE_FIELDS));
-                    }
-                    return new ProposeViewLayoutQuery.Edge(e.id(), e.sourceId(), e.targetId());
-                }).toList();
+                .map(e -> new ProposeViewLayoutQuery.Edge(e.id(), e.sourceId(), e.targetId()))
+                .toList();
         return new ProposeViewLayoutQuery(viewId, request.strategy(), nodes, edges);
     }
 

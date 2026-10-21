@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.adapter.rest;
 
+import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -15,9 +16,6 @@ import uz.salvadore.hamkorbank.archi.advisor.application.dto.query.GetAdvisorSet
 import uz.salvadore.hamkorbank.archi.advisor.application.dto.query.GetAdvisorStatusQuery;
 import uz.salvadore.hamkorbank.archi.advisor.application.dto.query.GetTokenUsageQuery;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.in.AdvisorAdminApplicationService;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
-import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Requester;
 
 /** Состояние помощника, выключатель и лимит, расход за месяц. */
@@ -43,13 +41,10 @@ public class AdvisorSettingsController {
         return DtoMapper.settings(admin.getAdvisorSettings(requester, new GetAdvisorSettingsQuery(workspaceId)));
     }
 
-    /** Изменить выключатель и лимит; без поля {@code enabled} запрос не разбирается. */
+    /** Изменить выключатель и лимит; без поля {@code enabled} — отказ формы запроса. */
     @PutMapping("/settings")
     public SettingsDto change(Requester requester, @RequestParam(required = false) UUID workspaceId,
-                              @RequestBody SettingsDto body) {
-        if (body.enabled() == null) {
-            throw AdvisorDomainException.invalid(Message.of(AdvisorMessages.FIELD_REQUIRED, "enabled"));
-        }
+                              @Valid @RequestBody SettingsDto body) {
         return DtoMapper.settings(admin.configureAdvisor(requester,
                 new ConfigureAdvisorCommand(workspaceId, body.enabled(), body.monthlyTokenLimit())));
     }

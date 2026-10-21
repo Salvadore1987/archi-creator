@@ -1,7 +1,7 @@
 package uz.salvadore.hamkorbank.archi.advisor.adapter.rest;
 
+import jakarta.validation.Valid;
 import java.util.Locale;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -58,34 +58,34 @@ public class AdvisorController {
 
     /** Ревью модели или одного представления — замечания потоком SSE. */
     @PostMapping("/review")
-    public ResponseEntity<SseEmitter> review(Requester requester, @RequestBody ReviewRequest body,
+    public ResponseEntity<SseEmitter> review(Requester requester, @Valid @RequestBody ReviewRequest body,
             @RequestHeader(value = IDEMPOTENCY_KEY, required = false) String key, Locale locale) {
         return stream(advisor.reviewModel(requester,
-                new ReviewModelCommand(model(body.modelId()), body.viewId(), key(key), locale)));
+                new ReviewModelCommand(body.modelId(), body.viewId(), key(key), locale)));
     }
 
     /** Подсказка по выбранному элементу и его окрестности — ответ потоком SSE. */
     @PostMapping("/explain")
-    public ResponseEntity<SseEmitter> explain(Requester requester, @RequestBody ExplainRequest body,
+    public ResponseEntity<SseEmitter> explain(Requester requester, @Valid @RequestBody ExplainRequest body,
             @RequestHeader(value = IDEMPOTENCY_KEY, required = false) String key, Locale locale) {
         return stream(advisor.explainElement(requester,
-                new ExplainElementCommand(model(body.modelId()), body.elementId(), key(key), locale)));
+                new ExplainElementCommand(body.modelId(), body.elementId(), key(key), locale)));
     }
 
     /** План фрагмента архитектуры по описанию — предложение элементов и связей, модель не меняется. */
     @PostMapping("/plan")
-    public ResponseEntity<SseEmitter> plan(Requester requester, @RequestBody PlanRequest body,
+    public ResponseEntity<SseEmitter> plan(Requester requester, @Valid @RequestBody PlanRequest body,
             @RequestHeader(value = IDEMPOTENCY_KEY, required = false) String key, Locale locale) {
         return stream(advisor.planModel(requester,
-                new PlanModelCommand(model(body.modelId()), body.prompt(), key(key), locale)));
+                new PlanModelCommand(body.modelId(), body.prompt(), key(key), locale)));
     }
 
     /** Документация по модели, представлению или элементу — текст потоком SSE. */
     @PostMapping("/document")
-    public ResponseEntity<SseEmitter> document(Requester requester, @RequestBody DocumentRequest body,
+    public ResponseEntity<SseEmitter> document(Requester requester, @Valid @RequestBody DocumentRequest body,
             @RequestHeader(value = IDEMPOTENCY_KEY, required = false) String key, Locale locale) {
         return stream(advisor.generateDocumentation(requester, new GenerateDocumentationCommand(
-                model(body.modelId()), body.viewId(), body.elementId(), key(key), locale)));
+                body.modelId(), body.viewId(), body.elementId(), key(key), locale)));
     }
 
     /** Поток читается в фоне: поток запроса освобождается, кадры уходят по мере прихода. */
@@ -104,13 +104,6 @@ public class AdvisorController {
                 .cacheControl(CacheControl.noStore())
                 .header("X-Accel-Buffering", "no")
                 .body(emitter);
-    }
-
-    private static UUID model(UUID modelId) {
-        if (modelId == null) {
-            throw AdvisorDomainException.invalid(Message.of(AdvisorMessages.FIELD_REQUIRED, "modelId"));
-        }
-        return modelId;
     }
 
     private static String key(String key) {

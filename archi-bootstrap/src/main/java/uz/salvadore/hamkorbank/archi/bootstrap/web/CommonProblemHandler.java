@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.web;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.net.URI;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -22,9 +23,12 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.ErrorResponse;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
@@ -88,6 +92,28 @@ public class CommonProblemHandler {
         LOG.debug("request not parsed: {} {}: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
         return problem(HttpStatus.BAD_REQUEST, ErrorCodes.BAD_REQUEST,
                 text(BootstrapMessages.BAD_REQUEST, unreadable(e)), request);
+    }
+
+    /**
+     * Тело не прошло проверку формы — поле не задано, элемент списка {@code null}: перечень путей
+     * полей, код и текст — контекста обработчика.
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    ProblemDetail invalidBody(MethodArgumentNotValidException e, HandlerMethod handler, HttpServletRequest request) {
+        return invalid(RequestViolations.fields(e), handler, request);
+    }
+
+    /** То же для тела-массива: ограничения на его элементах проверяет проверка метода. */
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    ProblemDetail invalidArguments(HandlerMethodValidationException e, HandlerMethod handler,
+                                   HttpServletRequest request) {
+        return invalid(RequestViolations.fields(e), handler, request);
+    }
+
+    private ProblemDetail invalid(List<String> fields, HandlerMethod handler, HttpServletRequest request) {
+        FormRefusal refusal = FormRefusal.of(handler.getBeanType());
+        return problem(refusal.status(), refusal.code(), text(refusal.key(fields.size()), String.join(", ", fields)),
+                request);
     }
 
     /** Отказ аутентификации и доступа — не ответ, а сигнал фильтру безопасности: он и отвечает. */
@@ -173,6 +199,7 @@ public class CommonProblemHandler {
             case 409 -> BootstrapMessages.TITLE_CONFLICT;
             case 413 -> BootstrapMessages.TITLE_TOO_LARGE;
             case 415 -> BootstrapMessages.TITLE_UNSUPPORTED_MEDIA_TYPE;
+            case 422 -> BootstrapMessages.TITLE_UNPROCESSABLE;
             case 500 -> BootstrapMessages.TITLE_INTERNAL;
             default -> BootstrapMessages.TITLE_NOT_SUPPORTED;
         };

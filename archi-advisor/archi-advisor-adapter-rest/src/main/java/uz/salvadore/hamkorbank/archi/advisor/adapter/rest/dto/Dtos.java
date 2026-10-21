@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto;
 
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -7,7 +8,8 @@ import java.util.UUID;
 /**
  * DTO помощника по контракту OpenAPI. Отсутствующее значение — {@code null}, а не
  * {@code Optional}: так его видит JSON. Ни один ответ не несёт команды изменения
- * модели — только текст, ссылки и предложения.
+ * модели — только текст, ссылки и предложения. Bean Validation проверяет только форму
+ * запроса; правила значений — сценарий и домен.
  */
 public final class Dtos {
 
@@ -15,19 +17,19 @@ public final class Dtos {
     }
 
     /** Запрос ревью: модель и, если задано, одно представление вместо всей модели. */
-    public record ReviewRequest(UUID modelId, UUID viewId) {
+    public record ReviewRequest(@NotNull UUID modelId, UUID viewId) {
     }
 
     /** Запрос подсказки: модель и {@code archiId} элемента. */
-    public record ExplainRequest(UUID modelId, String elementId) {
+    public record ExplainRequest(@NotNull UUID modelId, String elementId) {
     }
 
     /** Запрос плана: модель и описание фрагмента архитектуры. */
-    public record PlanRequest(UUID modelId, String prompt) {
+    public record PlanRequest(@NotNull UUID modelId, String prompt) {
     }
 
     /** Запрос документации: по модели, представлению или элементу — не больше одного из двух последних. */
-    public record DocumentRequest(UUID modelId, UUID viewId, String elementId) {
+    public record DocumentRequest(@NotNull UUID modelId, UUID viewId, String elementId) {
     }
 
     /** Ссылка на объект модели: идентификатор Archi и имя. */
@@ -71,7 +73,7 @@ public final class Dtos {
     }
 
     /** Настройки помощника: выключатель и месячный лимит; лимит {@code null} — значение по умолчанию. */
-    public record SettingsDto(Boolean enabled, Long monthlyTokenLimit) {
+    public record SettingsDto(@NotNull Boolean enabled, Long monthlyTokenLimit) {
     }
 
     /** Строка отчёта о расходе: автор или функция и их обращения, отказы и токены. */

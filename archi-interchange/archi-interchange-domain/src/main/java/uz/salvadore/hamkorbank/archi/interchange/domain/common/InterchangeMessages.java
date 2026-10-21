@@ -378,6 +378,10 @@ public final class InterchangeMessages {
     public static final String WHERE_VIEW_NODE = "interchange.mapping.where.view-node";
     /** Уточнение к неожиданному узлу: у него нет обязательного атрибута. */
     public static final String WHERE_WITHOUT = "interchange.mapping.where.without";
+    /** Не задано обязательное поле запроса: путь поля. */
+    public static final String REQUEST_FIELD_MISSING = "interchange.request.field-missing";
+    /** Не заданы обязательные поля запроса: их перечень. */
+    public static final String REQUEST_FIELDS_MISSING = "interchange.request.fields-missing";
     /** Заголовок ответа об ошибке, когда отказ вызван содержимым файла. */
     public static final String TITLE_BAD_FILE = "interchange.problem.bad-file";
     /** Заголовок ответа об ошибке для статуса 409. */

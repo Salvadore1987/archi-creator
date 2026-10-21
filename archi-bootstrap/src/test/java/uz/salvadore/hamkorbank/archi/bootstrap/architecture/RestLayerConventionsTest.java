@@ -5,23 +5,27 @@ import static com.tngtech.archunit.core.domain.JavaClass.Predicates.type;
 import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
 import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
@@ -133,6 +137,26 @@ class RestLayerConventionsTest {
                 .orShould().dependOnClassesThat().resideInAPackage("..adapter.persistence..")
                 .because("порядок проверок, транзакция и роль живут в сценарии; обход его из контроллера "
                         + "их теряет");
+
+        rule.check(classes);
+    }
+
+    @Test
+    @DisplayName("тело запроса проверяется по форме: у каждого @RequestBody есть @Valid")
+    void requestBodiesAreValidated() {
+        ArchRule rule = methods().that().areDeclaredInClassesThat(CONTROLLER)
+                .should(new ArchCondition<>("принимать тело запроса только с @Valid") {
+                    @Override
+                    public void check(JavaMethod method, ConditionEvents events) {
+                        method.getParameters().stream()
+                                .filter(parameter -> parameter.isAnnotatedWith(RequestBody.class)
+                                        && !parameter.isAnnotatedWith(Valid.class))
+                                .forEach(parameter -> events.add(SimpleConditionEvent.violated(method,
+                                        method.getFullName() + ": тело без @Valid")));
+                    }
+                })
+                .because("поле, не заданное в теле, или null в списке иначе доходят до сценария и домена "
+                        + "и падают там 500-м вместо отказа формы");
 
         rule.check(classes);
     }

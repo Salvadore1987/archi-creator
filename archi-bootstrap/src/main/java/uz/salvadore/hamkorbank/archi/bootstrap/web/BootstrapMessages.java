@@ -11,6 +11,8 @@ public final class BootstrapMessages {
     public static final String UNREADABLE_PARAMETER = "bootstrap.problem.unreadable-parameter";
     /** Обязательный параметр запроса не задан: имя параметра. */
     public static final String MISSING_PARAMETER = "bootstrap.problem.missing-parameter";
+    /** Обязательные поля тела не заданы: их перечень. */
+    public static final String MISSING_FIELDS = "bootstrap.problem.missing-fields";
     /** Обязательная часть формы не задана: имя части. */
     public static final String MISSING_PART = "bootstrap.problem.missing-part";
     /** Форма {@code multipart} не разобрана. */
@@ -45,6 +47,8 @@ public final class BootstrapMessages {
     public static final String TITLE_UNSUPPORTED_MEDIA_TYPE = "bootstrap.problem.title-unsupported-media-type";
     /** Заголовок ответа на неожиданный сбой сервера. */
     public static final String TITLE_INTERNAL = "bootstrap.problem.title-internal";
+    /** Заголовок ответа на запрос, не прошедший проверку формы. */
+    public static final String TITLE_UNPROCESSABLE = "bootstrap.problem.title-unprocessable";
     /** Заголовок прочих отказов Spring MVC со своим статусом. */
     public static final String TITLE_NOT_SUPPORTED = "bootstrap.problem.title-not-supported";
     /** Запрос пришёл без аутентификации. */

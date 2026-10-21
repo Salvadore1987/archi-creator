@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.rest;
 
+import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
@@ -48,9 +49,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.in.MetamodelAppli
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.RelationshipApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.TreeApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
-import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 /**
  * Содержимое модели: элементы, связи, дерево папок, метамодель для палитры.
@@ -77,7 +75,7 @@ public class ContentController {
     /** Создаёт элемент в модели — {@code 201} с адресом нового элемента. */
     @PostMapping("/models/{id}/elements")
     public ResponseEntity<ElementDto> createElement(
-            EditorIdentity actor, @PathVariable UUID id, @RequestBody CreateElementRequest request,
+            EditorIdentity actor, @PathVariable UUID id, @Valid @RequestBody CreateElementRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String key) {
         ElementResponse element = elements.createElement(actor, new CreateElementCommand(id, request.archiType(),
                 request.name(), request.folderId(), request.id(), request.archiId(), key));
@@ -86,7 +84,8 @@ public class ContentController {
 
     /** Правит имя, описание и свойства элемента; не переданное поле не меняется. */
     @PatchMapping("/elements/{id}")
-    public ElementDto updateElement(EditorIdentity actor, @PathVariable UUID id, @RequestBody ElementPatch patch) {
+    public ElementDto updateElement(EditorIdentity actor, @PathVariable UUID id,
+                                    @Valid @RequestBody ElementPatch patch) {
         return DtoMapper.element(elements.editElement(actor, new EditElementCommand(id, patch.name(),
                 patch.documentation(), properties(patch.properties()))));
     }
@@ -103,10 +102,10 @@ public class ContentController {
     /** Новая — {@code 201}; дубль того же типа между той же парой — {@code 200} с существующей. */
     @PostMapping("/models/{id}/relationships")
     public ResponseEntity<RelationshipDto> createRelationship(
-            EditorIdentity actor, @PathVariable UUID id, @RequestBody CreateRelationshipRequest request,
+            EditorIdentity actor, @PathVariable UUID id, @Valid @RequestBody CreateRelationshipRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String key) {
         CreateRelationshipResponse result = relationships.createRelationship(actor, new CreateRelationshipCommand(id,
-                request.archiType(), require(request.sourceId(), "sourceId"), require(request.targetId(), "targetId"),
+                request.archiType(), request.sourceId(), request.targetId(),
                 request.name(), request.folderId(), request.accessType(), request.directed(), request.id(),
                 request.archiId(), edge(request.view()), key));
         RelationshipDto body = DtoMapper.relationship(result.relationship(), result.edgeId());
@@ -118,7 +117,7 @@ public class ContentController {
     /** Правит имя, описание и свойства связи; не переданное поле не меняется. */
     @PatchMapping("/relationships/{id}")
     public RelationshipDto updateRelationship(EditorIdentity actor, @PathVariable UUID id,
-                                              @RequestBody ElementPatch patch) {
+                                              @Valid @RequestBody ElementPatch patch) {
         return DtoMapper.relationship(relationships.editRelationship(actor, new EditRelationshipCommand(id,
                 patch.name(), patch.documentation(), properties(patch.properties()))), null);
     }
@@ -135,34 +134,34 @@ public class ContentController {
     /** Создаёт папку в дереве модели — {@code 201}. */
     @PostMapping("/models/{id}/folders")
     public ResponseEntity<FolderDto> createFolder(
-            EditorIdentity actor, @PathVariable UUID id, @RequestBody CreateFolderRequest request,
+            EditorIdentity actor, @PathVariable UUID id, @Valid @RequestBody CreateFolderRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String key) {
         return ResponseEntity.status(HttpStatus.CREATED).body(DtoMapper.folder(tree.createFolder(actor,
-                new CreateFolderCommand(id, require(request.parentId(), "parentId"), request.name(), request.id(),
+                new CreateFolderCommand(id, request.parentId(), request.name(), request.id(),
                         request.archiId(), key))));
     }
 
     /** Переименовывает папку, элемент, связь или представление в дереве. */
     @PatchMapping("/models/{id}/tree/{itemId}")
     public ResponseEntity<Void> rename(EditorIdentity actor, @PathVariable UUID id, @PathVariable UUID itemId,
-                                       @RequestBody RenameRequest request) {
+                                       @Valid @RequestBody RenameRequest request) {
         tree.renameTreeItem(actor, new RenameTreeItemCommand(id, itemId, request.name()));
         return ResponseEntity.noContent().build();
     }
 
     /** Переносит объекты дерева в папку. */
     @PostMapping("/models/{id}/tree/move")
-    public ResponseEntity<Void> move(EditorIdentity actor, @PathVariable UUID id, @RequestBody MoveRequest request) {
-        tree.moveTreeItems(actor, new MoveTreeItemsCommand(id, require(request.targetFolderId(), "targetFolderId"),
-                items(request.itemIds())));
+    public ResponseEntity<Void> move(EditorIdentity actor, @PathVariable UUID id,
+                                     @Valid @RequestBody MoveRequest request) {
+        tree.moveTreeItems(actor, new MoveTreeItemsCommand(id, request.targetFolderId(), request.itemIds()));
         return ResponseEntity.noContent().build();
     }
 
     /** Групповое удаление — одна транзакция: часть не проходит — не удаляется ничего. */
     @PostMapping("/models/{id}/tree/delete")
     public ResponseEntity<Void> deleteItems(EditorIdentity actor, @PathVariable UUID id,
-                                            @RequestBody ItemsRequest request) {
-        tree.deleteTreeItems(actor, new DeleteTreeItemsCommand(id, items(request.itemIds())));
+                                            @Valid @RequestBody ItemsRequest request) {
+        tree.deleteTreeItems(actor, new DeleteTreeItemsCommand(id, request.itemIds()));
         return ResponseEntity.noContent().build();
     }
 
@@ -182,27 +181,12 @@ public class ContentController {
     }
 
     private static CreateRelationshipCommand.Edge edge(EdgePlacementRequest view) {
-        return view == null ? null : new CreateRelationshipCommand.Edge(require(view.viewId(), "view.viewId"),
-                require(view.sourceNodeId(), "view.sourceNodeId"), require(view.targetNodeId(), "view.targetNodeId"),
-                view.edgeId(), view.edgeArchiId());
+        return view == null ? null : new CreateRelationshipCommand.Edge(view.viewId(), view.sourceNodeId(),
+                view.targetNodeId(), view.edgeId(), view.edgeArchiId());
     }
 
     private static List<PropertyValue> properties(List<PropertyDto> properties) {
         return properties == null ? null : properties.stream()
                 .map(p -> new PropertyValue(p.key(), p.value() == null ? "" : p.value())).toList();
-    }
-
-    private static List<UUID> items(List<UUID> ids) {
-        if (ids == null || ids.isEmpty()) {
-            throw ModelingDomainException.invalid(Message.of(ModelingMessages.ITEMS_EMPTY));
-        }
-        return ids;
-    }
-
-    private static <T> T require(T value, String name) {
-        if (value == null) {
-            throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_MISSING, name));
-        }
-        return value;
     }
 }

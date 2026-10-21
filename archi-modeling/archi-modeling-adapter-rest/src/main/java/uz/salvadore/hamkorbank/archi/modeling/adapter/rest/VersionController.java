@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.rest;
 
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -44,7 +45,7 @@ public class VersionController {
     /** Сохранение: новая версия — {@code 201}; изменений нет или повтор ключа — {@code 200}. */
     @PostMapping
     public ResponseEntity<SaveResult> save(EditorIdentity actor, @PathVariable UUID id,
-                                           @RequestBody(required = false) CommentRequest request,
+                                           @Valid @RequestBody(required = false) CommentRequest request,
                                            @RequestHeader(value = "Idempotency-Key", required = false) String key) {
         SaveVersionResponse result = versions.saveVersion(actor, new SaveVersionCommand(id,
                 request == null ? null : request.comment(), key));
@@ -55,7 +56,7 @@ public class VersionController {
     /** Откатывает модель к версии; откат фиксируется новой версией. */
     @PostMapping("/{no}/restore")
     public VersionInfo restore(EditorIdentity actor, @PathVariable UUID id, @PathVariable long no,
-                               @RequestBody(required = false) CommentRequest request) {
+                               @Valid @RequestBody(required = false) CommentRequest request) {
         return DtoMapper.version(versions.restoreVersion(actor, new RestoreVersionCommand(id, no,
                 request == null ? null : request.comment())));
     }
@@ -63,7 +64,7 @@ public class VersionController {
     /** Ставит или снимает метку версии. */
     @PutMapping("/{no}/label")
     public VersionInfo label(EditorIdentity actor, @PathVariable UUID id, @PathVariable long no,
-                             @RequestBody LabelRequest request) {
+                             @Valid @RequestBody LabelRequest request) {
         return DtoMapper.version(versions.labelVersion(actor, new LabelVersionCommand(id, no, request.label())));
     }
 }
