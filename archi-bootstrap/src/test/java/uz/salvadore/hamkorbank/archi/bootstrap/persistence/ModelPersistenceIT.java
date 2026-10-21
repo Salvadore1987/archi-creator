@@ -1,11 +1,13 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,6 +15,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.IntegrationTest;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.BendpointValue;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.PropertyValue;
@@ -32,6 +36,8 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelTreeRe
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewNodeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentUpdateException;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelLockRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ElementApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
@@ -39,6 +45,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryAppl
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.RelationshipApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
 
@@ -61,6 +68,10 @@ class ModelPersistenceIT extends IntegrationTest {
     ModelQueryApplicationService queries;
     @Autowired
     ViewQueryApplicationService viewQueries;
+    @Autowired
+    ModelLockRepository lockRows;
+    @Autowired
+    PlatformTransactionManager transactions;
 
     @Test
     @DisplayName("INV-MDL-001: дубль archi_id в модели отклоняет база — UNIQUE (model_id, archi_id)")
@@ -76,6 +87,19 @@ class ModelPersistenceIT extends IntegrationTest {
                 insert into element (id, model_id, folder_id, archi_id, archi_type, layer, name, sort_order, supported)
                 values (?, ?, ?, ?, 'archimate:ApplicationComponent', 'APPLICATION', 'Двойник', 9000, true)
                 """, IDS.generate(), model.value(), folder, element.archiId()));
+    }
+
+    @Test
+    @DisplayName("отказ записи блокировки, не связанный с гонкой, не выдаётся за занятую блокировку")
+    void nonConflictWriteFailureIsNotReportedAsLockConflict() {
+        Instant now = Instant.now();
+        ModelLock ofMissingModel = ModelLock.restore(ModelId.of(IDS.generate()), ARCHITECT.subject(), now,
+                now.plusSeconds(60));
+
+        RuntimeException failure = assertThrows(RuntimeException.class, () -> new TransactionTemplate(transactions)
+                .executeWithoutResult(status -> lockRows.save(ofMissingModel)));
+
+        assertFalse(failure instanceof ConcurrentUpdateException, failure.toString());
     }
 
     @Test

@@ -46,6 +46,9 @@ public class JpaIdempotencyRepository implements IdempotencyRepository {
             em.persist(entity);
             em.flush();
         } catch (PersistenceException e) {
+            if (!WriteConflicts.isConflict(e)) {
+                throw e;
+            }
             throw new ModelingDomainException(IdempotentCommand.INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.IDEMPOTENT_IN_PROGRESS));
         }

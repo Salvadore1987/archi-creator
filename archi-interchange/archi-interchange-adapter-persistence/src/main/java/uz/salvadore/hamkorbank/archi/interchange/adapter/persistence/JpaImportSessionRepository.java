@@ -102,6 +102,9 @@ public class JpaImportSessionRepository implements ImportSessionRepository {
             }
             em.flush();
         } catch (PersistenceException e) {
+            if (!WriteConflicts.isConflict(e)) {
+                throw e;
+            }
             throw new InterchangeException(InterchangeCodes.IMPORT_IDEMPOTENCY, Failure.CONFLICT,
                     Message.of(InterchangeMessages.IMPORT_IN_PROGRESS), Map.of());
         }

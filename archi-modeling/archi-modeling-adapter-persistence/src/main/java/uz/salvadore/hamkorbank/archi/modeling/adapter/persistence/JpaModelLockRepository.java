@@ -48,6 +48,9 @@ public class JpaModelLockRepository implements ModelLockRepository {
             }
             em.flush();
         } catch (PersistenceException e) {
+            if (!WriteConflicts.isConflict(e)) {
+                throw e;
+            }
             throw new ConcurrentUpdateException(Message.of(ModelingMessages.MODEL_LOCK, lock.modelId()));
         }
     }
