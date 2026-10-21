@@ -123,7 +123,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.service.WorkspaceAppli
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.UuidV7;
 
 /** Сценарии modeling — бинами, порты — реализациями из адаптеров и отсюда. */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableScheduling
 @EnableConfigurationProperties(ModelingSettings.class)
 public class ModelingConfiguration {

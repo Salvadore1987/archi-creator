@@ -11,7 +11,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 /**
  * Настройка веб-слоя: фильтр корреляции журнала и разбор текущего редактора из аутентификации в аргумент обработчика.
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class WebConfiguration implements WebMvcConfigurer {
 
     /** После цепочки безопасности: subject в MDC известен только там. */

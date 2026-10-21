@@ -40,6 +40,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
 /**
@@ -422,6 +423,23 @@ class CodingRulesTest {
                                 place + " constructs " + call.getTargetOwner().getSimpleName())));
             }
         };
+    }
+
+    @Test
+    @DisplayName("Конфигурации — без прокси методов бинов: зависимость бина — параметр метода")
+    void configurationsDoNotProxyBeanMethods() {
+        classes().that().areAnnotatedWith(Configuration.class)
+                .should(new ArchCondition<>("объявлять @Configuration(proxyBeanMethods = false)") {
+                    @Override
+                    public void check(JavaClass item, ConditionEvents events) {
+                        boolean proxied = item.getAnnotationOfType(Configuration.class).proxyBeanMethods();
+                        events.add(new SimpleConditionEvent(item, !proxied,
+                                item.getName() + " проксирует методы бинов"));
+                    }
+                })
+                .because("прокси CGLIB нужен только вызову одного метода бина из другого; без него конфигурация "
+                        + "легче, а зависимость видна в сигнатуре")
+                .check(classes);
     }
 
     @Test

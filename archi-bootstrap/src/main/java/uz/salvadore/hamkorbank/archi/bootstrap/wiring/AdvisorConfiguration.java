@@ -48,7 +48,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceAppli
  * Сценарии помощника — бинами. Мост к modeling — только чтение: сценарий запросов
  * и пространства, ни одного сервиса записи.
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(AiSettings.class)
 public class AdvisorConfiguration {
 

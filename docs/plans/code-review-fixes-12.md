@@ -19,7 +19,7 @@
 | № | Задача | Находки | Проверка | Статус |
 |---|---|---|---|---|
 | 1 | Роли из `realm_access.roles` — свойством `authorities-claim-expressions` и префиксом `ROLE_`; конвертер и его бин удалить | 12-07 | `KeycloakIT` (роли из токена Keycloak); `CodingRulesTest`: в основном коде нет `Converter<Jwt, …>` | ✅ |
-| 2 | `@Configuration(proxyBeanMethods = false)` у всех конфигураций | 12-05 | `CodingRulesTest#configurationsDoNotProxyBeanMethods` | ⬜ |
+| 2 | `@Configuration(proxyBeanMethods = false)` у всех конфигураций | 12-05 | `CodingRulesTest#configurationsDoNotProxyBeanMethods` | ✅ |
 | 3 | Заглушка — `dev & !prod`, настоящая цепочка — `!dev \| prod` | 12-09 | `SecurityProfilesTest`: при `dev,prod` — настоящая цепочка, при `dev` — заглушка, без профиля — настоящая | ⬜ |
 | 4 | Три цепочки: Actuator (`EndpointRequest`), API, UI; открытое — списком, остальное — отказ | 12-01, 12-02 | `PublicSurfaceIT`: статика, `/ui-config`, пробы — открыты; адрес вне списка и Actuator без токена — не `200` | ⬜ |
 | 5 | `traceId` и `modelId` — фильтром до цепочки безопасности, субъект — после | 12-03 | `PublicSurfaceIT`: `401` несёт `X-Trace-Id` | ⬜ |
@@ -39,3 +39,6 @@
   `RealmRolesTest`: тот же разбор, что собирает Boot, по выражению и префиксу из `application.yaml`.
   Отсутствие `realm_access` даёт пустой набор: ошибка выражения SpEL Spring Security глушит сам.
   На старом коде правило `noHandWrittenJwtConverters` падало на `KeycloakRealmRolesConverter`.
+- **Задача 2.** Вызов метода бина из другого был один — `jwtAuthenticationConverter()` в `SecurityConfig`,
+  и он ушёл задачей 1; остальные шесть конфигураций получали зависимости параметрами и прежде.
+  На старом коде правило падало семь раз — на каждой конфигурации.

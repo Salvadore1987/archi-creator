@@ -32,7 +32,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  * Дублировать его в матчерах URL значило бы завести второй источник правды,
  * который разойдётся с первым.
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @EnableConfigurationProperties(CorsSettings.class)
 @Profile("!dev")

@@ -24,7 +24,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  * в dev не проверяются, и ошибка в них видна только на профиле {@code prod}
  * или в интеграционном тесте.
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @EnableConfigurationProperties(CorsSettings.class)
 @Profile("dev")

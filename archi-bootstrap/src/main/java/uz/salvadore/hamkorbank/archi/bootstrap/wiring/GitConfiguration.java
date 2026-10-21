@@ -53,7 +53,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 
 /** Git: адаптеры портов, публикация с проходом очереди по расписанию и импорт по ссылке. */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(GitSettings.class)
 public class GitConfiguration {
 
