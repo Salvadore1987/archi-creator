@@ -93,3 +93,11 @@
   порчей: путь `/ai/usage`, переименованный в контракте, роняет тест обоими списками.
 
 ## Итог
+
+Все девять задач закрыты 2026-10-21. `./mvnw -P '!frontend' verify` зелёный: 125 интеграционных тестов
+(было 112 после этапа 10; новые — `ProblemFallbackIT`, `RequestValidationIT`, `VersionPageIT` и случаи
+в `LocalizedProblemIT`, `ClientIdsIT`), покрытие строк 92,5 %. Новые юнит-тесты — `OpenApiContractTest`,
+`AdvisorControllerTest`, `VersionListQueryHandlerTest`, правила `RestLayerConventionsTest#requestBodiesAreValidated`
+и `#controllersDoNotBuildDtos`. Зависимости Maven не менялись — граф не перерисовывался. Фронтенд не тронут:
+тело истории версий осталось массивом, коды прежних отказов те же.
+
