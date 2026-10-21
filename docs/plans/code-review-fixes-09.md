@@ -19,10 +19,10 @@
 | 1 | Исключения основного кода — непроверяемые; `LlmUnavailableException` — `RuntimeException` | 09-01 | `CodingRulesTest`: класс основного кода, наследующий `Exception` не через `RuntimeException`, роняет сборку | ✅ |
 | 2 | Сессия занимает ключ до отказов и до внешнего API | 09-02 | `AdvisorIdempotencyTest`: ключ занят, пока читалась модель, — `409`, `open` не вызван; `AdvisorSessionClaimIT`: второе занятие ключа ждёт коммита первого и отказывает | ✅ |
 | 3 | Обрыв потока списывает выход по оценке | 09-03 | `AnthropicLlmClientTest` (подменный сервер): поток обрезан после текста или отменён — `LlmUnavailableException`, расход выхода не меньше оценки | ✅ |
-| 4 | Допуск — одним чтением; внутри записи без вложенной транзакции; метрика бюджета — после коммита | 09-04, 09-06 | `AdvisorServiceTest`: фейк `UnitOfWork` отказывает вложенной транзакции; настройки и бюджет читаются одной | ✅ |
+| 4 | Допуск — одним чтением; внутри записи без вложенной транзакции; метрика бюджета — после коммита | 09-04, 09-06 | `AdvisorSessionStartCommandHandlerTest` (был `AdvisorServiceTest`): фейк `UnitOfWork` отказывает вложенной транзакции; настройки и бюджет читаются одной | ✅ |
 | 5 | Повтор отклонённой сессии — с деталями отказа | 09-05 | `AdvisorIdempotencyTest`: повтор `BUDGET_EXHAUSTED` — дата сброса, `RATE_LIMITED` — ожидание | ✅ |
 | 6 | Окно частоты снимается, когда опустело; ключ JSON экранируется | 09-07, 09-08 | `RateLimiterTest`, `ContextJsonTest` | ✅ |
-| 7 | Advisor — входные порты, handler'ы, DTO | 09-09 | `ApplicationLayerTest` с контекстом advisor; `AdvisorHandlersTest`: роль до работы у всех сценариев | ⬜ |
+| 7 | Advisor — входные порты, handler'ы, DTO | 09-09 | `ApplicationLayerTest` с контекстом advisor; `AdvisorHandlersTest`: роль до работы у всех сценариев | ✅ |
 
 Находка 09-10 (счётчик повторов SDK Anthropic) переносится в этап 13 — адаптер Anthropic читается там целиком.
 
@@ -51,3 +51,14 @@
   повтор ключа отдаёт результат сессии, а результат отклонённой — отказ (новый запрос — новый ключ).
   Ожидание при повторе — остаток минуты от обращения, не меньше секунды; держать отказ «вечным»
   без ожидания значило бы снова отдавать `Retry-After` без числа.
+- **Задача 7.** Четыре функции — один handler `AdvisorSessionStartCommandHandler` с четырьмя командами:
+  порядок отказов, поток и списание у них общие, различаются только запрос домена и инструменты.
+  Вспомогательные части сценария (`ContextPlanner`, `ResultReader`, `AdvisorTools`, `ContextJson`,
+  `RateLimiter`, `ActiveSessions`, `AdvisorPolicy`) переехали из `service` в `handler`: в `service`
+  остались только реализации портов. Проводка переехала из `bootstrap/advisor` в `bootstrap/wiring`,
+  как у interchange: только там правило адаптеров разрешает видеть handler'ы. Тесты сценария
+  перенесены в пакет `handler` и переименованы (`AdvisorServiceTest` → `AdvisorSessionStartCommandHandlerTest`,
+  `AdvisorAdminServiceTest` → `AdvisorAdminHandlersTest`); ссылка в UC-ADV-001 поправлена.
+  Правило `ApplicationLayerTest#adaptersUseAdvisorInputPorts` на коде до задачи давало 50 нарушений.
+  `package-info` в подпакетах `dto` правило DTO считает классом верхнего уровня — у interchange их там нет,
+  и у advisor тоже нет.

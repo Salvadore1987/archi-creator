@@ -36,8 +36,10 @@ class ApplicationLayerTest {
     private static final String ROOT = "uz.salvadore.hamkorbank.archi";
     private static final String MODELING = ROOT + ".modeling.application";
     private static final String INTERCHANGE = ROOT + ".interchange.application";
+    private static final String ADVISOR = ROOT + ".advisor.application";
     /** Личность вызывающего — параметр входного порта рядом с командой, а не её данные. */
-    private static final String ACTOR = ROOT + ".modeling.domain.common.EditorIdentity";
+    private static final Set<String> ACTORS = Set.of(ROOT + ".modeling.domain.common.EditorIdentity",
+            ROOT + ".advisor.domain.common.Requester");
     /**
      * Сценарии interchange, ещё не переведённые на входные порты: адаптеры пока зовут их напрямую.
      * Остаток уходит из списка по мере перевода.
@@ -69,7 +71,8 @@ class ApplicationLayerTest {
         return Stream.of(
                 new Context("modeling", MODELING, List.of(ROOT + ".modeling.domain")),
                 new Context("interchange", INTERCHANGE, List.of(ROOT + ".interchange.domain",
-                        ROOT + ".modeling.domain")));
+                        ROOT + ".modeling.domain")),
+                new Context("advisor", ADVISOR, List.of(ROOT + ".advisor.domain")));
     }
 
     @BeforeAll
@@ -155,6 +158,17 @@ class ApplicationLayerTest {
                 .check(classes);
     }
 
+    @Test
+    @DisplayName("Адаптеры берут из application advisor только входной порт, его DTO и выходные порты")
+    void adaptersUseAdvisorInputPorts() {
+        noClasses().that().resideOutsideOfPackages(ADVISOR + "..", ROOT + ".bootstrap.wiring..")
+                .should().dependOnClassesThat(describe("advisor application class behind port.in",
+                        target -> target.getPackageName().startsWith(ADVISOR)
+                                && !target.getPackageName().startsWith(ADVISOR + ".port")
+                                && !target.getPackageName().startsWith(ADVISOR + ".dto")))
+                .check(classes);
+    }
+
     /** Класс application interchange, который адаптеру не положен: не порт, не DTO и не поимённое исключение. */
     private static boolean interchangeInternal(JavaClass target) {
         String packageName = target.getPackageName();
@@ -184,12 +198,12 @@ class ApplicationLayerTest {
     /** Тип выходного порта: за ним хранение и агрегаты, сценарий наружу его не отдаёт и не принимает. */
     private static boolean outputPort(JavaClass type) {
         JavaClass base = type.isArray() ? type.getBaseComponentType() : type;
-        return base.getPackageName().equals(MODELING + ".port") || base.getPackageName().equals(INTERCHANGE + ".port");
+        return Set.of(MODELING + ".port", INTERCHANGE + ".port", ADVISOR + ".port").contains(base.getPackageName());
     }
 
     private static boolean domain(Context context, JavaClass type) {
         JavaClass base = type.isArray() ? type.getBaseComponentType() : type;
         return context.domains().stream().anyMatch(base.getPackageName()::startsWith)
-                && !base.getName().equals(ACTOR);
+                && !ACTORS.contains(base.getName());
     }
 }

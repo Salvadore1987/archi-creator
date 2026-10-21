@@ -108,7 +108,14 @@ Application-слои без Spring: транзакция — порт `UnitOfWor
 Держит `ApplicationLayerTest` (ArchUnit), исключений нет. Содержимое модели между modeling и раскладкой
 документа ходит строками из простых значений (`dto/ModelRows`): агрегаты из строк и обратно собирает
 `mapper/ModelRowsMapper`, а раскладка спрашивает правила формата у `mapper/ModelRowRules` — так остаток
-XML тот же, а правило одно. Advisor переводится по этому образцу на своём этапе ревью.
+XML тот же, а правило одно. **Application-слой advisor — по тому же образцу.** Входные порты `port/in/` — четыре функции
+(`AdvisorApplicationService`, поток `AdvisorStream` в `StreamSink` из DTO) и управление
+(`AdvisorAdminApplicationService`); handler'ы — в `handler`, общее — `AdvisorKernel` (роль, метрика,
+транзакция, события, часы) и `AdvisorBudgets` (бюджет с настройками пространства). Проводка —
+`bootstrap/wiring/AdvisorConfiguration`; адаптеру из application advisor доступны только `port`, `port.in`
+и `dto` (`ApplicationLayerTest`). Новая сессия занимает ключ идемпотентности (`claim`, блокировка ключа
+в Postgres) до отказов и до внешнего API; поток Anthropic без `message_stop` — обрыв, выход списывается
+не меньше оценки по пришедшим символам.
 
 **Application-слой interchange — по тому же образцу.** Входные порты `port/in/` — импорт файла,
 настройка импорта, выгрузка модели, картинки представлений, привязка к Git, публикация, импорт
@@ -166,7 +173,7 @@ API и фиксирует версию. Идентификаторы новых 
 | Что | Где |
 |---|---|
 | Домен помощника: сессия, бюджет месяца, контекст модели с усечением | `archi-advisor-domain/.../advisor/domain/` (`session/`, `budget/`, `context/`) |
-| Сценарии: обращение к четырём функциям, управление и расход ([`UC-ADV-001`…`003`](spec/application/advisor/usecases/)) | `archi-advisor-application/.../application/service/` |
+| Сценарии: обращение к четырём функциям, управление и расход ([`UC-ADV-001`…`003`](spec/application/advisor/usecases/)) | `archi-advisor-application/.../application/handler/`, входные порты — `port/in/` |
 | Хранение: сессии, бюджеты, исход в аудите | `archi-advisor-adapter-persistence`, миграция `V4__advisor.sql` |
 | REST `/ai/**`: поток SSE на `SseEmitter`, отказы до потока | `archi-advisor-adapter-rest` |
 | Клиент Anthropic (Java SDK), мост к modeling на чтение, промпты, метрики | `archi-bootstrap/.../bootstrap/advisor/`, `src/main/resources/advisor/prompts/` |

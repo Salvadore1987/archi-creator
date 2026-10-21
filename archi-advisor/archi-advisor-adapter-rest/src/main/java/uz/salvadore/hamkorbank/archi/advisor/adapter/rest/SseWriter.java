@@ -6,11 +6,11 @@ import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import tools.jackson.databind.json.JsonMapper;
 import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.TokenDto;
-import uz.salvadore.hamkorbank.archi.advisor.application.service.SessionMeta;
-import uz.salvadore.hamkorbank.archi.advisor.application.service.StreamSink;
-import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorAnswer;
-import uz.salvadore.hamkorbank.archi.advisor.domain.session.Finding;
-import uz.salvadore.hamkorbank.archi.advisor.domain.session.ModelPlan;
+import uz.salvadore.hamkorbank.archi.advisor.application.dto.result.AdvisorAnswerResponse;
+import uz.salvadore.hamkorbank.archi.advisor.application.dto.result.FindingResponse;
+import uz.salvadore.hamkorbank.archi.advisor.application.dto.result.ModelPlanResponse;
+import uz.salvadore.hamkorbank.archi.advisor.application.dto.result.SessionMetaResponse;
+import uz.salvadore.hamkorbank.archi.advisor.application.port.in.StreamSink;
 
 /**
  * Кадры SSE: {@code event:<тип>} и одна строка {@code data:} с JSON, каждый кадр —
@@ -35,22 +35,22 @@ final class SseWriter implements StreamSink {
     }
 
     @Override
-    public void finding(Finding finding) {
+    public void finding(FindingResponse finding) {
         frame("finding", DtoMapper.finding(finding));
     }
 
     @Override
-    public void plan(ModelPlan plan) {
+    public void plan(ModelPlanResponse plan) {
         frame("plan", DtoMapper.plan(plan));
     }
 
     @Override
-    public void answer(AdvisorAnswer answer) {
+    public void answer(AdvisorAnswerResponse answer) {
         frame("answer", DtoMapper.answer(answer));
     }
 
     @Override
-    public void meta(SessionMeta meta) {
+    public void meta(SessionMetaResponse meta) {
         frame("meta", DtoMapper.meta(meta));
     }
 
