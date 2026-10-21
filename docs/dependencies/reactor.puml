@@ -147,6 +147,9 @@ rectangle "kotlin-stdlib\n2.3.21" as org_jetbrains_kotlin_kotlin_stdlib_jar_comp
 rectangle "annotations\n17.0.0" as org_jetbrains_annotations_jar_compile
 rectangle "kotlin-stdlib-jdk8\n2.3.21" as org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar_compile
 rectangle "kotlin-stdlib-jdk7\n2.3.21" as org_jetbrains_kotlin_kotlin_stdlib_jdk7_jar_compile
+rectangle "resilience4j-circuitbreaker\n2.4.0" as io_github_resilience4j_resilience4j_circuitbreaker_jar_compile
+rectangle "resilience4j-core\n2.4.0" as io_github_resilience4j_resilience4j_core_jar_compile
+rectangle "resilience4j-micrometer\n2.4.0" as io_github_resilience4j_resilience4j_micrometer_jar_compile
 rectangle "batik-anim\n1.19" as org_apache_xmlgraphics_batik_anim_jar_compile
 rectangle "batik-css\n1.19" as org_apache_xmlgraphics_batik_css_jar_compile
 rectangle "batik-ext\n1.19" as org_apache_xmlgraphics_batik_ext_jar_compile
@@ -407,6 +410,10 @@ org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar_compile -[#000000]-> org_jetbrains_k
 org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar_compile -[#000000]-> org_jetbrains_kotlin_kotlin_stdlib_jdk7_jar_compile
 com_anthropic_anthropic_java_jar_compile -[#000000]-> org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar_compile
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> com_anthropic_anthropic_java_jar_compile
+io_github_resilience4j_resilience4j_circuitbreaker_jar_compile -[#000000]-> io_github_resilience4j_resilience4j_core_jar_compile
+io_github_resilience4j_resilience4j_circuitbreaker_jar_compile -[#000000]-> org_slf4j_slf4j_api_jar_compile
+uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> io_github_resilience4j_resilience4j_circuitbreaker_jar_compile
+uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> io_github_resilience4j_resilience4j_micrometer_jar_compile
 org_apache_xmlgraphics_batik_anim_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_css_jar_compile
 org_apache_xmlgraphics_batik_anim_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_ext_jar_compile
 org_apache_xmlgraphics_batik_anim_jar_compile -[#000000]-> org_apache_xmlgraphics_batik_parser_jar_compile
@@ -432,7 +439,6 @@ org_apache_pdfbox_fontbox_jar_compile -[#000000]-> org_apache_pdfbox_pdfbox_io_j
 org_apache_pdfbox_fontbox_jar_compile -[#000000]-> commons_logging_commons_logging_jar_compile
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_apache_pdfbox_fontbox_jar_compile
 org_eclipse_jgit_org_eclipse_jgit_jar_compile -[#000000]-> com_googlecode_javaewah_JavaEWAH_jar_compile
-org_eclipse_jgit_org_eclipse_jgit_jar_compile -[#000000]-> org_slf4j_slf4j_api_jar_compile
 org_eclipse_jgit_org_eclipse_jgit_jar_compile -[#000000]-> commons_codec_commons_codec_jar_compile
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_eclipse_jgit_org_eclipse_jgit_jar_compile
 org_springframework_boot_spring_boot_security_jar_compile -[#000000]-> org_springframework_security_spring_security_config_jar_compile

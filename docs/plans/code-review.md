@@ -433,7 +433,8 @@ YAML-писатель и читатель.
 хранения modeling и запись в `WorkspaceApplicationService` (13-04); `spec/nfr` описывает повторы Git
 и порт чтения modeling не так, как они устроены (13-05).
 
-Исправления — план [`code-review-fixes-13.md`](code-review-fixes-13.md).
+**Находки исправлены 2026-10-21** — план [`code-review-fixes-13.md`](code-review-fixes-13.md); граф зависимостей
+перерисован (Resilience4j).
 
 Стандарт: §4.9 (5304–5541), §4.5 (4593–4724), §6.7 (7305–7360), §6.9 (7406–7443).
 

@@ -135,6 +135,9 @@ rectangle "okhttp\n4.12.0" as com_squareup_okhttp3_okhttp_jar<<runtime>>
 rectangle "anthropic-java\n2.71.0" as com_anthropic_anthropic_java_jar
 rectangle "annotations\n17.0.0" as org_jetbrains_annotations_jar
 rectangle "kotlin-stdlib-jdk7\n2.3.21" as org_jetbrains_kotlin_kotlin_stdlib_jdk7_jar
+rectangle "resilience4j-core\n2.4.0" as io_github_resilience4j_resilience4j_core_jar
+rectangle "resilience4j-circuitbreaker\n2.4.0" as io_github_resilience4j_resilience4j_circuitbreaker_jar
+rectangle "resilience4j-micrometer\n2.4.0" as io_github_resilience4j_resilience4j_micrometer_jar
 rectangle "batik-anim\n1.19" as org_apache_xmlgraphics_batik_anim_jar
 rectangle "batik-awt-util\n1.19" as org_apache_xmlgraphics_batik_awt_util_jar
 rectangle "batik-css\n1.19" as org_apache_xmlgraphics_batik_css_jar
@@ -466,6 +469,15 @@ org_jetbrains_kotlin_kotlin_stdlib_jdk7_jar .[#ABABAB].> org_jetbrains_kotlin_ko
 org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar -[#000000]-> org_jetbrains_kotlin_kotlin_stdlib_jdk7_jar
 com_anthropic_anthropic_java_jar -[#000000]-> org_jetbrains_kotlin_kotlin_stdlib_jdk8_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> com_anthropic_anthropic_java_jar
+io_github_resilience4j_resilience4j_core_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
+io_github_resilience4j_resilience4j_circuitbreaker_jar -[#000000]-> io_github_resilience4j_resilience4j_core_jar
+io_github_resilience4j_resilience4j_circuitbreaker_jar -[#000000]-> org_slf4j_slf4j_api_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> io_github_resilience4j_resilience4j_circuitbreaker_jar
+io_github_resilience4j_resilience4j_micrometer_jar .[#ABABAB].> io_micrometer_micrometer_core_jar
+io_github_resilience4j_resilience4j_micrometer_jar .[#ABABAB].> io_micrometer_micrometer_observation_jar
+io_github_resilience4j_resilience4j_micrometer_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
+io_github_resilience4j_resilience4j_micrometer_jar .[#ABABAB].> io_github_resilience4j_resilience4j_circuitbreaker_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> io_github_resilience4j_resilience4j_micrometer_jar
 org_apache_xmlgraphics_batik_anim_jar .[#ABABAB].> org_apache_xmlgraphics_batik_awt_util_jar
 org_apache_xmlgraphics_batik_css_jar .[#ABABAB].> org_apache_xmlgraphics_batik_shared_resources_jar
 org_apache_xmlgraphics_batik_css_jar .[#ABABAB].> org_apache_xmlgraphics_batik_util_jar
@@ -555,7 +567,7 @@ org_apache_pdfbox_fontbox_jar -[#000000]-> org_apache_pdfbox_pdfbox_io_jar
 org_apache_pdfbox_fontbox_jar -[#000000]-> commons_logging_commons_logging_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_apache_pdfbox_fontbox_jar
 org_eclipse_jgit_org_eclipse_jgit_jar -[#000000]-> com_googlecode_javaewah_JavaEWAH_jar
-org_eclipse_jgit_org_eclipse_jgit_jar -[#000000]-> org_slf4j_slf4j_api_jar
+org_eclipse_jgit_org_eclipse_jgit_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
 org_eclipse_jgit_org_eclipse_jgit_jar -[#000000]-> commons_codec_commons_codec_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_eclipse_jgit_org_eclipse_jgit_jar
 org_springframework_boot_spring_boot_starter_security_jar .[#ABABAB].> org_springframework_boot_spring_boot_starter_jar
