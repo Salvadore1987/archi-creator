@@ -135,6 +135,15 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
         return status == GitBindingStatus.CONFIGURED;
     }
 
+    /**
+     * Последний коммит сервера переносится в новую настройку того же адреса и ветки:
+     * состояние и отметка проверки доступности не меняются — проверки не было.
+     */
+    public GitBinding withHead(GitSha sha) {
+        return new GitBinding(workspaceId(), repoUrl, branch, tokenRef, status, Objects.requireNonNull(sha, "sha"),
+                lastCheckedAt, authors);
+    }
+
     /** Репозиторий ответил. */
     public GitBinding checked(Instant at) {
         requireWritable();
@@ -164,11 +173,6 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
     /** Автор коммитов для данного субъекта Keycloak, если он есть в привязке. */
     public Optional<GitAuthor> authorOf(String subject) {
         return authors.stream().filter(a -> a.subject().equals(subject)).findFirst();
-    }
-
-    private GitBinding withHead(GitSha sha) {
-        return new GitBinding(workspaceId(), repoUrl, branch, tokenRef, status, Objects.requireNonNull(sha, "sha"),
-                lastCheckedAt, authors);
     }
 
     private void requireWritable() {

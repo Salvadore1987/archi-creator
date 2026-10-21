@@ -177,7 +177,7 @@ final class GitAttempts {
         }
     }
 
-    /** Отклонённая до записи попытка — в журнал. */
+    /** Отклонённая до записи попытка — в журнал; метрика — по виду отказа: повреждение или строгий режим. */
     void saveRejected(ImportSession session, boolean corrupt) {
         unitOfWork.write(() -> {
             sessions.save(session);

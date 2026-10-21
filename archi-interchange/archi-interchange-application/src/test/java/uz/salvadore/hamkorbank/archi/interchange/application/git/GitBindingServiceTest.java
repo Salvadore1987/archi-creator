@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.git;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
@@ -15,6 +16,10 @@ import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeExceptio
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMetrics;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBinding;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.SecretRef;
+import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 
@@ -48,8 +53,35 @@ class GitBindingServiceTest {
                 .configure(ADMIN, WORKSPACE, settings("https://git.example.com/ea/landscape.git")).repoUrl());
     }
 
-    private static GitBindingService service(boolean localRepositories) {
+    @Test
+    @DisplayName("ссылка на секрет не задана — «не задано», а не формат значения «null»")
+    void missingTokenRefIsMissing() {
+        InterchangeException e = assertThrows(InterchangeException.class, () -> service(false).configure(ADMIN,
+                WORKSPACE, new GitBindingSettings("https://git.example.com/a.git", null, null, List.of())));
+
+        assertEquals(InterchangeMessages.GIT_PULL_FIELD_MISSING, e.reason().key());
+    }
+
+    @Test
+    @DisplayName("перенастройка на тот же адрес сохраняет последний коммит, но не отмечает проверку доступности")
+    void reconfigurationKeepsHeadWithoutCheckMark() {
         GitFakes.MemoryBindings bindings = new GitFakes.MemoryBindings();
+        GitSha head = GitSha.of("a".repeat(40));
+        bindings.save(GitBinding.configure(new WorkspaceId(WORKSPACE), "https://git.example.com/a.git", null,
+                SecretRef.of("env:ARCHI_GIT_TOKEN"), List.of()).committed(head, CLOCK.instant()));
+
+        GitBinding again = service(bindings, false).configure(ADMIN, WORKSPACE,
+                settings("https://git.example.com/a.git"));
+
+        assertEquals(head, again.lastCommitSha());
+        assertNull(again.lastCheckedAt());
+    }
+
+    private static GitBindingService service(boolean localRepositories) {
+        return service(new GitFakes.MemoryBindings(), localRepositories);
+    }
+
+    private static GitBindingService service(GitFakes.MemoryBindings bindings, boolean localRepositories) {
         return new GitBindingService(bindings, new GitFakes.RollbackUnitOfWork(List.of(bindings)),
                 InterchangeMetrics.NONE, CLOCK, localRepositories);
     }

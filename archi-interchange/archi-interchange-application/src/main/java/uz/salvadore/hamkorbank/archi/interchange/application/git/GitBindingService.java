@@ -62,10 +62,14 @@ public final class GitBindingService {
         return metrics.observe(operation.useCase(), () -> {
             operation.require(actor);
             WorkspaceId workspace = new WorkspaceId(workspaceId);
+            if (settings.tokenRef() == null) {
+                throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE,
+                        Message.of(InterchangeMessages.GIT_PULL_FIELD_MISSING, "tokenRef"), Map.of());
+            }
             GitBinding configured;
             try {
                 configured = GitBinding.configure(workspace, settings.repoUrl(), settings.branch(),
-                        SecretRef.of(String.valueOf(settings.tokenRef())), settings.authors().stream()
+                        SecretRef.of(settings.tokenRef()), settings.authors().stream()
                                 .map(a -> new GitAuthor(a.subject(), a.name(), a.email())).toList());
             } catch (InvalidValueException e) {
                 throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE, e.reason(),
@@ -84,7 +88,7 @@ public final class GitBindingService {
                         .filter(old -> old.repoUrl().equals(configured.repoUrl())
                                 && old.branch().equals(configured.branch()))
                         .map(GitBinding::lastCommitSha)
-                        .map(sha -> configured.committed(sha, clock.instant()))
+                        .map(configured::withHead)
                         .orElse(configured);
                 bindings.save(binding);
                 return binding;

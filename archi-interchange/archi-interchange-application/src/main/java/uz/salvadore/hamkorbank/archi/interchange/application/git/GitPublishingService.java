@@ -60,7 +60,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  *
  * <p>Сеть — вне транзакции; запись {@code git_sha} в версию, закрытие записи outbox
  * и новая голова привязки — одной транзакцией после push. Падение между ними
- * повтор находит по трейлерам коммита и не создаёт второго.
+ * повтор находит по трейлерам коммита и не создаёт второго — если после нашего коммита
+ * в ветку легло не больше коммитов, чем просматривает поиск адаптера.
  *
  * <p>Чужой коммит, тронувший каталог модели, или переписанная история — расхождение:
  * сервер ничего не перезаписывает, очередь модели встаёт до импорта или слияния.
@@ -360,6 +361,8 @@ public final class GitPublishingService {
         try {
             positions = previous.isEmpty() ? GitPositions.none() : reader.positions(previous);
         } catch (InvalidValueException unreadable) {
+            LOG.log(System.Logger.Level.WARNING, "git positions of model " + entry.model().value() + " in commit "
+                    + head + " are unreadable, the directory is renumbered", unreadable);
             positions = GitPositions.none();
         }
         ModelDocument document = new StaxArchiDocumentReader().read(new ByteArrayInputStream(version.xml()));

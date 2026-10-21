@@ -164,9 +164,10 @@ public final class GitImportService {
     }
 
     /**
-     * Применение коммита из отчёта новой версией. Модель изменилась после отчёта —
-     * {@code 409}; разбор или строгий режим отклонили — {@code 422} с находками; отказ
-     * при записи — откат и сессия {@code REJECTED}.
+     * Применение коммита из отчёта новой версией. Нет привязки — {@code 409}; коммита или каталога
+     * модели в нём нет — {@code 404}; репозиторий недоступен — {@code 503}. Модель изменилась после
+     * отчёта или не заблокирована — {@code 409}; разбор или строгий режим отклонили — {@code 422}
+     * с находками. Любой отказ после чтения коммита — откат и сессия {@code REJECTED}.
      */
     public Pulled apply(EditorIdentity actor, ModelId model, PullRequest request) {
         InterchangeOperation operation = InterchangeOperation.PULL_MODEL_FROM_GIT;

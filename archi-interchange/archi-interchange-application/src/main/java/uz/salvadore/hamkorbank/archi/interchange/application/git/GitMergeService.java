@@ -238,9 +238,10 @@ public final class GitMergeService {
     }
 
     /**
-     * Применение слияния из отчёта новой версией. Конфликт без выбора — {@code 422};
-     * модель изменилась после отчёта — {@code 409}; разбор или строгий режим отклонили —
-     * {@code 422} с находками; отказ при записи — откат и сессия {@code REJECTED}.
+     * Применение слияния из отчёта новой версией. Нет привязки — {@code 409}; коммита или каталога
+     * модели нет — {@code 404}; репозиторий недоступен — {@code 503}. Конфликт без выбора — {@code 422};
+     * модель изменилась после отчёта или не заблокирована — {@code 409}; разбор или строгий режим
+     * отклонили — {@code 422} с находками. Отказ при записи — откат и сессия {@code REJECTED}.
      */
     public Merged apply(EditorIdentity actor, ModelId model, MergeRequest request) {
         InterchangeOperation operation = InterchangeOperation.MERGE_MODEL_BRANCH;

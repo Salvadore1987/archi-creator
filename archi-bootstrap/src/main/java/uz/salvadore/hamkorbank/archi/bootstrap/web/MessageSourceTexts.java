@@ -3,13 +3,16 @@ package uz.salvadore.hamkorbank.archi.bootstrap.web;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContext;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 
 /**
  * Текст сообщений всех трёх контекстов на языке запроса: язык берётся из
- * {@code Accept-Language}, по умолчанию — русский. Аргумент-сообщение переводится
+ * {@code Accept-Language}, по умолчанию — русский. Вне запроса (фоновый проход очереди,
+ * планировщик) — тоже русский, а не системная локаль JVM: иначе тема коммита в Git зависела бы
+ * от того, кто запустил публикацию. Аргумент-сообщение переводится
  * первым: так подпись объекта встаёт во фразу в нужной форме. Прочие аргументы —
  * строки: разряды числа по локали исказили бы номера версий и идентификаторы.
  * Ключа нет в ресурсах — виден сам ключ, а не пустота.
@@ -27,17 +30,24 @@ public class MessageSourceTexts implements uz.salvadore.hamkorbank.archi.modelin
 
     @Override
     public String text(uz.salvadore.hamkorbank.archi.modeling.domain.common.Message message) {
-        return resolve(message.key(), message.args(), LocaleContextHolder.getLocale());
+        return resolve(message.key(), message.args(), locale());
     }
 
     @Override
     public String text(Message message) {
-        return resolve(message.key(), message.args(), LocaleContextHolder.getLocale());
+        return resolve(message.key(), message.args(), locale());
     }
 
     @Override
     public String text(uz.salvadore.hamkorbank.archi.advisor.domain.common.Message message) {
-        return resolve(message.key(), message.args(), LocaleContextHolder.getLocale());
+        return resolve(message.key(), message.args(), locale());
+    }
+
+    /** Язык запроса; запроса нет — базовые ресурсы, то есть русский. */
+    private static Locale locale() {
+        LocaleContext context = LocaleContextHolder.getLocaleContext();
+        Locale locale = context == null ? null : context.getLocale();
+        return locale == null ? Locale.ROOT : locale;
     }
 
     private String resolve(String key, List<Object> args, Locale locale) {
