@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.git;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -9,11 +10,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBinding;
+import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
 /** Привязка пространства к репозиторию: настраивает только ADMIN, токена в ответе нет. */
 class GitBindingIT extends ApiTest {
@@ -21,6 +30,11 @@ class GitBindingIT extends ApiTest {
     private static final String SETTINGS = """
             {"repoUrl":"https://gitlab.example/ea/landscape.git","tokenRef":"env:ARCHI_GIT_TOKEN",
              "authors":[{"subject":"architect-api","name":"Архитектор","email":"architect@example.uz"}]}""";
+
+    @Autowired
+    GitBindingRepository bindings;
+    @Autowired
+    PlatformTransactionManager transactions;
 
     @AfterEach
     void clean() {
@@ -70,5 +84,25 @@ class GitBindingIT extends ApiTest {
                 .andExpect(status().isOk());
         mvc.perform(delete(binding()).with(admin())).andExpect(status().isNoContent());
         mvc.perform(get(binding()).with(admin())).andExpect(jsonPath("$.status").value("DISABLED"));
+    }
+
+    @Test
+    @DisplayName("отметка проверки доступности не откатывает голову ветки, записанную публикацией")
+    void checkDoesNotOverwriteConcurrentHead() throws Exception {
+        mvc.perform(put(binding()).with(admin()).contentType(MediaType.APPLICATION_JSON).content(SETTINGS))
+                .andExpect(status().isOk());
+        WorkspaceId workspace = new WorkspaceId(workspace().value());
+        String head = "c".repeat(40);
+
+        new TransactionTemplate(transactions).executeWithoutResult(status -> {
+            GitBinding read = bindings.find(workspace).orElseThrow();
+            CompletableFuture.runAsync(() -> jdbc.update(
+                    "update git_binding set last_commit_sha = ? where workspace_id = ?", head,
+                    workspace.value())).join();
+            bindings.save(read.checked(Instant.now()));
+        });
+
+        assertEquals(head, jdbc.queryForObject("select last_commit_sha from git_binding where workspace_id = ?",
+                String.class, workspace.value()));
     }
 }

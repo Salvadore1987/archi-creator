@@ -29,6 +29,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateRela
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateViewCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EditElementCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewNodeCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.SaveVersionCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.SaveViewLayoutCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetModelQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetViewQuery;
@@ -40,16 +41,19 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewRespons
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ConcurrentUpdateException;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelLockRepository;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelVersionRepository;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ElementApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.LockApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.RelationshipApplicationService;
+import uz.salvadore.hamkorbank.archi.modeling.application.port.in.VersionApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ViewQueryApplicationService;
 import uz.salvadore.hamkorbank.archi.modeling.domain.lock.ModelLock;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
+import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
 
 class ModelPersistenceIT extends IntegrationTest {
 
@@ -72,6 +76,10 @@ class ModelPersistenceIT extends IntegrationTest {
     ViewQueryApplicationService viewQueries;
     @Autowired
     ModelLockRepository lockRows;
+    @Autowired
+    VersionApplicationService versions;
+    @Autowired
+    ModelVersionRepository versionRows;
     @Autowired
     PlatformTransactionManager transactions;
 
@@ -124,6 +132,26 @@ class ModelPersistenceIT extends IntegrationTest {
         }));
         assertEquals(OTHER_ARCHITECT.subject(),
                 jdbc.queryForObject("select owner from model_lock where model_id = ?", String.class, model.value()));
+    }
+
+    @Test
+    @DisplayName("метка версии, поставленная во время публикации, не стирает записанный публикацией git_sha")
+    void labelDoesNotOverwriteConcurrentGitSha() {
+        ModelId model = ModelId.of(lifecycle.createModel(ARCHITECT,
+                new CreateModelCommand(workspace().value(), "Метка и коммит", null)).id());
+        locks.acquireLock(ARCHITECT, new AcquireLockCommand(model.value()));
+        versions.saveVersion(ARCHITECT, new SaveVersionCommand(model.value(), "первая", null));
+        String sha = "b".repeat(40);
+
+        new TransactionTemplate(transactions).executeWithoutResult(status -> {
+            ModelVersion read = versionRows.last(model).orElseThrow();
+            CompletableFuture.runAsync(() -> jdbc.update("update model_version set git_sha = ? where id = ?", sha,
+                    read.id().value())).join();
+            versionRows.save(read.labelled("релиз"));
+        });
+
+        assertEquals(List.of(sha + " релиз"), column(
+                "select git_sha || ' ' || label from model_version where model_id = ?", String.class, model.value()));
     }
 
     @Test

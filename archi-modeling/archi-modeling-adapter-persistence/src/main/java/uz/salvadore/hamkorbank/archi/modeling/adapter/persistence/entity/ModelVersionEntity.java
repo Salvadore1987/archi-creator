@@ -6,8 +6,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.DynamicUpdate;
 
-/** Строка версии модели: номер, автор, комментарий, метка, сжатый снимок с отпечатком и коммит Git. */
+/**
+ * Строка версии модели: номер, автор, комментарий, метка, сжатый снимок с отпечатком и коммит Git.
+ * Метку, коммит и снимок меняют разные сценарии, поэтому запись обновляет только изменённые столбцы:
+ * иначе сценарий, прочитавший строку раньше, вернул бы чужому столбцу прочитанное значение.
+ */
+@DynamicUpdate
 @Entity
 @Table(name = "model_version")
 public class ModelVersionEntity {

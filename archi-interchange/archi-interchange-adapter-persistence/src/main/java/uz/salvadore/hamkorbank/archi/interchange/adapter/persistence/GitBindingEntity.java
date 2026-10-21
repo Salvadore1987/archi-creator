@@ -13,8 +13,14 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.hibernate.annotations.DynamicUpdate;
 
-/** Строка привязки рабочего пространства к Git-репозиторию: адрес, ветка, ссылка на секрет и авторы. */
+/**
+ * Строка привязки рабочего пространства к Git-репозиторию: адрес, ветка, ссылка на секрет и авторы.
+ * Голову ветки пишет публикация, остальное — администратор и проверка доступности, поэтому запись
+ * обновляет только изменённые столбцы и не откатывает чужой.
+ */
+@DynamicUpdate
 @Entity
 @Table(name = "git_binding")
 public class GitBindingEntity {
