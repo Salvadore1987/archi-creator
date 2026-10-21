@@ -101,8 +101,13 @@ public final class GitImportService {
         }
     }
 
-    /** Прочитанный коммит: сессия после разбора и проверки, документ и снимок, если собрались, иначе {@code null}. */
-    private record Candidate(ResolvedRef ref, ImportSession session, ModelDocument document, byte[] xml) {
+    /**
+     * Прочитанный коммит: сессия после разбора и проверки, документ и снимок, если приняты, иначе {@code null}.
+     *
+     * @param corrupt каталог не собрался или снимок не разобрался; отказ строгого режима — не повреждение
+     */
+    private record Candidate(ResolvedRef ref, ImportSession session, ModelDocument document, byte[] xml,
+                             boolean corrupt) {
     }
 
     private final GitBindingRepository bindings;
@@ -186,8 +191,8 @@ public final class GitImportService {
             Candidate candidate = fetched.candidate();
             ImportSession session = candidate.session();
             if (session.status() == ImportStatus.REJECTED) {
-                attempts.saveRejected(session, candidate.document() == null);
-                throw rejected(session, candidate.document() == null);
+                attempts.saveRejected(session, candidate.corrupt());
+                throw rejected(session, candidate.corrupt());
             }
             boolean adopt = sha.equals(fetched.head());
             String comment = request.comment() != null && !request.comment().isBlank() ? request.comment()
@@ -254,13 +259,13 @@ public final class GitImportService {
                 xml != null ? xml : GitAttempts.concatenated(tree.files()), actor);
         if (tree.defect() != null) {
             attempts.corrupt(session, tree.defect());
-            return new Candidate(ref, session, null, null);
+            return new Candidate(ref, session, null, null, true);
         }
         attempts.check(session, Objects.requireNonNull(xml));
         if (session.status() == ImportStatus.REJECTED) {
-            return new Candidate(ref, session, null, null);
+            return new Candidate(ref, session, null, null, session.document() == null);
         }
-        return new Candidate(ref, session, session.document(), xml);
+        return new Candidate(ref, session, session.document(), xml, false);
     }
 
     private static InterchangeException rejected(ImportSession session, boolean corrupt) {

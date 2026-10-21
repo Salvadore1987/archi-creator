@@ -129,6 +129,7 @@ final class GitFakes {
 
         State state;
         boolean failAfterReplace;
+        RuntimeException failure;
         final Map<Long, String> comments = new HashMap<>();
 
         List<Long> versionNos() {
@@ -158,6 +159,9 @@ final class GitFakes {
             if (failAfterReplace) {
                 throw new IllegalStateException("сбой при записи");
             }
+            if (failure != null) {
+                throw failure;
+            }
             return new Replaced(state.lastVersionNo(), true, 0);
         }
 
@@ -175,6 +179,7 @@ final class GitFakes {
     static final class MemorySessions implements ImportSessionRepository, Store<Map<ImportSessionId, ImportSession>> {
 
         Map<ImportSessionId, ImportSession> rows = new LinkedHashMap<>();
+        boolean failSaves;
 
         @Override
         public Optional<ImportSession> find(ImportSessionId id) {
@@ -183,6 +188,9 @@ final class GitFakes {
 
         @Override
         public void save(ImportSession session) {
+            if (failSaves) {
+                throw new IllegalStateException("журнал недоступен");
+            }
             rows.put(session.id(), session);
         }
 

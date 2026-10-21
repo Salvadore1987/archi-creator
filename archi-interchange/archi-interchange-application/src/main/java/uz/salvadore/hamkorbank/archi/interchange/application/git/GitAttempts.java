@@ -23,6 +23,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMet
 import uz.salvadore.hamkorbank.archi.interchange.application.port.SecretResolver;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.DomainException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
@@ -160,12 +161,22 @@ final class GitAttempts {
     /**
      * Попытка, сорвавшаяся при записи, — в журнал отдельной транзакцией после отката:
      * новой сессией, потому что прежняя могла успеть перейти в {@code APPLIED} в памяти.
+     * Сбой самого журнала прикладывается к отказу: клиент получает исходный отказ, а не сбой журнала.
      */
     void recordFailure(ImportSession attempt, RuntimeException failure) {
+        try {
+            journal(attempt, failure);
+        } catch (RuntimeException journal) { // NOPMD - журнал попытки не заменяет собой отказ, ради которого пишется
+            failure.addSuppressed(journal);
+        }
+    }
+
+    private void journal(ImportSession attempt, RuntimeException failure) {
         String code = switch (failure) {
             case InterchangeException e -> e.code();
             case ModelingDomainException e -> e.code();
-            default -> InterchangeCodes.GIT_IMPORT;
+            case DomainException e -> e.code();
+            default -> InterchangeCodes.GIT_APPLY_FAILED;
         };
         ImportRequest request = new ImportRequest(attempt.workspaceId(), attempt.targetModelId(),
                 attempt.sourceName(), attempt.sourceHash(), attempt.sourceSize(), uuids.next().toString(),

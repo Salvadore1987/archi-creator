@@ -33,6 +33,9 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMet
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeDomainException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBinding;
@@ -158,8 +161,53 @@ class GitImportTest {
         assertEquals(1, sessions.rows.size());
         ImportSession rejected = sessions.rows.values().iterator().next();
         assertEquals(ImportStatus.REJECTED, rejected.status());
-        assertEquals(InterchangeCodes.GIT_IMPORT, rejected.findings().getFirst().code());
+        assertEquals(InterchangeCodes.GIT_APPLY_FAILED, rejected.findings().getFirst().code());
         assertTrue(events.isEmpty());
+    }
+
+    @Test
+    @DisplayName("UC-IXC-006: журнал попытки не записался — наружу исходный отказ, сбой журнала приложен к нему")
+    void journalFailureDoesNotHideRefusal() {
+        repository.commit("main", model("АБС «Ядро»", NODE));
+        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        modelStates.failAfterReplace = true;
+        sessions.failSaves = true;
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> imports.apply(ARCHITECT, model, confirm(preview, null)));
+
+        assertEquals("сбой при записи", e.getMessage());
+        assertEquals(1, e.getSuppressed().length);
+    }
+
+    @Test
+    @DisplayName("UC-IXC-006: отказ домена interchange при записи — в журнале его код, а не «отчёт устарел»")
+    void domainRefusalKeepsItsCodeInJournal() {
+        repository.commit("main", model("АБС «Ядро»", NODE));
+        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        modelStates.failure = new InterchangeDomainException(InterchangeCodes.GIT_BINDING_DISABLED,
+                Message.of(InterchangeMessages.GIT_BINDING_MISSING, workspace));
+
+        assertThrows(InterchangeDomainException.class, () -> imports.apply(ARCHITECT, model, confirm(preview, null)));
+
+        assertEquals(InterchangeCodes.GIT_BINDING_DISABLED,
+                sessions.rows.values().iterator().next().findings().getFirst().code());
+    }
+
+    @Test
+    @DisplayName("UC-IXC-006: отказ строгого режима при применении — IXC_STRICT_IMPORT_REJECTED, а не «повреждён»")
+    void strictRejectionKeepsItsCode() {
+        strict = true;
+        repository.commit("main", model("АБС «Ядро»", NODE + FORBIDDEN));
+        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+
+        InterchangeException e = assertThrows(InterchangeException.class,
+                () -> imports.apply(ARCHITECT, model, confirm(preview, null)));
+
+        assertFalse(preview.applicable());
+        assertEquals(InterchangeCodes.STRICT_IMPORT_REJECTED, e.code());
+        assertEquals(Failure.UNPROCESSABLE, e.failure());
+        assertEquals(ImportStatus.REJECTED, sessions.rows.values().iterator().next().status());
     }
 
     @Test
@@ -291,6 +339,9 @@ class GitImportTest {
     // ── данные ─────────────────────────────────────────────────────────────
 
     private static final String NODE = "<element xsi:type=\"archimate:Node\" name=\"Сервер\" id=\"id-node\"/>";
+    /** Доступ узла к компоненту приложения — матрица ArchiMate его не допускает. */
+    private static final String FORBIDDEN = "<element xsi:type=\"archimate:AccessRelationship\" id=\"id-bad\" "
+            + "source=\"id-node\" target=\"id-app\"/>";
 
     private static ModelDocument model(String appName, String more) {
         String xml = """
