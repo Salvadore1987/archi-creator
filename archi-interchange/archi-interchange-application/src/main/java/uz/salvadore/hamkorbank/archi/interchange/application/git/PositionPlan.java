@@ -11,7 +11,8 @@ import java.util.Map;
  * <p>Записи, чьи прежние позиции идут в новом порядке по возрастанию (наибольшая
  * такая подпоследовательность), сохраняют их. Остальные встают в промежутки
  * равномерно; в хвосте — шагом 1000. Если промежутка не хватает, контейнер
- * нумеруется заново шагом 1000 — единственный случай, когда двигаются соседи.
+ * нумеруется заново шагом 1000 — единственный случай, когда двигаются соседи; так же —
+ * если хвост вышел бы за наибольшее {@code long}.
  * Повтор с прежними позициями, взятыми из собственного вывода, даёт те же числа.
  */
 final class PositionPlan {
@@ -47,22 +48,33 @@ final class PositionPlan {
             }
             int count = end - i;
             if (end == n) {
+                if (lower > Long.MAX_VALUE - (count + 1L) * GitYamlFormat.STEP) {
+                    return dense(n);
+                }
                 long next = (lower / GitYamlFormat.STEP + 1) * GitYamlFormat.STEP;
                 for (int j = 0; j < count; j++) {
                     result[i + j] = next + j * GitYamlFormat.STEP;
                 }
             } else {
-                long upper = known[end];
-                if (upper - lower < count + 1) {
+                long gap = known[end] - lower;
+                if (gap < count + 1) {
                     return dense(n);
                 }
                 for (int j = 1; j <= count; j++) {
-                    result[i + j - 1] = lower + (upper - lower) * j / (count + 1);
+                    result[i + j - 1] = lower + share(gap, j, count + 1);
                 }
             }
             i = end;
         }
         return result;
+    }
+
+    /**
+     * {@code gap * j / parts} с округлением вниз без переполнения: частное и остаток делятся
+     * отдельно, поэтому промежуток в весь диапазон {@code long} делится так же, как узкий.
+     */
+    private static long share(long gap, int j, int parts) {
+        return gap / parts * j + gap % parts * j / parts;
     }
 
     private static long[] dense(int n) {
