@@ -17,7 +17,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
- * Правила доступа для всех профилей, кроме {@code dev}.
+ * Правила доступа для всех профилей, кроме {@code dev} без {@code prod}.
  *
  * <p>Аутентификация — {@code Authorization: Bearer <JWT>} от Keycloak.
  * Роли Keycloak лежат в {@code realm_access.roles} — вложенным объектом, а не плоским
@@ -35,7 +35,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @EnableConfigurationProperties(CorsSettings.class)
-@Profile("!dev")
+@Profile("!dev | prod")
 public class SecurityConfig {
 
     @Bean

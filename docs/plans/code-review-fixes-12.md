@@ -20,7 +20,7 @@
 |---|---|---|---|---|
 | 1 | Роли из `realm_access.roles` — свойством `authorities-claim-expressions` и префиксом `ROLE_`; конвертер и его бин удалить | 12-07 | `KeycloakIT` (роли из токена Keycloak); `CodingRulesTest`: в основном коде нет `Converter<Jwt, …>` | ✅ |
 | 2 | `@Configuration(proxyBeanMethods = false)` у всех конфигураций | 12-05 | `CodingRulesTest#configurationsDoNotProxyBeanMethods` | ✅ |
-| 3 | Заглушка — `dev & !prod`, настоящая цепочка — `!dev \| prod` | 12-09 | `SecurityProfilesTest`: при `dev,prod` — настоящая цепочка, при `dev` — заглушка, без профиля — настоящая | ⬜ |
+| 3 | Заглушка — `dev & !prod`, настоящая цепочка — `!dev \| prod` | 12-09 | `SecurityProfilesTest`: при `dev,prod` — настоящая цепочка, при `dev` — заглушка, без профиля — настоящая | ✅ |
 | 4 | Три цепочки: Actuator (`EndpointRequest`), API, UI; открытое — списком, остальное — отказ | 12-01, 12-02 | `PublicSurfaceIT`: статика, `/ui-config`, пробы — открыты; адрес вне списка и Actuator без токена — не `200` | ⬜ |
 | 5 | `traceId` и `modelId` — фильтром до цепочки безопасности, субъект — после | 12-03 | `PublicSurfaceIT`: `401` несёт `X-Trace-Id` | ⬜ |
 | 6 | Контроллер сессии: перевод — `SessionDtoMapper`, роли и субъект — из `CurrentEditorResolver`, `401` — цепочка; `@EnableConfigurationProperties(UiSettings)` — в конфигурацию | 12-08 | `RestLayerConventionsTest#controllersDoNotBuildDtos` охватывает DTO bootstrap | ⬜ |
@@ -42,3 +42,8 @@
 - **Задача 2.** Вызов метода бина из другого был один — `jwtAuthenticationConverter()` в `SecurityConfig`,
   и он ушёл задачей 1; остальные шесть конфигураций получали зависимости параметрами и прежде.
   На старом коде правило падало семь раз — на каждой конфигурации.
+- **Задача 3.** Тест проверяет выбор цепочки по выражениям `@Profile`, а не старт приложения: что при
+  `dev,prod` настоящая цепочка не поднимется без ресурс-сервера (его автоконфигурацию выключает
+  `application-dev.yaml`), следует из устройства Spring Security и тестом не закреплено — для этого
+  пришлось бы поднимать контекст с базой ради одного отказа. На старом коде два случая из пяти
+  (`dev,prod` и `prod,dev`) включали заглушку.
