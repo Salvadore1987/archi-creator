@@ -64,6 +64,7 @@ public final class SvgWriter {
     private static final int NORMAL_WEIGHT = 400;
     private static final int BOLD_WEIGHT = 700;
     private static final double PT = 4.0 / 3.0;
+    private static final Locale RUSSIAN = Locale.forLanguageTag("ru");
     private static final Pattern CUTOUT = Pattern.compile("var\\(--icon-cutout(?:,[^)]*)?\\)");
     private static final String FALLBACK_STACK = ", system-ui, sans-serif";
 
@@ -222,85 +223,114 @@ public final class SvgWriter {
         private void label(Node node, ShapeEntry entry, Box box, Paint paint) {
             boolean tab = entry.outline().equals("tab");
             boolean note = entry.outline().equals("dog-ear");
-            Optional<ArchiFont> own = Optional.ofNullable(node.style().font()).flatMap(ArchiFont::parse);
-            Face face;
-            double lineHeight;
-            String color;
-            String text = node.label();
-            int maxLines;
-            FontToken subtitleFont = notation.font("node_subtitle");
-            if (tab) {
-                // Ярлык группы — всегда шрифтом подписей, капителью: свой шрифт объекта его не меняет.
-                face = new Face(notation.family(), subtitleFont.size(), notation.weight("group_tab_font_weight"),
-                        false, notation.ems("group_tab_letter_spacing"));
-                lineHeight = layoutUnit(subtitleFont.size() * subtitleFont.lineHeight());
-                color = notation.value("node_subtitle_color");
-                text = text.toUpperCase(Locale.forLanguageTag("ru"));
-                maxLines = 1;
-            } else {
-                String family = own.map(ArchiFont::family).orElse(notation.family());
-                if (!typesetter.hasFamily(family)) {
-                    losses.add(new ExportLoss(node.archiId(), LossObjectKind.NODE, "font",
-                            Message.of(InterchangeMessages.IMAGE_LOSS_FONT, family)));
-                    family = notation.family();
-                }
-                FontToken nodeFont = notation.font("node_font");
-                double fontSize = own.map(f -> f.sizePt() * PT).orElse(nodeFont.size());
-                int weight = own.filter(ArchiFont::bold).isPresent() ? BOLD_WEIGHT
-                        : notation.weight(note ? "note_font_weight" : "node_font_weight");
-                face = new Face(family, fontSize, weight, own.filter(ArchiFont::italic).isPresent(), 0);
-                lineHeight = layoutUnit(fontSize * nodeFont.lineHeight());
-                color = paint.text();
-                maxLines = note ? 0 : NAME_LINES;
-            }
-            LabelLayout.Lines lines = layout.wrap(text, face, box.width(), maxLines, note);
-            Optional<String> subtitle = node.opaque()
-                    ? Optional.of(texts.text(Message.of(InterchangeMessages.IMAGE_OPAQUE_SUBTITLE,
-                    shortType(node.shapeType()))))
-                    : Optional.empty();
-            Face subtitleFace = new Face(notation.family(), subtitleFont.size(), NORMAL_WEIGHT, false, 0);
-            double subtitleHeight = layoutUnit(subtitleFont.size() * subtitleFont.lineHeight());
-            double content = lines.lines().size() * lineHeight + subtitle.map(s -> SUBTITLE_GAP + subtitleHeight)
-                    .orElse(0.0);
+            Typography type = tab ? tabTypography(node) : nameTypography(node, paint, note);
+            LabelLayout.Lines lines = layout.wrap(type.text(), type.face(), box.width(), type.maxLines(), note);
+            Optional<String> subtitle = subtitle(node);
+            double content = lines.lines().size() * type.lineHeight()
+                    + subtitle.map(s -> SUBTITLE_GAP + subtitleHeight()).orElse(0.0);
             double top = tab || note ? box.y() : box.y() + (box.height() - content) / 2;
-            String align = Optional.ofNullable(node.style().textAlignment())
-                    .map(a -> a == 1 ? "left" : a == 4 ? "right" : "center")
-                    .orElse(tab ? "left" : "center");
+            String align = align(node, tab);
             boolean overflowsBox = top < box.y() - 0.01 || top + content > box.y() + box.height() + 0.01;
-            boolean overflowsSide = false;
-            for (int i = 0; i < lines.lines().size(); i++) {
-                double x = aligned(box, layout.width(lines.aligned(i), face), align);
-                overflowsSide |= x < box.x() - 0.01
-                        || x + layout.width(lines.lines().get(i), face) > box.x() + box.width() + 0.01;
-            }
-            boolean clipped = overflowsBox || overflowsSide;
-            if (lines.truncated() || overflowsBox && !text.isBlank()) {
+            boolean clipped = overflowsBox || overflowsSide(lines, type.face(), box, align);
+            if (lines.truncated() || overflowsBox && !type.text().isBlank()) {
                 losses.add(new ExportLoss(node.archiId(), LossObjectKind.NODE, "label",
                         Message.of(InterchangeMessages.IMAGE_LOSS_LABEL)));
             }
 
             if (clipped) {
-                String id = "c" + (++clips);
-                body.append("<clipPath id=\"").append(id).append("\"><rect x=\"").append(Svg.num(box.x()))
-                        .append("\" y=\"").append(Svg.num(box.y())).append("\" width=\"").append(Svg.num(box.width()))
-                        .append("\" height=\"").append(Svg.num(box.height())).append("\"/></clipPath>")
-                        .append("<g clip-path=\"url(#").append(id).append(")\">");
+                openClip(box);
             }
             double lineTop = top;
             for (int i = 0; i < lines.lines().size(); i++) {
-                double x = aligned(box, layout.width(lines.aligned(i), face), align);
-                text(lines.lines().get(i), face, x, baseline(face, lineTop, lineHeight), color, note);
-                lineTop += lineHeight;
+                double x = aligned(box, layout.width(lines.aligned(i), type.face()), align);
+                text(lines.lines().get(i), type.face(), x, baseline(type.face(), lineTop, type.lineHeight()),
+                        type.color(), note);
+                lineTop += type.lineHeight();
             }
             if (subtitle.isPresent()) {
-                String single = layout.single(subtitle.get(), subtitleFace, box.width()).lines().getFirst();
-                double x = aligned(box, layout.width(single, subtitleFace), align);
-                text(single, subtitleFace, x, baseline(subtitleFace, lineTop + SUBTITLE_GAP, subtitleHeight),
-                        notation.value("node_subtitle_color"), false);
+                subtitleLine(subtitle.get(), box, align, lineTop);
             }
             if (clipped) {
                 body.append("</g>");
             }
+        }
+
+        /** Ярлык группы — всегда шрифтом подзаголовка, капителью: свой шрифт объекта его не меняет. */
+        private Typography tabTypography(Node node) {
+            FontToken font = notation.font("node_subtitle");
+            Face face = new Face(notation.family(), font.size(), notation.weight("group_tab_font_weight"), false,
+                    notation.ems("group_tab_letter_spacing"));
+            return new Typography(face, layoutUnit(font.size() * font.lineHeight()),
+                    notation.value("node_subtitle_color"), node.label().toUpperCase(RUSSIAN), 1);
+        }
+
+        /** Имя элемента или текст заметки: свой шрифт объекта сильнее токена; шрифта нет на сервере — потеря. */
+        private Typography nameTypography(Node node, Paint paint, boolean note) {
+            Optional<ArchiFont> own = Optional.ofNullable(node.style().font()).flatMap(ArchiFont::parse);
+            String family = own.map(ArchiFont::family).orElse(notation.family());
+            if (!typesetter.hasFamily(family)) {
+                losses.add(new ExportLoss(node.archiId(), LossObjectKind.NODE, "font",
+                        Message.of(InterchangeMessages.IMAGE_LOSS_FONT, family)));
+                family = notation.family();
+            }
+            FontToken font = notation.font("node_font");
+            double size = own.map(f -> f.sizePt() * PT).orElse(font.size());
+            int weight = own.filter(ArchiFont::bold).isPresent() ? BOLD_WEIGHT
+                    : notation.weight(note ? "note_font_weight" : "node_font_weight");
+            Face face = new Face(family, size, weight, own.filter(ArchiFont::italic).isPresent(), 0);
+            return new Typography(face, layoutUnit(size * font.lineHeight()), paint.text(), node.label(),
+                    note ? 0 : NAME_LINES);
+        }
+
+        /** Подзаголовок заглушки — тип объекта; у поддержанного объекта его нет. */
+        private Optional<String> subtitle(Node node) {
+            return node.opaque()
+                    ? Optional.of(texts.text(Message.of(InterchangeMessages.IMAGE_OPAQUE_SUBTITLE,
+                    shortType(node.shapeType()))))
+                    : Optional.empty();
+        }
+
+        private Face subtitleFace() {
+            return new Face(notation.family(), notation.font("node_subtitle").size(), NORMAL_WEIGHT, false, 0);
+        }
+
+        private double subtitleHeight() {
+            FontToken font = notation.font("node_subtitle");
+            return layoutUnit(font.size() * font.lineHeight());
+        }
+
+        private void subtitleLine(String subtitle, Box box, String align, double lineTop) {
+            Face face = subtitleFace();
+            String single = layout.single(subtitle, face, box.width()).lines().getFirst();
+            double x = aligned(box, layout.width(single, face), align);
+            text(single, face, x, baseline(face, lineTop + SUBTITLE_GAP, subtitleHeight()),
+                    notation.value("node_subtitle_color"), false);
+        }
+
+        /** Выравнивание Archi: 1 — влево, 4 — вправо, прочее — по центру; без своего — ярлык влево. */
+        private String align(Node node, boolean tab) {
+            return Optional.ofNullable(node.style().textAlignment())
+                    .map(a -> a == 1 ? "left" : a == 4 ? "right" : "center")
+                    .orElse(tab ? "left" : "center");
+        }
+
+        /** Выходит ли какая-нибудь строка за боковые края области подписи. */
+        private boolean overflowsSide(LabelLayout.Lines lines, Face face, Box box, String align) {
+            for (int i = 0; i < lines.lines().size(); i++) {
+                double x = aligned(box, layout.width(lines.aligned(i), face), align);
+                if (x < box.x() - 0.01 || x + layout.width(lines.lines().get(i), face) > box.x() + box.width() + 0.01) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void openClip(Box box) {
+            String id = "c" + (++clips);
+            body.append("<clipPath id=\"").append(id).append("\"><rect x=\"").append(Svg.num(box.x()))
+                    .append("\" y=\"").append(Svg.num(box.y())).append("\" width=\"").append(Svg.num(box.width()))
+                    .append("\" height=\"").append(Svg.num(box.height())).append("\"/></clipPath>")
+                    .append("<g clip-path=\"url(#").append(id).append(")\">");
         }
 
         private double aligned(Box box, double lineWidth, String align) {
@@ -532,6 +562,10 @@ public final class SvgWriter {
     }
 
     private record Paint(String fill, String stroke, String text) {
+    }
+
+    /** Оформление подписи: гарнитура, высота строки, цвет, текст к набору и предел строк ({@code 0} — без предела). */
+    private record Typography(Face face, double lineHeight, String color, String text, int maxLines) {
     }
 
     /** Высота строки с точностью раскладки браузера — 1/64 пикселя, остаток отбрасывается. */
