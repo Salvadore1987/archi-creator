@@ -17,7 +17,6 @@ import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportDel
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportFileNames;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.LossReportJson;
 import uz.salvadore.hamkorbank.archi.interchange.application.mapper.ExportDataMapper;
-import uz.salvadore.hamkorbank.archi.interchange.application.oef.OefLoss;
 import uz.salvadore.hamkorbank.archi.interchange.application.oef.OefSchema;
 import uz.salvadore.hamkorbank.archi.interchange.application.oef.OefWriter;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation;
@@ -25,14 +24,12 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentR
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportFormat;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportOptions;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.FileSlug;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossEntry;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossReport;
-import uz.salvadore.hamkorbank.archi.interchange.domain.identity.LossEntryId;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetVersionSnapshotQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionSnapshotResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
@@ -134,7 +131,7 @@ public final class ModelExportQueryHandler {
             throw new ExportDefectException(InterchangeCodes.OEF_SCHEMA_VIOLATION,
                     Message.of(InterchangeMessages.OEF_SCHEMA_VIOLATION), violation.get());
         }
-        List<LossEntry> entries = written.losses().stream().map(this::entry).toList();
+        List<LossEntry> entries = kernel.lossEntries(written.losses());
         String inner = FileSlug.slug(snapshot.model().name()) + "-v" + snapshot.versionNo() + ".xml";
         byte[] zip = new DeterministicZip().add(inner, written.xml())
                 .add(LossReportJson.FILE_NAME, LossReportJson.report(ExportFormat.OPEN_EXCHANGE.name(),
@@ -152,11 +149,6 @@ public final class ModelExportQueryHandler {
                                        ExportOptions options, Artifact artifact, LossReport report) {
         delivery.deliver(actor, snapshot, null, format, options, artifact, report);
         return ExportDataMapper.file(artifact, snapshot.versionNo(), report.entries().size());
-    }
-
-    private LossEntry entry(OefLoss loss) {
-        return new LossEntry(LossEntryId.next(kernel.uuids()), ArchiId.of(loss.archiId()), loss.objectKind(),
-                loss.aspect(), kernel.texts().text(loss.reason()));
     }
 
     private static String fileName(VersionSnapshotResponse snapshot, String extension) {

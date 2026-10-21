@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportLoss;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter.Face;
@@ -86,7 +87,7 @@ public final class SvgWriter {
      * левый верхний угол с полями, {@code width} × {@code height} — размер картинки
      * при масштабе 100 %.
      */
-    public record Rendered(byte[] svg, double x, double y, double width, double height, List<ImageLoss> losses) {
+    public record Rendered(byte[] svg, double x, double y, double width, double height, List<ExportLoss> losses) {
 
         public Rendered {
             svg = svg.clone();
@@ -110,7 +111,7 @@ public final class SvgWriter {
         private final ViewScene scene;
         private final Options options;
         private final StringBuilder body = new StringBuilder();
-        private final List<ImageLoss> losses = new ArrayList<>();
+        private final List<ExportLoss> losses = new ArrayList<>();
         private final Map<String, StringBuilder> glyphs = new TreeMap<>();
         private final Map<String, Face> faces = new TreeMap<>();
         private final Map<String, Rect> shapes = new HashMap<>();
@@ -138,7 +139,7 @@ public final class SvgWriter {
                 Optional<Node> source = nodeOf(edge.sourceId(), 0);
                 Optional<Node> target = nodeOf(edge.targetId(), 0);
                 if (source.isEmpty() || target.isEmpty()) {
-                    losses.add(new ImageLoss(edge.archiId(), LossObjectKind.EDGE, "route",
+                    losses.add(new ExportLoss(edge.archiId(), LossObjectKind.EDGE, "route",
                             Message.of(InterchangeMessages.IMAGE_LOSS_EDGE)));
                     continue;
                 }
@@ -184,19 +185,19 @@ public final class SvgWriter {
             body.append("</g>");
 
             if (node.opaque()) {
-                losses.add(new ImageLoss(node.archiId(), LossObjectKind.NODE, "shape",
+                losses.add(new ExportLoss(node.archiId(), LossObjectKind.NODE, "shape",
                         Message.of(InterchangeMessages.IMAGE_LOSS_PLACEHOLDER, shortType(node.shapeType()))));
             }
             styleLosses(node.archiId(), LossObjectKind.NODE, node.style());
             if (node.image()) {
-                losses.add(new ImageLoss(node.archiId(), LossObjectKind.NODE, "image",
+                losses.add(new ExportLoss(node.archiId(), LossObjectKind.NODE, "image",
                         Message.of(InterchangeMessages.IMAGE_LOSS_IMAGE)));
             }
         }
 
         private void styleLosses(String archiId, LossObjectKind kind, Style style) {
             for (String attribute : style.rejected()) {
-                losses.add(new ImageLoss(archiId, kind, "style",
+                losses.add(new ExportLoss(archiId, kind, "style",
                         Message.of(InterchangeMessages.IMAGE_LOSS_STYLE, attribute)));
             }
         }
@@ -233,7 +234,7 @@ public final class SvgWriter {
             } else {
                 String family = own.map(ArchiFont::family).orElse(notation.family());
                 if (!typesetter.hasFamily(family)) {
-                    losses.add(new ImageLoss(node.archiId(), LossObjectKind.NODE, "font",
+                    losses.add(new ExportLoss(node.archiId(), LossObjectKind.NODE, "font",
                             Message.of(InterchangeMessages.IMAGE_LOSS_FONT, family)));
                     family = notation.family();
                 }
@@ -266,7 +267,7 @@ public final class SvgWriter {
             }
             boolean clipped = overflowsBox || overflowsSide;
             if (lines.truncated() || overflowsBox && !text.isBlank()) {
-                losses.add(new ImageLoss(node.archiId(), LossObjectKind.NODE, "label",
+                losses.add(new ExportLoss(node.archiId(), LossObjectKind.NODE, "label",
                         Message.of(InterchangeMessages.IMAGE_LOSS_LABEL)));
             }
 
@@ -345,7 +346,7 @@ public final class SvgWriter {
             Optional<Rect> source = endpoint(edge.sourceId());
             Optional<Rect> target = endpoint(edge.targetId());
             if (source.isEmpty() || target.isEmpty()) {
-                losses.add(new ImageLoss(edge.archiId(), LossObjectKind.EDGE, "route",
+                losses.add(new ExportLoss(edge.archiId(), LossObjectKind.EDGE, "route",
                         Message.of(InterchangeMessages.IMAGE_LOSS_EDGE)));
                 return;
             }

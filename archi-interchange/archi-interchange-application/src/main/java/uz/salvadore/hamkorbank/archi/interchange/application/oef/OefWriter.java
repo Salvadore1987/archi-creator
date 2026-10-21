@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportLoss;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.ArchiFont;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.Size;
@@ -134,7 +135,7 @@ public final class OefWriter {
     }
 
     /** Файл OEF в UTF-8 и всё, что в него не перенеслось, в порядке обхода документа. */
-    public record Written(byte[] xml, List<OefLoss> losses) {
+    public record Written(byte[] xml, List<ExportLoss> losses) {
 
         public Written {
             xml = xml.clone();
@@ -157,7 +158,7 @@ public final class OefWriter {
 
         private final ModelDocument document;
         private final String modelId;
-        private final List<OefLoss> losses = new ArrayList<>();
+        private final List<ExportLoss> losses = new ArrayList<>();
         private final Map<String, String> propertyIds = new LinkedHashMap<>();
         private final Set<String> usedIds = new HashSet<>();
         private final Set<String> concepts = new HashSet<>();
@@ -879,7 +880,7 @@ public final class OefWriter {
         }
 
         private void loss(String archiId, String kind, String aspect, Message reason) {
-            losses.add(new OefLoss(archiId, LossObjectKind.of(kind), aspect, reason));
+            losses.add(new ExportLoss(archiId, LossObjectKind.of(kind), aspect, reason));
         }
     }
 

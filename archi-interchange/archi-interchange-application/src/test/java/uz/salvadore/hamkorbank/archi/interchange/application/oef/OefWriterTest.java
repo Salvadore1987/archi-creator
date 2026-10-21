@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportLoss;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.ShapeEntry;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.Size;
@@ -50,7 +51,7 @@ class OefWriterTest {
         assertEquals(document.relationships().size(), count(xml, "<relationship "));
         assertEquals(document.views().size(), count(xml, "<view "));
         assertTrue(xml.contains("xsi:type=\"Location\""), "Location в редакторе opaque, но в OEF выражается");
-        assertEquals(Set.of("type"), written.losses().stream().map(OefLoss::aspect).collect(Collectors.toSet()),
+        assertEquals(Set.of("type"), written.losses().stream().map(ExportLoss::aspect).collect(Collectors.toSet()),
                 "в эталоне теряется только тип корневых папок");
         assertEquals(document.folders().size(), written.losses().size());
     }

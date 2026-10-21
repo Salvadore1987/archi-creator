@@ -2,12 +2,17 @@ package uz.salvadore.hamkorbank.archi.interchange.application.handler;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeOperation;
+import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportLoss;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeEvents;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMetrics;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
+import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossEntry;
+import uz.salvadore.hamkorbank.archi.interchange.domain.identity.LossEntryId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.UuidV7;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
@@ -79,5 +84,11 @@ public final class InterchangeKernel {
     /** Генератор ключей версии 7 по часам приложения. */
     UuidV7 uuids() {
         return uuids;
+    }
+
+    /** Потери выгрузки — записи отчёта с причинами на языке запроса. */
+    List<LossEntry> lossEntries(List<ExportLoss> losses) {
+        return losses.stream().map(l -> new LossEntry(LossEntryId.next(uuids), ArchiId.of(l.archiId()),
+                l.objectKind(), l.aspect(), texts.text(l.reason()))).toList();
     }
 }

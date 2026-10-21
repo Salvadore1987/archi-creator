@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportLoss;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
@@ -95,14 +96,14 @@ class SvgWriterTest {
                 "</element>\n              </folder>\n            </archimate:model>",
                 "  <sourceConnection xsi:type=\"archimate:Connection\" id=\"id-c9\" source=\"id-n4\" target=\"id-zz\"/>"
                         + "\n                </element>\n              </folder>\n            </archimate:model>");
-        List<ImageLoss> losses = render(RenderingFixtures.document(xml), TEXT).losses();
+        List<ExportLoss> losses = render(RenderingFixtures.document(xml), TEXT).losses();
 
-        assertTrue(losses.contains(new ImageLoss("id-n4", LossObjectKind.NODE, "shape",
+        assertTrue(losses.contains(new ExportLoss("id-n4", LossObjectKind.NODE, "shape",
                 Message.of(
                         "interchange.image.loss-placeholder", "WorkPackage"))), losses.toString());
         assertTrue(losses.stream().anyMatch(l -> l.archiId().equals("id-n2") && l.aspect().equals("font")));
         assertEquals(List.of("id-n2", "id-n4"), losses.stream().filter(l -> !l.aspect().equals("route"))
-                .map(ImageLoss::archiId).distinct().sorted().toList());
+                .map(ExportLoss::archiId).distinct().sorted().toList());
     }
 
     @Test
