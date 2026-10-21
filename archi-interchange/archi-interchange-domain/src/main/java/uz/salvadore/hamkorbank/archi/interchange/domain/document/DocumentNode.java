@@ -41,6 +41,24 @@ public record DocumentNode(String tag, DocumentOrder order, Attributes attribute
         VIEW_EDGE
     }
 
+    /** Вид объекта представления по {@code xsi:type} узла или ребра представления. */
+    public enum ViewObject {
+        /** Фигура элемента модели — {@code archimate:DiagramObject}. */
+        ELEMENT,
+        /** Группа — {@code archimate:Group}. */
+        GROUP,
+        /** Заметка — {@code archimate:Note}. */
+        NOTE,
+        /** Ссылка на другое представление — {@code archimate:DiagramModelReference}. */
+        VIEW_REFERENCE,
+        /** Линия связи модели — {@code archimate:Connection}. */
+        RELATIONSHIP_LINE,
+        /** Простая линия без связи модели — {@code archimate:DiagramModelConnection}. */
+        LINE,
+        /** Всё прочее: объекты скетча и холста, тип, которого Archi ещё не знал. */
+        OTHER
+    }
+
     public DocumentNode {
         Objects.requireNonNull(tag, "tag");
         Objects.requireNonNull(order, "order");
@@ -83,6 +101,19 @@ public record DocumentNode(String tag, DocumentOrder order, Attributes attribute
                 yield type.endsWith("Relationship") ? Kind.RELATIONSHIP
                         : type.endsWith("Model") ? Kind.VIEW : Kind.ELEMENT;
             }
+        };
+    }
+
+    /** Вид объекта представления по типу; у узла не из представления — {@link ViewObject#OTHER}. */
+    public ViewObject viewObject() {
+        return switch (archiType().orElse("")) {
+            case "archimate:DiagramObject" -> ViewObject.ELEMENT;
+            case "archimate:Group" -> ViewObject.GROUP;
+            case "archimate:Note" -> ViewObject.NOTE;
+            case "archimate:DiagramModelReference" -> ViewObject.VIEW_REFERENCE;
+            case "archimate:Connection" -> ViewObject.RELATIONSHIP_LINE;
+            case "archimate:DiagramModelConnection" -> ViewObject.LINE;
+            default -> ViewObject.OTHER;
         };
     }
 

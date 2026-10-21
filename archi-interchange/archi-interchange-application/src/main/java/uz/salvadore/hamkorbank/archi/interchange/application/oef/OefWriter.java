@@ -55,6 +55,8 @@ public final class OefWriter {
     private static final String PREFIX = "archimate:";
     private static final String DIAGRAM = "archimate:ArchimateDiagramModel";
     private static final String JUNCTION = "archimate:Junction";
+    /** Окончание типа связи Archi; без него — имя типа в OEF. */
+    private static final String RELATIONSHIP_SUFFIX = "Relationship";
 
     /** Типы элементов OEF 3.1 без соединителей — перечень схемы. */
     private static final Set<String> ELEMENT_TYPES = Set.of("BusinessActor", "BusinessRole",
@@ -278,11 +280,11 @@ public final class OefWriter {
 
         private Optional<String> relationshipType(DocumentNode relationship) {
             String xsiType = relationship.archiType().orElse("");
-            if (!xsiType.startsWith(PREFIX) || !xsiType.endsWith(OefMarkup.RELATIONSHIP_SUFFIX)) {
+            if (!xsiType.startsWith(PREFIX) || !xsiType.endsWith(RELATIONSHIP_SUFFIX)) {
                 return Optional.empty();
             }
             return Optional.of(xsiType.substring(PREFIX.length(),
-                            xsiType.length() - OefMarkup.RELATIONSHIP_SUFFIX.length()))
+                            xsiType.length() - RELATIONSHIP_SUFFIX.length()))
                     .filter(RELATIONSHIP_TYPES::contains);
         }
 

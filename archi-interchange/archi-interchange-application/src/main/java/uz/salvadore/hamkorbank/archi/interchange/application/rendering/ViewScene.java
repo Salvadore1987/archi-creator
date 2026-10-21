@@ -127,18 +127,18 @@ final class ViewScene {
         String xsiType = child.archiType().orElse("");
         Optional<DocumentNode> element = child.attribute("archimateElement").map(concepts::get)
                 .filter(ViewScene::isElement);
-        Kind kind = switch (xsiType) {
-            case "archimate:DiagramObject" -> Kind.ELEMENT;
-            case "archimate:Group" -> Kind.GROUP;
-            case "archimate:Note" -> Kind.NOTE;
+        Kind kind = switch (child.viewObject()) {
+            case ELEMENT -> Kind.ELEMENT;
+            case GROUP -> Kind.GROUP;
+            case NOTE -> Kind.NOTE;
             default -> Kind.OTHER;
         };
         String shapeType = element.flatMap(DocumentNode::archiType).orElse(xsiType);
         Layer layer = REGISTRY.findByXsiType(shapeType).map(c -> c.layer()).orElse(Layer.OTHER);
-        boolean opaque = kind == Kind.OTHER || kind == Kind.ELEMENT && element.flatMap(DocumentNode::archiType)
+        boolean opaque = kind == Kind.OTHER || (kind == Kind.ELEMENT && element.flatMap(DocumentNode::archiType)
                 .flatMap(REGISTRY::findByXsiType)
                 .filter(c -> c.kind() == ConceptKind.ELEMENT || c.kind() == ConceptKind.JUNCTION)
-                .filter(c -> c.supported()).isEmpty();
+                .filter(c -> c.supported()).isEmpty());
         Optional<String> text = child.values("content").stream().findFirst().map(DocumentValue::text);
         String label = kind == Kind.NOTE ? text.orElse("")
                 : element.map(e -> e.attribute("name").orElse(""))

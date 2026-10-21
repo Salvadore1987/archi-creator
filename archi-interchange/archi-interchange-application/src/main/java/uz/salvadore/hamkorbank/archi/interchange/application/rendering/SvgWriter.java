@@ -6,7 +6,6 @@ import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -64,7 +63,6 @@ public final class SvgWriter {
     private static final int NORMAL_WEIGHT = 400;
     private static final int BOLD_WEIGHT = 700;
     private static final double PT = 4.0 / 3.0;
-    private static final Locale RUSSIAN = Locale.forLanguageTag("ru");
     private static final Pattern CUTOUT = Pattern.compile("var\\(--icon-cutout(?:,[^)]*)?\\)");
     private static final String FALLBACK_STACK = ", system-ui, sans-serif";
 
@@ -261,7 +259,7 @@ public final class SvgWriter {
             Face face = new Face(notation.family(), font.size(), notation.weight("group_tab_font_weight"), false,
                     notation.ems("group_tab_letter_spacing"));
             return new Typography(face, layoutUnit(font.size() * font.lineHeight()),
-                    notation.value("node_subtitle_color"), node.label().toUpperCase(RUSSIAN), 1);
+                    notation.value("node_subtitle_color"), node.label().toUpperCase(LabelLayout.RUSSIAN), 1);
         }
 
         /** Имя элемента или текст заметки: свой шрифт объекта сильнее токена; шрифта нет на сервере — потеря. */

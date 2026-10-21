@@ -17,7 +17,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentValue;
 final class OefMarkup {
 
     static final String XSI_TYPE = "xsi:type";
-    static final String RELATIONSHIP_SUFFIX = "Relationship";
     private static final Pattern NCNAME = Pattern.compile("^[A-Za-z_][A-Za-z0-9_.-]*$");
 
     private OefMarkup() {

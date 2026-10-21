@@ -28,6 +28,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.R
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
+import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode.ViewObject;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentValue;
 
 /** Представления-диаграммы в OEF: узлы с абсолютной геометрией, линии и точки перегиба. */
@@ -214,19 +215,18 @@ final class OefViews {
         private Optional<NodeKind> nodeKind(DocumentNode node) {
             String id = node.archiId().value();
             String xsiType = node.archiType().orElse("");
-            return switch (xsiType) {
-                case "archimate:DiagramObject" -> {
+            return switch (node.viewObject()) {
+                case ELEMENT -> {
                     boolean exported = node.attribute("archimateElement").filter(pass.concepts()::contains)
-                            .filter(e -> !pass.byId().get(e).archiType().orElse("")
-                                    .endsWith(OefMarkup.RELATIONSHIP_SUFFIX))
+                            .filter(e -> pass.byId().get(e).kind() != DocumentNode.Kind.RELATIONSHIP)
                             .isPresent();
                     if (!exported) {
                         pass.loss(id, "node", "element", Message.of(InterchangeMessages.OEF_LOSS_NODE_CONCEPT));
                     }
                     yield exported ? Optional.of(NodeKind.ELEMENT) : Optional.empty();
                 }
-                case "archimate:Group" -> Optional.of(NodeKind.CONTAINER);
-                case "archimate:Note", "archimate:DiagramModelReference" -> Optional.of(NodeKind.LABEL);
+                case GROUP -> Optional.of(NodeKind.CONTAINER);
+                case NOTE, VIEW_REFERENCE -> Optional.of(NodeKind.LABEL);
                 default -> {
                     pass.loss(id, "node", "type", Message.of(InterchangeMessages.OEF_LOSS_NODE_TYPE, xsiType));
                     yield Optional.empty();
@@ -250,8 +250,8 @@ final class OefViews {
         private Optional<DocumentNode> connectionCandidate(DocumentNode connection) {
             String id = connection.archiId().value();
             String xsiType = connection.archiType().orElse("");
-            switch (xsiType) {
-                case "archimate:Connection" -> {
+            switch (connection.viewObject()) {
+                case RELATIONSHIP_LINE -> {
                     boolean exported = connection.attribute("archimateRelationship").filter(pass.concepts()::contains)
                             .isPresent();
                     if (!exported) {
@@ -260,7 +260,7 @@ final class OefViews {
                     }
                     return Optional.of(connection);
                 }
-                case "archimate:DiagramModelConnection" -> {
+                case LINE -> {
                     return Optional.of(connection);
                 }
                 default -> {
@@ -318,15 +318,15 @@ final class OefViews {
         private void node(StringBuilder out, OutNode node, int depth) {
             DocumentNode source = node.node();
             String id = source.archiId().value();
-            String xsiType = source.archiType().orElse("");
-            Set<String> carried = switch (xsiType) {
-                case "archimate:DiagramObject" -> union(NODE_ATTRIBUTES, "archimateElement");
-                case "archimate:Group" -> union(NODE_ATTRIBUTES, "name");
-                case "archimate:DiagramModelReference" -> union(NODE_ATTRIBUTES, "model");
+            ViewObject object = source.viewObject();
+            Set<String> carried = switch (object) {
+                case ELEMENT -> union(NODE_ATTRIBUTES, "archimateElement");
+                case GROUP -> union(NODE_ATTRIBUTES, "name");
+                case VIEW_REFERENCE -> union(NODE_ATTRIBUTES, "model");
                 default -> NODE_ATTRIBUTES;
             };
             pass.checkAttributes(source, "node", carried);
-            pass.checkContent(source, "node", xsiType.equals("archimate:Note")
+            pass.checkContent(source, "node", object == ViewObject.NOTE
                     ? Set.of("bounds", "content", "documentation") : Set.of("bounds", "documentation"));
 
             Rect rect = node.rect();
@@ -342,13 +342,13 @@ final class OefViews {
 
             StringBuilder body = new StringBuilder();
             Optional<String> viewRef = Optional.empty();
-            switch (xsiType) {
-                case "archimate:Group" -> source.attribute("name").filter(n -> !n.isEmpty())
+            switch (object) {
+                case GROUP -> source.attribute("name").filter(n -> !n.isEmpty())
                         .ifPresent(n -> langString(body, depth + 1, "label", n));
-                case "archimate:Note" -> source.values("content").stream().findFirst()
+                case NOTE -> source.values("content").stream().findFirst()
                         .map(DocumentValue::text).filter(t -> !t.isEmpty())
                         .ifPresent(t -> langString(body, depth + 1, "label", t));
-                case "archimate:DiagramModelReference" -> {
+                case VIEW_REFERENCE -> {
                     Optional<String> target = source.attribute("model");
                     target.map(pass.byId()::get).flatMap(v -> v.attribute("name")).filter(n -> !n.isEmpty())
                             .ifPresent(n -> langString(body, depth + 1, "label", n));
@@ -370,7 +370,7 @@ final class OefViews {
 
         private void connection(StringBuilder out, DocumentNode connection, List<Point> points) {
             String id = connection.archiId().value();
-            boolean relationship = connection.archiType().filter("archimate:Connection"::equals).isPresent();
+            boolean relationship = connection.viewObject() == ViewObject.RELATIONSHIP_LINE;
             pass.checkAttributes(connection, "edge", relationship ? union(EDGE_ATTRIBUTES, "archimateRelationship")
                     : union(EDGE_ATTRIBUTES, "name"));
             pass.checkContent(connection, "edge", Set.of("bendpoint", "documentation"));
