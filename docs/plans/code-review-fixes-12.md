@@ -24,7 +24,7 @@
 | 4 | Три цепочки: Actuator (`EndpointRequest`), API, UI; открытое — списком, остальное — отказ | 12-01, 12-02 | `PublicSurfaceIT`: статика, `/ui-config`, пробы — открыты; адрес вне списка и Actuator без токена — не `200` | ✅ |
 | 5 | `traceId` и `modelId` — фильтром до цепочки безопасности, субъект — после | 12-03 | `PublicSurfaceIT`: `401` несёт `X-Trace-Id` | ✅ |
 | 6 | Контроллер сессии: перевод — `SessionDtoMapper`, роли и субъект — из `CurrentEditorResolver`, `401` — цепочка; `@EnableConfigurationProperties(UiSettings)` — в конфигурацию | 12-08 | `RestLayerConventionsTest#controllersDoNotBuildDtos` охватывает DTO bootstrap; `#controllersDoNotConstructExceptions` | ✅ |
-| 7 | `spring-boot-configuration-processor` в `annotationProcessorPaths` модуля `archi-bootstrap` | 12-06 | `ConfigurationMetadataTest`: метаданные есть у каждого префикса `@ConfigurationProperties` | ⬜ |
+| 7 | `spring-boot-configuration-processor` в `annotationProcessorPaths` модуля `archi-bootstrap` | 12-06 | `ConfigurationMetadataTest`: метаданные есть у каждого префикса `@ConfigurationProperties` | ✅ |
 | 8 | `@Validated` и ограничения на всех шести настройках; умолчания `InterchangeSettings`; одно умолчание каталога кэша Git | 12-04 | `SettingsValidationTest`: недопустимые значения роняют контекст; `CodingRulesTest`: `@ConfigurationProperties` — с `@Validated` | ⬜ |
 | 9 | Пояс очистки снимков и её расписания — `archi.modeling.retention-zone` | 12-10 | `CodingRulesTest`: нет `ZoneId.systemDefault()` и `TimeZone.getDefault()` в основном коде | ⬜ |
 | 10 | `scanBasePackages` у класса запуска | 12-11 | `CodingRulesTest`: класс запуска называет корень сканирования | ⬜ |
@@ -64,3 +64,7 @@
   в `EditorIdentity` неупорядочен, поэтому маппер сортирует. Своя проверка «вошёл ли» у `/me` ушла:
   цепочка API не пускает к нему без токена, `SessionIT` это проверяет. На старом коде правила падали
   трижды на DTO и один раз на исключении `SessionController`.
+- **Задача 7.** Файл метаданных с тем же именем лежит и в jar'ах Spring Boot, поэтому тест собирает
+  группы со всех файлов classpath, а не с первого найденного: первый вариант на старом коде нашёл
+  чужой файл и упал не на отсутствии файла, а на группе. Процессор подключён только в `archi-bootstrap` —
+  все шесть классов настроек живут там. На старом коде групп `archi.*` не было ни одной.
