@@ -2,7 +2,6 @@ package uz.salvadore.hamkorbank.archi.bootstrap.wiring;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
-import java.time.ZoneId;
 import java.util.Locale;
 import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
@@ -15,6 +14,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
+import org.springframework.scheduling.config.CronTask;
+import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.transaction.PlatformTransactionManager;
 import uz.salvadore.hamkorbank.archi.bootstrap.git.GitSnapshotArchive;
 import uz.salvadore.hamkorbank.archi.interchange.application.mapping.ArchimateSnapshots;
@@ -213,7 +214,7 @@ public class ModelingConfiguration {
                                                                             GitSnapshotArchive git,
                                                                             ModelingSettings settings) {
         return new SnapshotRetentionApplicationServiceImpl(new SnapshotPurgeCommandHandler(kernel, git,
-                ZoneId.systemDefault(), settings.retentionEnabled()));
+                settings.retentionZone(), settings.retentionEnabled()));
     }
 
     @Bean
@@ -323,6 +324,7 @@ public class ModelingConfiguration {
     @Bean
     SchedulingConfigurer snapshotRetention(SnapshotRetentionApplicationService retention,
                                            ModelingSettings settings) {
-        return registrar -> registrar.addCronTask(retention::purgeSnapshots, settings.retentionCron());
+        return registrar -> registrar.addCronTask(new CronTask(retention::purgeSnapshots,
+                new CronTrigger(settings.retentionCron(), settings.retentionZone())));
     }
 }

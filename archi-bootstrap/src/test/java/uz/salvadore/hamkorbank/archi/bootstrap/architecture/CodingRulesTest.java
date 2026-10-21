@@ -29,10 +29,13 @@ import jakarta.persistence.PersistenceContext;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TimeZone;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLOutputFactory;
 import org.junit.jupiter.api.BeforeAll;
@@ -425,6 +428,17 @@ class CodingRulesTest {
                                 place + " constructs " + call.getTargetOwner().getSimpleName())));
             }
         };
+    }
+
+    @Test
+    @DisplayName("Пояс времени — из настроек или часов приложения, а не пояс JVM")
+    void noSystemTimeZone() {
+        noClasses().should().callMethod(ZoneId.class, "systemDefault")
+                .orShould().callMethod(TimeZone.class, "getDefault")
+                .orShould().callMethod(Clock.class, "systemDefaultZone")
+                .because("пояс JVM — свойство образа, а не установки: в контейнере он UTC, и граница месяца "
+                        + "или ночное расписание сдвигаются на часы")
+                .check(classes);
     }
 
     @Test

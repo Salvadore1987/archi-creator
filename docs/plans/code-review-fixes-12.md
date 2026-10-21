@@ -26,7 +26,7 @@
 | 6 | Контроллер сессии: перевод — `SessionDtoMapper`, роли и субъект — из `CurrentEditorResolver`, `401` — цепочка; `@EnableConfigurationProperties(UiSettings)` — в конфигурацию | 12-08 | `RestLayerConventionsTest#controllersDoNotBuildDtos` охватывает DTO bootstrap; `#controllersDoNotConstructExceptions` | ✅ |
 | 7 | `spring-boot-configuration-processor` в `annotationProcessorPaths` модуля `archi-bootstrap` | 12-06 | `ConfigurationMetadataTest`: метаданные есть у каждого префикса `@ConfigurationProperties` | ✅ |
 | 8 | `@Validated` и ограничения на всех шести настройках; умолчания `InterchangeSettings`; одно умолчание каталога кэша Git | 12-04 | `SettingsValidationTest`: недопустимые значения роняют контекст; `CodingRulesTest`: `@ConfigurationProperties` — с `@Validated` | ✅ |
-| 9 | Пояс очистки снимков и её расписания — `archi.modeling.retention-zone` | 12-10 | `CodingRulesTest`: нет `ZoneId.systemDefault()` и `TimeZone.getDefault()` в основном коде | ⬜ |
+| 9 | Пояс очистки снимков и её расписания — `archi.modeling.retention-zone` | 12-10 | `CodingRulesTest`: нет `ZoneId.systemDefault()` и `TimeZone.getDefault()` в основном коде | ✅ |
 | 10 | `scanBasePackages` у класса запуска | 12-11 | `CodingRulesTest`: класс запуска называет корень сканирования | ⬜ |
 | 11 | ADR: роль — таблицей операций в ядре сценария, `@PreAuthorize` не вводится; D-21 | 12-12 | `tools/check-links.py`, `tools/check-traceability.py` | ⬜ |
 
@@ -76,3 +76,9 @@
   без него приложение не стартует. Умолчания `InterchangeSettings` повторяют `application.yaml`: так класс
   без YAML (тест, другой профиль) получает рабочие пределы, а не нули. На старом коде падали все
   12 случаев `SettingsValidationTest` и правило `settingsAreValidated`.
+- **Задача 9.** Пояс — отдельная настройка `archi.modeling.retention-zone` (`ARCHI_RETENTION_ZONE`,
+  по умолчанию `Asia/Tashkent`), а не общий с поясом бюджета помощника: это разные решения установки,
+  хоть сейчас и совпадают. Расписание идёт `CronTrigger` с тем же поясом. Правило ловит явный вызов пояса
+  JVM (`ZoneId.systemDefault`, `TimeZone.getDefault`, `Clock.systemDefaultZone`), но не неявный —
+  `addCronTask(…, String)` без пояса берёт пояс JVM внутри Spring, и ArchUnit этого не видит.
+  На старом коде правило падало на `ModelingConfiguration.snapshotRetentionApplicationService`.
