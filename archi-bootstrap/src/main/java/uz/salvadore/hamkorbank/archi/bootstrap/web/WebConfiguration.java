@@ -29,6 +29,15 @@ public class WebConfiguration implements WebMvcConfigurer {
         return registration;
     }
 
+    /** После корреляции и до цепочки безопасности: в журнале запроса и её отказы, и {@code traceId}. */
+    @Bean
+    FilterRegistrationBean<RequestLoggingFilter> requestLoggingFilter() {
+        FilterRegistrationBean<RequestLoggingFilter> registration =
+                new FilterRegistrationBean<>(new RequestLoggingFilter());
+        registration.setOrder(SecurityFilterProperties.DEFAULT_FILTER_ORDER - 5);
+        return registration;
+    }
+
     /** После цепочки безопасности: субъект в MDC известен только там. */
     @Bean
     FilterRegistrationBean<RequestUserFilter> requestUserFilter() {

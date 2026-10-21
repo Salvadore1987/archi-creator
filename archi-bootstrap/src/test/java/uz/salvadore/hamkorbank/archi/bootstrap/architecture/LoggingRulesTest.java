@@ -12,13 +12,16 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,6 +38,8 @@ class LoggingRulesTest {
 
     private static final String ROOT = "uz.salvadore.hamkorbank.archi";
     private static final Path REPOSITORY = Path.of("..");
+    /** Сборка, зависимости и Node — исходников проекта там нет, а файлов десятки тысяч. */
+    private static final Set<String> SKIPPED = Set.of("target", "node_modules", ".node", ".git", ".mvn");
     /** Вызов журнала до конца выражения: поле журнала в проекте называется {@code LOG}. */
     private static final Pattern LOG_CALL =
             Pattern.compile("\\bLOG\\s*\\.\\s*\\w+\\s*\\((?:[^;\"]|\"(?:[^\"\\\\]|\\\\.)*\")*;");
@@ -73,20 +78,31 @@ class LoggingRulesTest {
     @DisplayName("сообщение журнала — шаблон с {}, а не склейка строк")
     void noConcatenationInLogCalls() throws IOException {
         List<String> violations = new ArrayList<>();
-        try (Stream<Path> files = Files.walk(REPOSITORY)) {
-            for (Path file : files.filter(f -> f.toString().endsWith(".java")
-                    && f.toString().contains("/src/main/java/")
-                    && !f.toString().contains("/target/") && !f.toString().contains("/node_modules/")).toList()) {
-                String source = Files.readString(file, StandardCharsets.UTF_8);
-                Matcher call = LOG_CALL.matcher(source);
-                while (call.find()) {
-                    String blanked = STRING_LITERAL.matcher(call.group()).replaceAll("\"\"");
-                    if (CONCATENATION.matcher(blanked).find()) {
-                        violations.add(REPOSITORY.relativize(file) + ": " + call.group().replaceAll("\\s+", " "));
-                    }
+        Files.walkFileTree(REPOSITORY, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attributes) {
+                return SKIPPED.contains(String.valueOf(dir.getFileName())) ? FileVisitResult.SKIP_SUBTREE
+                        : FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException {
+                if (file.toString().endsWith(".java") && file.toString().contains("/src/main/java/")) {
+                    scan(file, violations);
                 }
+                return FileVisitResult.CONTINUE;
+            }
+        });
+        assertThat(violations).as("склейка строк в вызове журнала").isEmpty();
+    }
+
+    private static void scan(Path file, List<String> violations) throws IOException {
+        Matcher call = LOG_CALL.matcher(Files.readString(file, StandardCharsets.UTF_8));
+        while (call.find()) {
+            String blanked = STRING_LITERAL.matcher(call.group()).replaceAll("\"\"");
+            if (CONCATENATION.matcher(blanked).find()) {
+                violations.add(REPOSITORY.relativize(file) + ": " + call.group().replaceAll("\\s+", " "));
             }
         }
-        assertThat(violations).as("склейка строк в вызове журнала").isEmpty();
     }
 }
