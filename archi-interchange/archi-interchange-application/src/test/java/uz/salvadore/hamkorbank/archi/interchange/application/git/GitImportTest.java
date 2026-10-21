@@ -50,7 +50,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSessionAppliedEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportStatus;
-import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
@@ -83,10 +82,12 @@ class GitImportTest {
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(Instant.parse("2026-10-14T10:00:00Z"), ZoneOffset.UTC);
-        UnitOfWork transactions = new RollbackUnitOfWork(List.of(modelStates, sessions, outbox, bindings, versions));
+        RollbackUnitOfWork transactions = new RollbackUnitOfWork(List.of(modelStates, sessions, outbox, bindings,
+                versions));
         ImportPolicy policy = new ImportPolicy() {
             @Override
             public boolean strictImport(WorkspaceId workspaceId) {
+                assertTrue(transactions.active(), "настройка пространства читается в транзакции");
                 return strict;
             }
 

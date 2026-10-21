@@ -129,7 +129,7 @@ final class GitAttempts {
                           EditorIdentity actor) {
         String name = ref.ref().value() + "@" + ref.sha().value();
         return ImportSession.receive(new ImportSessionId(uuids.next()), ImportRequest.of(workspace,
-                model, name, source, uuids.next().toString(), policy.strictImport(workspace),
+                model, name, source, uuids.next().toString(), unitOfWork.read(() -> policy.strictImport(workspace)),
                 actor.subject()), clock.instant());
     }
 

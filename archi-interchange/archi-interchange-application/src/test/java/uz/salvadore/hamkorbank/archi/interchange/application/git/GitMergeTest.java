@@ -14,6 +14,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -201,6 +202,20 @@ class GitMergeTest {
                 "proposal", Map.of("id-app:name", "THEIRS"))));
         assertEquals(InterchangeCodes.INVALID_REQUEST, code(() -> service.preview(ARCHITECT, model,
                 "proposal", Map.of("id-app:name", "MINE"))));
+    }
+
+    @Test
+    @DisplayName("UC-IXC-007: выбор без значения — 422 и в отчёте, и в применении, а не сбой")
+    void nullResolutionIsRejected() {
+        repository.commit("proposal", model("АБС theirs", "", ""));
+        GitMergeService.Preview preview = service.preview(ARCHITECT, model, "proposal", Map.of("id-app:name", "OURS"));
+        Map<String, String> missing = new HashMap<>();
+        missing.put("id-app:name", null);
+
+        assertEquals(InterchangeCodes.INVALID_REQUEST, code(() -> service.preview(ARCHITECT, model,
+                "proposal", missing)));
+        assertEquals(InterchangeCodes.INVALID_REQUEST, code(() -> service.apply(ARCHITECT, model,
+                confirm(preview, missing))));
     }
 
     @Test

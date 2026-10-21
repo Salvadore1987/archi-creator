@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,12 +78,14 @@ public final class GitMergeService {
     /**
      * Что подтверждает архитектор: ссылка, оба коммита и отпечаток из отчёта, выборы, комментарий.
      * Не переданное поле — {@code null}; без комментария версия получает комментарий по умолчанию.
+     * Выбор без значения сохраняется как есть: отказывает в нём сценарий, а не конструктор.
      */
     public record MergeRequest(String ref, String commitSha, String mergeBaseSha, String baseHash,
                                Map<String, String> resolutions, String comment) {
 
         public MergeRequest {
-            resolutions = Map.copyOf(resolutions);
+            resolutions = resolutions == null ? Map.of()
+                    : Collections.unmodifiableMap(new LinkedHashMap<>(resolutions));
         }
     }
 
@@ -366,6 +369,9 @@ public final class GitMergeService {
     private static Map<String, Side> choices(Map<String, String> resolutions) {
         Map<String, Side> choices = new LinkedHashMap<>();
         resolutions.forEach((id, value) -> {
+            if (value == null) {
+                throw GitAttempts.invalid(Message.of(InterchangeMessages.GIT_MERGE_RESOLUTION_INVALID, id, ""));
+            }
             try {
                 choices.put(id, Side.valueOf(String.valueOf(value)));
             } catch (IllegalArgumentException unknown) {

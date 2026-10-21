@@ -68,6 +68,7 @@ final class GitFakes {
 
         private final List<Store<?>> stores;
         private int depth;
+        private int reads;
 
         RollbackUnitOfWork(List<Store<?>> stores) {
             this.stores = stores;
@@ -99,7 +100,17 @@ final class GitFakes {
 
         @Override
         public <T> T read(Supplier<T> work) {
-            return work.get();
+            reads++;
+            try {
+                return work.get();
+            } finally {
+                reads--;
+            }
+        }
+
+        /** Идёт ли сейчас транзакция — чтения или записи. */
+        boolean active() {
+            return depth > 0 || reads > 0;
         }
     }
 
