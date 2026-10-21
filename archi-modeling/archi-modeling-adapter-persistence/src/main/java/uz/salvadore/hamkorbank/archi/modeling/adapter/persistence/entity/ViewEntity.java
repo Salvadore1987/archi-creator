@@ -19,6 +19,7 @@ import java.util.UUID;
 public class ViewEntity {
 
     @Id
+    @Column(name = "id")
     public UUID id;
 
     @Column(name = "model_id", nullable = false, updatable = false)
@@ -33,11 +34,13 @@ public class ViewEntity {
     @Column(name = "archi_type", nullable = false, updatable = false)
     public String archiType;
 
-    @Column(nullable = false)
+    @Column(name = "name", nullable = false)
     public String name;
 
+    @Column(name = "documentation")
     public String documentation;
 
+    @Column(name = "viewpoint")
     public String viewpoint;
 
     @Column(name = "sort_order", nullable = false)
@@ -47,6 +50,7 @@ public class ViewEntity {
     public String rawXml;
 
     @Version
+    @Column(name = "version")
     public long version;
 
     @ElementCollection

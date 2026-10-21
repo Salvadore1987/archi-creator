@@ -19,6 +19,7 @@ import org.hibernate.annotations.DynamicUpdate;
 public class ModelVersionEntity {
 
     @Id
+    @Column(name = "id")
     public UUID id;
 
     @Column(name = "model_id", nullable = false, updatable = false)
@@ -27,17 +28,19 @@ public class ModelVersionEntity {
     @Column(name = "version_no", nullable = false, updatable = false)
     public long versionNo;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "author", nullable = false, updatable = false)
     public String author;
 
-    @Column(updatable = false)
+    @Column(name = "comment", updatable = false)
     public String comment;
 
+    @Column(name = "label")
     public String label;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     public Instant createdAt;
 
+    @Column(name = "snapshot")
     public byte[] snapshot;
 
     @Column(name = "content_hash", nullable = false, updatable = false)

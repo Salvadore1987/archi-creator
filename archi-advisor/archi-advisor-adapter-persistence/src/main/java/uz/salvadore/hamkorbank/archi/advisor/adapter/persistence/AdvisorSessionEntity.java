@@ -13,6 +13,7 @@ import java.util.UUID;
 public class AdvisorSessionEntity {
 
     @Id
+    @Column(name = "id")
     public UUID id;
 
     @Column(name = "workspace_id", nullable = false, updatable = false)
@@ -21,7 +22,7 @@ public class AdvisorSessionEntity {
     @Column(name = "model_id", nullable = false, updatable = false)
     public UUID modelId;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "function", nullable = false, updatable = false)
     public String function;
 
     @Column(name = "view_id", updatable = false)
@@ -33,10 +34,10 @@ public class AdvisorSessionEntity {
     @Column(name = "idempotency_key", nullable = false, updatable = false)
     public String idempotencyKey;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "fingerprint", nullable = false, updatable = false)
     public String fingerprint;
 
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false)
     public String status;
 
     @Column(name = "context_tokens")
@@ -54,6 +55,7 @@ public class AdvisorSessionEntity {
     @Column(name = "rejection_reason")
     public String rejectionReason;
 
+    @Column(name = "result")
     public String result;
 
     @Column(name = "requested_by", nullable = false, updatable = false)

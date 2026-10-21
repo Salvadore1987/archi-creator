@@ -17,9 +17,10 @@ import java.util.UUID;
 public class WorkspaceEntity {
 
     @Id
+    @Column(name = "id")
     public UUID id;
 
-    @Column(nullable = false)
+    @Column(name = "name", nullable = false)
     public String name;
 
     @Column(name = "created_at", nullable = false, updatable = false)

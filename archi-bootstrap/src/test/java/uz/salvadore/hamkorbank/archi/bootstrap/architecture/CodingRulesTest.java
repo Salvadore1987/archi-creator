@@ -142,6 +142,37 @@ class CodingRulesTest {
     }
 
     @Test
+    @DisplayName("Сохраняемое поле сущности называет свой столбец явно")
+    void entityColumnsAreNamed() {
+        fields().that().areNotStatic()
+                .and().areDeclaredInClassesThat().areAnnotatedWith(JPA + "Entity")
+                .or().areDeclaredInClassesThat().areAnnotatedWith(JPA + "Embeddable")
+                .should(nameTheirColumn())
+                .because("имя столбца, выведенное стратегией именования, меняется вместе с полем или стратегией "
+                        + "без следа в SQL")
+                .check(classes);
+    }
+
+    private static ArchCondition<JavaField> nameTheirColumn() {
+        return new ArchCondition<>("name their column") {
+            @Override
+            public void check(JavaField field, ConditionEvents events) {
+                if (field.getModifiers().contains(JavaModifier.STATIC)
+                        || field.isAnnotatedWith(JPA + "ElementCollection")
+                        || field.isAnnotatedWith(JPA + "Transient")) {
+                    return;
+                }
+                boolean named = field.tryGetAnnotationOfType(JPA + "Column")
+                        .flatMap(column -> column.get("name")).map(name -> !name.toString().isEmpty()).orElse(false);
+                if (!named) {
+                    events.add(SimpleConditionEvent.violated(field,
+                            field.getFullName() + " has no @Column with an explicit name"));
+                }
+            }
+        };
+    }
+
+    @Test
     @DisplayName("Сущности агрегата modeling меняет только сам агрегат")
     void trackedEntitiesChangeOnlyInsideAggregate() {
         codeUnits().should(notChangeTrackedEntitiesOutsideAggregate())

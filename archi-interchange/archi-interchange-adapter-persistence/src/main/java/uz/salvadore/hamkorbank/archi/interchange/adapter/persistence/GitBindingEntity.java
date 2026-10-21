@@ -32,13 +32,13 @@ public class GitBindingEntity {
     @Column(name = "repo_url", nullable = false)
     public String repoUrl;
 
-    @Column(nullable = false)
+    @Column(name = "branch", nullable = false)
     public String branch;
 
     @Column(name = "token_ref", nullable = false)
     public String tokenRef;
 
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false)
     public String status;
 
     @Column(name = "last_commit_sha")
@@ -56,13 +56,13 @@ public class GitBindingEntity {
     @Embeddable
     public static class Author {
 
-        @Column(nullable = false)
+        @Column(name = "subject", nullable = false)
         public String subject;
 
-        @Column(nullable = false)
+        @Column(name = "name", nullable = false)
         public String name;
 
-        @Column(nullable = false)
+        @Column(name = "email", nullable = false)
         public String email;
     }
 }

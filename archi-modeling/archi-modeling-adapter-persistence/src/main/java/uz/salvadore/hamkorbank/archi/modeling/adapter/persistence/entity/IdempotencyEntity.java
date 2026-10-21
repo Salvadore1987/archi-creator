@@ -16,16 +16,18 @@ import java.util.Objects;
 public class IdempotencyEntity {
 
     @Id
+    @Column(name = "scope")
     public String scope;
 
     @Id
+    @Column(name = "actor")
     public String actor;
 
     @Id
     @Column(name = "idem_key")
     public String key;
 
-    @Column(nullable = false)
+    @Column(name = "fingerprint", nullable = false)
     public String fingerprint;
 
     @Column(name = "result_ref", nullable = false)

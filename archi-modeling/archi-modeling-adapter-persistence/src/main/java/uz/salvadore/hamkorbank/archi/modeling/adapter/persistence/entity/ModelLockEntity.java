@@ -17,7 +17,7 @@ public class ModelLockEntity {
     @Column(name = "model_id")
     public UUID modelId;
 
-    @Column(nullable = false)
+    @Column(name = "owner", nullable = false)
     public String owner;
 
     @Column(name = "acquired_at", nullable = false)

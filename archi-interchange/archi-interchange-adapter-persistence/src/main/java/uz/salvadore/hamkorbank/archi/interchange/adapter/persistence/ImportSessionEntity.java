@@ -13,6 +13,7 @@ import java.util.UUID;
 public class ImportSessionEntity {
 
     @Id
+    @Column(name = "id")
     public UUID id;
 
     @Column(name = "workspace_id", nullable = false, updatable = false)
@@ -36,7 +37,7 @@ public class ImportSessionEntity {
     @Column(name = "strict_mode", nullable = false)
     public boolean strictMode;
 
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false)
     public String status;
 
     @Column(name = "started_by", nullable = false)

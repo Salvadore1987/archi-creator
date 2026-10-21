@@ -13,6 +13,7 @@ import java.util.UUID;
 public class AuditLogEntity {
 
     @Id
+    @Column(name = "id")
     public UUID id;
 
     @Column(name = "workspace_id", nullable = false, updatable = false)
@@ -27,10 +28,10 @@ public class AuditLogEntity {
     @Column(name = "user_subject", nullable = false, updatable = false)
     public String userSubject;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "action", nullable = false, updatable = false)
     public String action;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "outcome", nullable = false, updatable = false)
     public String outcome;
 
     @Column(name = "rejection_reason", updatable = false)

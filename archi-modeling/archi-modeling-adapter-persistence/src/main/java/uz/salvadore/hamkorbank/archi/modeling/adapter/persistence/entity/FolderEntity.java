@@ -12,6 +12,7 @@ import java.util.UUID;
 public class FolderEntity {
 
     @Id
+    @Column(name = "id")
     public UUID id;
 
     @Column(name = "model_id", nullable = false, updatable = false)
@@ -23,7 +24,7 @@ public class FolderEntity {
     @Column(name = "archi_id", nullable = false, updatable = false)
     public String archiId;
 
-    @Column(nullable = false)
+    @Column(name = "name", nullable = false)
     public String name;
 
     @Column(name = "folder_type")
