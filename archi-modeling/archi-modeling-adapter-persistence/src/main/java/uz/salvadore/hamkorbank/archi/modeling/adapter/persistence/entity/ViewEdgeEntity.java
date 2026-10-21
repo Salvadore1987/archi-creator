@@ -44,7 +44,7 @@ public class ViewEdgeEntity {
     public UUID targetEdgeId;
 
     /** {@code [[startX,startY,endX,endY], …]}; разбирает {@code Bendpoints}. */
-    @Column(name = "bendpoints", nullable = false)
+    @Column(name = "bendpoints", nullable = false, columnDefinition = "jsonb")
     @ColumnTransformer(write = "?::jsonb")
     public String bendpoints;
 

@@ -25,7 +25,7 @@
 | 5 | `@DynamicUpdate` у версии модели и привязки к Git | 10-06 | `ModelPersistenceIT`: `git_sha`, записанный между чтением и сохранением метки, остаётся; `GitBindingIT`: голова ветки, записанная между чтением и отметкой проверки, остаётся | ✅ |
 | 6 | Список моделей со свойствами одним запросом | 10-03 | `ModelPersistenceIT`: число запросов списка не растёт с числом моделей | ✅ |
 | 7 | Явное `@Column(name = …)` у каждого сохраняемого поля | 10-08 | `CodingRulesTest#entityColumnsAreNamed`: поле `@Entity`/`@Embeddable` без `@Column` с именем роняет сборку | ✅ |
-| 8 | `ddl-auto: validate` | 10-07 | контекст `*IT` стартует с проверкой схемы; `SchemaValidationIT` — значение настройки | ⬜ |
+| 8 | `ddl-auto: validate` | 10-07 | контекст `*IT` стартует с проверкой схемы; `SchemaValidationIT` — значение настройки | ✅ |
 | 9 | ADR-0029: имена схемы и вид JPA-строк; D-20 — принято | 10-09 | `tools/check-links.py`, `tools/check-traceability.py` | ⬜ |
 
 ## Расхождения плана с фактом
@@ -59,3 +59,8 @@
   Коллекции `@ElementCollection` правило пропускает: их таблицу и столбцы называют `@CollectionTable`
   и поля встраиваемого класса. Составные ключи `@IdClass` (`Key`) не сущности и правилом не охвачены —
   их поля повторяют поля сущности, а столбцы называет она.
+- **Задача 8.** Проверка схемы не пропустила одно поле — `ViewEdgeEntity.bendpoints`: столбец `jsonb`, а
+  строка Java по умолчанию ждёт `varchar`. Тип объявлен `columnDefinition = "jsonb"`, запись по-прежнему
+  приводит текст к `jsonb` (`@ColumnTransformer`). `@JdbcTypeCode(SqlTypes.JSON)` не взят: он
+  меняет путь записи значения через сериализатор JSON, а `columnDefinition` — только сверку схемы. Остальные столбцы
+  (`text` против `varchar`, `bytea`, `timestamptz`) диалект Postgres признаёт равными.
