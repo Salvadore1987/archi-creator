@@ -2,6 +2,8 @@ package uz.salvadore.hamkorbank.archi.interchange.application.rendering;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Маршрут связи — тот же, что рисует канва: через точки перегиба, а без них
@@ -12,6 +14,9 @@ public final class Routing {
 
     /** Петля связи узла с самим собой выступает вправо на столько. */
     private static final double LOOP = 24;
+
+    /** Предел цепочки «связь к связи», как у канвы: дальше конец неизвестен, цикл не зацикливает. */
+    private static final int LINK_DEPTH = 8;
 
     private Routing() {
     }
@@ -31,6 +36,44 @@ public final class Routing {
 
     /** Точка перегиба Archi: смещения от центров источника и цели. */
     public record Bendpoint(double startX, double startY, double endX, double endY) {
+    }
+
+    /** Связь как конец другой связи: её концы и точки перегиба. */
+    public record Link(String sourceId, String targetId, List<Bendpoint> bendpoints) {
+
+        public Link {
+            bendpoints = List.copyOf(bendpoints);
+        }
+    }
+
+    /**
+     * Прямоугольник конца связи: фигура, а у связи к связи — квадрат в пиксель посередине
+     * маршрута связи-конца, как крепит канва. Конец не найден, цепочка длиннее предела
+     * или замкнута в цикл — пусто.
+     *
+     * @param shapes прямоугольники фигур по идентификатору узла
+     * @param links  связи по идентификатору ребра
+     */
+    public static Optional<Rect> endpoint(String id, Map<String, Rect> shapes, Map<String, Link> links) {
+        return endpoint(id, shapes, links, 0);
+    }
+
+    private static Optional<Rect> endpoint(String id, Map<String, Rect> shapes, Map<String, Link> links, int depth) {
+        Rect shape = shapes.get(id);
+        if (shape != null) {
+            return Optional.of(shape);
+        }
+        Link link = links.get(id);
+        if (link == null || depth > LINK_DEPTH) {
+            return Optional.empty();
+        }
+        Optional<Rect> source = endpoint(link.sourceId(), shapes, links, depth + 1);
+        Optional<Rect> target = endpoint(link.targetId(), shapes, links, depth + 1);
+        if (source.isEmpty() || target.isEmpty()) {
+            return Optional.empty();
+        }
+        Point p = midpoint(route(source.get(), target.get(), link.bendpoints()));
+        return Optional.of(new Rect(p.x() - 0.5, p.y() - 0.5, 1, 1));
     }
 
     /**

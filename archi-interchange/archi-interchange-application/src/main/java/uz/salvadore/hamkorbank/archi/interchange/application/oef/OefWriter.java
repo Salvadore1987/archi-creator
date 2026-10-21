@@ -17,6 +17,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.Size;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Bendpoint;
+import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Link;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Point;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Rect;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.XmlEscaping;
@@ -423,8 +424,7 @@ public final class OefWriter {
             private final List<OutNode> roots;
             private final Map<String, Rect> rects = new HashMap<>();
             private final List<DocumentNode> connections = new ArrayList<>();
-            private final Map<String, DocumentNode> connectionById = new HashMap<>();
-            private final Map<String, Point> anchors = new HashMap<>();
+            private final Map<String, Link> links = new HashMap<>();
             private double shiftX;
             private double shiftY;
 
@@ -506,7 +506,8 @@ public final class OefWriter {
 
             private void collectConnection(DocumentNode connection) {
                 connections.add(connection);
-                connectionById.put(connection.archiId().value(), connection);
+                links.put(connection.archiId().value(), new Link(connection.attribute("source").orElse(""),
+                        connection.attribute("target").orElse(""), relativeBendpoints(connection)));
                 connection.children().stream().filter(c -> c.tag().equals("sourceConnection"))
                         .forEach(this::collectConnection);
             }
@@ -570,35 +571,27 @@ public final class OefWriter {
                 }
             }
 
+            /**
+             * Точки перегиба в координатах холста. Конец, которого нет на представлении
+             * (цепочка связей к связи длиннее предела или в цикле), — линия без них и запись отчёта.
+             */
             private List<Point> bendpoints(DocumentNode connection) {
-                List<Bendpoint> relative = new ArrayList<>();
-                for (DocumentValue value : connection.values("bendpoint")) {
-                    relative.add(new Bendpoint(number(value, "startX", 0), number(value, "startY", 0),
-                            number(value, "endX", 0), number(value, "endY", 0)));
-                }
+                List<Bendpoint> relative = relativeBendpoints(connection);
                 if (relative.isEmpty()) {
                     return List.of();
                 }
-                return Routing.absoluteBendpoints(endpoint(connection.attribute("source").orElse(""), 0),
-                        endpoint(connection.attribute("target").orElse(""), 0), relative);
+                Optional<Rect> source = endpoint(connection.attribute("source").orElse(""));
+                Optional<Rect> target = endpoint(connection.attribute("target").orElse(""));
+                if (source.isEmpty() || target.isEmpty()) {
+                    loss(connection.archiId().value(), "edge", "bendpoint",
+                            Message.of(InterchangeMessages.OEF_LOSS_BENDPOINTS));
+                    return List.of();
+                }
+                return Routing.absoluteBendpoints(source.get(), target.get(), relative);
             }
 
-            /** Прямоугольник конца линии; конец-линия — точка посередине между её концами. */
-            private Rect endpoint(String id, int depth) {
-                Rect rect = rects.get(id);
-                if (rect != null) {
-                    return rect;
-                }
-                Point point = anchors.computeIfAbsent(id, key -> {
-                    DocumentNode connection = connectionById.get(key);
-                    if (connection == null || depth > connectionById.size()) {
-                        return new Point(0, 0);
-                    }
-                    Point a = endpoint(connection.attribute("source").orElse(""), depth + 1).center();
-                    Point b = endpoint(connection.attribute("target").orElse(""), depth + 1).center();
-                    return new Point((a.x() + b.x()) / 2, (a.y() + b.y()) / 2);
-                });
-                return new Rect(point.x(), point.y(), 0, 0);
+            private Optional<Rect> endpoint(String id) {
+                return Routing.endpoint(id, rects, links);
             }
 
             /** Сдвиг представления так, чтобы ни одна координата не ушла в минус. */
@@ -963,6 +956,15 @@ public final class OefWriter {
 
     private static String integer(double value) {
         return String.valueOf((long) value);
+    }
+
+    private static List<Bendpoint> relativeBendpoints(DocumentNode connection) {
+        List<Bendpoint> relative = new ArrayList<>();
+        for (DocumentValue value : connection.values("bendpoint")) {
+            relative.add(new Bendpoint(number(value, "startX", 0), number(value, "startY", 0),
+                    number(value, "endX", 0), number(value, "endY", 0)));
+        }
+        return relative;
     }
 
     private static double number(DocumentValue value, String name, double fallback) {

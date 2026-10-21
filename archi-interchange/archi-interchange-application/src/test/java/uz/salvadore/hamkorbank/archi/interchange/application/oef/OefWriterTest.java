@@ -164,6 +164,55 @@ class OefWriterTest {
     }
 
     @Test
+    @DisplayName("§3.5: связь к связи — к середине маршрута ребра-конца, как на канве; цепочка не роняет выгрузку")
+    void connectionToConnectionChain() {
+        String archimate = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:archimate="http://www.archimatetool.com/archimate" name="М" id="id-m" version="5.0.0">
+                  <folder name="Application" id="id-f1" type="application">
+                    <element xsi:type="archimate:ApplicationComponent" name="A" id="id-a"/>
+                    <element xsi:type="archimate:ApplicationComponent" name="B" id="id-b"/>
+                    <element xsi:type="archimate:ApplicationComponent" name="C" id="id-c"/>
+                    <element xsi:type="archimate:ApplicationComponent" name="D" id="id-d"/>
+                  </folder>
+                  <folder name="Relations" id="id-f2" type="relations">
+                    <element xsi:type="archimate:FlowRelationship" id="id-r1" source="id-a" target="id-b"/>
+                    <element xsi:type="archimate:AssociationRelationship" id="id-r2" source="id-c" target="id-r1"/>
+                    <element xsi:type="archimate:AssociationRelationship" id="id-r3" source="id-d" target="id-r2"/>
+                  </folder>
+                  <folder name="Views" id="id-f3" type="diagrams">
+                    <element xsi:type="archimate:ArchimateDiagramModel" name="В" id="id-v">
+                      <child xsi:type="archimate:DiagramObject" id="id-na" archimateElement="id-a">
+                        <bounds x="0" y="0" width="100" height="40"/>
+                        <sourceConnection xsi:type="archimate:Connection" id="id-e1" targetConnections="id-e2" source="id-na" target="id-nb" archimateRelationship="id-r1"/>
+                      </child>
+                      <child xsi:type="archimate:DiagramObject" id="id-nb" targetConnections="id-e1" archimateElement="id-b">
+                        <bounds x="300" y="0" width="100" height="40"/>
+                      </child>
+                      <child xsi:type="archimate:DiagramObject" id="id-nc" archimateElement="id-c">
+                        <bounds x="150" y="200" width="100" height="40"/>
+                        <sourceConnection xsi:type="archimate:Connection" id="id-e2" targetConnections="id-e3" source="id-nc" target="id-e1" archimateRelationship="id-r2"/>
+                      </child>
+                      <child xsi:type="archimate:DiagramObject" id="id-nd" archimateElement="id-d">
+                        <bounds x="400" y="200" width="100" height="40"/>
+                        <sourceConnection xsi:type="archimate:Connection" id="id-e3" source="id-nd" target="id-e2" archimateRelationship="id-r3">
+                          <bendpoint startY="-100"/>
+                        </sourceConnection>
+                      </child>
+                    </element>
+                  </folder>
+                </archimate:model>
+                """;
+        OefWriter.Written written = WRITER.write(read(archimate.getBytes(StandardCharsets.UTF_8)));
+        String xml = text(written);
+
+        assertEquals(Optional.empty(), SCHEMA.violation(written.xml()));
+        // Середина маршрута e1 — (200, 20), маршрут e2 вертикален от низа до неё: середина (200, 110.25).
+        // Точка перегиба e3 — пополам между (450, 220 - 100) и (200, 110.25).
+        assertTrue(xml.contains("<bendpoint x=\"325\" y=\"115\"/>"), xml);
+    }
+
+    @Test
     @DisplayName("INV-IXC-004: тот же документ — те же байты")
     void writingTwiceProducesIdenticalBytes() throws IOException {
         ModelDocument document = read(fixture("all_relationship_types.archimate"));

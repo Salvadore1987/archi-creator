@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -21,6 +22,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.CornerIcon;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.ShapeEntry;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.Size;
+import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Link;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Point;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Rect;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.ViewScene.Edge;
@@ -53,7 +55,8 @@ public final class SvgWriter {
     private static final double EDGE_LABEL_LIFT = 4;
     private static final double SUBTITLE_GAP = 1;
     private static final double ICON_GRID = 16;
-    private static final int ENDPOINT_DEPTH = 8;
+    /** Сколько звеньев «связь к связи» пройти до узла, чтобы найти уровень отрисовки ребра. */
+    private static final int LEVEL_DEPTH = 16;
     private static final int NAME_LINES = 2;
     private static final double PT = 4.0 / 3.0;
     private static final Pattern CUTOUT = Pattern.compile("var\\(--icon-cutout(?:,[^)]*)?\\)");
@@ -110,6 +113,8 @@ public final class SvgWriter {
         private final List<ImageLoss> losses = new ArrayList<>();
         private final Map<String, StringBuilder> glyphs = new TreeMap<>();
         private final Map<String, Face> faces = new TreeMap<>();
+        private final Map<String, Rect> shapes = new HashMap<>();
+        private final Map<String, Link> links = new HashMap<>();
         private double minX = Double.POSITIVE_INFINITY;
         private double minY = Double.POSITIVE_INFINITY;
         private double maxX = Double.NEGATIVE_INFINITY;
@@ -119,6 +124,9 @@ public final class SvgWriter {
         Drawing(ViewScene scene, Options options) {
             this.scene = scene;
             this.options = options;
+            scene.nodes().forEach(node -> shapes.put(node.archiId(), node.rect()));
+            scene.edges().forEach(edge -> links.put(edge.archiId(),
+                    new Link(edge.sourceId(), edge.targetId(), edge.bendpoints())));
         }
 
         Rendered draw() {
@@ -326,8 +334,8 @@ public final class SvgWriter {
         // ── Рёбра ──────────────────────────────────────────────────
 
         private void edge(Edge edge) {
-            Optional<Rect> source = endpoint(edge.sourceId(), 0);
-            Optional<Rect> target = endpoint(edge.targetId(), 0);
+            Optional<Rect> source = endpoint(edge.sourceId());
+            Optional<Rect> target = endpoint(edge.targetId());
             if (source.isEmpty() || target.isEmpty()) {
                 losses.add(new ImageLoss(edge.archiId(), LossObjectKind.EDGE, "route",
                         Message.of(InterchangeMessages.IMAGE_LOSS_EDGE)));
@@ -407,29 +415,15 @@ public final class SvgWriter {
 
         private Optional<Node> nodeOf(String endpoint, int guard) {
             Optional<Node> node = scene.node(endpoint);
-            if (node.isPresent() || guard > 16) {
+            if (node.isPresent() || guard > LEVEL_DEPTH) {
                 return node;
             }
             return scene.edge(endpoint).flatMap(e -> nodeOf(e.sourceId(), guard + 1));
         }
 
-        /** Прямоугольник конца: узел, а у связи со связью — точка в середине маршрута ребра-конца. */
-        private Optional<Rect> endpoint(String id, int depth) {
-            Optional<Node> node = scene.node(id);
-            if (node.isPresent()) {
-                return Optional.of(node.get().rect());
-            }
-            Optional<Edge> edge = scene.edge(id);
-            if (edge.isEmpty() || depth > ENDPOINT_DEPTH) {
-                return Optional.empty();
-            }
-            Optional<Rect> s = endpoint(edge.get().sourceId(), depth + 1);
-            Optional<Rect> t = endpoint(edge.get().targetId(), depth + 1);
-            if (s.isEmpty() || t.isEmpty()) {
-                return Optional.empty();
-            }
-            Point p = Routing.midpoint(Routing.route(s.get(), t.get(), edge.get().bendpoints()));
-            return Optional.of(new Rect(p.x() - 0.5, p.y() - 0.5, 1, 1));
+        /** Прямоугольник конца: узел, а у связи к связи — точка в середине маршрута ребра-конца. */
+        private Optional<Rect> endpoint(String id) {
+            return Routing.endpoint(id, shapes, links);
         }
 
         // ── Текст ──────────────────────────────────────────────────

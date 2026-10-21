@@ -308,6 +308,8 @@ public final class InterchangeMessages {
     public static final String DIGEST_UNAVAILABLE = "interchange.internal.digest-unavailable";
     /** Потеря в OEF: атрибут объекта в формате не выражается. */
     public static final String OEF_LOSS_ATTRIBUTE = "interchange.oef.loss-attribute";
+    /** Потеря в OEF: конец линии не нашёлся на представлении, точки перегиба не выгружены. */
+    public static final String OEF_LOSS_BENDPOINTS = "interchange.oef.loss-bendpoints";
     /** Потеря в OEF: типа объекта в формате нет, объект не выгружен. */
     public static final String OEF_LOSS_CONCEPT_TYPE = "interchange.oef.loss-concept-type";
     /** Потеря в OEF: связь модели не выгружена, поэтому и линия на представлении. */
