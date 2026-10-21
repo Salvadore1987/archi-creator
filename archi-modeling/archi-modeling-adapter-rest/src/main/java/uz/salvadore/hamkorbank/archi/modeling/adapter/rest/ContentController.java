@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -128,14 +127,14 @@ public class ContentController {
 
     // ── Дерево ──────────────────────────────────────────────────────
 
-    /** Создаёт папку в дереве модели — {@code 201}. */
+    /** Создаёт папку в дереве модели — {@code 201} с адресом папки в дереве. */
     @PostMapping("/models/{id}/folders")
     public ResponseEntity<FolderDto> createFolder(
             EditorIdentity actor, @PathVariable UUID id, @Valid @RequestBody CreateFolderRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String key) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(DtoMapper.folder(tree.createFolder(actor,
-                new CreateFolderCommand(id, request.parentId(), request.name(), request.id(),
-                        request.archiId(), key))));
+        FolderDto folder = DtoMapper.folder(tree.createFolder(actor, new CreateFolderCommand(id, request.parentId(),
+                request.name(), request.id(), request.archiId(), key)));
+        return ResponseEntity.created(URI.create("/api/v1/models/" + id + "/tree/" + folder.id())).body(folder);
     }
 
     /** Переименовывает папку, элемент, связь или представление в дереве. */

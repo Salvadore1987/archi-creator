@@ -23,7 +23,7 @@
 | 3 | Заголовок отказа — ключ по статусу на обоих языках у четырёх обработчиков | 11-04 | `LocalizedProblemIT`: `400`, `405`, `409` interchange — заголовок по-английски при `en` | ✅ |
 | 4 | Bean Validation на запросах: обязательные поля и элементы списков, `@Valid` на теле; `422 INVALID_INPUT` контекста | 11-01 | `RestLayerConventionsTest#requestBodiesAreValidated`; `RequestValidationIT`: `[null]` в списке доступа, свойство без ключа, `null` в узлах раскладки и авторах Git — `422` | ✅ |
 | 5 | Переводы запроса и ответа — в мапперы; контроллер их не собирает | 11-06 | `RestLayerConventionsTest#controllersDoNotBuildDtos` | ✅ |
-| 6 | `Location` у созданной папки и ребра | 11-07 | `ViewEditingIT`, `ModelLifecycleIT`: у `201` есть `Location` | ⬜ |
+| 6 | `Location` у созданной папки и ребра | 11-07 | `ClientIdsIT`: у `201` папки и ребра есть `Location` | ✅ |
 | 7 | Срок потока SSE — из `spring.mvc.async.request-timeout` | 11-08 | `AdvisorControllerTest`: у эмиттера нет собственного срока | ⬜ |
 | 8 | История версий страницами: `size` (50, не больше 200), `before`; ADR об ограниченных списках моделей и пространств; D-16 | 11-05 | `VersionPageIT`: предел и продолжение | ⬜ |
 | 9 | Контракт OpenAPI и обработчики — одно множество «метод + путь» | 11-09 | `OpenApiContractTest` | ⬜ |
@@ -73,5 +73,9 @@
   `SessionController` правилом не охвачен: его DTO лежат в `bootstrap.security.dto`, а сам он разбирает
   токен — это предмет этапа 12 (безопасность), там и решится, нужен ли ему маппер. Modeling `DtoMapper`
   переводит теперь в обе стороны; у interchange для импорта — `InterchangeDtoMapper` рядом с `GitDtoMapper`.
+- **Задача 6.** Проверка — в `ClientIdsIT`, а не в `ViewEditingIT` и `ModelLifecycleIT` из плана: папку
+  и ребро с заданным клиентом идентификатором создаёт именно он, и адрес сверяется с этим идентификатором.
+  Адрес папки — `/models/{id}/tree/{folderId}`: отдельного ресурса папки в API нет, а этот адрес её
+  переименовывает. На старом коде оба `201` шли без `Location`.
 
 ## Итог

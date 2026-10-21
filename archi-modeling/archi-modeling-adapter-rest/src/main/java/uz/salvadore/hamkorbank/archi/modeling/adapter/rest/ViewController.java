@@ -3,7 +3,6 @@ package uz.salvadore.hamkorbank.archi.modeling.adapter.rest;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -133,7 +132,7 @@ public class ViewController {
         return ResponseEntity.noContent().build();
     }
 
-    /** Новое ребро — {@code 201}; такое же ребро между теми же концами уже есть — {@code 200} с ним. */
+    /** Новое ребро — {@code 201} с адресом; такое же ребро между теми же концами уже есть — {@code 200} с ним. */
     @PostMapping("/views/{id}/edges")
     public ResponseEntity<ViewEdgeDto> placeEdge(EditorIdentity actor, @PathVariable UUID id,
                                                  @Valid @RequestBody PlaceEdgeRequest request) {
@@ -141,7 +140,9 @@ public class ViewController {
                 request.sourceId(), request.targetId(), DtoMapper.bendpoints(request.bendpoints()), request.id(),
                 request.archiId()));
         ViewEdgeDto body = DtoMapper.edge(edge.edge());
-        return edge.created() ? ResponseEntity.status(HttpStatus.CREATED).body(body) : ResponseEntity.ok(body);
+        return edge.created()
+                ? ResponseEntity.created(URI.create("/api/v1/view-edges/" + body.id())).body(body)
+                : ResponseEntity.ok(body);
     }
 
     /** Удаляет узел с представления; элемент в модели остаётся. */
