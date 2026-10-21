@@ -24,7 +24,7 @@
 | 4 | Bean Validation на запросах: обязательные поля и элементы списков, `@Valid` на теле; `422 INVALID_INPUT` контекста | 11-01 | `RestLayerConventionsTest#requestBodiesAreValidated`; `RequestValidationIT`: `[null]` в списке доступа, свойство без ключа, `null` в узлах раскладки и авторах Git — `422` | ✅ |
 | 5 | Переводы запроса и ответа — в мапперы; контроллер их не собирает | 11-06 | `RestLayerConventionsTest#controllersDoNotBuildDtos` | ✅ |
 | 6 | `Location` у созданной папки и ребра | 11-07 | `ClientIdsIT`: у `201` папки и ребра есть `Location` | ✅ |
-| 7 | Срок потока SSE — из `spring.mvc.async.request-timeout` | 11-08 | `AdvisorControllerTest`: у эмиттера нет собственного срока | ⬜ |
+| 7 | Срок потока SSE — из `spring.mvc.async.request-timeout` | 11-08 | `AdvisorControllerTest`: у эмиттера нет собственного срока | ✅ |
 | 8 | История версий страницами: `size` (50, не больше 200), `before`; ADR об ограниченных списках моделей и пространств; D-16 | 11-05 | `VersionPageIT`: предел и продолжение | ⬜ |
 | 9 | Контракт OpenAPI и обработчики — одно множество «метод + путь» | 11-09 | `OpenApiContractTest` | ⬜ |
 
@@ -77,5 +77,8 @@
   и ребро с заданным клиентом идентификатором создаёт именно он, и адрес сверяется с этим идентификатором.
   Адрес папки — `/models/{id}/tree/{folderId}`: отдельного ресурса папки в API нет, а этот адрес её
   переименовывает. На старом коде оба `201` шли без `Location`.
+- **Задача 7.** `SseEmitter` без срока берёт срок асинхронного запроса Spring MVC — `spring.mvc.async.request-timeout`;
+  комментарий к настройке говорит, что это и срок потока. Тест — в `archi-bootstrap`: у модулей
+  `*-adapter-rest` своих тестов нет. На старом коде срок эмиттера был `330000`.
 
 ## Итог

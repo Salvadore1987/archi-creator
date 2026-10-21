@@ -42,8 +42,6 @@ public class AdvisorController {
     private static final Logger LOG = LoggerFactory.getLogger(AdvisorController.class);
 
     private static final String IDEMPOTENCY_KEY = "Idempotency-Key";
-    /** Дольше самого долгого обращения: документация по модели — до пяти минут. */
-    private static final long STREAM_TIMEOUT_MS = 330_000;
 
     private final AdvisorApplicationService advisor;
     private final JsonMapper json;
@@ -88,9 +86,12 @@ public class AdvisorController {
                 body.modelId(), body.viewId(), body.elementId(), key(key), locale)));
     }
 
-    /** Поток читается в фоне: поток запроса освобождается, кадры уходят по мере прихода. */
+    /**
+     * Поток читается в фоне: поток запроса освобождается, кадры уходят по мере прихода.
+     * Своего срока у потока нет — его задаёт срок асинхронного запроса в настройках.
+     */
     private ResponseEntity<SseEmitter> stream(AdvisorStream stream) {
-        SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MS);
+        SseEmitter emitter = new SseEmitter();
         executor.execute(() -> {
             try {
                 stream.run(new SseWriter(emitter, json));
