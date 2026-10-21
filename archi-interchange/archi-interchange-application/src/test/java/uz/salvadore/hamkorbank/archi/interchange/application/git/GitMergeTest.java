@@ -61,7 +61,6 @@ class GitMergeTest {
 
     private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
     private static final EditorIdentity ARCHITECT = EditorIdentity.of("architect-merge", Role.ARCHITECT);
-    private static final EditorIdentity VIEWER = EditorIdentity.of("viewer-merge", Role.VIEWER);
     private static final String NODE = "<element xsi:type=\"archimate:Node\" name=\"Сервер\" id=\"id-node\"/>";
     private static final String VIEW = """
             <element xsi:type="archimate:ArchimateDiagramModel" name="Контекст" id="id-view">
@@ -84,7 +83,7 @@ class GitMergeTest {
     private final MemoryMerges merges = new MemoryMerges();
     private final MemoryRepository repository = new MemoryRepository(model);
     private final List<Object> events = new ArrayList<>();
-    private GitMergeService service;
+    private GitMerge service;
     private GitSha published;
 
     @BeforeEach
@@ -102,7 +101,7 @@ class GitMergeTest {
             public void setStrictImport(WorkspaceId workspaceId, boolean value) {
             }
         };
-        service = new GitMergeService(bindings, repository, ref -> Optional.empty(), modelStates, sessions, policy,
+        service = new GitMerge(bindings, repository, ref -> Optional.empty(), modelStates, sessions, policy,
                 outbox, versions, merges, transactions, events::addAll, InterchangeMetrics.NONE,
                 message -> message.key() + message.args(), clock);
         bindings.save(GitBinding.configure(workspace, "file:///repo.git", null,
@@ -119,14 +118,14 @@ class GitMergeTest {
     void disjointProposalIsReportedWithMarks() {
         GitSha proposal = repository.commit("proposal", model("АБС", NODE, VIEW.formatted(NODE_ON_VIEW)));
 
-        GitMergeService.Preview preview = service.preview(ARCHITECT, model, "proposal", Map.of());
+        GitMerge.Preview preview = service.preview(ARCHITECT, model, "proposal", Map.of());
 
         assertEquals(proposal, preview.ref().sha());
         assertEquals(published, preview.mergeBase());
         assertEquals(List.of(), preview.conflicts());
         assertTrue(preview.applicable());
-        assertTrue(preview.marks().contains(new GitMergeService.Mark(ArchiId.of("id-node"), ModelChanges.Type.ADDED)));
-        GitMergeService.AddedNode added = preview.views().getFirst().nodes().stream()
+        assertTrue(preview.marks().contains(new GitMerge.Mark(ArchiId.of("id-node"), ModelChanges.Type.ADDED)));
+        GitMerge.AddedNode added = preview.views().getFirst().nodes().stream()
                 .filter(n -> n.archiId().equals(ArchiId.of("id-dnode"))).findFirst().orElseThrow();
         assertEquals(List.of(110, 70, 120, 55), List.of(added.x(), added.y(), added.width(), added.height()),
                 "геометрия абсолютна: смещение группы прибавлено");
@@ -139,9 +138,9 @@ class GitMergeTest {
     @DisplayName("INV-IXC-010: применение — новая версия с правками обеих сторон, слитый коммит за моделью")
     void disjointProposalIsMerged() {
         GitSha proposal = repository.commit("proposal", model("АБС", NODE, ""));
-        GitMergeService.Preview preview = service.preview(ARCHITECT, model, "proposal", Map.of());
+        GitMerge.Preview preview = service.preview(ARCHITECT, model, "proposal", Map.of());
 
-        GitMergeService.Merged merged = service.apply(ARCHITECT, model, confirm(preview, Map.of()));
+        GitMerge.Merged merged = service.apply(ARCHITECT, model, confirm(preview, Map.of()));
 
         assertEquals(5, merged.versionNo());
         assertTrue(merged.created());
@@ -158,7 +157,7 @@ class GitMergeTest {
     @DisplayName("INV-IXC-010: одно поле в обеих ветвях — без выбора не применяется, с выбором — по полю")
     void conflictIsResolvedPerField() {
         repository.commit("proposal", model("АБС theirs", NODE, ""));
-        GitMergeService.Preview preview = service.preview(ARCHITECT, model, "proposal", Map.of());
+        GitMerge.Preview preview = service.preview(ARCHITECT, model, "proposal", Map.of());
 
         EntityMerge.Conflict conflict = preview.conflicts().getFirst();
         assertEquals("id-app:name", conflict.id());
@@ -170,7 +169,7 @@ class GitMergeTest {
         assertEquals(List.of("id-app:name"), unresolved.details().get("conflicts"));
         assertEquals(4, modelStates.state.lastVersionNo());
 
-        GitMergeService.Preview chosen = service.preview(ARCHITECT, model, "proposal",
+        GitMerge.Preview chosen = service.preview(ARCHITECT, model, "proposal",
                 Map.of(conflict.id(), "THEIRS"));
         assertTrue(chosen.applicable());
         service.apply(ARCHITECT, model, confirm(chosen, Map.of(conflict.id(), "THEIRS")));
@@ -182,7 +181,7 @@ class GitMergeTest {
     @DisplayName("INV-IXC-012: модель изменилась после отчёта — 409, сессия REJECTED")
     void staleReportIsRejected() {
         repository.commit("proposal", model("АБС", NODE, ""));
-        GitMergeService.Preview preview = service.preview(ARCHITECT, model, "proposal", Map.of());
+        GitMerge.Preview preview = service.preview(ARCHITECT, model, "proposal", Map.of());
         modelStates.state = new MemoryStates.State(xml(model("АБС-2", "", "")), 4, true);
 
         InterchangeException e = assertThrows(InterchangeException.class,
@@ -208,7 +207,7 @@ class GitMergeTest {
     @DisplayName("UC-IXC-007: выбор без значения — 422 и в отчёте, и в применении, а не сбой")
     void nullResolutionIsRejected() {
         repository.commit("proposal", model("АБС theirs", "", ""));
-        GitMergeService.Preview preview = service.preview(ARCHITECT, model, "proposal", Map.of("id-app:name", "OURS"));
+        GitMerge.Preview preview = service.preview(ARCHITECT, model, "proposal", Map.of("id-app:name", "OURS"));
         Map<String, String> missing = new HashMap<>();
         missing.put("id-app:name", null);
 
@@ -219,11 +218,9 @@ class GitMergeTest {
     }
 
     @Test
-    @DisplayName("UC-IXC-007: нет опубликованной версии, нет каталога в предке, нет роли — свои отказы")
+    @DisplayName("UC-IXC-007: нет опубликованной версии, нет каталога в предке — свои отказы")
     void refusals() {
         repository.commit("proposal", model("АБС", NODE, ""));
-        assertEquals(InterchangeCodes.ACCESS_DENIED, code(() -> service.preview(VIEWER, model,
-                "proposal", Map.of())));
         assertEquals(InterchangeCodes.GIT_REF_NOT_FOUND, code(() -> service.preview(ARCHITECT, model,
                 "nope", Map.of())));
 
@@ -243,9 +240,9 @@ class GitMergeTest {
     void mergeOfDivergedHeadSupersedesQueue() {
         GitSha head = repository.commit("main", model("АБС", NODE, ""));
         outbox.divergeHead(model);
-        GitMergeService.Preview preview = service.preview(ARCHITECT, model, "main", Map.of());
+        GitMerge.Preview preview = service.preview(ARCHITECT, model, "main", Map.of());
 
-        GitMergeService.Merged merged = service.apply(ARCHITECT, model, confirm(preview, Map.of()));
+        GitMerge.Merged merged = service.apply(ARCHITECT, model, confirm(preview, Map.of()));
 
         assertEquals(5, merged.versionNo());
         assertEquals(List.of("SKIPPED"), outbox.statuses());
@@ -258,9 +255,9 @@ class GitMergeTest {
     void mergeOfUnchangedDivergedHeadClosesCurrentVersion() {
         GitSha head = repository.commit("main", model("АБС «Ядро»", "", ""));
         outbox.divergeHead(model);
-        GitMergeService.Preview preview = service.preview(ARCHITECT, model, "main", Map.of());
+        GitMerge.Preview preview = service.preview(ARCHITECT, model, "main", Map.of());
 
-        GitMergeService.Merged merged = service.apply(ARCHITECT, model, confirm(preview, Map.of()));
+        GitMerge.Merged merged = service.apply(ARCHITECT, model, confirm(preview, Map.of()));
 
         assertFalse(merged.created());
         assertEquals(List.of("SKIPPED"), outbox.statuses());
@@ -273,9 +270,9 @@ class GitMergeTest {
     void allOursKeepsVersionButRecordsMerge() {
         GitSha proposal = repository.commit("proposal", model("АБС theirs", "", ""));
         Map<String, String> ours = Map.of("id-app:name", "OURS");
-        GitMergeService.Preview preview = service.preview(ARCHITECT, model, "proposal", ours);
+        GitMerge.Preview preview = service.preview(ARCHITECT, model, "proposal", ours);
 
-        GitMergeService.Merged merged = service.apply(ARCHITECT, model, confirm(preview, ours));
+        GitMerge.Merged merged = service.apply(ARCHITECT, model, confirm(preview, ours));
 
         assertTrue(preview.unchanged());
         assertFalse(merged.created());
@@ -283,8 +280,8 @@ class GitMergeTest {
         assertEquals(Map.of(model, proposal), merges.rows);
     }
 
-    private GitMergeService.MergeRequest confirm(GitMergeService.Preview preview, Map<String, String> resolutions) {
-        return new GitMergeService.MergeRequest(preview.ref().ref().value(),
+    private GitMerge.MergeRequest confirm(GitMerge.Preview preview, Map<String, String> resolutions) {
+        return new GitMerge.MergeRequest(preview.ref().ref().value(),
                 preview.ref().sha().value(), preview.mergeBase().value(),
                 preview.baseHash(), resolutions, null);
     }

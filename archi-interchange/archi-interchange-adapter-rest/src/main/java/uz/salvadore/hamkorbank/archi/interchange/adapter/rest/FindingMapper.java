@@ -17,10 +17,6 @@ final class FindingMapper {
                 f.archiId() == null ? null : f.archiId().value(), f.xmlLine());
     }
 
-    static List<FindingDto> findings(List<ImportFinding> findings, TextCatalog text) {
-        return findings.stream().map(f -> finding(f, text)).toList();
-    }
-
     /** Находки из результата сценария — текст уже на языке запроса. */
     static List<FindingDto> findings(List<ImportFindingResponse> findings) {
         return findings.stream().map(f -> new FindingDto(f.severity(), f.code(), f.message(), f.archiId(),

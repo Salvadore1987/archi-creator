@@ -40,14 +40,9 @@ class ApplicationLayerTest {
     private static final String ACTOR = ROOT + ".modeling.domain.common.EditorIdentity";
     /**
      * Сценарии interchange, ещё не переведённые на входные порты: адаптеры пока зовут их напрямую.
-     * Git переводится отдельным этапом; остальное уходит из списка по мере перевода.
+     * Остаток уходит из списка по мере перевода.
      */
     private static final Set<String> NOT_YET_MIGRATED = Set.of(
-            INTERCHANGE + ".git.GitBindingService",
-            INTERCHANGE + ".git.GitBindingSettings",
-            INTERCHANGE + ".git.GitImportService",
-            INTERCHANGE + ".git.GitMergeService",
-            INTERCHANGE + ".git.GitPublishingService",
             INTERCHANGE + ".mapping.ArchimateSnapshots");
     /**
      * Что адаптеру interchange можно кроме входного порта, его DTO и выходных портов: отказы контекста

@@ -65,7 +65,6 @@ class GitImportTest {
 
     private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
     private static final EditorIdentity ARCHITECT = EditorIdentity.of("architect-git", Role.ARCHITECT);
-    private static final EditorIdentity VIEWER = EditorIdentity.of("viewer-git", Role.VIEWER);
 
     private final WorkspaceId workspace = new WorkspaceId(IDS.generate());
     private final ModelId model = new ModelId(IDS.generate());
@@ -77,7 +76,7 @@ class GitImportTest {
     private final MemoryRepository repository = new MemoryRepository(model);
     private final List<Object> events = new ArrayList<>();
     private boolean strict;
-    private GitImportService imports;
+    private GitPull imports;
 
     @BeforeEach
     void setUp() {
@@ -96,7 +95,7 @@ class GitImportTest {
                 strict = value;
             }
         };
-        imports = new GitImportService(bindings, repository, ref -> Optional.empty(), modelStates, sessions, policy,
+        imports = new GitPull(bindings, repository, ref -> Optional.empty(), modelStates, sessions, policy,
                 outbox, versions, transactions, events::addAll, InterchangeMetrics.NONE,
                 message -> message.key() + message.args(), clock);
         bindings.save(GitBinding.configure(workspace, "file:///repo.git", null,
@@ -110,7 +109,7 @@ class GitImportTest {
         GitSha sha = repository.commit("main", model("АБС «Ядро»", NODE));
         MemoryStates.State before = modelStates.state;
 
-        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        GitPull.Preview preview = imports.preview(ARCHITECT, model, "main");
 
         assertEquals(new ResolvedRef(GitRef.of("main"), RefKind.BRANCH, sha), preview.ref());
         assertEquals(3L, preview.baseVersionNo());
@@ -129,9 +128,9 @@ class GitImportTest {
     void appliedStateBecomesNewVersion() {
         ModelDocument target = model("АБС «Ядро»", NODE);
         GitSha sha = repository.commit("main", target);
-        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        GitPull.Preview preview = imports.preview(ARCHITECT, model, "main");
 
-        GitImportService.Pulled pulled = imports.apply(ARCHITECT, model, confirm(preview, "из ветки"));
+        GitPull.Pulled pulled = imports.apply(ARCHITECT, model, confirm(preview, "из ветки"));
 
         assertEquals(4, pulled.versionNo());
         assertTrue(pulled.created());
@@ -151,7 +150,7 @@ class GitImportTest {
     @DisplayName("INV-IXC-012: сбой внутри применения откатывает всё; остаётся только сессия REJECTED")
     void applyIsAtomic() {
         repository.commit("main", model("АБС «Ядро»", NODE));
-        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        GitPull.Preview preview = imports.preview(ARCHITECT, model, "main");
         MemoryStates.State before = modelStates.state;
         modelStates.failAfterReplace = true;
 
@@ -170,7 +169,7 @@ class GitImportTest {
     @DisplayName("UC-IXC-006: журнал попытки не записался — наружу исходный отказ, сбой журнала приложен к нему")
     void journalFailureDoesNotHideRefusal() {
         repository.commit("main", model("АБС «Ядро»", NODE));
-        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        GitPull.Preview preview = imports.preview(ARCHITECT, model, "main");
         modelStates.failAfterReplace = true;
         sessions.failSaves = true;
 
@@ -185,7 +184,7 @@ class GitImportTest {
     @DisplayName("UC-IXC-006: отказ домена interchange при записи — в журнале его код, а не «отчёт устарел»")
     void domainRefusalKeepsItsCodeInJournal() {
         repository.commit("main", model("АБС «Ядро»", NODE));
-        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        GitPull.Preview preview = imports.preview(ARCHITECT, model, "main");
         modelStates.failure = new InterchangeDomainException(InterchangeCodes.GIT_BINDING_DISABLED,
                 Message.of(InterchangeMessages.GIT_BINDING_MISSING, workspace));
 
@@ -200,7 +199,7 @@ class GitImportTest {
     void strictRejectionKeepsItsCode() {
         strict = true;
         repository.commit("main", model("АБС «Ядро»", NODE + FORBIDDEN));
-        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        GitPull.Preview preview = imports.preview(ARCHITECT, model, "main");
 
         InterchangeException e = assertThrows(InterchangeException.class,
                 () -> imports.apply(ARCHITECT, model, confirm(preview, null)));
@@ -215,7 +214,7 @@ class GitImportTest {
     @DisplayName("INV-IXC-012: модель изменилась после отчёта — 409, применять нечего видимого")
     void staleReportIsRejected() {
         repository.commit("main", model("АБС «Ядро»", NODE));
-        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        GitPull.Preview preview = imports.preview(ARCHITECT, model, "main");
         modelStates.state = new MemoryStates.State(xml(model("АБС-2", "")), 3, true);
         MemoryStates.State edited = modelStates.state;
 
@@ -233,7 +232,7 @@ class GitImportTest {
     void reportedCommitIsAppliedAfterBranchMoved() {
         ModelDocument reported = model("АБС «Ядро»", "");
         repository.commit("main", reported);
-        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        GitPull.Preview preview = imports.preview(ARCHITECT, model, "main");
         repository.commit("main", model("АБС «Ядро» 2", NODE));
 
         imports.apply(ARCHITECT, model, confirm(preview, null));
@@ -245,7 +244,7 @@ class GitImportTest {
     @DisplayName("UC-IXC-006: без блокировки — отказ modeling, модель не тронута, попытка в журнале")
     void lockIsRequired() {
         repository.commit("main", model("АБС «Ядро»", ""));
-        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        GitPull.Preview preview = imports.preview(ARCHITECT, model, "main");
         modelStates.state = new MemoryStates.State(modelStates.state.xml(), 3, false);
 
         ModelingDomainException e = assertThrows(ModelingDomainException.class,
@@ -262,9 +261,9 @@ class GitImportTest {
     void corruptTreeIsReportedAndRejected() {
         GitSha sha = repository.commitFiles("main", Map.of("model.yaml", "format_version: 9\n"));
 
-        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        GitPull.Preview preview = imports.preview(ARCHITECT, model, "main");
         InterchangeException e = assertThrows(InterchangeException.class, () -> imports.apply(ARCHITECT, model,
-                new GitImportService.PullRequest("main", sha.value(),
+                new GitPull.PullRequest("main", sha.value(),
                         preview.baseHash(), null)));
 
         assertFalse(preview.applicable());
@@ -276,7 +275,7 @@ class GitImportTest {
     }
 
     @Test
-    @DisplayName("UC-IXC-006: нет ссылки, нет каталога модели, нет привязки, нет роли — свои отказы")
+    @DisplayName("UC-IXC-006: нет ссылки, нет каталога модели, нет привязки — свои отказы")
     void refusals() {
         repository.commitFiles("other", Map.of());
         assertEquals(InterchangeCodes.GIT_REF_NOT_FOUND, code(() -> imports.preview(ARCHITECT, model,
@@ -285,7 +284,6 @@ class GitImportTest {
                 "other")));
         assertEquals(InterchangeCodes.INVALID_REQUEST, code(() -> imports.preview(ARCHITECT, model,
                 "a..b")));
-        assertEquals(InterchangeCodes.ACCESS_DENIED, code(() -> imports.preview(VIEWER, model, "main")));
         bindings.save(bindings.find(workspace).orElseThrow().disabled());
         assertEquals(InterchangeCodes.GIT_NOT_BOUND, code(() -> imports.preview(ARCHITECT, model,
                 "main")));
@@ -296,7 +294,7 @@ class GitImportTest {
     void rebindingDuringNetworkKeepsNewBindingHead() {
         outbox.enqueue(workspace, model, 3, Instant.EPOCH);
         repository.commit("main", model("АБС «Ядро»", NODE));
-        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        GitPull.Preview preview = imports.preview(ARCHITECT, model, "main");
         GitBinding rebound = GitBinding.configure(workspace, "file:///other.git", null,
                 SecretRef.of("env:ARCHI_GIT_TOKEN"), List.of());
         repository.afterFetch = () -> bindings.save(rebound);
@@ -313,7 +311,7 @@ class GitImportTest {
         outbox.enqueue(workspace, model, 2, Instant.EPOCH);
         outbox.enqueue(workspace, model, 3, Instant.EPOCH);
         GitSha head = repository.commit("main", model("АБС «Ядро»", NODE));
-        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        GitPull.Preview preview = imports.preview(ARCHITECT, model, "main");
 
         imports.apply(ARCHITECT, model, confirm(preview, null));
 
@@ -327,9 +325,9 @@ class GitImportTest {
     void unchangedHeadIsAdoptedByLastVersion() {
         outbox.enqueue(workspace, model, 3, Instant.EPOCH);
         GitSha head = repository.commit("main", model("АБС", ""));
-        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        GitPull.Preview preview = imports.preview(ARCHITECT, model, "main");
 
-        GitImportService.Pulled pulled = imports.apply(ARCHITECT, model, confirm(preview, null));
+        GitPull.Pulled pulled = imports.apply(ARCHITECT, model, confirm(preview, null));
 
         assertTrue(preview.unchanged());
         assertFalse(pulled.created());
@@ -345,7 +343,7 @@ class GitImportTest {
         GitSha tagged = repository.commit("main", model("АБС «Ядро»", ""));
         repository.tags.put("v1", tagged);
         repository.commit("main", model("АБС «Ядро» 2", ""));
-        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "v1");
+        GitPull.Preview preview = imports.preview(ARCHITECT, model, "v1");
 
         imports.apply(ARCHITECT, model, confirm(preview, null));
 
@@ -378,8 +376,8 @@ class GitImportTest {
         return new ArchiXmlWriter().write(document);
     }
 
-    private static GitImportService.PullRequest confirm(GitImportService.Preview preview, String comment) {
-        return new GitImportService.PullRequest(preview.ref().ref().value(),
+    private static GitPull.PullRequest confirm(GitPull.Preview preview, String comment) {
+        return new GitPull.PullRequest(preview.ref().ref().value(),
                 preview.ref().sha().value(), preview.baseHash(), comment);
     }
 

@@ -25,14 +25,14 @@ class GitExportIT extends GitApiTest {
     @DisplayName("FR-40, INV-IXC-011: модель, вернувшаяся к прежнему содержимому, даёт то же дерево — без diff")
     void repeatedExportProducesNoDiff() throws Exception {
         UUID model = importModel(Fixtures.fixture("styled_objects"));
-        publishing.publishPending();
+        publishing.publishPendingVersions();
         String element = elementNamed(model, "АБС");
 
         renameElement(model, element, "АБС «Ядро»");
         save(model, "переименование");
         renameElement(model, element, "АБС");
         save(model, "обратно");
-        publishing.publishPending();
+        publishing.publishPendingVersions();
 
         List<RevCommit> history = history();
         assertThat(history).hasSize(3);
@@ -50,11 +50,11 @@ class GitExportIT extends GitApiTest {
     @DisplayName("INV-IXC-009: история только дописывается — каждая версия поверх предыдущей, git_sha в версии")
     void historyIsAppendOnly() throws Exception {
         UUID model = importModel(Fixtures.fixture("styled_objects"));
-        publishing.publishPending();
+        publishing.publishPendingVersions();
         RevCommit first = history().getFirst();
         renameElement(model, elementNamed(model, "АБС"), "АБС-2");
         save(model, "вторая");
-        publishing.publishPending();
+        publishing.publishPendingVersions();
 
         List<RevCommit> history = history();
         assertThat(history).hasSize(2);
@@ -70,7 +70,7 @@ class GitExportIT extends GitApiTest {
     @DisplayName("FR-46: очищенный снимок возвращается из коммита версии — выгрузка та же, что до очистки")
     void purgedSnapshotIsRestoredFromGit() throws Exception {
         UUID model = importModel(Fixtures.reference());
-        publishing.publishPending();
+        publishing.publishPendingVersions();
         byte[] before = export(model);
 
         jdbc.update("update model_version set snapshot = null where model_id = ? and version_no = 1", model);
@@ -82,7 +82,7 @@ class GitExportIT extends GitApiTest {
     @DisplayName("FR-47: без привязки очищенный снимок вернуть неоткуда — 410")
     void purgedSnapshotWithoutGitIsGone() throws Exception {
         UUID model = importModel(Fixtures.fixture("styled_objects"));
-        publishing.publishPending();
+        publishing.publishPendingVersions();
         jdbc.update("update model_version set snapshot = null where model_id = ? and version_no = 1", model);
         jdbc.update("delete from git_binding");
 

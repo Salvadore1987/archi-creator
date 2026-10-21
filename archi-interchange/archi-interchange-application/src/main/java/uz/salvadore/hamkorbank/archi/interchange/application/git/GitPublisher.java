@@ -17,7 +17,6 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
-import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeOperation;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort;
@@ -70,8 +69,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  * модели, или каталог в голове уже несёт содержимое версии — тогда версия получает голову.
  * Не расхождение и правка, принятая слиянием: она входит в слитый коммит модели. Слитого
  * коммита нет в голове ветки — он второй родитель нашего коммита.
+ *
+ * <p>Шаги сценария, а не сценарий целиком: роль и метрику даёт handler, который зовёт этот класс.
  */
-public final class GitPublishingService {
+public final class GitPublisher {
 
     /** Трейлер коммита с идентификатором модели — по нему узнаётся свой коммит при повторе. */
     public static final String TRAILER_MODEL = "Archi-Model-Id";
@@ -81,7 +82,7 @@ public final class GitPublishingService {
     static final String GITATTRIBUTES = ".gitattributes";
     private static final String GITATTRIBUTES_RESOURCE = "gitattributes";
     private static final int MAX_ATTEMPTS_SHIFT = 10;
-    private static final System.Logger LOG = System.getLogger(GitPublishingService.class.getName());
+    private static final System.Logger LOG = System.getLogger(GitPublisher.class.getName());
 
     /**
      * Кто коммитит и как выглядит автор, которого нет в привязке; паузы повтора.
@@ -125,7 +126,7 @@ public final class GitPublishingService {
     private final Map<ModelId, Object> modelLocks = new ConcurrentHashMap<>();
     private final byte[] gitattributes;
 
-    public GitPublishingService(GitOutbox outbox, GitBindingRepository bindings, PublishedVersions versions,
+    public GitPublisher(GitOutbox outbox, GitBindingRepository bindings, PublishedVersions versions,
                                 ModelMerges merges, GitRepositoryPort repository, SecretResolver secrets,
                                 UnitOfWork unitOfWork,
                                 InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts, Clock clock,
@@ -171,22 +172,18 @@ public final class GitPublishingService {
      * как расхождение разобрали руками. Версию не создаёт.
      */
     public ModelGitStatus push(EditorIdentity actor, ModelId model) {
-        InterchangeOperation operation = InterchangeOperation.PUSH_MODEL_TO_GIT;
-        return metrics.observe(operation.useCase(), () -> {
-            operation.require(actor);
-            WorkspaceId workspace = versions.visibleWorkspace(actor, model);
-            GitBinding binding = unitOfWork.read(() -> bindings.find(workspace)).filter(GitBinding::writable)
-                    .orElseThrow(() -> new InterchangeException(InterchangeCodes.GIT_NOT_BOUND, Failure.CONFLICT,
-                            Message.of(InterchangeMessages.GIT_BINDING_MISSING, workspace), Map.of()));
-            drain(model, true);
-            Optional<GitOutbox.Entry> head = unitOfWork.read(() -> outbox.head(model));
-            GitBinding after = unitOfWork.read(() -> bindings.find(workspace)).orElse(binding);
-            if (head.filter(h -> h.status() == GitOutbox.Status.PENDING).isPresent() && !after.reachable()) {
-                throw new InterchangeException(InterchangeCodes.GIT_UNREACHABLE, Failure.UNAVAILABLE,
-                        Message.of(InterchangeMessages.GIT_UNREACHABLE, after.repoUrl()), Map.of());
-            }
-            return status(model);
-        });
+        WorkspaceId workspace = versions.visibleWorkspace(actor, model);
+        GitBinding binding = unitOfWork.read(() -> bindings.find(workspace)).filter(GitBinding::writable)
+                .orElseThrow(() -> new InterchangeException(InterchangeCodes.GIT_NOT_BOUND, Failure.CONFLICT,
+                        Message.of(InterchangeMessages.GIT_BINDING_MISSING, workspace), Map.of()));
+        drain(model, true);
+        Optional<GitOutbox.Entry> head = unitOfWork.read(() -> outbox.head(model));
+        GitBinding after = unitOfWork.read(() -> bindings.find(workspace)).orElse(binding);
+        if (head.filter(h -> h.status() == GitOutbox.Status.PENDING).isPresent() && !after.reachable()) {
+            throw new InterchangeException(InterchangeCodes.GIT_UNREACHABLE, Failure.UNAVAILABLE,
+                    Message.of(InterchangeMessages.GIT_UNREACHABLE, after.repoUrl()), Map.of());
+        }
+        return status(model);
     }
 
     /** Состояние публикации модели: очередь, последняя опубликованная версия, расхождение. */
@@ -312,8 +309,7 @@ public final class GitPublishingService {
         long started = System.nanoTime();
         Outcome outcome = null;
         try {
-            outcome = metrics.observe(InterchangeOperation.PUSH_MODEL_TO_GIT.useCase(),
-                    () -> attempt(entry, binding.get(), version.get()));
+            outcome = attempt(entry, binding.get(), version.get());
             return outcome;
         } catch (Unreachable e) {
             outcome = Outcome.RETRY;
@@ -484,7 +480,7 @@ public final class GitPublishingService {
     }
 
     private static byte[] resource(String name) {
-        try (InputStream in = GitPublishingService.class.getResourceAsStream(name)) {
+        try (InputStream in = GitPublisher.class.getResourceAsStream(name)) {
             if (in == null) {
                 throw new IllegalStateException(name);
             }

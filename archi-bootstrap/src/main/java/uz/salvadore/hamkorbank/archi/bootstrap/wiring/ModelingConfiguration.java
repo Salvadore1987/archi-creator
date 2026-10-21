@@ -17,9 +17,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.transaction.PlatformTransactionManager;
 import uz.salvadore.hamkorbank.archi.bootstrap.git.GitSnapshotArchive;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService;
 import uz.salvadore.hamkorbank.archi.interchange.application.mapping.ArchimateSnapshots;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.GitPublishingApplicationService;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiXmlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EnsureDefaultWorkspaceCommand;
@@ -156,7 +156,7 @@ public class ModelingConfiguration {
 
     /** Доступность репозитория и восстановление очищенного снимка — через публикацию в Git. */
     @Bean
-    GitSnapshotArchive gitSnapshotArchive(ObjectProvider<GitPublishingService> publishing) {
+    GitSnapshotArchive gitSnapshotArchive(ObjectProvider<GitPublishingApplicationService> publishing) {
         return new GitSnapshotArchive(publishing::getObject);
     }
 

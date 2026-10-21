@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitBindingSettings;
+import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ConfigureGitBindingCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.ModelingKernel;
 import uz.salvadore.hamkorbank.archi.modeling.application.handler.SnapshotPurgeCommandHandler;
 
@@ -45,7 +45,7 @@ class GitRetentionIT extends GitApiTest {
     @DisplayName("FR-47: репозиторий недоступен — очистка не идёт, привязка UNREACHABLE")
     void purgeStopsWhenRepositoryIsUnreachable() throws Exception {
         UUID model = modelWithVersions();
-        bindings.configure(ADMIN, workspace().value(), new GitBindingSettings(
+        bindings.configureGitBinding(ADMIN, new ConfigureGitBindingCommand(workspace().value(),
                 temp.resolve("gone.git").toUri().toString(), null, "env:ARCHI_GIT_TOKEN_IT", List.of()));
 
         assertThat(retention().handle()).isZero();
@@ -66,7 +66,7 @@ class GitRetentionIT extends GitApiTest {
                     .andExpect(status().isOk());
             save(model, "правка " + i);
         }
-        publishing.publishPending();
+        publishing.publishPendingVersions();
         assertThat(gitSha(model, 3)).isPresent();
         jdbc.update("update model_version set created_at = created_at - interval '180 days' where model_id = ?",
                 model);

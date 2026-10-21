@@ -14,9 +14,21 @@ import uz.salvadore.hamkorbank.archi.bootstrap.git.GitSettings;
 import uz.salvadore.hamkorbank.archi.bootstrap.git.JGitRepository;
 import uz.salvadore.hamkorbank.archi.bootstrap.git.ModelingModelStates;
 import uz.salvadore.hamkorbank.archi.bootstrap.git.ModelingPublishedVersions;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitImportService;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitMergeService;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitMerge;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublisher;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPull;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.GitBindingConfigureCommandHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.GitBindingDisableCommandHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.GitBindingGetQueryHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.GitOutboxPublishCommandHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.GitReachabilityQueryHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.GitSnapshotRestoreQueryHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.InterchangeKernel;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.ModelBranchMergeCommandHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.ModelBranchMergePreviewQueryHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.ModelGitPullCommandHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.ModelGitPullPreviewQueryHandler;
+import uz.salvadore.hamkorbank.archi.interchange.application.handler.ModelGitPushCommandHandler;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort;
@@ -29,6 +41,14 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.ModelStates;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.PublishedVersions;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.SecretResolver;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.GitBindingApplicationService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.GitMergeApplicationService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.GitPublishingApplicationService;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.in.GitPullApplicationService;
+import uz.salvadore.hamkorbank.archi.interchange.application.service.GitBindingApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.interchange.application.service.GitMergeApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.interchange.application.service.GitPublishingApplicationServiceImpl;
+import uz.salvadore.hamkorbank.archi.interchange.application.service.GitPullApplicationServiceImpl;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.in.ModelExchangeApplicationService;
 
@@ -57,14 +77,14 @@ public class GitConfiguration {
     }
 
     @Bean
-    GitPublishingService gitPublishingService(GitOutbox outbox, GitBindingRepository bindings,
+    GitPublisher gitPublisher(GitOutbox outbox, GitBindingRepository bindings,
                                               PublishedVersions versions, ModelMerges merges,
                                               GitRepositoryPort repository, SecretResolver secrets,
                                               UnitOfWork unitOfWork, InterchangeEvents events,
                                               InterchangeMetrics metrics, TextCatalog texts, Clock clock,
                                               GitSettings settings) {
-        return new GitPublishingService(outbox, bindings, versions, merges, repository, secrets, unitOfWork, events,
-                metrics, texts, clock, new GitPublishingService.Settings(settings.committerName(),
+        return new GitPublisher(outbox, bindings, versions, merges, repository, secrets, unitOfWork, events,
+                metrics, texts, clock, new GitPublisher.Settings(settings.committerName(),
                 settings.committerEmail(), settings.authorEmailDomain(), settings.retryBase(), settings.retryMax(),
                 settings.outboxRetention()));
     }
@@ -75,31 +95,58 @@ public class GitConfiguration {
     }
 
     @Bean
-    GitImportService gitImportService(GitBindingRepository bindings, GitRepositoryPort repository,
+    GitPull gitPull(GitBindingRepository bindings, GitRepositoryPort repository,
                                       SecretResolver secrets, ModelStates states, ImportSessionRepository sessions,
                                       ImportPolicy policy, GitOutbox outbox, PublishedVersions versions,
                                       UnitOfWork unitOfWork, InterchangeEvents events, InterchangeMetrics metrics,
                                       TextCatalog texts, Clock clock) {
-        return new GitImportService(bindings, repository, secrets, states, sessions, policy, outbox, versions,
+        return new GitPull(bindings, repository, secrets, states, sessions, policy, outbox, versions,
                 unitOfWork, events, metrics, texts, clock);
     }
 
     @Bean
-    GitMergeService gitMergeService(GitBindingRepository bindings, GitRepositoryPort repository,
+    GitMerge gitMerge(GitBindingRepository bindings, GitRepositoryPort repository,
                                     SecretResolver secrets, ModelStates states, ImportSessionRepository sessions,
                                     ImportPolicy policy, GitOutbox outbox, PublishedVersions versions,
                                     ModelMerges merges, UnitOfWork unitOfWork, InterchangeEvents events,
                                     InterchangeMetrics metrics, TextCatalog texts, Clock clock) {
-        return new GitMergeService(bindings, repository, secrets, states, sessions, policy, outbox, versions, merges,
+        return new GitMerge(bindings, repository, secrets, states, sessions, policy, outbox, versions, merges,
                 unitOfWork, events, metrics, texts, clock);
+    }
+
+    @Bean
+    GitPublishingApplicationService gitPublishingApplicationService(InterchangeKernel kernel, GitPublisher publisher) {
+        return new GitPublishingApplicationServiceImpl(new ModelGitPushCommandHandler(kernel, publisher),
+                new GitOutboxPublishCommandHandler(publisher), new GitReachabilityQueryHandler(publisher),
+                new GitSnapshotRestoreQueryHandler(publisher));
+    }
+
+    @Bean
+    GitPullApplicationService gitPullApplicationService(InterchangeKernel kernel, GitPull pull) {
+        return new GitPullApplicationServiceImpl(new ModelGitPullPreviewQueryHandler(kernel, pull),
+                new ModelGitPullCommandHandler(kernel, pull));
+    }
+
+    @Bean
+    GitMergeApplicationService gitMergeApplicationService(InterchangeKernel kernel, GitMerge merge) {
+        return new GitMergeApplicationServiceImpl(new ModelBranchMergePreviewQueryHandler(kernel, merge),
+                new ModelBranchMergeCommandHandler(kernel, merge));
+    }
+
+    @Bean
+    GitBindingApplicationService gitBindingApplicationService(InterchangeKernel kernel, GitBindingRepository bindings,
+                                                              GitSettings settings) {
+        return new GitBindingApplicationServiceImpl(new GitBindingGetQueryHandler(kernel, bindings),
+                new GitBindingConfigureCommandHandler(kernel, bindings, settings.allowLocalRepositories()),
+                new GitBindingDisableCommandHandler(kernel, bindings));
     }
 
     /** Проход очереди: отказ одного прохода пишется в журнал, расписание не останавливается. */
     @Bean
-    SchedulingConfigurer gitPublishing(GitPublishingService publishing, GitSettings settings) {
+    SchedulingConfigurer gitPublishing(GitPublishingApplicationService publishing, GitSettings settings) {
         return registrar -> registrar.addFixedDelayTask(() -> {
             try {
-                publishing.publishPending();
+                publishing.publishPendingVersions();
             } catch (RuntimeException e) { // NOPMD - сбой одного прохода не останавливает расписание
                 LOG.warn("git publishing pass failed", e);
             }

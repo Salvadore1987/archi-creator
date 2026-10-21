@@ -40,8 +40,8 @@ import org.junit.jupiter.api.io.TempDir;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPositions;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService;
-import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublishingService.ModelGitStatus;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublisher;
+import uz.salvadore.hamkorbank.archi.interchange.application.git.GitPublisher.ModelGitStatus;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlWriter;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
@@ -101,7 +101,7 @@ class GitPublisherTest {
     /** Что случается сразу после push — например, администратор перепривязывает пространство. */
     private Runnable afterPush = () -> { };
     private GitRepositoryPort repository;
-    private GitPublishingService publishing;
+    private GitPublisher publishing;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -131,10 +131,10 @@ class GitPublisherTest {
                 return work.get();
             }
         };
-        publishing = new GitPublishingService(outbox, bindings, versions, merges, repository, ref -> Optional.empty(),
+        publishing = new GitPublisher(outbox, bindings, versions, merges, repository, ref -> Optional.empty(),
                 direct,
                 events::addAll, InterchangeMetrics.NONE, message -> message.key() + message.args(), clock,
-                new GitPublishingService.Settings("Archi Creator", "archi@test", "users.test", Duration.ofSeconds(5),
+                new GitPublisher.Settings("Archi Creator", "archi@test", "users.test", Duration.ofSeconds(5),
                         Duration.ofMinutes(10), Duration.ofDays(30)));
         bindings.save(GitBinding.configure(workspace, remote.toUri().toString(), null,
                 SecretRef.of("env:ARCHI_GIT_TOKEN"),
