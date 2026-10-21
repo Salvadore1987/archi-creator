@@ -27,7 +27,7 @@
 | 7 | `spring-boot-configuration-processor` в `annotationProcessorPaths` модуля `archi-bootstrap` | 12-06 | `ConfigurationMetadataTest`: метаданные есть у каждого префикса `@ConfigurationProperties` | ✅ |
 | 8 | `@Validated` и ограничения на всех шести настройках; умолчания `InterchangeSettings`; одно умолчание каталога кэша Git | 12-04 | `SettingsValidationTest`: недопустимые значения роняют контекст; `CodingRulesTest`: `@ConfigurationProperties` — с `@Validated` | ✅ |
 | 9 | Пояс очистки снимков и её расписания — `archi.modeling.retention-zone` | 12-10 | `CodingRulesTest`: нет `ZoneId.systemDefault()` и `TimeZone.getDefault()` в основном коде | ✅ |
-| 10 | `scanBasePackages` у класса запуска | 12-11 | `CodingRulesTest`: класс запуска называет корень сканирования | ⬜ |
+| 10 | `scanBasePackages` у класса запуска | 12-11 | `CodingRulesTest`: класс запуска называет корень сканирования | ✅ |
 | 11 | ADR: роль — таблицей операций в ядре сценария, `@PreAuthorize` не вводится; D-21 | 12-12 | `tools/check-links.py`, `tools/check-traceability.py` | ⬜ |
 
 ## Расхождения плана с фактом

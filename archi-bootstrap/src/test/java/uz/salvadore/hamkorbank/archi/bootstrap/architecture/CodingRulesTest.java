@@ -43,6 +43,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
@@ -428,6 +429,22 @@ class CodingRulesTest {
                                 place + " constructs " + call.getTargetOwner().getSimpleName())));
             }
         };
+    }
+
+    @Test
+    @DisplayName("Класс запуска называет корень сканирования явно")
+    void applicationNamesScanRoot() {
+        classes().that().areAnnotatedWith(SpringBootApplication.class)
+                .should(new ArchCondition<>("объявлять scanBasePackages = корень проекта") {
+                    @Override
+                    public void check(JavaClass item, ConditionEvents events) {
+                        String[] roots = item.getAnnotationOfType(SpringBootApplication.class).scanBasePackages();
+                        events.add(new SimpleConditionEvent(item, List.of(roots).equals(List.of(ROOT)),
+                                item.getName() + " сканирует " + List.of(roots)));
+                    }
+                })
+                .because("перенос класса запуска иначе молча меняет набор бинов")
+                .check(classes);
     }
 
     @Test

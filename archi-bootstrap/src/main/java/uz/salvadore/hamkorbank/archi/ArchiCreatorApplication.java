@@ -6,11 +6,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /**
  * Точка входа приложения.
  *
- * <p>Класс лежит в корневом пакете {@code uz.salvadore.hamkorbank.archi}, чтобы
- * сканирование компонентов накрывало адаптеры всех трёх контекстов без явного
- * {@code basePackages}: модули собираются в один jar.
+ * <p>Сканирование компонентов накрывает адаптеры всех трёх контекстов — корень
+ * {@code uz.salvadore.hamkorbank.archi} назван явно: набор бинов не зависит от того,
+ * в каком пакете лежит класс запуска.
  */
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "uz.salvadore.hamkorbank.archi")
 public class ArchiCreatorApplication {
 
     /** Запускает приложение Spring Boot с аргументами командной строки. */
