@@ -11,7 +11,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.CorsConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -21,6 +20,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  * Правила доступа для всех профилей, кроме {@code dev}.
  *
  * <p>Аутентификация — {@code Authorization: Bearer <JWT>} от Keycloak.
+ * Роли Keycloak лежат в {@code realm_access.roles} — вложенным объектом, а не плоским
+ * списком; в полномочия {@code ROLE_*} их переводит Spring Boot по выражению
+ * {@code spring.security.oauth2.resourceserver.jwt.authorities-claim-expressions}.
  * Сессии нет и быть не должно: токен приходит с каждым запросом, состояние
  * на сервере не хранится, поэтому CSRF-защита выключена — красть нечего.
  *
@@ -55,19 +57,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/**").authenticated()
                         // Статика фронтенда: сам SPA открыт, данные за ним — нет.
                         .anyRequest().permitAll())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(
-                        jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
         return http.build();
-    }
-
-    /**
-     * Роли Keycloak из {@code realm_access.roles} — в полномочия {@code ROLE_*}.
-     */
-    @Bean
-    JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(new KeycloakRealmRolesConverter());
-        return converter;
     }
 
     /**

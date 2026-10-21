@@ -21,9 +21,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 
 /**
  * Автор команды — параметр {@code EditorIdentity} контроллера (у помощника — {@code Requester}). Субъект — {@code sub}
- * из JWT, роли — {@code ROLE_*} из {@code realm_access} (KeycloakRealmRolesConverter),
- * группы — claim {@code groups} для списка доступа модели. Персональных
- * данных нет: имя и почта в домен не попадают.
+ * из JWT, роли — {@code ROLE_*} из {@code realm_access}; полномочие вне модели доступа
+ * ({@code offline_access}, {@code default-roles-archi}) ролью не становится; группы — claim
+ * {@code groups} для списка доступа модели. Персональных данных нет: имя и почта в домен не попадают.
  *
  * <p>Контроллеры не знают ни Spring Security, ни формата токена: заглушка профиля
  * {@code dev} и Keycloak в {@code prod} дают им одно и то же.

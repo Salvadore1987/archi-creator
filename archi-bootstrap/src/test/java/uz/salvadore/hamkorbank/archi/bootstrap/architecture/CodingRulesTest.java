@@ -425,6 +425,21 @@ class CodingRulesTest {
     }
 
     @Test
+    @DisplayName("Роли из токена — свойством Spring Boot, без своего конвертера JWT")
+    void noHandWrittenJwtConverters() {
+        noClasses().that().implement("org.springframework.core.convert.converter.Converter")
+                .should().dependOnClassesThat().haveFullyQualifiedName("org.springframework.security.oauth2.jwt.Jwt")
+                .because("роли из нестандартного claim достаёт authorities-claim-expressions; свой конвертер — "
+                        + "второй разбор токена, который расходится с настройкой")
+                .allowEmptyShould(true)
+                .check(classes);
+        noClasses().should().dependOnClassesThat().haveFullyQualifiedName(
+                        "org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter")
+                .because("конвертер аутентификации собирает Spring Boot по настройкам ресурс-сервера")
+                .check(classes);
+    }
+
+    @Test
     @DisplayName("JSON — Jackson 3: ни Jackson 2, ни его исключений в коде")
     void jacksonThreeOnly() {
         noClasses().should().dependOnClassesThat().resideInAnyPackage("com.fasterxml.jackson.databind..",
