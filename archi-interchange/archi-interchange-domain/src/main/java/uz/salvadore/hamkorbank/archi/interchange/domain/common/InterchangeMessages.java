@@ -240,6 +240,8 @@ public final class InterchangeMessages {
     public static final String IMAGE_LOSS_LABEL = "interchange.image.loss-label";
     /** Потеря в картинке: неподдержанный тип нарисован силуэтом заглушки. */
     public static final String IMAGE_LOSS_PLACEHOLDER = "interchange.image.loss-placeholder";
+    /** Потеря в картинке: значение цвета из файла не по правилу формата, нарисовано цветом слоя. */
+    public static final String IMAGE_LOSS_STYLE = "interchange.image.loss-style";
     /** Подзаголовок фигуры неподдержанного типа на картинке. */
     public static final String IMAGE_OPAQUE_SUBTITLE = "interchange.image.opaque-subtitle";
     /** Параметр выгрузки картинки задан недопустимым значением. */

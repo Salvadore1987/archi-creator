@@ -187,9 +187,17 @@ public final class SvgWriter {
                 losses.add(new ImageLoss(node.archiId(), LossObjectKind.NODE, "shape",
                         Message.of(InterchangeMessages.IMAGE_LOSS_PLACEHOLDER, shortType(node.shapeType()))));
             }
+            styleLosses(node.archiId(), LossObjectKind.NODE, node.style());
             if (node.image()) {
                 losses.add(new ImageLoss(node.archiId(), LossObjectKind.NODE, "image",
                         Message.of(InterchangeMessages.IMAGE_LOSS_IMAGE)));
+            }
+        }
+
+        private void styleLosses(String archiId, LossObjectKind kind, Style style) {
+            for (String attribute : style.rejected()) {
+                losses.add(new ImageLoss(archiId, kind, "style",
+                        Message.of(InterchangeMessages.IMAGE_LOSS_STYLE, attribute)));
             }
         }
 
@@ -199,8 +207,8 @@ public final class SvgWriter {
                 return;
             }
             Box box = Outlines.resolve(new Box(icon.x(), icon.y(), icon.size(), icon.size()), size);
-            String painted = CUTOUT.matcher(symbol.replace("currentColor", paint.stroke()))
-                    .replaceAll(Matcher.quoteReplacement(paint.fill()));
+            String painted = CUTOUT.matcher(symbol.replace("currentColor", Svg.escape(paint.stroke())))
+                    .replaceAll(Matcher.quoteReplacement(Svg.escape(paint.fill())));
             body.append("<g transform=\"translate(").append(Svg.num(box.x())).append(' ').append(Svg.num(box.y()))
                     .append(") scale(").append(Svg.num(box.width() / ICON_GRID)).append(")\">")
                     .append(painted).append("</g>");
@@ -341,6 +349,7 @@ public final class SvgWriter {
                         Message.of(InterchangeMessages.IMAGE_LOSS_EDGE)));
                 return;
             }
+            styleLosses(edge.archiId(), LossObjectKind.EDGE, edge.style());
             List<Point> points = Routing.route(source.get(), target.get(), edge.bendpoints());
             EdgeNotation notationOfEdge = EdgeNotation.of(edge.archiType(), edge.accessType(), edge.directed());
             String stroke = Objects.requireNonNullElse(edge.style().lineColor(), notation.value("edge_color"));

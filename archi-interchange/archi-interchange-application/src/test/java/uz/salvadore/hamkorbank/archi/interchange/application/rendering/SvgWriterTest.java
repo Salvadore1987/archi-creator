@@ -52,6 +52,21 @@ class SvgWriterTest {
     }
 
     @Test
+    @DisplayName("INV-IXC-006: цвет из файла не по правилу формата — токен слоя и запись отчёта, не разметка")
+    void foreignColorIsNotMarkup() {
+        String xml = RenderingFixtures.MODEL.replace("fillColor=\"#ff8800\"",
+                "fillColor=\"x&quot;/&gt;&lt;script&gt;1&lt;/script&gt;\" lineColor=\"red&quot; onload=&quot;1\"");
+        SvgWriter.Rendered rendered = render(RenderingFixtures.document(xml), TEXT);
+        String svg = svg(rendered);
+
+        assertFalse(svg.contains("<script") || svg.contains("onload"), svg);
+        assertTrue(svg.contains("fill=\"#E3F2FD\" stroke=\"#4A90C2\"/></g>"), "иконка — цветом слоя: " + svg);
+        assertEquals(List.of("fillColor", "lineColor"), rendered.losses().stream()
+                .filter(l -> l.archiId().equals("id-n1") && l.aspect().equals("style"))
+                .map(l -> l.reason().args().getFirst().toString()).toList(), rendered.losses().toString());
+    }
+
+    @Test
     @DisplayName("FR-41: наконечник — явная геометрия; ромб композиции развёрнут у начала связи")
     void markersAreExplicitPaths() {
         String svg = svg(render(TEXT));
