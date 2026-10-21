@@ -2,10 +2,12 @@ package uz.salvadore.hamkorbank.archi.interchange.application.git;
 
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.ARCHIMATE_PREFIX;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_ID;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_KEY;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_NAME;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_SOURCE;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_TARGET;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_TYPE;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_VALUE;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.CONTENT_ORDER;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.EXTENSION;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.FOLDERS_FILE;
@@ -41,6 +43,7 @@ import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlF
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.TAG_PROPERTY;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.TAG_PURPOSE;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.canonicalOrder;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.itemKey;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.nested;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.promoted;
 
@@ -262,7 +265,7 @@ public final class GitYamlReader {
                 }
                 item.done();
                 int ordinal = ordinals.merge(kind, 1, Integer::sum);
-                add(container, new Entry(position, kind.token() + "#" + ordinal, owner.file, build));
+                add(container, new Entry(position, itemKey(kind, ordinal), owner.file, build));
             }
         }
 
@@ -372,11 +375,7 @@ public final class GitYamlReader {
         Optional<List<String>> explicit = fields.optionalStrings(K_CONTENT_ORDER);
         if (explicit.isPresent()) {
             for (String token : explicit.get()) {
-                Kind kind = Kind.ofToken(token);
-                if (kind == null) {
-                    throw fields.invalid(K_CONTENT_ORDER);
-                }
-                sequence.add(kind);
+                sequence.add(Kind.ofToken(token).orElseThrow(() -> fields.invalid(K_CONTENT_ORDER)));
             }
             return sequence;
         }
@@ -394,8 +393,8 @@ public final class GitYamlReader {
 
     private static Attributes propertyAttributes(Fields property) {
         List<Attribute> list = new ArrayList<>();
-        property.optional(K_KEY).ifPresent(k -> list.add(new Attribute(K_KEY, k)));
-        property.optional(K_VALUE).ifPresent(v -> list.add(new Attribute(K_VALUE, v)));
+        property.optional(K_KEY).ifPresent(k -> list.add(new Attribute(A_KEY, k)));
+        property.optional(K_VALUE).ifPresent(v -> list.add(new Attribute(A_VALUE, v)));
         property.done();
         if (list.isEmpty()) {
             throw property.invalid(K_KEY);

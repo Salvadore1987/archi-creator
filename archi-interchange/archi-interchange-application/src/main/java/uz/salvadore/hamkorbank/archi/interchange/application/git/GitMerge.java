@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
@@ -41,7 +40,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ModelChanges;
-import uz.salvadore.hamkorbank.archi.interchange.domain.git.RefKind;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
@@ -71,8 +69,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  */
 public final class GitMerge {
 
-    private static final Pattern BASE_HASH = Pattern.compile("^[0-9a-f]{64}$");
-    private static final int SHORT_SHA = 7;
     private static final String BOUNDS = "bounds";
     private static final String ELEMENT_REF = "archimateElement";
 
@@ -173,7 +169,6 @@ public final class GitMerge {
     private final UnitOfWork unitOfWork;
     private final InterchangeEvents events;
     private final InterchangeMetrics metrics;
-    private final TextCatalog texts;
     private final Clock clock;
 
     public GitMerge(GitBindingRepository bindings, GitRepositoryPort repository, SecretResolver secrets,
@@ -192,7 +187,6 @@ public final class GitMerge {
         this.unitOfWork = unitOfWork;
         this.events = events;
         this.metrics = metrics;
-        this.texts = texts;
         this.clock = clock;
     }
 
@@ -245,17 +239,12 @@ public final class GitMerge {
         GitSha sha = GitAttempts.parse(() -> GitSha.of(GitAttempts.required(request.commitSha(), "commitSha")));
         GitSha base = GitAttempts.parse(() -> GitSha.of(GitAttempts.required(request.mergeBaseSha(),
                 "mergeBaseSha")));
-        String baseHash = GitAttempts.required(request.baseHash(), "baseHash");
-        if (!BASE_HASH.matcher(baseHash).matches()) {
-            throw GitAttempts.invalid(Message.of(InterchangeMessages.GIT_BASE_HASH_INVALID, baseHash));
-        }
+        String baseHash = GitAttempts.baseHash(request.baseHash());
         Map<String, Side> choices = choices(request.resolutions());
         ModelStates.Current current = states.current(actor, model);
         GitBinding binding = attempts.binding(current.workspace());
         Sides sides = attempts.network(binding, remote -> {
-            ResolvedRef commit = repository.resolve(remote, GitRef.of(sha.value()))
-                    .filter(r -> r.kind() == RefKind.COMMIT && r.sha().equals(sha))
-                    .orElseThrow(() -> GitAttempts.refNotFound(GitRef.of(sha.value())));
+            ResolvedRef commit = attempts.commit(remote, sha);
             if (!repository.contains(remote, base, commit.sha())) {
                 throw GitAttempts.invalid(Message.of(InterchangeMessages.GIT_MERGE_BASE_INVALID, base.value(),
                         sha.value()));
@@ -285,17 +274,11 @@ public final class GitMerge {
             throw rejected(session, Message.of(InterchangeMessages.GIT_PULL_REJECTED_STRICT),
                     InterchangeCodes.STRICT_IMPORT_REJECTED);
         }
-        String comment = request.comment() != null && !request.comment().isBlank() ? request.comment()
-                : texts.text(Message.of(InterchangeMessages.GIT_MERGE_COMMENT, ref.value(),
-                        sha.value().substring(0, SHORT_SHA)));
+        String comment = attempts.comment(request.comment(), InterchangeMessages.GIT_MERGE_COMMENT, ref, sha);
         Applied applied;
         try {
             applied = unitOfWork.write(() -> {
-                ModelStates.Current now = states.current(actor, model);
-                if (!now.hash().equals(baseHash)) {
-                    throw new InterchangeException(InterchangeCodes.GIT_IMPORT, Failure.CONFLICT,
-                            Message.of(InterchangeMessages.GIT_REPORT_STALE, model.value()), Map.of());
-                }
+                GitAttempts.requireUnchanged(states.current(actor, model), baseHash, model);
                 ModelStates.Replaced replaced = states.replace(actor, model, attempt.xml(), comment);
                 Instant at = clock.instant();
                 session.apply(model, replaced.versionNo(), replaced.opaqueObjects(), at);

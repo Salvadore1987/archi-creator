@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.SortedMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.MethodologyCheck;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
@@ -36,6 +37,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
+import uz.salvadore.hamkorbank.archi.interchange.domain.git.RefKind;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.FindingId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId;
@@ -61,7 +63,11 @@ final class GitAttempts {
 
     private final GitBindingRepository bindings;
     private final GitRepositoryPort repository;
+    private static final Pattern BASE_HASH = Pattern.compile("^[0-9a-f]{64}$");
+    private static final int SHORT_SHA = 7;
+
     private final GitRemotes remotes;
+    private final TextCatalog texts;
     private final ImportSessionRepository sessions;
     private final ImportPolicy policy;
     private final GitOutbox outbox;
@@ -81,6 +87,7 @@ final class GitAttempts {
         this.versions = versions;
         this.repository = repository;
         this.remotes = new GitRemotes(secrets, texts);
+        this.texts = texts;
         this.sessions = sessions;
         this.policy = policy;
         this.unitOfWork = unitOfWork;
@@ -160,6 +167,36 @@ final class GitAttempts {
             versions.recordGitSha(model, replaced.versionNo(), head);
         }
         bindings.save(current.get().committed(head, at));
+    }
+
+    /** Коммит из отчёта по полному идентификатору; нет такого коммита — {@code 404}. */
+    ResolvedRef commit(Remote remote, GitSha sha) {
+        return repository.resolve(remote, GitRef.of(sha.value()))
+                .filter(r -> r.kind() == RefKind.COMMIT && r.sha().equals(sha))
+                .orElseThrow(() -> refNotFound(GitRef.of(sha.value())));
+    }
+
+    /** Комментарий версии: заданный, а без него — по умолчанию со ссылкой и коротким коммитом. */
+    String comment(String given, String defaultKey, GitRef ref, GitSha sha) {
+        return given != null && !given.isBlank() ? given
+                : texts.text(Message.of(defaultKey, ref.value(), sha.value().substring(0, SHORT_SHA)));
+    }
+
+    /** Отпечаток содержимого из отчёта: обязателен и в виде SHA-256. */
+    static String baseHash(String value) {
+        String baseHash = required(value, "baseHash");
+        if (!BASE_HASH.matcher(baseHash).matches()) {
+            throw invalid(Message.of(InterchangeMessages.GIT_BASE_HASH_INVALID, baseHash));
+        }
+        return baseHash;
+    }
+
+    /** Модель с отчёта не менялась — иначе применять нечего видимого: {@code 409}, нужен новый отчёт. */
+    static void requireUnchanged(ModelStates.Current now, String baseHash, ModelId model) {
+        if (!now.hash().equals(baseHash)) {
+            throw new InterchangeException(InterchangeCodes.GIT_IMPORT, Failure.CONFLICT,
+                    Message.of(InterchangeMessages.GIT_REPORT_STALE, model.value()), Map.of());
+        }
     }
 
     /** Нечитаемое дерево — сразу {@code REJECTED} с находкой. */

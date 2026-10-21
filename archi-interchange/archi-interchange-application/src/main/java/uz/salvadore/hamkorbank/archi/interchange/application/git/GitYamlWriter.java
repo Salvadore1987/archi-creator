@@ -2,10 +2,12 @@ package uz.salvadore.hamkorbank.archi.interchange.application.git;
 
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.ARCHIMATE_PREFIX;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_ID;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_KEY;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_NAME;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_SOURCE;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_TARGET;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_TYPE;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.A_VALUE;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.CONTENT_ORDER;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.ELEMENTS_DIR;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.EXTENSION;
@@ -44,6 +46,7 @@ import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlF
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.TAG_PURPOSE;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.VIEWS_DIR;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.canonicalOrder;
+import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.itemKey;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.names;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.nested;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.promoted;
@@ -147,7 +150,7 @@ public final class GitYamlWriter {
                     default -> {
                         Kind kind = itemKind(item);
                         int ordinal = ordinals.merge(kind, 1, Integer::sum);
-                        yield kind.token() + "#" + ordinal;
+                        yield itemKey(kind, ordinal);
                     }
                 });
             }
@@ -300,6 +303,13 @@ public final class GitYamlWriter {
         return out;
     }
 
+    /** Значение под ключом, если оно есть; {@code null} — атрибута нет. */
+    private static void putPresent(Map<String, Object> out, String key, String value) {
+        if (value != null) {
+            out.put(key, value);
+        }
+    }
+
     /**
      * Атрибуты узла или корня: продвинутые — своими ключами, прочие — {@code attributes}
      * в порядке файла, нестандартный порядок — {@code attribute_order}.
@@ -310,8 +320,9 @@ public final class GitYamlWriter {
         for (Attribute attribute : attributes) {
             (promoted(attribute.name(), nested) ? promoted : rest).put(attribute.name(), attribute.value());
         }
-        Optional.ofNullable(promoted.get(A_ID)).ifPresent(id -> out.put(K_ID, id));
-        Optional.ofNullable(promoted.get(A_TYPE)).ifPresent(type -> {
+        putPresent(out, K_ID, promoted.get(A_ID));
+        String type = promoted.get(A_TYPE);
+        if (type != null) {
             if (type.startsWith(ARCHIMATE_PREFIX) && type.indexOf(':', ARCHIMATE_PREFIX.length()) < 0) {
                 out.put(K_TYPE, type.substring(ARCHIMATE_PREFIX.length()));
             } else if (type.contains(":")) {
@@ -319,10 +330,10 @@ public final class GitYamlWriter {
             } else {
                 out.put(K_XSI_TYPE, type);
             }
-        });
-        Optional.ofNullable(promoted.get(A_NAME)).ifPresent(name -> out.put(K_NAME, name));
-        Optional.ofNullable(promoted.get(A_SOURCE)).ifPresent(source -> out.put(K_SOURCE, source));
-        Optional.ofNullable(promoted.get(A_TARGET)).ifPresent(target -> out.put(K_TARGET, target));
+        }
+        putPresent(out, K_NAME, promoted.get(A_NAME));
+        putPresent(out, K_SOURCE, promoted.get(A_SOURCE));
+        putPresent(out, K_TARGET, promoted.get(A_TARGET));
         if (!rest.isEmpty()) {
             out.put(K_ATTRIBUTES, new LinkedHashMap<>(rest));
         }
@@ -393,7 +404,7 @@ public final class GitYamlWriter {
     private static boolean regularProperty(DocumentValue value) {
         List<String> names = names(value.attributes().list());
         return value.tag().equals(TAG_PROPERTY) && value.text() == null && !names.isEmpty()
-                && List.of(K_KEY, K_VALUE).containsAll(names) && (names.size() == 1 || names.getFirst().equals(K_KEY));
+                && List.of(A_KEY, A_VALUE).containsAll(names) && (names.size() == 1 || names.getFirst().equals(A_KEY));
     }
 
     private static boolean regularPoints(DocumentValue value, String tag) {
@@ -402,8 +413,8 @@ public final class GitYamlWriter {
 
     private static Map<String, Object> property(DocumentValue value) {
         Map<String, Object> property = new LinkedHashMap<>();
-        value.attribute(K_KEY).ifPresent(k -> property.put(K_KEY, k));
-        value.attribute(K_VALUE).ifPresent(v -> property.put(K_VALUE, v));
+        value.attribute(A_KEY).ifPresent(k -> property.put(K_KEY, k));
+        value.attribute(A_VALUE).ifPresent(v -> property.put(K_VALUE, v));
         return property;
     }
 

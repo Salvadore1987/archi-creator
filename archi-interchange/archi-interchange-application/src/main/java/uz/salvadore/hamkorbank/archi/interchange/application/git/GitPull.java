@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Pattern;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
@@ -29,7 +28,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitBinding;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ModelChanges;
-import uz.salvadore.hamkorbank.archi.interchange.domain.git.RefKind;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
@@ -63,8 +61,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  */
 public final class GitPull {
 
-    private static final Pattern BASE_HASH = Pattern.compile("^[0-9a-f]{64}$");
-    private static final int SHORT_SHA = 7;
 
     /**
      * Что подтверждает архитектор: ссылка и коммит из отчёта, отпечаток содержимого, комментарий.
@@ -121,7 +117,6 @@ public final class GitPull {
     private final UnitOfWork unitOfWork;
     private final InterchangeEvents events;
     private final InterchangeMetrics metrics;
-    private final TextCatalog texts;
     private final Clock clock;
 
     public GitPull(GitBindingRepository bindings, GitRepositoryPort repository, SecretResolver secrets,
@@ -139,7 +134,6 @@ public final class GitPull {
         this.unitOfWork = unitOfWork;
         this.events = events;
         this.metrics = metrics;
-        this.texts = texts;
         this.clock = clock;
     }
 
@@ -169,17 +163,12 @@ public final class GitPull {
     public Pulled apply(EditorIdentity actor, ModelId model, PullRequest request) {
         GitRef ref = GitAttempts.parse(() -> GitRef.of(GitAttempts.required(request.ref(), "ref")));
         GitSha sha = GitAttempts.parse(() -> GitSha.of(GitAttempts.required(request.commitSha(), "commitSha")));
-        String baseHash = GitAttempts.required(request.baseHash(), "baseHash");
-        if (!BASE_HASH.matcher(baseHash).matches()) {
-            throw GitAttempts.invalid(Message.of(InterchangeMessages.GIT_BASE_HASH_INVALID, baseHash));
-        }
+        String baseHash = GitAttempts.baseHash(request.baseHash());
         WorkspaceId workspace = states.current(actor, model).workspace();
         GitBinding binding = attempts.binding(workspace);
         Fetched fetched = attempts.network(binding, remote -> {
             GitSha head = repository.fetch(remote).orElse(null);
-            ResolvedRef commit = repository.resolve(remote, GitRef.of(sha.value()))
-                    .filter(r -> r.kind() == RefKind.COMMIT && r.sha().equals(sha))
-                    .orElseThrow(() -> GitAttempts.refNotFound(GitRef.of(sha.value())));
+            ResolvedRef commit = attempts.commit(remote, sha);
             return new Fetched(head, read(remote, new ResolvedRef(ref, commit.kind(), sha), workspace, model,
                     actor));
         });
@@ -190,18 +179,12 @@ public final class GitPull {
             throw rejected(session, candidate.corrupt());
         }
         boolean adopt = sha.equals(fetched.head());
-        String comment = request.comment() != null && !request.comment().isBlank() ? request.comment()
-                : texts.text(Message.of(InterchangeMessages.GIT_PULL_COMMENT, ref.value(),
-                        sha.value().substring(0, SHORT_SHA)));
+        String comment = attempts.comment(request.comment(), InterchangeMessages.GIT_PULL_COMMENT, ref, sha);
         byte[] xml = Objects.requireNonNull(candidate.xml());
         Applied applied;
         try {
             applied = unitOfWork.write(() -> {
-                ModelStates.Current now = states.current(actor, model);
-                if (!now.hash().equals(baseHash)) {
-                    throw new InterchangeException(InterchangeCodes.GIT_IMPORT, Failure.CONFLICT,
-                            Message.of(InterchangeMessages.GIT_REPORT_STALE, model.value()), Map.of());
-                }
+                GitAttempts.requireUnchanged(states.current(actor, model), baseHash, model);
                 ModelStates.Replaced replaced = states.replace(actor, model, xml, comment);
                 Instant at = clock.instant();
                 session.apply(model, replaced.versionNo(), replaced.opaqueObjects(), at);

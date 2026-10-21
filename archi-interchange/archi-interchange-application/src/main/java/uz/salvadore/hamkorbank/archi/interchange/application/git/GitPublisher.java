@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -22,7 +21,6 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.CommitRequest;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Person;
-import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.PushResult;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Pushed;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Rejected;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Remote;
@@ -327,60 +325,91 @@ public final class GitPublisher {
         }
     }
 
+    /** Попытка публикации одной версии: голова ветки, проверка истории, затем коммит. */
     private Outcome attempt(GitOutbox.Entry entry, GitBinding binding, PublishedVersions.Version version) {
         Remote remote = remote(binding);
         GitSha head = repository.fetch(remote).orElse(null);
         Map<String, String> trailers = Map.of(TRAILER_MODEL, entry.model().value().toString(),
                 TRAILER_VERSION, Long.toString(entry.versionNo()));
-        if (binding.lastCommitSha() != null
-                && (head == null || !repository.contains(remote, binding.lastCommitSha(), head))) {
-            return diverged(entry, binding, head);
-        }
-        Optional<GitSha> already = head == null ? Optional.empty() : repository.findByTrailers(remote, head, trailers);
-        if (already.isPresent()) {
-            return recorded(entry, binding, version, already.get(), Objects.requireNonNull(head), 0);
-        }
         String directory = directory(remote, head, entry.model(), version.modelName());
         GitSha merged = unitOfWork.read(() -> merges.last(entry.model())).orElse(null);
-        if (head != null) {
-            Optional<GitRepositoryPort.Commit> last = repository.lastChange(remote, head, directory);
-            if (last.isPresent() && !entry.model().value().toString().equals(last.get().trailers().get(TRAILER_MODEL))
-                    && !accepted(remote, entry.model(), last.get().sha(), merged)) {
-                if (carries(remote, head, directory, version)) {
-                    return recorded(entry, binding, version, head, head, 0);
-                }
-                return diverged(entry, binding, head);
-            }
+        Push push = new Push(entry, binding, version, remote, head, directory, merged);
+        return settled(push, trailers).orElseGet(() -> commit(push, trailers));
+    }
+
+    /** Что известно о попытке до коммита: запись, привязка, версия, адрес, голова ветки, каталог, слитый коммит. */
+    private record Push(GitOutbox.Entry entry, GitBinding binding, PublishedVersions.Version version, Remote remote,
+                        GitSha head, String directory, GitSha merged) {
+    }
+
+    /**
+     * Исход без нового коммита: история переписана или каталог тронут чужим — расхождение; наш коммит
+     * уже есть по трейлерам или голова уже несёт содержимое версии — версия получает его. Пусто — коммит нужен.
+     */
+    private Optional<Outcome> settled(Push push, Map<String, String> trailers) {
+        GitSha head = push.head();
+        GitBinding binding = push.binding();
+        if (binding.lastCommitSha() != null
+                && (head == null || !repository.contains(push.remote(), binding.lastCommitSha(), head))) {
+            return Optional.of(diverged(push.entry(), binding, head));
         }
-        SortedMap<String, byte[]> previous = head == null ? new TreeMap<>() : repository.read(remote, head, directory);
-        GitPositions positions;
-        try {
-            positions = previous.isEmpty() ? GitPositions.none() : reader.positions(previous);
-        } catch (InvalidValueException unreadable) {
-            LOG.log(System.Logger.Level.WARNING, "git positions of model " + entry.model().value() + " in commit "
-                    + head + " are unreadable, the directory is renumbered", unreadable);
-            positions = GitPositions.none();
+        if (head == null) {
+            return Optional.empty();
         }
-        ModelDocument document = new StaxArchiDocumentReader().read(new ByteArrayInputStream(version.xml()));
-        SortedMap<String, byte[]> files = writer.write(document, positions);
+        Optional<GitSha> already = repository.findByTrailers(push.remote(), head, trailers);
+        if (already.isPresent()) {
+            return Optional.of(recorded(push.entry(), binding, push.version(), already.get(), head, 0));
+        }
+        Optional<GitRepositoryPort.Commit> last = repository.lastChange(push.remote(), head, push.directory());
+        String model = push.entry().model().value().toString();
+        if (last.isEmpty() || model.equals(last.get().trailers().get(TRAILER_MODEL))
+                || accepted(push.remote(), push.entry().model(), last.get().sha(), push.merged())) {
+            return Optional.empty();
+        }
+        return Optional.of(carries(push.remote(), head, push.directory(), push.version())
+                ? recorded(push.entry(), binding, push.version(), head, head, 0)
+                : diverged(push.entry(), binding, head));
+    }
+
+    /** Новый коммит версии поверх головы; ветка ушла вперёд — повтор позже. */
+    private Outcome commit(Push push, Map<String, String> trailers) {
+        GitSha head = push.head();
+        ModelDocument document = new StaxArchiDocumentReader().read(new ByteArrayInputStream(push.version().xml()));
+        SortedMap<String, byte[]> files = writer.write(document, positions(push));
         SortedMap<String, byte[]> rootFiles = new TreeMap<>();
         rootFiles.put(GITATTRIBUTES, gitattributes(head == null ? null
-                : repository.file(remote, head, GITATTRIBUTES).orElse(null)));
-        CommitRequest request = new CommitRequest(directory, files, rootFiles, message(version, trailers),
-                author(binding, version), new Person(settings.committerName(), settings.committerEmail(),
-                clock.instant()), merged);
-        PushResult result = repository.push(remote, head, request);
-        return switch (result) {
-            case Pushed pushed -> recorded(entry, binding, version, pushed.sha(), pushed.sha(), pushed.changedFiles());
-            case Unchanged unchanged -> recorded(entry, binding, version, unchanged.head(), unchanged.head(), 0);
+                : repository.file(push.remote(), head, GITATTRIBUTES).orElse(null)));
+        CommitRequest request = new CommitRequest(push.directory(), files, rootFiles,
+                message(push.version(), trailers), author(push.binding(), push.version()),
+                new Person(settings.committerName(), settings.committerEmail(), clock.instant()), push.merged());
+        return switch (repository.push(push.remote(), head, request)) {
+            case Pushed pushed -> recorded(push.entry(), push.binding(), push.version(), pushed.sha(), pushed.sha(),
+                    pushed.changedFiles());
+            case Unchanged unchanged -> recorded(push.entry(), push.binding(), push.version(), unchanged.head(),
+                    unchanged.head(), 0);
             case Rejected rejected -> {
                 unitOfWork.write(() -> {
-                    outbox.retryLater(entry.id(), rejected.toString(), clock.instant());
+                    outbox.retryLater(push.entry().id(), rejected.getClass().getSimpleName(), clock.instant());
                     return null;
                 });
                 yield Outcome.RETRY;
             }
         };
+    }
+
+    /** Позиции каталога в голове ветки; нечитаемые — запись в журнал и нумерация заново. */
+    private GitPositions positions(Push push) {
+        if (push.head() == null) {
+            return GitPositions.none();
+        }
+        SortedMap<String, byte[]> previous = repository.read(push.remote(), push.head(), push.directory());
+        try {
+            return previous.isEmpty() ? GitPositions.none() : reader.positions(previous);
+        } catch (InvalidValueException unreadable) {
+            LOG.log(System.Logger.Level.WARNING, "git positions of model " + push.entry().model().value()
+                    + " in commit " + push.head() + " are unreadable, the directory is renumbered", unreadable);
+            return GitPositions.none();
+        }
     }
 
     /**
