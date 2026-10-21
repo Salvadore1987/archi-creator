@@ -8,7 +8,7 @@ public interface LlmStream {
      * Обрыв внешнего API — {@link LlmUnavailableException}; израсходованное к этому
      * моменту слушатель уже получил через {@link LlmListener#usage}.
      */
-    void consume(LlmListener listener) throws LlmUnavailableException;
+    void consume(LlmListener listener);
 
     /** Прервать поток: новый запрос того же автора отменяет предыдущий. */
     void cancel();

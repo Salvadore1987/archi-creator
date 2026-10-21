@@ -12,6 +12,7 @@ import java.util.Set;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorFunction;
+import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
 
 /**
  * Усечённое представление модели под одну функцию помощника. Неизменяемо, живёт одну
@@ -32,7 +33,6 @@ public record ModelContext(AdvisorFunction function, List<ContextElement> elemen
     private static final int RELATION_OVERHEAD = 48;
     private static final int VIEW_OVERHEAD = 32;
     private static final int ID_OVERHEAD = 3;
-    private static final int CHARS_PER_TOKEN = 4;
 
     public ModelContext {
         Objects.requireNonNull(function, "function");
@@ -148,6 +148,6 @@ public record ModelContext(AdvisorFunction function, List<ContextElement> elemen
                 chars += ID_OVERHEAD + id.length();
             }
         }
-        return (int) Math.min(Integer.MAX_VALUE, chars / CHARS_PER_TOKEN);
+        return (int) Math.min(Integer.MAX_VALUE, chars / TokenUsage.CHARS_PER_TOKEN);
     }
 }

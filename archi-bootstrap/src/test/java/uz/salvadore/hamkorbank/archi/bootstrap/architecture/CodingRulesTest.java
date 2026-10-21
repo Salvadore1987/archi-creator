@@ -182,6 +182,15 @@ class CodingRulesTest {
     }
 
     @Test
+    @DisplayName("Исключения основного кода — непроверяемые: checked-исключений нет")
+    void exceptionsAreUnchecked() {
+        classes().that().areAssignableTo(Exception.class)
+                .should().beAssignableTo(RuntimeException.class)
+                .because("checked-исключение тянет throws через порты и сценарии и требует rollbackFor")
+                .check(classes);
+    }
+
+    @Test
     @DisplayName("Событие домена — {Агрегат}{Действие}Event и реализует базовый тип событий своего агрегата")
     void domainEventsFollowNamingAndBaseType() {
         for (String context : DOMAIN_EXCEPTION_ROOTS) {

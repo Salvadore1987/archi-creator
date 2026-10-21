@@ -10,34 +10,37 @@ import org.springframework.web.bind.annotation.RestController;
 import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.SettingsDto;
 import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.StatusDto;
 import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.UsageDto;
-import uz.salvadore.hamkorbank.archi.advisor.application.service.AdvisorAdminService;
+import uz.salvadore.hamkorbank.archi.advisor.application.dto.command.ConfigureAdvisorCommand;
+import uz.salvadore.hamkorbank.archi.advisor.application.dto.query.GetAdvisorSettingsQuery;
+import uz.salvadore.hamkorbank.archi.advisor.application.dto.query.GetAdvisorStatusQuery;
+import uz.salvadore.hamkorbank.archi.advisor.application.dto.query.GetTokenUsageQuery;
+import uz.salvadore.hamkorbank.archi.advisor.application.port.in.AdvisorAdminApplicationService;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Requester;
-import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
 
 /** Состояние помощника, выключатель и лимит, расход за месяц. */
 @RestController
 @RequestMapping("/api/v1/ai")
 public class AdvisorSettingsController {
 
-    private final AdvisorAdminService admin;
+    private final AdvisorAdminApplicationService admin;
 
-    public AdvisorSettingsController(AdvisorAdminService admin) {
+    public AdvisorSettingsController(AdvisorAdminApplicationService admin) {
         this.admin = admin;
     }
 
     /** Включён ли помощник и в каком состоянии бюджет текущего месяца. */
     @GetMapping("/status")
     public StatusDto status(Requester requester, @RequestParam(required = false) UUID workspaceId) {
-        return DtoMapper.status(admin.status(requester, workspace(workspaceId)));
+        return DtoMapper.status(admin.getAdvisorStatus(requester, new GetAdvisorStatusQuery(workspaceId)));
     }
 
     /** Выключатель и месячный лимит токенов пространства. */
     @GetMapping("/settings")
     public SettingsDto settings(Requester requester, @RequestParam(required = false) UUID workspaceId) {
-        return DtoMapper.settings(admin.settings(requester, workspace(workspaceId)));
+        return DtoMapper.settings(admin.getAdvisorSettings(requester, new GetAdvisorSettingsQuery(workspaceId)));
     }
 
     /** Изменить выключатель и лимит; без поля {@code enabled} запрос не разбирается. */
@@ -47,18 +50,14 @@ public class AdvisorSettingsController {
         if (body.enabled() == null) {
             throw AdvisorDomainException.invalid(Message.of(AdvisorMessages.FIELD_REQUIRED, "enabled"));
         }
-        return DtoMapper.settings(admin.change(requester, workspace(workspaceId), body.enabled(),
-                body.monthlyTokenLimit()));
+        return DtoMapper.settings(admin.configureAdvisor(requester,
+                new ConfigureAdvisorCommand(workspaceId, body.enabled(), body.monthlyTokenLimit())));
     }
 
     /** Расход токенов за период — по авторам и по функциям. */
     @GetMapping("/usage")
     public UsageDto usage(Requester requester, @RequestParam(required = false) UUID workspaceId,
                           @RequestParam(required = false) String period) {
-        return DtoMapper.usage(admin.usage(requester, workspace(workspaceId), period));
-    }
-
-    private static WorkspaceId workspace(UUID workspaceId) {
-        return workspaceId == null ? null : WorkspaceId.of(workspaceId);
+        return DtoMapper.usage(admin.getTokenUsage(requester, new GetTokenUsageQuery(workspaceId, period)));
     }
 }

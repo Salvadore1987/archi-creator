@@ -91,4 +91,4 @@ stages: ["5"]
 | Находка ссылается на объект | `FindingTest#everyFindingHasResolvableTarget`, `ReviewIT#findingsPointToExistingElements` |
 | Ключ не уходит клиенту | `AdvisorSecurityIT#apiKeyNeverAppearsInResponseOrLog` |
 | Аудит на каждое обращение | `AdvisorAuditIT#everyCallLeavesAuditEntry` |
-| Обрыв потока списывает расход | `AdvisorServiceTest#brokenStreamStillConsumesBudget` |
+| Обрыв потока списывает расход | `AdvisorSessionStartCommandHandlerTest#brokenStreamStillConsumesBudget`, `AnthropicLlmClientTest#cutStreamReportsEstimatedOutput` |

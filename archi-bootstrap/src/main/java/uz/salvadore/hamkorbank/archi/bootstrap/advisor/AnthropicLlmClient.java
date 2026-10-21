@@ -5,13 +5,16 @@ import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.core.JsonValue;
 import com.anthropic.core.http.StreamResponse;
 import com.anthropic.errors.AnthropicException;
+import com.anthropic.models.messages.InputJsonDelta;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.MessageDeltaUsage;
 import com.anthropic.models.messages.OutputConfig;
 import com.anthropic.models.messages.RawContentBlockDelta;
 import com.anthropic.models.messages.RawContentBlockStartEvent;
 import com.anthropic.models.messages.RawMessageStreamEvent;
+import com.anthropic.models.messages.TextDelta;
 import com.anthropic.models.messages.Tool;
+import java.io.EOFException;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -60,7 +63,7 @@ public final class AnthropicLlmClient implements LlmPort {
     }
 
     @Override
-    public LlmStream open(LlmRequest request) throws LlmUnavailableException {
+    public LlmStream open(LlmRequest request) {
         if (client == null) {
             throw new LlmUnavailableException(new IllegalStateException());
         }
@@ -97,58 +100,88 @@ public final class AnthropicLlmClient implements LlmPort {
                 .build();
     }
 
-    /** Открытый поток: события SDK — в события порта. */
+    /**
+     * Открытый поток: события SDK — в события порта. Выход Anthropic сообщает в начале ответа
+     * и в его конце; поток, оборванный или отменённый посередине, получает расход выхода не меньше
+     * оценки по пришедшим символам — иначе обрыв перед концом списывал бы только вход. Поток,
+     * кончившийся без {@code message_stop}, — тоже обрыв: ответ получен не целиком.
+     */
     private static final class Stream implements LlmStream {
 
         private final StreamResponse<RawMessageStreamEvent> response;
+        private final Map<Long, String> toolNames = new HashMap<>();
+        private final Map<Long, StringBuilder> toolInputs = new HashMap<>();
+        private long input;
+        private long output;
+        private long outputChars;
+        private boolean stopped;
 
         Stream(StreamResponse<RawMessageStreamEvent> response) {
             this.response = response;
         }
 
         @Override
-        public void consume(LlmListener listener) throws LlmUnavailableException {
-            Map<Long, String> toolNames = new HashMap<>();
-            Map<Long, StringBuilder> toolInputs = new HashMap<>();
-            long input = 0;
-            long output = 0;
+        public void consume(LlmListener listener) {
             try (response) {
                 Iterator<RawMessageStreamEvent> events = response.stream().iterator();
                 while (events.hasNext()) {
-                    RawMessageStreamEvent event = events.next();
-                    if (event.isMessageStart()) {
-                        input = event.asMessageStart().message().usage().inputTokens();
-                        output = event.asMessageStart().message().usage().outputTokens();
-                        listener.usage(new TokenUsage(input, output));
-                    } else if (event.isContentBlockStart()) {
-                        RawContentBlockStartEvent start = event.asContentBlockStart();
-                        start.contentBlock().toolUse().ifPresent(use -> {
-                            toolNames.put(start.index(), use.name());
-                            toolInputs.put(start.index(), new StringBuilder());
-                        });
-                    } else if (event.isContentBlockDelta()) {
-                        long index = event.asContentBlockDelta().index();
-                        RawContentBlockDelta delta = event.asContentBlockDelta().delta();
-                        delta.text().ifPresent(text -> listener.text(text.text()));
-                        delta.inputJson().ifPresent(json -> toolInputs
-                                .computeIfAbsent(index, k -> new StringBuilder()).append(json.partialJson()));
-                    } else if (event.isContentBlockStop()) {
-                        long index = event.asContentBlockStop().index();
-                        String name = toolNames.remove(index);
-                        StringBuilder json = toolInputs.remove(index);
-                        if (name != null) {
-                            listener.toolCall(name, parse(json));
-                        }
-                    } else if (event.isMessageDelta()) {
-                        MessageDeltaUsage usage = event.asMessageDelta().usage();
-                        input = usage.inputTokens().orElse(input);
-                        output = usage.outputTokens();
-                        listener.usage(new TokenUsage(input, output));
-                    }
+                    accept(events.next(), listener);
                 }
             } catch (AnthropicException | UncheckedIOException e) {
-                throw new LlmUnavailableException(e);
+                throw broken(listener, e);
             }
+            if (!stopped) {
+                throw broken(listener, new EOFException());
+            }
+        }
+
+        private void accept(RawMessageStreamEvent event, LlmListener listener) {
+            if (event.isMessageStart()) {
+                input = event.asMessageStart().message().usage().inputTokens();
+                output = event.asMessageStart().message().usage().outputTokens();
+                listener.usage(new TokenUsage(input, output));
+            } else if (event.isContentBlockStart()) {
+                RawContentBlockStartEvent start = event.asContentBlockStart();
+                start.contentBlock().toolUse().ifPresent(use -> {
+                    toolNames.put(start.index(), use.name());
+                    toolInputs.put(start.index(), new StringBuilder());
+                });
+            } else if (event.isContentBlockDelta()) {
+                delta(event.asContentBlockDelta().index(), event.asContentBlockDelta().delta(), listener);
+            } else if (event.isContentBlockStop()) {
+                long index = event.asContentBlockStop().index();
+                String name = toolNames.remove(index);
+                StringBuilder json = toolInputs.remove(index);
+                if (name != null) {
+                    listener.toolCall(name, parse(json));
+                }
+            } else if (event.isMessageDelta()) {
+                MessageDeltaUsage usage = event.asMessageDelta().usage();
+                input = usage.inputTokens().orElse(input);
+                output = usage.outputTokens();
+                listener.usage(new TokenUsage(input, output));
+            } else if (event.isMessageStop()) {
+                stopped = true;
+            }
+        }
+
+        private void delta(long index, RawContentBlockDelta delta, LlmListener listener) {
+            String text = delta.text().map(TextDelta::text).orElse("");
+            if (!text.isEmpty()) {
+                outputChars += text.length();
+                listener.text(text);
+            }
+            String json = delta.inputJson().map(InputJsonDelta::partialJson).orElse("");
+            if (!json.isEmpty()) {
+                outputChars += json.length();
+                toolInputs.computeIfAbsent(index, k -> new StringBuilder()).append(json);
+            }
+        }
+
+        /** Сообщить израсходованное к обрыву и вернуть отказ для сценария. */
+        private LlmUnavailableException broken(LlmListener listener, Exception cause) {
+            listener.usage(new TokenUsage(input, Math.max(output, TokenUsage.estimate(outputChars))));
+            return new LlmUnavailableException(cause);
         }
 
         @Override

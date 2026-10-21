@@ -19,15 +19,16 @@ import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.DocumentReque
 import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.ExplainRequest;
 import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.PlanRequest;
 import uz.salvadore.hamkorbank.archi.advisor.adapter.rest.dto.Dtos.ReviewRequest;
-import uz.salvadore.hamkorbank.archi.advisor.application.service.AdvisorService;
-import uz.salvadore.hamkorbank.archi.advisor.application.service.AdvisorStream;
+import uz.salvadore.hamkorbank.archi.advisor.application.dto.command.ExplainElementCommand;
+import uz.salvadore.hamkorbank.archi.advisor.application.dto.command.GenerateDocumentationCommand;
+import uz.salvadore.hamkorbank.archi.advisor.application.dto.command.PlanModelCommand;
+import uz.salvadore.hamkorbank.archi.advisor.application.dto.command.ReviewModelCommand;
+import uz.salvadore.hamkorbank.archi.advisor.application.port.in.AdvisorApplicationService;
+import uz.salvadore.hamkorbank.archi.advisor.application.port.in.AdvisorStream;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Requester;
-import uz.salvadore.hamkorbank.archi.advisor.domain.identity.ModelId;
-import uz.salvadore.hamkorbank.archi.advisor.domain.identity.ViewId;
-import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorRequest;
 
 /**
  * Четыре функции помощника — поток SSE на {@code POST}. Отказы сценарий принимает до
@@ -44,11 +45,11 @@ public class AdvisorController {
     /** Дольше самого долгого обращения: документация по модели — до пяти минут. */
     private static final long STREAM_TIMEOUT_MS = 330_000;
 
-    private final AdvisorService advisor;
+    private final AdvisorApplicationService advisor;
     private final JsonMapper json;
     private final AsyncTaskExecutor executor;
 
-    public AdvisorController(AdvisorService advisor, JsonMapper json,
+    public AdvisorController(AdvisorApplicationService advisor, JsonMapper json,
                              @Qualifier("applicationTaskExecutor") AsyncTaskExecutor executor) {
         this.advisor = advisor;
         this.json = json;
@@ -59,32 +60,32 @@ public class AdvisorController {
     @PostMapping("/review")
     public ResponseEntity<SseEmitter> review(Requester requester, @RequestBody ReviewRequest body,
             @RequestHeader(value = IDEMPOTENCY_KEY, required = false) String key, Locale locale) {
-        return stream(advisor.ask(requester, AdvisorRequest.review(model(body.modelId()), view(body.viewId())),
-                key(key), locale));
+        return stream(advisor.reviewModel(requester,
+                new ReviewModelCommand(model(body.modelId()), body.viewId(), key(key), locale)));
     }
 
     /** Подсказка по выбранному элементу и его окрестности — ответ потоком SSE. */
     @PostMapping("/explain")
     public ResponseEntity<SseEmitter> explain(Requester requester, @RequestBody ExplainRequest body,
             @RequestHeader(value = IDEMPOTENCY_KEY, required = false) String key, Locale locale) {
-        return stream(advisor.ask(requester, AdvisorRequest.explain(model(body.modelId()), body.elementId()),
-                key(key), locale));
+        return stream(advisor.explainElement(requester,
+                new ExplainElementCommand(model(body.modelId()), body.elementId(), key(key), locale)));
     }
 
     /** План фрагмента архитектуры по описанию — предложение элементов и связей, модель не меняется. */
     @PostMapping("/plan")
     public ResponseEntity<SseEmitter> plan(Requester requester, @RequestBody PlanRequest body,
             @RequestHeader(value = IDEMPOTENCY_KEY, required = false) String key, Locale locale) {
-        return stream(advisor.ask(requester, AdvisorRequest.plan(model(body.modelId()), body.prompt()), key(key),
-                locale));
+        return stream(advisor.planModel(requester,
+                new PlanModelCommand(model(body.modelId()), body.prompt(), key(key), locale)));
     }
 
     /** Документация по модели, представлению или элементу — текст потоком SSE. */
     @PostMapping("/document")
     public ResponseEntity<SseEmitter> document(Requester requester, @RequestBody DocumentRequest body,
             @RequestHeader(value = IDEMPOTENCY_KEY, required = false) String key, Locale locale) {
-        return stream(advisor.ask(requester, AdvisorRequest.document(model(body.modelId()), view(body.viewId()),
-                body.elementId()), key(key), locale));
+        return stream(advisor.generateDocumentation(requester, new GenerateDocumentationCommand(
+                model(body.modelId()), body.viewId(), body.elementId(), key(key), locale)));
     }
 
     /** Поток читается в фоне: поток запроса освобождается, кадры уходят по мере прихода. */
@@ -105,15 +106,11 @@ public class AdvisorController {
                 .body(emitter);
     }
 
-    private static ModelId model(UUID modelId) {
+    private static UUID model(UUID modelId) {
         if (modelId == null) {
             throw AdvisorDomainException.invalid(Message.of(AdvisorMessages.FIELD_REQUIRED, "modelId"));
         }
-        return ModelId.of(modelId);
-    }
-
-    private static ViewId view(UUID viewId) {
-        return viewId == null ? null : ViewId.of(viewId);
+        return modelId;
     }
 
     private static String key(String key) {
