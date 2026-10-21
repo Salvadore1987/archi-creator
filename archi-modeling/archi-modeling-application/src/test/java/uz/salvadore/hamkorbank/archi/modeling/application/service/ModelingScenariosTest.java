@@ -60,7 +60,7 @@ class ModelingScenariosTest {
 
         assertEquals(first.id(), replay.id());
         assertEquals(1, ports.models.size());
-        assertEquals(1, ports.versionService.listVersions(ALICE, new ListVersionsQuery(first.id())).size());
+        assertEquals(1, ports.versionService.listVersions(ALICE, new ListVersionsQuery(first.id(), null, null)).size());
         assertEquals(9, ports.models.get(ModelId.of(first.id())).roots().size());
         ModelingDomainException other = assertThrows(ModelingDomainException.class,
                 () -> create(ALICE, "Другая", "k-1"));

@@ -1,9 +1,13 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.rest;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.AclEntryDto;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.AutoLayoutRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.BendpointDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EdgeBendpoints;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EdgePlacementRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ElementDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ElementTypeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.Finding;
@@ -17,13 +21,22 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PlacementDto
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PropertyDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.RelationTypeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.RelationshipDto;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.SaveResult;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.StyleDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.VersionInfo;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewEdgeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewNodeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewPayload;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewSummary;
+import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.WorkspaceDto;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.BendpointValue;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.PropertyValue;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.StyleValue;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateRelationshipCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceAccessListCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.SaveViewLayoutCommand;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ProposeViewLayoutQuery;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.AccessListResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ElementTypeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.FolderResponse;
@@ -34,14 +47,19 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ModelTreeRe
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PropertyResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationTypeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.RelationshipResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.SaveVersionResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ValidationFindingResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewEdgeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewNodeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
+import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.WorkspaceResponse;
 
-/** Агрегаты — в DTO. Списки — в порядке {@code sort_order}: клиенту не нужно сортировать заново. */
+/**
+ * Перевод на границе HTTP: тело запроса — в команду или запрос сценария, результат — в DTO.
+ * Списки — в порядке {@code sort_order}: клиенту не нужно сортировать заново.
+ */
 public final class DtoMapper {
 
     private DtoMapper() {
@@ -147,5 +165,77 @@ public final class DtoMapper {
         return new LayoutPatch(proposal.nodes().stream()
                 .map(n -> new NodeBounds(n.id(), n.x(), n.y(), n.width(), n.height())).toList(),
                 proposal.clearedEdges().stream().map(id -> new EdgeBendpoints(id, List.of())).toList());
+    }
+
+    // ── Запросы ─────────────────────────────────────────────────────
+
+    /** Рабочее пространство: идентификатор и имя. */
+    public static WorkspaceDto workspace(WorkspaceResponse w) {
+        return new WorkspaceDto(w.id(), w.name());
+    }
+
+    /** Список доступа в ответе: записи в порядке сценария. */
+    public static List<AclEntryDto> accessList(AccessListResponse list) {
+        return list.entries().stream().map(e -> new AclEntryDto(e.principalType(), e.principal(), e.access()))
+                .toList();
+    }
+
+    /** Новый список доступа целиком — в команду замены. */
+    public static ReplaceAccessListCommand replaceAccessList(UUID modelId, List<AclEntryDto> entries) {
+        return new ReplaceAccessListCommand(modelId, entries.stream()
+                .map(e -> new ReplaceAccessListCommand.Entry(e.principalType(), e.principal(), e.access()))
+                .toList());
+    }
+
+    /** Итог сохранения: версия и признак, что она новая. */
+    public static SaveResult saveResult(SaveVersionResponse result) {
+        return new SaveResult(version(result.version()), result.created());
+    }
+
+    /** Ребро новой связи; без {@code view} связь рисуется без ребра. */
+    public static CreateRelationshipCommand.Edge edge(EdgePlacementRequest view) {
+        return view == null ? null : new CreateRelationshipCommand.Edge(view.viewId(), view.sourceNodeId(),
+                view.targetNodeId(), view.edgeId(), view.edgeArchiId());
+    }
+
+    /**
+     * Свойства правки; {@code null} — не менять. Значение без {@code value} — пустая строка:
+     * так свойство без значения читает и файл.
+     */
+    public static List<PropertyValue> properties(List<PropertyDto> properties) {
+        return properties == null ? null : properties.stream()
+                .map(p -> new PropertyValue(p.key(), p.value() == null ? "" : p.value())).toList();
+    }
+
+    /** Собственный стиль правки; {@code null} — снять. */
+    public static StyleValue style(StyleDto dto) {
+        return dto == null ? null
+                : new StyleValue(dto.fillColor(), dto.font(), dto.fontColor(), dto.lineColor(), dto.textAlignment());
+    }
+
+    /** Точки перегиба; не переданы — ребро прямое. */
+    public static List<BendpointValue> bendpoints(List<BendpointDto> points) {
+        return Optional.ofNullable(points).orElse(List.of()).stream()
+                .map(b -> new BendpointValue(b.startX(), b.startY(), b.endX(), b.endY())).toList();
+    }
+
+    /** Геометрия после перемещений; не переданный список — без изменений. */
+    public static SaveViewLayoutCommand layout(UUID viewId, LayoutPatch patch) {
+        return new SaveViewLayoutCommand(viewId,
+                Optional.ofNullable(patch.nodes()).orElse(List.of()).stream()
+                        .map(n -> new SaveViewLayoutCommand.NodeBounds(n.id(), n.x(), n.y(), n.width(), n.height()))
+                        .toList(),
+                Optional.ofNullable(patch.edges()).orElse(List.of()).stream()
+                        .map(e -> new SaveViewLayoutCommand.EdgeBendpoints(e.id(), bendpoints(e.bendpoints())))
+                        .toList());
+    }
+
+    /** Граф представления из браузера — в запрос авторазметки. */
+    public static ProposeViewLayoutQuery layoutQuery(UUID viewId, AutoLayoutRequest request) {
+        return new ProposeViewLayoutQuery(viewId, request.strategy(),
+                request.nodes().stream().map(n -> new ProposeViewLayoutQuery.Node(n.id(), n.parentId(),
+                        n.conceptType(), n.x(), n.y(), n.width(), n.height())).toList(),
+                Optional.ofNullable(request.edges()).orElse(List.of()).stream()
+                        .map(e -> new ProposeViewLayoutQuery.Edge(e.id(), e.sourceId(), e.targetId())).toList());
     }
 }

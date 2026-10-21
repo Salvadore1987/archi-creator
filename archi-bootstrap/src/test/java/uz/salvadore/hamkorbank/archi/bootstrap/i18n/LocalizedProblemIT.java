@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.i18n;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -10,6 +11,7 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 
 /**
@@ -43,5 +45,25 @@ class LocalizedProblemIT extends ApiTest {
         mvc.perform(get("/api/v1/models/" + IDS.generate()).with(architect())
                         .header(HttpHeaders.ACCEPT_LANGUAGE, "de"))
                 .andExpect(jsonPath("$.title").value("Не найдено"));
+    }
+
+    @Test
+    @DisplayName("UI-021: заголовок общего отказа и отказа interchange — на языке запроса")
+    void titlesFollowAcceptLanguage() throws Exception {
+        mvc.perform(get("/api/v1/models/zzz").with(architect()).header(HttpHeaders.ACCEPT_LANGUAGE, "en"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Bad request"));
+        mvc.perform(get("/api/v1/models/zzz").with(architect()))
+                .andExpect(jsonPath("$.title").value("Некорректный запрос"));
+        mvc.perform(put("/api/v1/models").with(architect()).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.title").value("Метод не поддерживается"));
+
+        String workspace = read(mvc.perform(get("/api/v1/workspaces").with(admin())).andReturn(), "$[0].id");
+        mvc.perform(get("/api/v1/workspaces/" + workspace + "/git-binding").with(admin())
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "en"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("IXC_NOT_FOUND"))
+                .andExpect(jsonPath("$.title").value("Not found"));
     }
 }

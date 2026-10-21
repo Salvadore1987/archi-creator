@@ -1,5 +1,8 @@
 package uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -8,6 +11,8 @@ import java.util.UUID;
  * DTO modeling по контракту OpenAPI. Остаток XML ({@code raw_xml}) наружу
  * не отдаётся: это внутренний формат interchange.
  * Отсутствующее значение — {@code null}, а не {@code Optional}: так его видит JSON.
+ * Ограничения Bean Validation проверяют только форму запроса — поле задано, элемент
+ * списка не {@code null}; правила значений проверяют сценарий и домен.
  */
 public final class Dtos {
 
@@ -25,7 +30,7 @@ public final class Dtos {
     }
 
     /** Свойство объекта: ключ и значение. */
-    public record PropertyDto(String key, String value) {
+    public record PropertyDto(@NotNull String key, String value) {
     }
 
     /** Папка дерева модели; {@code folderType} — только у корневой, {@code parentId} — только у вложенной. */
@@ -105,7 +110,7 @@ public final class Dtos {
     }
 
     /** Запись списка доступа: тип субъекта, субъект и уровень доступа. */
-    public record AclEntryDto(String principalType, String principal, String access) {
+    public record AclEntryDto(@NotNull String principalType, @NotNull String principal, @NotNull String access) {
     }
 
     /** Тип каталога метамодели для палитры; {@code supported} — редактируется ли в текущей фазе. */
@@ -139,22 +144,22 @@ public final class Dtos {
     }
 
     /** {@code properties}: {@code null} — не менять, пустой список — снять все. */
-    public record ElementPatch(String name, String documentation, List<PropertyDto> properties) {
+    public record ElementPatch(String name, String documentation, List<@NotNull @Valid PropertyDto> properties) {
     }
 
     /** Ребро, которое рисуется вместе с новой связью; {@code edgeId} и {@code edgeArchiId} может задать клиент. */
-    public record EdgePlacementRequest(UUID viewId, UUID sourceNodeId, UUID targetNodeId, UUID edgeId,
-                                       String edgeArchiId) {
+    public record EdgePlacementRequest(@NotNull UUID viewId, @NotNull UUID sourceNodeId,
+                                       @NotNull UUID targetNodeId, UUID edgeId, String edgeArchiId) {
     }
 
     /** Создание связи и, если передан {@code view}, её ребра на представлении. */
-    public record CreateRelationshipRequest(String archiType, UUID sourceId, UUID targetId, String name,
-                                            EdgePlacementRequest view, UUID id, String archiId, UUID folderId,
-                                            String accessType, Boolean directed) {
+    public record CreateRelationshipRequest(String archiType, @NotNull UUID sourceId, @NotNull UUID targetId,
+                                            String name, @Valid EdgePlacementRequest view, UUID id, String archiId,
+                                            UUID folderId, String accessType, Boolean directed) {
     }
 
     /** Создание папки в родительской папке. */
-    public record CreateFolderRequest(UUID parentId, String name, UUID id, String archiId) {
+    public record CreateFolderRequest(@NotNull UUID parentId, String name, UUID id, String archiId) {
     }
 
     /** Новое имя объекта дерева. */
@@ -162,11 +167,11 @@ public final class Dtos {
     }
 
     /** Перенос объектов дерева в папку. */
-    public record MoveRequest(UUID targetFolderId, List<UUID> itemIds) {
+    public record MoveRequest(@NotNull UUID targetFolderId, @NotEmpty List<@NotNull UUID> itemIds) {
     }
 
     /** Объекты дерева для группового удаления. */
-    public record ItemsRequest(List<UUID> itemIds) {
+    public record ItemsRequest(@NotEmpty List<@NotNull UUID> itemIds) {
     }
 
     /** Создание представления; без {@code folderId} — в корне представлений. */
@@ -183,11 +188,11 @@ public final class Dtos {
     }
 
     /** Отсутствующее поле не меняется; стиль заменяется целиком. */
-    public record EditNodeRequest(String label, String content, StyleDto style) {
+    public record EditNodeRequest(String label, String content, @Valid StyleDto style) {
     }
 
     /** Новый собственный стиль ребра; заменяется целиком. */
-    public record EditEdgeRequest(StyleDto style) {
+    public record EditEdgeRequest(@Valid StyleDto style) {
     }
 
     /** @param parentId нет — корень представления; координаты — относительно нового родителя */
@@ -195,31 +200,33 @@ public final class Dtos {
     }
 
     /** Ребро уже существующей связи: концы — узлы или рёбра того же представления. */
-    public record PlaceEdgeRequest(UUID id, String archiId, UUID relationshipId, UUID sourceId, UUID targetId,
-                                   List<BendpointDto> bendpoints) {
+    public record PlaceEdgeRequest(UUID id, String archiId, @NotNull UUID relationshipId, @NotNull UUID sourceId,
+                                   @NotNull UUID targetId, List<@NotNull BendpointDto> bendpoints) {
     }
 
     /** Новые границы узла относительно родителя. */
-    public record NodeBounds(UUID id, int x, int y, int width, int height) {
+    public record NodeBounds(@NotNull UUID id, int x, int y, int width, int height) {
     }
 
     /** Новые точки перегиба ребра. */
-    public record EdgeBendpoints(UUID id, List<BendpointDto> bendpoints) {
+    public record EdgeBendpoints(@NotNull UUID id, List<@NotNull BendpointDto> bendpoints) {
     }
 
     /** Геометрия после перемещений: узлы и точки перегиба одной транзакцией. */
-    public record LayoutPatch(List<NodeBounds> nodes, List<EdgeBendpoints> edges) {
+    public record LayoutPatch(List<@NotNull @Valid NodeBounds> nodes, List<@NotNull @Valid EdgeBendpoints> edges) {
     }
 
     /** Граф представления как он в браузере — с несохранёнными узлами. */
-    public record AutoLayoutRequest(String strategy, List<LayoutNode> nodes, List<LayoutEdge> edges) {
+    public record AutoLayoutRequest(String strategy, @NotNull List<@NotNull @Valid LayoutNode> nodes,
+                                    List<@NotNull @Valid LayoutEdge> edges) {
     }
 
     /** @param conceptType тип элемента узла; нет — группа, заметка или иное */
-    public record LayoutNode(UUID id, UUID parentId, String conceptType, int x, int y, int width, int height) {
+    public record LayoutNode(@NotNull UUID id, UUID parentId, String conceptType, int x, int y, int width,
+                             int height) {
     }
 
     /** Ребро графа авторазметки между двумя узлами. */
-    public record LayoutEdge(UUID id, UUID sourceId, UUID targetId) {
+    public record LayoutEdge(@NotNull UUID id, @NotNull UUID sourceId, @NotNull UUID targetId) {
     }
 }

@@ -12,6 +12,10 @@ public final class ErrorCodes {
 
     /** Код отказа на неразборчивый запрос: тело, параметр или часть формы не читаются. */
     public static final String BAD_REQUEST = "BAD_REQUEST";
+    /** Код отказа самого Spring MVC: метод, тип тела или адрес здесь не обслуживаются. */
+    public static final String REQUEST_NOT_SUPPORTED = "REQUEST_NOT_SUPPORTED";
+    /** Код неожиданного сбоя сервера: причина — в журнале, клиенту — только код. */
+    public static final String INTERNAL_ERROR = "INTERNAL_ERROR";
 
     private ErrorCodes() {
     }

@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.api;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -12,6 +13,7 @@ import com.fasterxml.uuid.impl.UUIDUtil;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 
@@ -60,6 +62,7 @@ class ClientIdsIT extends ApiTest {
                         .content("{\"parentId\":\"" + root + "\",\"name\":\"Потоки\",\"id\":\"" + folderId
                                 + "\",\"archiId\":\"id-client-folder\"}"))
                 .andExpect(status().isCreated())
+                .andExpect(header().string(HttpHeaders.LOCATION, "/api/v1/models/" + model + "/tree/" + folderId))
                 .andExpect(jsonPath("$.id").value(folderId.toString()))
                 .andExpect(jsonPath("$.archiId").value("id-client-folder"));
     }
@@ -132,6 +135,7 @@ class ClientIdsIT extends ApiTest {
                                 + relationship + "\",\"sourceId\":\"" + cNode + "\",\"targetId\":\"" + dNode
                                 + "\",\"bendpoints\":[{\"startX\":10,\"startY\":40,\"endX\":-150,\"endY\":40}]}"))
                 .andExpect(status().isCreated())
+                .andExpect(header().string(HttpHeaders.LOCATION, "/api/v1/view-edges/" + firstEdge))
                 .andExpect(jsonPath("$.id").value(firstEdge.toString()))
                 .andExpect(jsonPath("$.archiId").value("id-edge-1"))
                 .andExpect(jsonPath("$.relationshipId").value(relationship.toString()))

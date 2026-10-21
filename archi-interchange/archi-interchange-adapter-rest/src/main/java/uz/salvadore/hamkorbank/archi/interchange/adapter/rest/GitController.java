@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.adapter.rest;
 
+import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -55,26 +56,28 @@ public class GitController {
     /** Отчёт об изменениях по ссылке — ничего не меняет. */
     @PostMapping("/models/{id}/git/pull/preview")
     public GitPullPreviewDto previewPull(EditorIdentity actor, @PathVariable UUID id,
-                                         @RequestBody GitPullPreviewRequestDto body) {
+                                         @Valid @RequestBody GitPullPreviewRequestDto body) {
         return GitDtoMapper.preview(pulls.previewGitPull(actor, new PreviewGitPullQuery(id, body.ref())));
     }
 
     /** Применить коммит из отчёта новой версией модели. */
     @PostMapping("/models/{id}/git/pull")
-    public GitPullResultDto pull(EditorIdentity actor, @PathVariable UUID id, @RequestBody GitPullRequestDto body) {
+    public GitPullResultDto pull(EditorIdentity actor, @PathVariable UUID id,
+                                 @Valid @RequestBody GitPullRequestDto body) {
         return GitDtoMapper.pulled(pulls.pullModelFromGit(actor, GitDtoMapper.pullRequest(id, body)));
     }
 
     /** Отчёт слияния предложения по сущностям с выборами по конфликтам — ничего не меняет. */
     @PostMapping("/models/{id}/git/merge/preview")
     public GitMergePreviewDto previewMerge(EditorIdentity actor, @PathVariable UUID id,
-                                           @RequestBody GitMergePreviewRequestDto body) {
+                                           @Valid @RequestBody GitMergePreviewRequestDto body) {
         return GitDtoMapper.mergePreview(merging.previewGitMerge(actor, GitDtoMapper.mergePreviewRequest(id, body)));
     }
 
     /** Применить слияние из отчёта новой версией модели. */
     @PostMapping("/models/{id}/git/merge")
-    public GitMergeResultDto merge(EditorIdentity actor, @PathVariable UUID id, @RequestBody GitMergeRequestDto body) {
+    public GitMergeResultDto merge(EditorIdentity actor, @PathVariable UUID id,
+                                   @Valid @RequestBody GitMergeRequestDto body) {
         return GitDtoMapper.merged(merging.mergeModelBranch(actor, GitDtoMapper.mergeRequest(id, body)));
     }
 
@@ -93,7 +96,7 @@ public class GitController {
     /** Задаёт привязку пространства заново: адрес, ветку, ссылку на токен и авторов. */
     @PutMapping("/workspaces/{id}/git-binding")
     public GitBindingDto configure(EditorIdentity actor, @PathVariable UUID id,
-                                   @RequestBody GitBindingSettingsDto settings) {
+                                   @Valid @RequestBody GitBindingSettingsDto settings) {
         return GitDtoMapper.binding(bindings.configureGitBinding(actor, GitDtoMapper.settings(id, settings)));
     }
 

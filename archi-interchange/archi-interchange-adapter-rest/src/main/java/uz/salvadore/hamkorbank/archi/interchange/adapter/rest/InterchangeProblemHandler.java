@@ -6,6 +6,8 @@ import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -19,8 +21,12 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessag
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 
-/** Отказы interchange — в {@code application/problem+json}, текст — на языке запроса. */
+/**
+ * Отказы interchange — в {@code application/problem+json}, текст — на языке запроса.
+ * Стоит раньше общего обработчика: у того последняя линия на любое исключение.
+ */
 @RestControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class InterchangeProblemHandler {
 
     private static final String TYPE_BASE = "https://archi-creator/errors/";
@@ -68,12 +74,25 @@ public class InterchangeProblemHandler {
         return problem(status, e.code(), text.text(e.reason()), Map.of(), request, text);
     }
 
+    /** Ключ заголовка по статусу: {@code 400} у interchange — всегда отказ по содержимому файла. */
+    private static String title(HttpStatus status) {
+        return switch (status) {
+            case BAD_REQUEST -> InterchangeMessages.TITLE_BAD_FILE;
+            case NOT_FOUND -> InterchangeMessages.TITLE_NOT_FOUND;
+            case CONFLICT -> InterchangeMessages.TITLE_CONFLICT;
+            case FORBIDDEN -> InterchangeMessages.TITLE_FORBIDDEN;
+            case GONE -> InterchangeMessages.TITLE_GONE;
+            case SERVICE_UNAVAILABLE -> InterchangeMessages.TITLE_UNAVAILABLE;
+            case INTERNAL_SERVER_ERROR -> InterchangeMessages.TITLE_INTERNAL;
+            default -> InterchangeMessages.TITLE_UNPROCESSABLE;
+        };
+    }
+
     static ProblemDetail problem(HttpStatus status, String code, String detail, Map<String, Object> details,
                                  HttpServletRequest request, TextCatalog text) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setType(URI.create(TYPE_BASE + code.toLowerCase(Locale.ROOT).replace('_', '-')));
-        problem.setTitle(text.text(Message.of(status == HttpStatus.BAD_REQUEST
-                ? InterchangeMessages.TITLE_BAD_FILE : InterchangeMessages.TITLE_INTERCHANGE)));
+        problem.setTitle(text.text(Message.of(title(status))));
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", code);
         details.forEach((name, value) -> problem.setProperty(name, FindingMapper.detail(value, text)));

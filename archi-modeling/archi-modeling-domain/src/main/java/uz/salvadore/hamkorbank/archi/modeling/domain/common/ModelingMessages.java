@@ -204,14 +204,14 @@ public final class ModelingMessages {
     public static final String OPAQUE_WITHOUT_RESIDUE = "modeling.opaque.without-residue";
     /** Позиция в родителе не положительна. */
     public static final String SORT_ORDER_POSITIVE = "modeling.order.positive";
-    /** Заголовок ответа об ошибке для статуса 400. */
-    public static final String TITLE_BAD_REQUEST = "modeling.problem.bad-request";
     /** Заголовок ответа об ошибке для статуса 409. */
     public static final String TITLE_CONFLICT = "modeling.problem.conflict";
     /** Заголовок ответа об ошибке для статуса 403. */
     public static final String TITLE_FORBIDDEN = "modeling.problem.forbidden";
     /** Заголовок ответа об ошибке для статуса 410. */
     public static final String TITLE_GONE = "modeling.problem.gone";
+    /** Заголовок ответа об ошибке для статуса 500: сервер сам испортил или не прочёл свои данные. */
+    public static final String TITLE_INTERNAL = "modeling.problem.internal";
     /** Заголовок ответа об ошибке для статуса 404. */
     public static final String TITLE_NOT_FOUND = "modeling.problem.not-found";
     /** Заголовок ответа об ошибке для статуса 503. */
@@ -248,8 +248,6 @@ public final class ModelingMessages {
     public static final String FIELD_MISSING = "modeling.request.field-missing";
     /** В запросе не задано несколько обязательных полей. */
     public static final String FIELDS_MISSING = "modeling.request.fields-missing";
-    /** В запросе пустой список объектов. */
-    public static final String ITEMS_EMPTY = "modeling.request.items-empty";
     /** Остаток XML передан пустой строкой, а не отсутствием. */
     public static final String RESIDUE_EMPTY = "modeling.residue.empty";
     /** Цвет стиля записан не как {@code #rrggbb}. */
@@ -314,6 +312,8 @@ public final class ModelingMessages {
     public static final String HASH_NOT_SHA256 = "modeling.version.hash-not-sha256";
     /** Номер версии не положителен. */
     public static final String VERSION_NUMBER_POSITIVE = "modeling.version.number-positive";
+    /** Размер страницы истории — от одного до предела: предел. */
+    public static final String PAGE_SIZE_INVALID = "modeling.version.page-size-invalid";
     /** Предыдущая версия принадлежит другой модели. */
     public static final String VERSION_OTHER_MODEL = "modeling.version.other-model";
     /** Снимок версии не читается. */

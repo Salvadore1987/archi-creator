@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto;
 
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -7,7 +8,8 @@ import java.util.UUID;
 
 /**
  * DTO interchange по контракту OpenAPI. Отсутствующее значение — {@code null},
- * а не {@code Optional}: так его видит JSON.
+ * а не {@code Optional}: так его видит JSON. Bean Validation проверяет только форму
+ * запроса; правила значений — сценарий и домен.
  */
 public final class Dtos {
 
@@ -32,7 +34,8 @@ public final class Dtos {
     }
 
     /** Настройка привязки: ссылка на секрет, а не токен. */
-    public record GitBindingSettingsDto(String repoUrl, String branch, String tokenRef, List<GitAuthorDto> authors) {
+    public record GitBindingSettingsDto(String repoUrl, String branch, String tokenRef,
+                                        List<@NotNull GitAuthorDto> authors) {
     }
 
     /** Привязка пространства к репозиторию: состояние, последний известный коммит ветки и время проверки. */

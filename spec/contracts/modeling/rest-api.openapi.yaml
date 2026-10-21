@@ -252,11 +252,22 @@ paths:
       summary: История версий (FR-06)
       x-use-case: UC-MDL-004
       x-operation: ListVersions
+      parameters:
+        - name: size
+          in: query
+          description: Версий на странице; по умолчанию 50, больше 200 не отдаётся. Меньше 1 — 422 `MDL_INVALID_INPUT`.
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - name: before
+          in: query
+          description: |
+            Номер версии, с которой продолжить к старым: следующая страница — `before` = номер последней
+            версии предыдущей. Не задан — с последней версии.
+          schema: { type: integer, format: int64, minimum: 1 }
       responses:
         '200':
           headers:
             X-Trace-Id: { $ref: '#/components/headers/XTraceId' }
-          description: От новых к старым.
+          description: Страница истории от новых к старым; пустая — версий старше `before` нет.
           content:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/VersionInfo' } }
@@ -1102,7 +1113,12 @@ components:
         instance: { type: string }
         code:
           type: string
-          description: Код инварианта (`INV-MDL-NNN`, domain/modeling/invariants.md) или иной бизнес-ошибки.
+          description: |
+            Код инварианта (`INV-MDL-NNN`, domain/modeling/invariants.md) или иной бизнес-ошибки.
+            Общие для всех адресов трёх контрактов: `BAD_REQUEST` (400, запрос не разобран),
+            `REQUEST_NOT_SUPPORTED` (405, 406, 415, 404 — метод, тип тела или адрес не обслуживаются),
+            `INTEGRITY_CONFLICT` (409), `INTERNAL_ERROR` (500, неожиданный сбой; подробности — в журнале
+            по `X-Trace-Id`).
           examples: ["INV-MDL-004", "INV-MDL-006", "RELATION_NOT_PERMITTED", "MDL_ID_TAKEN"]
         lockOwner:     { type: string }
         relationships: { type: array, items: { type: string, format: uuid } }

@@ -4,6 +4,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.util.Locale;
 import java.util.Map;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -20,8 +22,10 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 /**
  * Отказы помощника — в {@code application/problem+json}, текст — на языке запроса.
  * Превышение частоты несёт {@code Retry-After}, исчерпанный бюджет — дату сброса.
+ * Стоит раньше общего обработчика: у того последняя линия на любое исключение.
  */
 @RestControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class AdvisorProblemHandler {
 
     private static final String TYPE_BASE = "https://archi-creator/errors/";
