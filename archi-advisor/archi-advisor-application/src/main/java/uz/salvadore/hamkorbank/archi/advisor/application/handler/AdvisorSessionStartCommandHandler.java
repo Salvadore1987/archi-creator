@@ -11,6 +11,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uz.salvadore.hamkorbank.archi.advisor.application.access.AdvisorOperation;
 import uz.salvadore.hamkorbank.archi.advisor.application.dto.command.ExplainElementCommand;
 import uz.salvadore.hamkorbank.archi.advisor.application.dto.command.GenerateDocumentationCommand;
@@ -69,7 +71,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
  */
 public final class AdvisorSessionStartCommandHandler {
 
-    private static final System.Logger LOG = System.getLogger(AdvisorSessionStartCommandHandler.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(AdvisorSessionStartCommandHandler.class);
 
     private final AdvisorKernel kernel;
     private final AdvisorBudgets budgets;
@@ -175,7 +177,7 @@ public final class AdvisorSessionStartCommandHandler {
         try {
             upstream = llm.open(prompt(request, context, language));
         } catch (LlmUnavailableException unavailable) {
-            LOG.log(System.Logger.Level.WARNING, "advisor upstream unavailable: {0}",
+            LOG.error("advisor upstream unavailable: {}",
                     unavailable.getCause() == null ? "-" : unavailable.getCause().getClass().getName());
             finish(session, () -> session.fail(TokenUsage.NONE, AuditEntryId.next(kernel.uuids()), kernel.now()));
             throw new AdvisorDomainException(AdvisorCodes.UNAVAILABLE, Failure.UNAVAILABLE,
@@ -399,7 +401,7 @@ public final class AdvisorSessionStartCommandHandler {
                 sink.meta(AdvisorDataMapper.meta(session));
             } catch (RuntimeException broken) { // NOPMD - расход пишется при любом обрыве, внешнего API и клиента
                 upstream.cancel();
-                LOG.log(System.Logger.Level.WARNING, "advisor stream broken: session {0}, {1}", session.id(),
+                LOG.error("advisor stream broken: session {}, {}", session.id(),
                         broken.getClass().getName());
                 if (!session.status().terminal()) {
                     finish(session, () -> session.fail(usage.get(), AuditEntryId.next(kernel.uuids()), kernel.now()));
@@ -408,7 +410,7 @@ public final class AdvisorSessionStartCommandHandler {
                     sink.meta(AdvisorDataMapper.meta(session));
                 } catch (RuntimeException clientGone) { // NOPMD - адаптер потока сообщает уход клиента как угодно
                     // Клиент ушёл — сообщить итог некому; сессия и расход уже записаны.
-                    LOG.log(System.Logger.Level.INFO, "advisor stream: client gone before result, session {0}",
+                    LOG.info("advisor stream: client gone before result, session {}",
                             session.id());
                 }
             } finally {
