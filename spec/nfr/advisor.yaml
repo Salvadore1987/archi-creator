@@ -200,9 +200,10 @@ observability:
     - { name: advisor_usecase_errors_total,     type: counter,   labels: [usecase, error_code] }
     - { name: advisor_first_token_seconds,      type: histogram, labels: [function], buckets: [0.5, 1, 2, 3, 5, 10] }
     - { name: advisor_sessions_total,           type: counter,   labels: [function, outcome, rejection_reason] }
-    - { name: advisor_tokens_consumed,          type: counter,   labels: [workspace, function, kind] }
-    - { name: advisor_budget_utilization_ratio, type: gauge,     labels: [workspace, period] }
+    - { name: advisor_tokens_consumed_total,    type: counter,   labels: [workspace, function, kind] }
+    - { name: advisor_budget_utilization_ratio, type: gauge,     labels: [workspace, period], note: "один на пространство — текущего месяца" }
     - { name: advisor_context_truncated_total,  type: counter,   labels: [function] }
+    - { name: resilience4j_circuitbreaker_state, type: gauge,    labels: [name, state], note: "предохранитель anthropic_api" }
 
   alerts:
     - name: SlowFirstTokenP95

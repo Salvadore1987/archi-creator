@@ -58,7 +58,7 @@ bounded_context: advisor
 |---|---|---|
 | Время до первых токенов | p95 ≤ 3 с (NFR-04) | `advisor_first_token_seconds` |
 | Доля сессий, завершившихся ошибкой | ≤ 2 % за месяц | `advisor_sessions_total{outcome="FAILED"}` |
-| Расход бюджета токенов | Ни одно рабочее пространство не достигает 100 % раньше 25-го числа месяца | `advisor_tokens_consumed{workspace}` против `ai_monthly_token_limit` |
+| Расход бюджета токенов | Ни одно рабочее пространство не достигает 100 % раньше 25-го числа месяца | `advisor_tokens_consumed_total{workspace}` против `ai_monthly_token_limit` |
 | Полезность ревью | ≥ 30 % находок приводят к правке модели в течение недели | Сопоставление `Finding.targetId` с изменениями элемента в следующих версиях |
 | Попытки записи в модель из помощника | 0 — архитектурно невозможны, проверяется тестом (INV-ADV-004) | `AdvisorResultTest#resultCarriesNoMutations` в CI |
 
