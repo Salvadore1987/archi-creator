@@ -80,6 +80,12 @@ final class Fixture {
     ModelGraph graph = graph();
     AdvisorPolicy policy = new AdvisorPolicy(120_000, 0.25, 5_000_000, 4096, 5, 20, ZoneId.of("UTC"));
     final List<FakeStream> opened = new ArrayList<>();
+    /** Номер открытой транзакции; 0 — вне транзакции. */
+    int transaction;
+    int transactions;
+    /** В какой транзакции читались настройки и бюджет. */
+    int settingsReadIn;
+    int budgetReadIn;
     /** Что случается, пока сценарий читает модель, — например, параллельное обращение. */
     Runnable duringRead = () -> {
     };
@@ -167,6 +173,7 @@ final class Fixture {
         return new TokenBudgetRepository() {
             @Override
             public Optional<TokenBudget> find(WorkspaceId workspaceId, BudgetPeriod period, BudgetPolicy policy) {
+                budgetReadIn = transaction;
                 return Optional.ofNullable(budgets.get(period)).map(b -> copy(b, policy));
             }
 
@@ -193,6 +200,7 @@ final class Fixture {
         return new AdvisorSettingsRepository() {
             @Override
             public StoredSettings find(WorkspaceId workspaceId) {
+                settingsReadIn = transaction;
                 return new StoredSettings(enabled, limit);
             }
 
@@ -230,18 +238,31 @@ final class Fixture {
         };
     }
 
-    static UnitOfWork unitOfWork() {
+    /** Транзакция в памяти: номер текущей, вложенная — ошибка сценария, а не молчаливое присоединение. */
+    UnitOfWork unitOfWork() {
         return new UnitOfWork() {
             @Override
             public <T> T write(Supplier<T> work) {
-                return work.get();
+                return inTransaction(work);
             }
 
             @Override
             public <T> T read(Supplier<T> work) {
-                return work.get();
+                return inTransaction(work);
             }
         };
+    }
+
+    private <T> T inTransaction(Supplier<T> work) {
+        if (transaction != 0) {
+            throw new AssertionError("вложенная транзакция");
+        }
+        transaction = ++transactions;
+        try {
+            return work.get();
+        } finally {
+            transaction = 0;
+        }
     }
 
     AdvisorEvents events() {

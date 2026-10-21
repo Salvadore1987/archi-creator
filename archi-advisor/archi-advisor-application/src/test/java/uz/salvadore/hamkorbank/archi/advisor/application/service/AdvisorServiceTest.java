@@ -230,4 +230,17 @@ class AdvisorServiceTest {
         assertEquals("MODEL_DELETED", refused.code());
         assertEquals(List.of(), fixture.upstreamCalls);
     }
+
+    @Test
+    @DisplayName("Допуск решается одним чтением: настройки и бюджет — в одной транзакции")
+    void admissionReadsSettingsAndBudgetTogether() {
+        Fixture fixture = new Fixture();
+        fixture.script = listener -> {
+        };
+        fixture.service().ask(Fixture.ALICE, AdvisorRequest.review(Fixture.MODEL, null), "one-read", RU)
+                .run(new Fixture.Recorded());
+
+        assertTrue(fixture.budgetReadIn != 0, "бюджет читается в транзакции");
+        assertEquals(fixture.settingsReadIn, fixture.budgetReadIn);
+    }
 }

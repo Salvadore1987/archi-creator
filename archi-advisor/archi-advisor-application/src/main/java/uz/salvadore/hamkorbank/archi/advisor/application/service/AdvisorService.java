@@ -144,10 +144,12 @@ public final class AdvisorService {
                 throw reject(session, RejectionReason.MODEL_DELETED, Map.of());
             }
             BudgetPeriod period = BudgetPeriod.containing(now, policy.budgetZone());
-            BudgetPolicy budgetPolicy = budgetPolicy(model.workspaceId());
-            TokenBudget budget = unitOfWork.read(() -> budgets.find(model.workspaceId(), period, budgetPolicy))
-                    .orElseGet(() -> TokenBudget.open(TokenBudgetId.next(uuids), model.workspaceId(), period,
-                            budgetPolicy.limitTokens(), budgetPolicy.enabled()));
+            TokenBudget budget = unitOfWork.read(() -> {
+                BudgetPolicy budgetPolicy = budgetPolicy(model.workspaceId());
+                return budgets.find(model.workspaceId(), period, budgetPolicy)
+                        .orElseGet(() -> TokenBudget.open(TokenBudgetId.next(uuids), model.workspaceId(), period,
+                                budgetPolicy.limitTokens(), budgetPolicy.enabled()));
+            });
             Optional<RejectionReason> refused = budget.admission();
             if (refused.isPresent()) {
                 throw reject(session, refused.get(), refused.get() == RejectionReason.BUDGET_EXHAUSTED
@@ -251,8 +253,9 @@ public final class AdvisorService {
         };
     }
 
+    /** Действующие выключатель и лимит; вызывается внутри транзакции сценария. */
     private BudgetPolicy budgetPolicy(WorkspaceId workspaceId) {
-        AdvisorSettingsRepository.StoredSettings stored = unitOfWork.read(() -> settings.find(workspaceId));
+        AdvisorSettingsRepository.StoredSettings stored = settings.find(workspaceId);
         return new BudgetPolicy(stored.enabled(), Objects.requireNonNullElse(stored.monthlyTokenLimit(),
                 policy.defaultMonthlyTokenLimit()));
     }
@@ -281,26 +284,27 @@ public final class AdvisorService {
 
     /**
      * Терминальный переход и его фиксация: сессия с аудитом, расход в бюджете периода,
-     * события — одной транзакцией. Отказ ничего не расходует, бюджет не трогается.
+     * события — одной транзакцией; метрики — после коммита. Отказ ничего не расходует,
+     * бюджет не трогается.
      */
     private void finish(AdvisorSession session, Runnable transition) {
         transition.run();
-        unitOfWork.write(() -> {
+        Optional<TokenBudget> charged = unitOfWork.write(() -> {
             sessions.save(session);
             List<DomainEvent> published = new ArrayList<>(session.pullEvents());
+            TokenBudget budget = null;
             if (session.usage().total() > 0) {
                 BudgetPeriod period = BudgetPeriod.containing(session.requestedAt(), policy.budgetZone());
-                BudgetPolicy budgetPolicy = budgetPolicy(session.workspaceId());
-                TokenBudget budget = budgets.lock(session.workspaceId(), period, budgetPolicy,
+                budget = budgets.lock(session.workspaceId(), period, budgetPolicy(session.workspaceId()),
                         TokenBudgetId.next(uuids));
                 budget.record(session.usage(), clock.instant());
                 budgets.save(budget);
                 published.addAll(budget.pullEvents());
-                metrics.budget(budget);
             }
             events.publish(published);
-            return null;
+            return Optional.ofNullable(budget);
         });
+        charged.ifPresent(metrics::budget);
         metrics.session(session.function(), session.status(), session.rejectionReason());
         if (session.usage().total() > 0) {
             metrics.tokens(session.function(), session.workspaceId().toString(), session.usage());

@@ -101,16 +101,17 @@ public final class AdvisorAdminService {
                 throw AdvisorDomainException.invalid(Message.of(AdvisorMessages.LIMIT_NOT_POSITIVE));
             }
             WorkspaceId workspaceId = workspaces.resolve(requested);
-            return unitOfWork.write(() -> {
+            TokenBudget changed = unitOfWork.write(() -> {
                 settings.save(workspaceId, enabled, limit);
                 TokenBudget budget = budgets.lock(workspaceId, currentPeriod(), new BudgetPolicy(enabled, limit),
                         TokenBudgetId.next(uuids));
                 budget.changeLimit(limit, clock.instant());
                 budgets.save(budget);
                 events.publish(budget.pullEvents());
-                metrics.budget(budget);
-                return new Settings(enabled, limit);
+                return budget;
             });
+            metrics.budget(changed);
+            return new Settings(enabled, limit);
         });
     }
 
