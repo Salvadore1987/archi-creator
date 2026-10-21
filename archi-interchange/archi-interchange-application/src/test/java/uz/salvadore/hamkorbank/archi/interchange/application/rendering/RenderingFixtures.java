@@ -74,7 +74,13 @@ final class RenderingFixtures {
                     Map.entry("paper_text", "#1A1D22"), Map.entry("grid_step", "20px"),
                     Map.entry("group_fill", "rgba(255,255,255,.35)"), Map.entry("group_border", "#9E9E9E"),
                     Map.entry("note_fill", "#FFFDF2"), Map.entry("note_border", "#E0D9BE"),
-                    Map.entry("opaque_border", "#9E9E9E"), Map.entry("node_subtitle_color", "#667085")),
+                    Map.entry("opaque_border", "#9E9E9E"), Map.entry("node_subtitle_color", "#667085"),
+                    Map.entry("node_font", "13px/1.3 \"Inter\", system-ui, sans-serif"),
+                    Map.entry("node_font_weight", "500"),
+                    Map.entry("node_subtitle", "11px/1.2 \"Inter\", system-ui, sans-serif"),
+                    Map.entry("edge_label_font", "10px/1.2 \"Inter\", system-ui, sans-serif"),
+                    Map.entry("group_tab_font_weight", "600"), Map.entry("group_tab_letter_spacing", "0.04em"),
+                    Map.entry("note_font_weight", "400")),
             Map.of("i-component", "<rect x=\"1\" y=\"1\" width=\"14\" height=\"14\" "
                     + "fill=\"var(--icon-cutout, white)\" stroke=\"currentColor\"/>"),
             "Inter");

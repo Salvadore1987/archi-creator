@@ -4,14 +4,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportLoss;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter.Face;
@@ -19,8 +20,10 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter.Met
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.EdgeNotation.Marker;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.Box;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.CornerIcon;
+import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.FontToken;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.ShapeEntry;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.Size;
+import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Link;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Point;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Rect;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.ViewScene.Edge;
@@ -53,8 +56,12 @@ public final class SvgWriter {
     private static final double EDGE_LABEL_LIFT = 4;
     private static final double SUBTITLE_GAP = 1;
     private static final double ICON_GRID = 16;
-    private static final int ENDPOINT_DEPTH = 8;
+    /** Сколько звеньев «связь к связи» пройти до узла, чтобы найти уровень отрисовки ребра. */
+    private static final int LEVEL_DEPTH = 16;
     private static final int NAME_LINES = 2;
+    /** Начертания сокращённой записи {@code font} CSS: {@code normal} и {@code bold}. */
+    private static final int NORMAL_WEIGHT = 400;
+    private static final int BOLD_WEIGHT = 700;
     private static final double PT = 4.0 / 3.0;
     private static final Pattern CUTOUT = Pattern.compile("var\\(--icon-cutout(?:,[^)]*)?\\)");
     private static final String FALLBACK_STACK = ", system-ui, sans-serif";
@@ -83,7 +90,7 @@ public final class SvgWriter {
      * левый верхний угол с полями, {@code width} × {@code height} — размер картинки
      * при масштабе 100 %.
      */
-    public record Rendered(byte[] svg, double x, double y, double width, double height, List<ImageLoss> losses) {
+    public record Rendered(byte[] svg, double x, double y, double width, double height, List<ExportLoss> losses) {
 
         public Rendered {
             svg = svg.clone();
@@ -107,9 +114,11 @@ public final class SvgWriter {
         private final ViewScene scene;
         private final Options options;
         private final StringBuilder body = new StringBuilder();
-        private final List<ImageLoss> losses = new ArrayList<>();
+        private final List<ExportLoss> losses = new ArrayList<>();
         private final Map<String, StringBuilder> glyphs = new TreeMap<>();
         private final Map<String, Face> faces = new TreeMap<>();
+        private final Map<String, Rect> shapes = new HashMap<>();
+        private final Map<String, Link> links = new HashMap<>();
         private double minX = Double.POSITIVE_INFINITY;
         private double minY = Double.POSITIVE_INFINITY;
         private double maxX = Double.NEGATIVE_INFINITY;
@@ -119,6 +128,9 @@ public final class SvgWriter {
         Drawing(ViewScene scene, Options options) {
             this.scene = scene;
             this.options = options;
+            scene.nodes().forEach(node -> shapes.put(node.archiId(), node.rect()));
+            scene.edges().forEach(edge -> links.put(edge.archiId(),
+                    new Link(edge.sourceId(), edge.targetId(), edge.bendpoints())));
         }
 
         Rendered draw() {
@@ -130,7 +142,7 @@ public final class SvgWriter {
                 Optional<Node> source = nodeOf(edge.sourceId(), 0);
                 Optional<Node> target = nodeOf(edge.targetId(), 0);
                 if (source.isEmpty() || target.isEmpty()) {
-                    losses.add(new ImageLoss(edge.archiId(), LossObjectKind.EDGE, "route",
+                    losses.add(new ExportLoss(edge.archiId(), LossObjectKind.EDGE, "route",
                             Message.of(InterchangeMessages.IMAGE_LOSS_EDGE)));
                     continue;
                 }
@@ -176,12 +188,20 @@ public final class SvgWriter {
             body.append("</g>");
 
             if (node.opaque()) {
-                losses.add(new ImageLoss(node.archiId(), LossObjectKind.NODE, "shape",
+                losses.add(new ExportLoss(node.archiId(), LossObjectKind.NODE, "shape",
                         Message.of(InterchangeMessages.IMAGE_LOSS_PLACEHOLDER, shortType(node.shapeType()))));
             }
+            styleLosses(node.archiId(), LossObjectKind.NODE, node.style());
             if (node.image()) {
-                losses.add(new ImageLoss(node.archiId(), LossObjectKind.NODE, "image",
+                losses.add(new ExportLoss(node.archiId(), LossObjectKind.NODE, "image",
                         Message.of(InterchangeMessages.IMAGE_LOSS_IMAGE)));
+            }
+        }
+
+        private void styleLosses(String archiId, LossObjectKind kind, Style style) {
+            for (String attribute : style.rejected()) {
+                losses.add(new ExportLoss(archiId, kind, "style",
+                        Message.of(InterchangeMessages.IMAGE_LOSS_STYLE, attribute)));
             }
         }
 
@@ -191,8 +211,8 @@ public final class SvgWriter {
                 return;
             }
             Box box = Outlines.resolve(new Box(icon.x(), icon.y(), icon.size(), icon.size()), size);
-            String painted = CUTOUT.matcher(symbol.replace("currentColor", paint.stroke()))
-                    .replaceAll(Matcher.quoteReplacement(paint.fill()));
+            String painted = CUTOUT.matcher(symbol.replace("currentColor", Svg.escape(paint.stroke())))
+                    .replaceAll(Matcher.quoteReplacement(Svg.escape(paint.fill())));
             body.append("<g transform=\"translate(").append(Svg.num(box.x())).append(' ').append(Svg.num(box.y()))
                     .append(") scale(").append(Svg.num(box.width() / ICON_GRID)).append(")\">")
                     .append(painted).append("</g>");
@@ -201,81 +221,114 @@ public final class SvgWriter {
         private void label(Node node, ShapeEntry entry, Box box, Paint paint) {
             boolean tab = entry.outline().equals("tab");
             boolean note = entry.outline().equals("dog-ear");
-            Optional<ArchiFont> own = Optional.ofNullable(node.style().font()).flatMap(ArchiFont::parse);
-            Face face;
-            double lineHeight;
-            String color;
-            String text = node.label();
-            int maxLines;
-            if (tab) {
-                // Ярлык группы — всегда шрифтом подписей, капителью: свой шрифт объекта его не меняет.
-                face = new Face(notation.family(), 11, 600, false, 0.04);
-                lineHeight = layoutUnit(11 * 1.2);
-                color = notation.value("node_subtitle_color");
-                text = text.toUpperCase(Locale.forLanguageTag("ru"));
-                maxLines = 1;
-            } else {
-                String family = own.map(ArchiFont::family).orElse(notation.family());
-                if (!typesetter.hasFamily(family)) {
-                    losses.add(new ImageLoss(node.archiId(), LossObjectKind.NODE, "font",
-                            Message.of(InterchangeMessages.IMAGE_LOSS_FONT, family)));
-                    family = notation.family();
-                }
-                double fontSize = own.map(f -> f.sizePt() * PT).orElse(13.0);
-                int weight = own.filter(ArchiFont::bold).isPresent() ? 700 : note ? 400 : 500;
-                face = new Face(family, fontSize, weight, own.filter(ArchiFont::italic).isPresent(), 0);
-                lineHeight = layoutUnit(fontSize * 1.3);
-                color = paint.text();
-                maxLines = note ? 0 : NAME_LINES;
-            }
-            LabelLayout.Lines lines = layout.wrap(text, face, box.width(), maxLines, note);
-            Optional<String> subtitle = node.opaque()
-                    ? Optional.of(texts.text(Message.of(InterchangeMessages.IMAGE_OPAQUE_SUBTITLE,
-                    shortType(node.shapeType()))))
-                    : Optional.empty();
-            Face subtitleFace = new Face(notation.family(), 11, 400, false, 0);
-            double subtitleHeight = layoutUnit(11 * 1.2);
-            double content = lines.lines().size() * lineHeight + subtitle.map(s -> SUBTITLE_GAP + subtitleHeight)
-                    .orElse(0.0);
+            Typography type = tab ? tabTypography(node) : nameTypography(node, paint, note);
+            LabelLayout.Lines lines = layout.wrap(type.text(), type.face(), box.width(), type.maxLines(), note);
+            Optional<String> subtitle = subtitle(node);
+            double content = lines.lines().size() * type.lineHeight()
+                    + subtitle.map(s -> SUBTITLE_GAP + subtitleHeight()).orElse(0.0);
             double top = tab || note ? box.y() : box.y() + (box.height() - content) / 2;
-            String align = Optional.ofNullable(node.style().textAlignment())
-                    .map(a -> a == 1 ? "left" : a == 4 ? "right" : "center")
-                    .orElse(tab ? "left" : "center");
+            String align = align(node, tab);
             boolean overflowsBox = top < box.y() - 0.01 || top + content > box.y() + box.height() + 0.01;
-            boolean overflowsSide = false;
-            for (int i = 0; i < lines.lines().size(); i++) {
-                double x = aligned(box, layout.width(lines.aligned(i), face), align);
-                overflowsSide |= x < box.x() - 0.01
-                        || x + layout.width(lines.lines().get(i), face) > box.x() + box.width() + 0.01;
-            }
-            boolean clipped = overflowsBox || overflowsSide;
-            if (lines.truncated() || overflowsBox && !text.isBlank()) {
-                losses.add(new ImageLoss(node.archiId(), LossObjectKind.NODE, "label",
+            boolean clipped = overflowsBox || overflowsSide(lines, type.face(), box, align);
+            if (lines.truncated() || overflowsBox && !type.text().isBlank()) {
+                losses.add(new ExportLoss(node.archiId(), LossObjectKind.NODE, "label",
                         Message.of(InterchangeMessages.IMAGE_LOSS_LABEL)));
             }
 
             if (clipped) {
-                String id = "c" + (++clips);
-                body.append("<clipPath id=\"").append(id).append("\"><rect x=\"").append(Svg.num(box.x()))
-                        .append("\" y=\"").append(Svg.num(box.y())).append("\" width=\"").append(Svg.num(box.width()))
-                        .append("\" height=\"").append(Svg.num(box.height())).append("\"/></clipPath>")
-                        .append("<g clip-path=\"url(#").append(id).append(")\">");
+                openClip(box);
             }
             double lineTop = top;
             for (int i = 0; i < lines.lines().size(); i++) {
-                double x = aligned(box, layout.width(lines.aligned(i), face), align);
-                text(lines.lines().get(i), face, x, baseline(face, lineTop, lineHeight), color, note);
-                lineTop += lineHeight;
+                double x = aligned(box, layout.width(lines.aligned(i), type.face()), align);
+                text(lines.lines().get(i), type.face(), x, baseline(type.face(), lineTop, type.lineHeight()),
+                        type.color(), note);
+                lineTop += type.lineHeight();
             }
             if (subtitle.isPresent()) {
-                String single = layout.single(subtitle.get(), subtitleFace, box.width()).lines().getFirst();
-                double x = aligned(box, layout.width(single, subtitleFace), align);
-                text(single, subtitleFace, x, baseline(subtitleFace, lineTop + SUBTITLE_GAP, subtitleHeight),
-                        notation.value("node_subtitle_color"), false);
+                subtitleLine(subtitle.get(), box, align, lineTop);
             }
             if (clipped) {
                 body.append("</g>");
             }
+        }
+
+        /** Ярлык группы — всегда шрифтом подзаголовка, капителью: свой шрифт объекта его не меняет. */
+        private Typography tabTypography(Node node) {
+            FontToken font = notation.font("node_subtitle");
+            Face face = new Face(notation.family(), font.size(), notation.weight("group_tab_font_weight"), false,
+                    notation.ems("group_tab_letter_spacing"));
+            return new Typography(face, layoutUnit(font.size() * font.lineHeight()),
+                    notation.value("node_subtitle_color"), node.label().toUpperCase(LabelLayout.RUSSIAN), 1);
+        }
+
+        /** Имя элемента или текст заметки: свой шрифт объекта сильнее токена; шрифта нет на сервере — потеря. */
+        private Typography nameTypography(Node node, Paint paint, boolean note) {
+            Optional<ArchiFont> own = Optional.ofNullable(node.style().font()).flatMap(ArchiFont::parse);
+            String family = own.map(ArchiFont::family).orElse(notation.family());
+            if (!typesetter.hasFamily(family)) {
+                losses.add(new ExportLoss(node.archiId(), LossObjectKind.NODE, "font",
+                        Message.of(InterchangeMessages.IMAGE_LOSS_FONT, family)));
+                family = notation.family();
+            }
+            FontToken font = notation.font("node_font");
+            double size = own.map(f -> f.sizePt() * PT).orElse(font.size());
+            int weight = own.filter(ArchiFont::bold).isPresent() ? BOLD_WEIGHT
+                    : notation.weight(note ? "note_font_weight" : "node_font_weight");
+            Face face = new Face(family, size, weight, own.filter(ArchiFont::italic).isPresent(), 0);
+            return new Typography(face, layoutUnit(size * font.lineHeight()), paint.text(), node.label(),
+                    note ? 0 : NAME_LINES);
+        }
+
+        /** Подзаголовок заглушки — тип объекта; у поддержанного объекта его нет. */
+        private Optional<String> subtitle(Node node) {
+            return node.opaque()
+                    ? Optional.of(texts.text(Message.of(InterchangeMessages.IMAGE_OPAQUE_SUBTITLE,
+                    shortType(node.shapeType()))))
+                    : Optional.empty();
+        }
+
+        private Face subtitleFace() {
+            return new Face(notation.family(), notation.font("node_subtitle").size(), NORMAL_WEIGHT, false, 0);
+        }
+
+        private double subtitleHeight() {
+            FontToken font = notation.font("node_subtitle");
+            return layoutUnit(font.size() * font.lineHeight());
+        }
+
+        private void subtitleLine(String subtitle, Box box, String align, double lineTop) {
+            Face face = subtitleFace();
+            String single = layout.single(subtitle, face, box.width()).lines().getFirst();
+            double x = aligned(box, layout.width(single, face), align);
+            text(single, face, x, baseline(face, lineTop + SUBTITLE_GAP, subtitleHeight()),
+                    notation.value("node_subtitle_color"), false);
+        }
+
+        /** Выравнивание Archi: 1 — влево, 4 — вправо, прочее — по центру; без своего — ярлык влево. */
+        private String align(Node node, boolean tab) {
+            return Optional.ofNullable(node.style().textAlignment())
+                    .map(a -> a == 1 ? "left" : a == 4 ? "right" : "center")
+                    .orElse(tab ? "left" : "center");
+        }
+
+        /** Выходит ли какая-нибудь строка за боковые края области подписи. */
+        private boolean overflowsSide(LabelLayout.Lines lines, Face face, Box box, String align) {
+            for (int i = 0; i < lines.lines().size(); i++) {
+                double x = aligned(box, layout.width(lines.aligned(i), face), align);
+                if (x < box.x() - 0.01 || x + layout.width(lines.lines().get(i), face) > box.x() + box.width() + 0.01) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void openClip(Box box) {
+            String id = "c" + (++clips);
+            body.append("<clipPath id=\"").append(id).append("\"><rect x=\"").append(Svg.num(box.x()))
+                    .append("\" y=\"").append(Svg.num(box.y())).append("\" width=\"").append(Svg.num(box.width()))
+                    .append("\" height=\"").append(Svg.num(box.height())).append("\"/></clipPath>")
+                    .append("<g clip-path=\"url(#").append(id).append(")\">");
         }
 
         private double aligned(Box box, double lineWidth, String align) {
@@ -326,13 +379,14 @@ public final class SvgWriter {
         // ── Рёбра ──────────────────────────────────────────────────
 
         private void edge(Edge edge) {
-            Optional<Rect> source = endpoint(edge.sourceId(), 0);
-            Optional<Rect> target = endpoint(edge.targetId(), 0);
+            Optional<Rect> source = endpoint(edge.sourceId());
+            Optional<Rect> target = endpoint(edge.targetId());
             if (source.isEmpty() || target.isEmpty()) {
-                losses.add(new ImageLoss(edge.archiId(), LossObjectKind.EDGE, "route",
+                losses.add(new ExportLoss(edge.archiId(), LossObjectKind.EDGE, "route",
                         Message.of(InterchangeMessages.IMAGE_LOSS_EDGE)));
                 return;
             }
+            styleLosses(edge.archiId(), LossObjectKind.EDGE, edge.style());
             List<Point> points = Routing.route(source.get(), target.get(), edge.bendpoints());
             EdgeNotation notationOfEdge = EdgeNotation.of(edge.archiType(), edge.accessType(), edge.directed());
             String stroke = Objects.requireNonNullElse(edge.style().lineColor(), notation.value("edge_color"));
@@ -383,12 +437,13 @@ public final class SvgWriter {
         }
 
         private void edgeLabel(String label, Point at, Style style) {
-            Face face = new Face(notation.family(), 10, 400, false, 0);
+            FontToken labelFont = notation.font("edge_label_font");
+            Face face = new Face(notation.family(), labelFont.size(), NORMAL_WEIGHT, false, 0);
             String line = label.replaceAll("\\s+", " ").strip();
             double width = layout.width(line, face);
             double x = at.x() - width / 2;
             double baseline = at.y() - EDGE_LABEL_LIFT;
-            include(x, baseline - 10);
+            include(x, baseline - labelFont.size());
             include(x + width, baseline + 3);
             String paper = notation.value("paper");
             if (options.outline()) {
@@ -407,29 +462,15 @@ public final class SvgWriter {
 
         private Optional<Node> nodeOf(String endpoint, int guard) {
             Optional<Node> node = scene.node(endpoint);
-            if (node.isPresent() || guard > 16) {
+            if (node.isPresent() || guard > LEVEL_DEPTH) {
                 return node;
             }
             return scene.edge(endpoint).flatMap(e -> nodeOf(e.sourceId(), guard + 1));
         }
 
-        /** Прямоугольник конца: узел, а у связи со связью — точка в середине маршрута ребра-конца. */
-        private Optional<Rect> endpoint(String id, int depth) {
-            Optional<Node> node = scene.node(id);
-            if (node.isPresent()) {
-                return Optional.of(node.get().rect());
-            }
-            Optional<Edge> edge = scene.edge(id);
-            if (edge.isEmpty() || depth > ENDPOINT_DEPTH) {
-                return Optional.empty();
-            }
-            Optional<Rect> s = endpoint(edge.get().sourceId(), depth + 1);
-            Optional<Rect> t = endpoint(edge.get().targetId(), depth + 1);
-            if (s.isEmpty() || t.isEmpty()) {
-                return Optional.empty();
-            }
-            Point p = Routing.midpoint(Routing.route(s.get(), t.get(), edge.get().bendpoints()));
-            return Optional.of(new Rect(p.x() - 0.5, p.y() - 0.5, 1, 1));
+        /** Прямоугольник конца: узел, а у связи к связи — точка в середине маршрута ребра-конца. */
+        private Optional<Rect> endpoint(String id) {
+            return Routing.endpoint(id, shapes, links);
         }
 
         // ── Текст ──────────────────────────────────────────────────
@@ -521,6 +562,10 @@ public final class SvgWriter {
     private record Paint(String fill, String stroke, String text) {
     }
 
+    /** Оформление подписи: гарнитура, высота строки, цвет, текст к набору и предел строк ({@code 0} — без предела). */
+    private record Typography(Face face, double lineHeight, String color, String text, int maxLines) {
+    }
+
     /** Высота строки с точностью раскладки браузера — 1/64 пикселя, остаток отбрасывается. */
     private static double layoutUnit(double value) {
         return Math.floor(value * 64) / 64;
@@ -541,26 +586,5 @@ public final class SvgWriter {
     private static String shortType(String archiType) {
         int colon = archiType.indexOf(':');
         return colon >= 0 ? archiType.substring(colon + 1) : archiType;
-    }
-
-    /**
-     * Шрифт Archi строкой SWT: {@code 1|Segoe UI|10.0|1|WINDOWS|…} — версия, семейство,
-     * кегль в пунктах, начертание (1 — жирный, 2 — курсив).
-     */
-    record ArchiFont(String family, double sizePt, boolean bold, boolean italic) {
-
-        static Optional<ArchiFont> parse(String value) {
-            String[] parts = value.split("\\|");
-            if (parts.length < 3 || parts[1].isBlank()) {
-                return Optional.empty();
-            }
-            try {
-                double size = Double.parseDouble(parts[2]);
-                int flags = parts.length > 3 && !parts[3].isBlank() ? Integer.parseInt(parts[3].strip()) : 0;
-                return Optional.of(new ArchiFont(parts[1], size, (flags & 1) == 1, (flags & 2) == 2));
-            } catch (NumberFormatException malformed) {
-                return Optional.empty();
-            }
-        }
     }
 }

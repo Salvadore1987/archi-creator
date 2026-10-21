@@ -72,7 +72,7 @@ public final class ViewImageExportQueryHandler {
             String name = node.attribute("name").orElse("") + "-v" + snapshot.versionNo();
             Artifact artifact = Artifact.of(picture.bytes(), settings.mediaType(),
                     ExportFileNames.safe(name, "view") + "." + settings.extension());
-            LossReport report = new LossReport(images.entries(picture.losses()), true);
+            LossReport report = new LossReport(kernel.lossEntries(picture.losses()), true);
             delivery.deliver(actor, snapshot, new ViewId(query.viewId()), settings.format(), settings.options(),
                     artifact, report);
             return ExportDataMapper.file(artifact, snapshot.versionNo(), report.entries().size());

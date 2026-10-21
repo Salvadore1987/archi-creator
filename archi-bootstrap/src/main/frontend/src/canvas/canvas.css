@@ -24,7 +24,7 @@
   justify-content: flex-start;
 }
 .shape__label--dog-ear {
-  font-weight: 400;
+  font-weight: var(--note-font-weight);
   white-space: pre-wrap;
 }
 .shape__label--dog-ear .shape__name {
@@ -46,10 +46,10 @@
 .shape__label--tab .shape__name {
   -webkit-line-clamp: 1;
   font: var(--node-subtitle);
-  font-weight: 600;
+  font-weight: var(--group-tab-font-weight);
   color: var(--node-subtitle-color);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--group-tab-letter-spacing);
 }
 
 /* ---------- Холст и вкладки ---------- */

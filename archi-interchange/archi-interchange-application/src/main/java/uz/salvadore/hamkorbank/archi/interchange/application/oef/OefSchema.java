@@ -59,11 +59,10 @@ public final class OefSchema {
             factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
             factory.setResourceResolver(new LocalResolver());
             URL root = Objects.requireNonNull(OefSchema.class.getResource(ROOT), ROOT);
-            return new OefSchema(factory.newSchema(new StreamSource(root.openStream(), root.toExternalForm())));
+            // Источник — адрес ресурса, а не поток: разборщик сам открывает и закрывает его.
+            return new OefSchema(factory.newSchema(new StreamSource(root.toExternalForm())));
         } catch (SAXException e) {
             throw new IllegalStateException(ROOT, e);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
         }
     }
 
@@ -134,16 +133,15 @@ public final class OefSchema {
         }
     }
 
-    /** Источник схемы: поток открывается из ресурса по требованию разборщика. */
+    /**
+     * Источник схемы — только адрес ресурса: без потока и текста разборщик открывает
+     * {@code systemId} сам и сам его закрывает.
+     */
     private record Input(String systemId, String publicId, String baseURI) implements LSInput {
 
         @Override
         public InputStream getByteStream() {
-            try {
-                return new URL(systemId).openStream();
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
+            return null;
         }
 
         @Override

@@ -65,7 +65,7 @@ public final class AllViewImagesExportQueryHandler {
                 String name = view.attribute("name").orElse("");
                 String file = unique(names, FileSlug.of(name, view.archiId()), settings.extension());
                 zip.add(file, picture.bytes());
-                List<LossEntry> entries = images.entries(picture.losses());
+                List<LossEntry> entries = kernel.lossEntries(picture.losses());
                 all.addAll(entries);
                 report.add(new LossReportJson.ViewLosses(view.archiId().value(), name, file, entries));
             }

@@ -3,6 +3,8 @@ package uz.salvadore.hamkorbank.archi.interchange.application.rendering;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Визуальный язык, общий с канвой: силуэты фигур, токены стиля и символы иконок.
@@ -18,6 +20,9 @@ import java.util.Optional;
 public record Notation(Size defaultSize, Map<String, Size> defaultSizeByType, Map<String, ShapeEntry> shapes,
                        ShapeEntry fallback, Map<String, LayerPaint> layers, Map<String, String> values,
                        Map<String, String> icons, String family) {
+
+    /** Начало токена шрифта CSS: {@code 13px/1.3 "Inter", …} — кегль и высота строки. */
+    private static final Pattern FONT = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)px\\s*/\\s*(\\d+(?:\\.\\d+)?)\\b");
 
     public Notation {
         Objects.requireNonNull(defaultSize, "defaultSize");
@@ -60,6 +65,25 @@ public record Notation(Size defaultSize, Map<String, Size> defaultSizeByType, Ma
         return Double.parseDouble(value(key).replace("px", "").strip());
     }
 
+    /** Кегль и высота строки токена шрифта; другой записи токен не допускает — это ошибка файла токенов. */
+    public FontToken font(String key) {
+        Matcher m = FONT.matcher(value(key));
+        if (!m.find()) {
+            throw new IllegalStateException(key);
+        }
+        return new FontToken(Double.parseDouble(m.group(1)), Double.parseDouble(m.group(2)));
+    }
+
+    /** Начертание числом: {@code 500}. */
+    public int weight(String key) {
+        return Integer.parseInt(value(key).strip());
+    }
+
+    /** Длина в долях кегля: {@code 0.04em} → 0,04. */
+    public double ems(String key) {
+        return Double.parseDouble(value(key).replace("em", "").strip());
+    }
+
     /** Заливка и обводка слоя; неизвестный ключ — слой {@code other}. */
     public LayerPaint layer(String key) {
         return Optional.ofNullable(layers.get(key)).orElseGet(() -> layers.get("other"));
@@ -67,6 +91,10 @@ public record Notation(Size defaultSize, Map<String, Size> defaultSizeByType, Ma
 
     /** Размер фигуры. */
     public record Size(double width, double height) {
+    }
+
+    /** Шрифт токена: кегль в пикселях и высота строки множителем кегля. */
+    public record FontToken(double size, double lineHeight) {
     }
 
     /** Прямоугольник в координатах фигуры; отрицательное — от дальнего края. */

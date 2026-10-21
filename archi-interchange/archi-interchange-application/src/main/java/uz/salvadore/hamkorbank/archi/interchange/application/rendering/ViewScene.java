@@ -13,6 +13,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentContent
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentValue;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
+import uz.salvadore.hamkorbank.archi.modeling.application.mapper.ModelRowRules;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiTypeRegistry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ConceptKind;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
@@ -35,13 +36,35 @@ final class ViewScene {
         OTHER
     }
 
-    /** Собственный стиль объекта из файла; поле {@code null} — токен слоя. */
-    record Style(String fillColor, String font, String fontColor, String lineColor, Integer textAlignment) {
+    /**
+     * Собственный стиль объекта из файла; поле {@code null} — токен слоя. Цвет берётся только
+     * по правилу формата modeling: чужое значение из остатка XML в разметку не попадает.
+     *
+     * @param rejected имена атрибутов цвета, значения которых правило не приняло
+     */
+    record Style(String fillColor, String font, String fontColor, String lineColor, Integer textAlignment,
+                 List<String> rejected) {
+
+        Style {
+            rejected = List.copyOf(rejected);
+        }
 
         static Style of(DocumentNode node) {
-            return new Style(nonBlank(node, "fillColor").orElse(null), nonBlank(node, "font").orElse(null),
-                    nonBlank(node, "fontColor").orElse(null), nonBlank(node, "lineColor").orElse(null),
-                    nonBlank(node, "textAlignment").flatMap(ViewScene::integer).orElse(null));
+            List<String> rejected = new ArrayList<>();
+            String fillColor = color(node, "fillColor", rejected);
+            String fontColor = color(node, "fontColor", rejected);
+            String lineColor = color(node, "lineColor", rejected);
+            return new Style(fillColor, nonBlank(node, "font").orElse(null), fontColor, lineColor,
+                    nonBlank(node, "textAlignment").flatMap(ViewScene::integer).orElse(null), rejected);
+        }
+
+        private static String color(DocumentNode node, String name, List<String> rejected) {
+            String value = nonBlank(node, name).orElse(null);
+            if (value == null || ModelRowRules.color(value)) {
+                return value;
+            }
+            rejected.add(name);
+            return null;
         }
     }
 
@@ -104,18 +127,18 @@ final class ViewScene {
         String xsiType = child.archiType().orElse("");
         Optional<DocumentNode> element = child.attribute("archimateElement").map(concepts::get)
                 .filter(ViewScene::isElement);
-        Kind kind = switch (xsiType) {
-            case "archimate:DiagramObject" -> Kind.ELEMENT;
-            case "archimate:Group" -> Kind.GROUP;
-            case "archimate:Note" -> Kind.NOTE;
+        Kind kind = switch (child.viewObject()) {
+            case ELEMENT -> Kind.ELEMENT;
+            case GROUP -> Kind.GROUP;
+            case NOTE -> Kind.NOTE;
             default -> Kind.OTHER;
         };
         String shapeType = element.flatMap(DocumentNode::archiType).orElse(xsiType);
         Layer layer = REGISTRY.findByXsiType(shapeType).map(c -> c.layer()).orElse(Layer.OTHER);
-        boolean opaque = kind == Kind.OTHER || kind == Kind.ELEMENT && element.flatMap(DocumentNode::archiType)
+        boolean opaque = kind == Kind.OTHER || (kind == Kind.ELEMENT && element.flatMap(DocumentNode::archiType)
                 .flatMap(REGISTRY::findByXsiType)
                 .filter(c -> c.kind() == ConceptKind.ELEMENT || c.kind() == ConceptKind.JUNCTION)
-                .filter(c -> c.supported()).isEmpty();
+                .filter(c -> c.supported()).isEmpty());
         Optional<String> text = child.values("content").stream().findFirst().map(DocumentValue::text);
         String label = kind == Kind.NOTE ? text.orElse("")
                 : element.map(e -> e.attribute("name").orElse(""))

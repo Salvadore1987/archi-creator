@@ -21,6 +21,8 @@ public final class BatikRasterizer implements Rasterizer {
         transcoder.addTranscodingHint(SVGAbstractTranscoder.KEY_WIDTH, (float) width);
         transcoder.addTranscodingHint(SVGAbstractTranscoder.KEY_HEIGHT, (float) height);
         transcoder.addTranscodingHint(SVGAbstractTranscoder.KEY_EXECUTE_ONLOAD, Boolean.FALSE);
+        // Картинка самодостаточна: ссылка наружу в SVG — не повод серверу ходить в сеть или читать файлы.
+        transcoder.addTranscodingHint(SVGAbstractTranscoder.KEY_ALLOW_EXTERNAL_RESOURCES, Boolean.FALSE);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
             transcoder.transcode(new TranscoderInput(new ByteArrayInputStream(svg)), new TranscoderOutput(out));

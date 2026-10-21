@@ -8,23 +8,20 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
+import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportLoss;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.RasterGate;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Rasterizer;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter;
-import uz.salvadore.hamkorbank.archi.interchange.application.rendering.ImageLoss;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.SvgWriter;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
-import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportFormat;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.ExportOptions;
-import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.LossEntry;
-import uz.salvadore.hamkorbank.archi.interchange.domain.identity.LossEntryId;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionSnapshotResponse;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 
@@ -85,7 +82,7 @@ final class ViewImages {
     }
 
     /** Картинка и то, что в неё не перенеслось. */
-    record Picture(byte[] bytes, List<ImageLoss> losses) {
+    record Picture(byte[] bytes, List<ExportLoss> losses) {
     }
 
     /**
@@ -167,12 +164,6 @@ final class ViewImages {
     private static boolean fits(Raster raster, long maxAreaPx) {
         return raster.width() <= MAX_PNG_SIDE && raster.height() <= MAX_PNG_SIDE
                 && (long) raster.width() * raster.height() <= maxAreaPx;
-    }
-
-    /** Потери картинки — записи отчёта с причинами на языке запроса. */
-    List<LossEntry> entries(List<ImageLoss> losses) {
-        return losses.stream().map(l -> new LossEntry(LossEntryId.next(kernel.uuids()), ArchiId.of(l.archiId()),
-                l.objectKind(), l.aspect(), kernel.texts().text(l.reason()))).toList();
     }
 
     /** Документ снимка версии. */

@@ -265,8 +265,8 @@ class CodingRulesTest {
     @DisplayName("Optional — только результат поиска и локальная переменная: не поле и не параметр")
     void optionalIsNeitherFieldNorParameter() {
         for (String packages : OPTIONAL_FREE) {
-            noFields().that().areDeclaredInClassesThat().resideInAPackage(packages)
-                    .should().haveRawType(Optional.class)
+            fields().that().areDeclaredInClassesThat().resideInAPackage(packages)
+                    .should(notHoldOptional())
                     .because("поле держит само значение, отсутствие — null с проверкой в конструкторе")
                     .check(classes);
             codeUnits().that().areDeclaredInClassesThat().resideInAPackage(packages)
@@ -276,6 +276,22 @@ class CodingRulesTest {
         }
     }
 
+    /** Поле без Optional — ни типом, ни аргументом дженерика ({@code Map<K, Optional<V>>}). */
+    private static ArchCondition<JavaField> notHoldOptional() {
+        return new ArchCondition<>("not hold Optional") {
+            @Override
+            public void check(JavaField field, ConditionEvents events) {
+                if (mentionsOptional(field.getType())) {
+                    events.add(SimpleConditionEvent.violated(field, field.getFullName() + " holds Optional"));
+                }
+            }
+        };
+    }
+
+    /**
+     * Параметр без Optional — ни типом, ни аргументом дженерика: {@code Function<K, Optional<V>>}
+     * в параметре — тот же Optional, переданный отложенно.
+     */
     private static ArchCondition<JavaCodeUnit> notTakeOptional() {
         return new ArchCondition<>("not take Optional parameters") {
             @Override
@@ -283,11 +299,26 @@ class CodingRulesTest {
                 if (unit.getModifiers().contains(JavaModifier.SYNTHETIC)) {
                     return;
                 }
-                if (unit.getRawParameterTypes().stream().anyMatch(t -> t.isEquivalentTo(Optional.class))) {
+                if (unit.getRawParameterTypes().stream().anyMatch(t -> t.isEquivalentTo(Optional.class))
+                        || unit.getParameterTypes().stream().anyMatch(CodingRulesTest::mentionsOptional)) {
                     events.add(SimpleConditionEvent.violated(unit, unit.getFullName() + " takes Optional"));
                 }
             }
         };
+    }
+
+    private static boolean mentionsOptional(JavaType type) {
+        if (type.toErasure().isEquivalentTo(Optional.class)) {
+            return true;
+        }
+        if (type instanceof JavaParameterizedType parameterized) {
+            return parameterized.getActualTypeArguments().stream().anyMatch(CodingRulesTest::mentionsOptional);
+        }
+        if (type instanceof JavaWildcardType wildcard) {
+            return wildcard.getUpperBounds().stream().anyMatch(CodingRulesTest::mentionsOptional)
+                    || wildcard.getLowerBounds().stream().anyMatch(CodingRulesTest::mentionsOptional);
+        }
+        return false;
     }
 
     @Test

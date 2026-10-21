@@ -19,7 +19,8 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.Typesetter.Fac
 final class LabelLayout {
 
     static final String ELLIPSIS = "…";
-    private static final Locale RUSSIAN = Locale.forLanguageTag("ru");
+    /** Язык подписей: по нему рвутся строки и набирается капитель ярлыка. */
+    static final Locale RUSSIAN = Locale.forLanguageTag("ru");
 
     private final Typesetter typesetter;
 
