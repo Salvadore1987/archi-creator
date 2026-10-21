@@ -26,7 +26,7 @@
 | 6 | Список моделей со свойствами одним запросом | 10-03 | `ModelPersistenceIT`: число запросов списка не растёт с числом моделей | ✅ |
 | 7 | Явное `@Column(name = …)` у каждого сохраняемого поля | 10-08 | `CodingRulesTest#entityColumnsAreNamed`: поле `@Entity`/`@Embeddable` без `@Column` с именем роняет сборку | ✅ |
 | 8 | `ddl-auto: validate` | 10-07 | контекст `*IT` стартует с проверкой схемы; `SchemaValidationIT` — значение настройки | ✅ |
-| 9 | ADR-0029: имена схемы и вид JPA-строк; D-20 — принято | 10-09 | `tools/check-links.py`, `tools/check-traceability.py` | ⬜ |
+| 9 | ADR-0029: имена схемы и вид JPA-строк; D-20 — принято | 10-09 | `tools/check-links.py`, `tools/check-traceability.py` | ✅ |
 
 ## Расхождения плана с фактом
 
