@@ -1,7 +1,11 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.security;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * Что фронтенду нужно знать до входа ({@code archi.ui.*}).
@@ -9,7 +13,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param oidc куда вести браузер за токеном
  */
 @ConfigurationProperties("archi.ui")
-public record UiSettings(@DefaultValue Oidc oidc) {
+@Validated
+public record UiSettings(@DefaultValue @Valid Oidc oidc) {
 
     /**
      * Вход через Keycloak глазами браузера.
@@ -21,6 +26,12 @@ public record UiSettings(@DefaultValue Oidc oidc) {
      * @param clientId  публичный клиент SPA в realm'е
      */
     public record Oidc(@DefaultValue("true") boolean enabled, @DefaultValue("") String authority,
-                       @DefaultValue("archi-creator-ui") String clientId) {
+                       @DefaultValue("archi-creator-ui") @NotBlank String clientId) {
+
+        /** Включённый вход без адреса realm'а увёл бы браузер в никуда. */
+        @AssertTrue
+        public boolean isAuthorityGiven() {
+            return !enabled || authority != null && !authority.isBlank();
+        }
     }
 }

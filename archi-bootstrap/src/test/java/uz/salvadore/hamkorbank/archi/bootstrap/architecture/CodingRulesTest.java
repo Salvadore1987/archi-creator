@@ -40,8 +40,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * Правила кода, которые видны по байткоду основного кода всех модулей: сигнатуры
@@ -423,6 +425,15 @@ class CodingRulesTest {
                                 place + " constructs " + call.getTargetOwner().getSimpleName())));
             }
         };
+    }
+
+    @Test
+    @DisplayName("Настройки проверяются на старте: @ConfigurationProperties — с @Validated")
+    void settingsAreValidated() {
+        classes().that().areAnnotatedWith(ConfigurationProperties.class)
+                .should().beAnnotatedWith(Validated.class)
+                .because("ошибка конфигурации роняет приложение на старте, а не первый запрос под нагрузкой")
+                .check(classes);
     }
 
     @Test

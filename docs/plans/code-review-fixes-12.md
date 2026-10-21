@@ -25,7 +25,7 @@
 | 5 | `traceId` и `modelId` — фильтром до цепочки безопасности, субъект — после | 12-03 | `PublicSurfaceIT`: `401` несёт `X-Trace-Id` | ✅ |
 | 6 | Контроллер сессии: перевод — `SessionDtoMapper`, роли и субъект — из `CurrentEditorResolver`, `401` — цепочка; `@EnableConfigurationProperties(UiSettings)` — в конфигурацию | 12-08 | `RestLayerConventionsTest#controllersDoNotBuildDtos` охватывает DTO bootstrap; `#controllersDoNotConstructExceptions` | ✅ |
 | 7 | `spring-boot-configuration-processor` в `annotationProcessorPaths` модуля `archi-bootstrap` | 12-06 | `ConfigurationMetadataTest`: метаданные есть у каждого префикса `@ConfigurationProperties` | ✅ |
-| 8 | `@Validated` и ограничения на всех шести настройках; умолчания `InterchangeSettings`; одно умолчание каталога кэша Git | 12-04 | `SettingsValidationTest`: недопустимые значения роняют контекст; `CodingRulesTest`: `@ConfigurationProperties` — с `@Validated` | ⬜ |
+| 8 | `@Validated` и ограничения на всех шести настройках; умолчания `InterchangeSettings`; одно умолчание каталога кэша Git | 12-04 | `SettingsValidationTest`: недопустимые значения роняют контекст; `CodingRulesTest`: `@ConfigurationProperties` — с `@Validated` | ✅ |
 | 9 | Пояс очистки снимков и её расписания — `archi.modeling.retention-zone` | 12-10 | `CodingRulesTest`: нет `ZoneId.systemDefault()` и `TimeZone.getDefault()` в основном коде | ⬜ |
 | 10 | `scanBasePackages` у класса запуска | 12-11 | `CodingRulesTest`: класс запуска называет корень сканирования | ⬜ |
 | 11 | ADR: роль — таблицей операций в ядре сценария, `@PreAuthorize` не вводится; D-21 | 12-12 | `tools/check-links.py`, `tools/check-traceability.py` | ⬜ |
@@ -68,3 +68,11 @@
   группы со всех файлов classpath, а не с первого найденного: первый вариант на старом коде нашёл
   чужой файл и упал не на отсутствии файла, а на группе. Процессор подключён только в `archi-bootstrap` —
   все шесть классов настроек живут там. На старом коде групп `archi.*` не было ни одной.
+- **Задача 8.** Проверка нашла настоящий случай в тестах: интеграционные тесты задавали пустой
+  issuer, и адрес входа, выведенный из него, был пуст при включённом входе — фронтенд получил бы
+  пустой `authority`. Тестам адрес задан явно (`IntegrationTest`). Тексты нарушений — сообщения
+  Bean Validation по умолчанию: они уходят в журнал старта, а не пользователю. Обязательность адреса входа —
+  `@AssertTrue` на методе записи `Oidc`. Умолчание каталога кэша Git осталось одно — в `application.yaml`;
+  без него приложение не стартует. Умолчания `InterchangeSettings` повторяют `application.yaml`: так класс
+  без YAML (тест, другой профиль) получает рабочие пределы, а не нули. На старом коде падали все
+  12 случаев `SettingsValidationTest` и правило `settingsAreValidated`.

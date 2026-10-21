@@ -1,9 +1,12 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.git;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.nio.file.Path;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * Настройки выгрузки в Git ({@code archi.git.*}).
@@ -22,15 +25,16 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  *                          только для тестов
  */
 @ConfigurationProperties("archi.git")
-public record GitSettings(Path cacheDir,
-                          @DefaultValue("oauth2") String username,
-                          @DefaultValue("Archi Creator") String committerName,
-                          @DefaultValue("archi-creator@localhost") String committerEmail,
-                          @DefaultValue("users.archi-creator.local") String authorEmailDomain,
-                          @DefaultValue("10s") Duration pollInterval,
-                          @DefaultValue("30s") Duration timeout,
-                          @DefaultValue("5s") Duration retryBase,
-                          @DefaultValue("10m") Duration retryMax,
-                          @DefaultValue("30d") Duration outboxRetention,
+@Validated
+public record GitSettings(@NotNull Path cacheDir,
+                          @DefaultValue("oauth2") @NotBlank String username,
+                          @DefaultValue("Archi Creator") @NotBlank String committerName,
+                          @DefaultValue("archi-creator@localhost") @NotBlank String committerEmail,
+                          @DefaultValue("users.archi-creator.local") @NotBlank String authorEmailDomain,
+                          @DefaultValue("10s") @NotNull Duration pollInterval,
+                          @DefaultValue("30s") @NotNull Duration timeout,
+                          @DefaultValue("5s") @NotNull Duration retryBase,
+                          @DefaultValue("10m") @NotNull Duration retryMax,
+                          @DefaultValue("30d") @NotNull Duration outboxRetention,
                           @DefaultValue("false") boolean allowLocalRepositories) {
 }

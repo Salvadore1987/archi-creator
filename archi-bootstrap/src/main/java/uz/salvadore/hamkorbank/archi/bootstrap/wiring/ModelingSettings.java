@@ -1,8 +1,11 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.wiring;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * Настройки modeling ({@code archi.modeling.*}).
@@ -15,8 +18,9 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param retentionCron        расписание очистки
  */
 @ConfigurationProperties("archi.modeling")
-public record ModelingSettings(@DefaultValue("30m") Duration lockTtl,
+@Validated
+public record ModelingSettings(@DefaultValue("30m") @NotNull Duration lockTtl,
                                String defaultWorkspaceName,
                                @DefaultValue("true") boolean retentionEnabled,
-                               @DefaultValue("0 30 3 * * *") String retentionCron) {
+                               @DefaultValue("0 30 3 * * *") @NotBlank String retentionCron) {
 }
