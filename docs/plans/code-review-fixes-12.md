@@ -82,3 +82,8 @@
   JVM (`ZoneId.systemDefault`, `TimeZone.getDefault`, `Clock.systemDefaultZone`), но не неявный —
   `addCronTask(…, String)` без пояса берёт пояс JVM внутри Spring, и ArchUnit этого не видит.
   На старом коде правило падало на `ModelingConfiguration.snapshotRetentionApplicationService`.
+- **Задача 11.** ADR записывает решение, действующее с этапа 2; кода не меняет. D-21 в реестре —
+  «принято, ADR-0031».
+- **Вне объёма этапа.** Отдельный порт Actuator (§4.5.2, §6.11 №4) — пункт этапа 14: цепочка Actuator
+  уже адресуется `EndpointRequest`, и перенос на порт её не тронет. Каждая задача закрыта полной сборкой
+  `./mvnw -P '!frontend' install` (128 интеграционных тестов), покрытие после последней — 92,5 %.
