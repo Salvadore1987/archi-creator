@@ -47,7 +47,7 @@ Workspace 1──* Model 1──* ModelFolder ──* ModelFolder (вложен�
 | `ViewEdge` | `id`, `model_id`, `view_id`, `archi_id`, `archi_type`, `relationship_id`, `source_node_id` \| `source_edge_id`, `target_node_id` \| `target_edge_id`, `bendpoints` (jsonb), `fill_color`, `font`, `font_color`, `line_color`, `text_alignment`, `sort_order` (позиция в содержимом источника), `raw_xml` |
 | `ModelProperty` / `ElementProperty` / `RelationshipProperty` / `ViewProperty` | `owner_id`, `sort_order`, `key`, `value` |
 | `ModelVersion` | `id`, `model_id`, `version_no`, `author`, `comment`, `label` (метка релиза, nullable), `created_at`, `snapshot` (сжатый `.archimate`, **nullable** — может быть очищен, §4.4), `content_hash` (SHA-256 несжатого снимка), `git_sha` (nullable, §11.6) |
-| `ModelLock` | `model_id` (PK), `owner`, `acquired_at`, `expires_at` |
+| `ModelLock` | `model_id` (PK), `owner`, `acquired_at`, `expires_at`, `version` (оптимистичная блокировка: два захвата просроченной не перезаписывают друг друга) |
 | `ModelAccessEntry` | `model_id`, `principal_type` (`USER`/`GROUP`), `principal`, `access` (`READ`/`WRITE`) — FR-29, `INV-MDL-011` |
 | `IdempotencyRecord` | `scope`, `actor`, `idem_key`, `fingerprint`, `result_ref`, `created_at` — `INV-MDL-003` |
 | `ImportSession` / `ImportFinding` | сессия импорта и её находки (`INV-IXC-002`, `INV-IXC-003`) |

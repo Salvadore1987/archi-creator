@@ -7,10 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -100,6 +102,28 @@ class ModelPersistenceIT extends IntegrationTest {
                 .executeWithoutResult(status -> lockRows.save(ofMissingModel)));
 
         assertFalse(failure instanceof ConcurrentUpdateException, failure.toString());
+    }
+
+    @Test
+    @DisplayName("INV-MDL-006: два захвата просроченной блокировки — второй получает конфликт, а не перезапись")
+    void concurrentTakeoverOfExpiredLockConflicts() {
+        ModelId model = ModelId.of(lifecycle.createModel(ARCHITECT,
+                new CreateModelCommand(workspace().value(), "Две руки", null)).id());
+        Instant now = Instant.now();
+        jdbc.update("insert into model_lock (model_id, owner, acquired_at, expires_at) values (?, 'gone', ?, ?)",
+                model.value(), Timestamp.from(now.minusSeconds(7200)), Timestamp.from(now.minusSeconds(3600)));
+        TransactionTemplate tx = new TransactionTemplate(transactions);
+
+        assertThrows(ConcurrentUpdateException.class, () -> tx.executeWithoutResult(status -> {
+            lockRows.find(model).orElseThrow();
+            CompletableFuture.runAsync(() -> tx.executeWithoutResult(other -> {
+                lockRows.find(model).orElseThrow();
+                lockRows.save(ModelLock.restore(model, OTHER_ARCHITECT.subject(), now, now.plusSeconds(600)));
+            })).join();
+            lockRows.save(ModelLock.restore(model, ARCHITECT.subject(), now, now.plusSeconds(600)));
+        }));
+        assertEquals(OTHER_ARCHITECT.subject(),
+                jdbc.queryForObject("select owner from model_lock where model_id = ?", String.class, model.value()));
     }
 
     @Test
