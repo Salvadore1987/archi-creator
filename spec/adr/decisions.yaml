@@ -415,3 +415,18 @@ decisions:
       sections: ['§4.7.1', '§3.3.8.1']
     note: |
       Записывает схему, действующую с первой миграции: таблицы в единственном числе, префиксы ix_/uq_; сущности — плоские строки с публичными полями без ассоциаций и Lombok. Найдено на этапе 10 ревью кода (D-20).
+
+  - id: ADR-0030
+    title: Списки моделей и пространств без пагинации
+    status: accepted
+    date: 2026-10-21
+    kind: architecture
+    adr_file: 0030-bounded-collections.md
+    affects: [modeling]
+    requirements: [FR-06]
+    implemented: 2026-10-21
+    deviates_from:
+      standard: java-spring-code-guidelines-v2@97bce16
+      sections: ['§4.1.4']
+    note: |
+      История версий отдаётся страницами (size, before); модели и пространства — целиком, пока их число ограничено устройством продукта. Найдено на этапе 11 ревью кода (D-16).

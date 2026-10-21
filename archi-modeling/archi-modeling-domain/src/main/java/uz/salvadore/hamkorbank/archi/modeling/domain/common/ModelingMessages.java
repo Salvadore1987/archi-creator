@@ -312,6 +312,8 @@ public final class ModelingMessages {
     public static final String HASH_NOT_SHA256 = "modeling.version.hash-not-sha256";
     /** Номер версии не положителен. */
     public static final String VERSION_NUMBER_POSITIVE = "modeling.version.number-positive";
+    /** Размер страницы истории — от одного до предела: предел. */
+    public static final String PAGE_SIZE_INVALID = "modeling.version.page-size-invalid";
     /** Предыдущая версия принадлежит другой модели. */
     public static final String VERSION_OTHER_MODEL = "modeling.version.other-model";
     /** Снимок версии не читается. */

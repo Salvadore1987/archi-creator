@@ -138,7 +138,7 @@
 | GET | `/models/{id}/export` | Экспорт модели | `?fmt=archimate` (по умолчанию) \| `oef` \| `csv`, для csv — `&folder=&sep=` | `application/xml`, для `csv` — `application/zip` (§5.2) |
 | POST | `/models/{id}/lock` | Захватить блокировку | — | `LockInfo` / `409` |
 | DELETE | `/models/{id}/lock` | Освободить (ADMIN — принудительно) | — | `204` |
-| GET | `/models/{id}/versions` | История версий | — | `VersionInfo[]` |
+| GET | `/models/{id}/versions` | История версий страницами: `size` (50, не больше 200), `before` — номер, с которого продолжить (ADR-0030) | — | `VersionInfo[]` |
 | POST | `/models/{id}/versions/{no}/restore` | Откат к версии | `{comment}` | `ModelSummary` |
 | PUT | `/models/{id}/versions/{no}/label` | Пометить версию как релиз ([§4.4](database.md#44-хранение-и-очистка-версий)) | `{label}` | `VersionInfo` |
 | GET | `/models/{id}/validate` | Отчёт валидации метамодели (без ИИ) | — | `Finding[]` |

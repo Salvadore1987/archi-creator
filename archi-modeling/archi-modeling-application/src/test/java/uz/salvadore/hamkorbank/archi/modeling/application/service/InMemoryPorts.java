@@ -328,6 +328,11 @@ final class InMemoryPorts {
         }
 
         @Override
+        public List<ModelVersion> page(ModelId modelId, long before, int size) {
+            return list(modelId).stream().filter(v -> v.versionNo() < before).limit(size).toList();
+        }
+
+        @Override
         public void save(ModelVersion version) {
             versions.removeIf(v -> v.id().equals(version.id()));
             versions.add(version);

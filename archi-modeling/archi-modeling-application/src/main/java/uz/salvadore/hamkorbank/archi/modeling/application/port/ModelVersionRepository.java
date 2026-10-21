@@ -17,6 +17,9 @@ public interface ModelVersionRepository {
     /** Версии без снимков, от новых к старым; наличие снимка — {@link ModelVersion#hasSnapshot()}. */
     List<ModelVersion> list(ModelId modelId);
 
+    /** Страница того же списка: версии с номером меньше {@code before}, не больше {@code size}. */
+    List<ModelVersion> page(ModelId modelId, long before, int size);
+
     /** Вставка новой версии или правка метки и очистка снимка у существующей. */
     void save(ModelVersion version);
 

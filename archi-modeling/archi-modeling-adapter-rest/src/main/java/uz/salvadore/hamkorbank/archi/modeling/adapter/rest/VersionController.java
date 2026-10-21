@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.CommentRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.LabelRequest;
@@ -36,10 +37,13 @@ public class VersionController {
         this.versions = versions;
     }
 
-    /** История версий модели, от новых к старым. */
+    /** Страница истории версий модели, от новых к старым; {@code before} — с какой версии продолжить. */
     @GetMapping
-    public List<VersionInfo> list(EditorIdentity actor, @PathVariable UUID id) {
-        return versions.listVersions(actor, new ListVersionsQuery(id)).stream().map(DtoMapper::version).toList();
+    public List<VersionInfo> list(EditorIdentity actor, @PathVariable UUID id,
+                                  @RequestParam(required = false) Integer size,
+                                  @RequestParam(required = false) Long before) {
+        return versions.listVersions(actor, new ListVersionsQuery(id, size, before)).stream()
+                .map(DtoMapper::version).toList();
     }
 
     /** Сохранение: новая версия — {@code 201}; изменений нет или повтор ключа — {@code 200}. */

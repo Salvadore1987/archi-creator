@@ -46,12 +46,24 @@ public class JpaModelVersionRepository implements ModelVersionRepository {
 
     @Override
     public List<ModelVersion> list(ModelId modelId) {
+        return headers(modelId, Long.MAX_VALUE, Integer.MAX_VALUE);
+    }
+
+    @Override
+    public List<ModelVersion> page(ModelId modelId, long before, int size) {
+        return headers(modelId, before, size);
+    }
+
+    /** Заголовки версий без снимков, от новых к старым: номер меньше {@code before}, не больше {@code size}. */
+    private List<ModelVersion> headers(ModelId modelId, long before, int size) {
         return em.createQuery("""
                         select v.id, v.versionNo, v.author, v.comment, v.label, v.createdAt,
                                (case when v.snapshot is null then false else true end), v.contentHash, v.gitSha
-                        from ModelVersionEntity v where v.modelId = :m order by v.versionNo desc
+                        from ModelVersionEntity v where v.modelId = :m and v.versionNo < :before
+                        order by v.versionNo desc
                         """, Object[].class)
-                .setParameter("m", modelId.value()).getResultList().stream()
+                .setParameter("m", modelId.value()).setParameter("before", before).setMaxResults(size)
+                .getResultList().stream()
                 .map(row -> ModelVersion.restore(VersionId.of((UUID) row[0]), modelId, (Long) row[1], (String) row[2],
                         (String) row[3], (String) row[4], (Instant) row[5],
                         Boolean.TRUE.equals(row[6]) ? NOT_LOADED : null, (String) row[7],
