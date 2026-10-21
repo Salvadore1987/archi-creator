@@ -20,7 +20,8 @@ final class YamlEmitter {
 
     private static final int STEP = 2;
     private static final Pattern FLOW_KEY = Pattern.compile("[A-Za-z][A-Za-z0-9_]*");
-    private static final Pattern FLOW_VALUE = Pattern.compile("-?[A-Za-z0-9_.#]+");
+    /** Значение короткой записи; {@code #} в начале прочитался бы комментарием. */
+    private static final Pattern FLOW_VALUE = Pattern.compile("-?[A-Za-z0-9_.][A-Za-z0-9_.#]*");
     private static final String PLAIN_FIRST_FORBIDDEN = "-?:,[]{}#&*!|>'\"%@`";
 
     /** Короткое отображение одной строкой: {@code {x: 24, y: 60}}. Только если все значения просты. */
@@ -31,7 +32,7 @@ final class YamlEmitter {
 
     static byte[] document(List<String> comments, Map<String, Object> root) {
         YamlEmitter emitter = new YamlEmitter();
-        comments.forEach(c -> emitter.out.append("# ").append(c).append('\n'));
+        comments.forEach(c -> emitter.out.append("# ").append(comment(c)).append('\n'));
         emitter.mapping(root, 0);
         return emitter.out.toString().getBytes(StandardCharsets.UTF_8);
     }
@@ -165,6 +166,16 @@ final class YamlEmitter {
             }
         }
         return text.codePoints().allMatch(c -> c == '\n' || c == '\t' || printable(c));
+    }
+
+    /**
+     * Текст комментария одной строкой: всё непечатное — перевод строки любого вида, управляющие
+     * символы — пробелом. Иначе остаток имени после перевода строки читается ключом файла.
+     */
+    private static String comment(String text) {
+        StringBuilder line = new StringBuilder(text.length());
+        text.codePoints().forEach(c -> line.appendCodePoint(c == '\t' || printable(c) ? c : ' '));
+        return line.toString();
     }
 
     /** Печатные символы YAML без тех, что SnakeYAML считает переводом строки или меткой порядка байтов. */

@@ -162,6 +162,35 @@ class GitYamlWriterTest {
         assertEquals(original, reader.read(writer.write(original, GitPositions.none())));
     }
 
+    @Test
+    @DisplayName("имена концов в заголовке файла связи: перевод строки любого вида не рвёт комментарий")
+    void relationshipHeaderSurvivesLineBreaksInNames() {
+        String[] names = {"A\u0085documentation: x", "B\u2028C", "D\u0090E", "F\nG", "H\rI", "J\u2029K"};
+        StringBuilder xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<archimate:model"
+                + " xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""
+                + " xmlns:archimate=\"http://www.archimatetool.com/archimate\""
+                + " name=\"x\" id=\"id-1\" version=\"5.0.0\">\n"
+                + "  <folder name=\"Business\" id=\"id-2\" type=\"business\">\n");
+        for (int i = 0; i < names.length; i++) {
+            xml.append("    <element xsi:type=\"archimate:BusinessActor\" name=\"")
+                    .append(escape(names[i]).replace("\r", "&#xD;")).append("\" id=\"id-a").append(i).append("\"/>\n");
+        }
+        xml.append("  </folder>\n  <folder name=\"Relations\" id=\"id-3\" type=\"relations\">\n");
+        for (int i = 0; i + 1 < names.length; i++) {
+            xml.append("    <element xsi:type=\"archimate:AssociationRelationship\" id=\"id-r").append(i)
+                    .append("\" source=\"id-a").append(i).append("\" target=\"id-a").append(i + 1)
+                    .append("\"/>\n");
+        }
+        xml.append("  </folder>\n  <folder name=\"Views\" id=\"id-4\" type=\"diagrams\">\n"
+                + "    <element xsi:type=\"archimate:ArchimateDiagramModel\" name=\"v\" id=\"id-v\">\n"
+                + "      <child xsi:type=\"archimate:DiagramObject\" id=\"id-d\" archimateElement=\"id-a0\">\n"
+                + "        <bounds x=\"#1\" y=\"2\"/>\n      </child>\n    </element>\n  </folder>\n"
+                + "</archimate:model>\n");
+        ModelDocument original = read(xml.toString());
+
+        assertEquals(original, reader.read(writer.write(original, GitPositions.none())));
+    }
+
     private static String escape(String text) {
         return text.replace("&", "&amp;").replace("<", "&lt;").replace("\"", "&quot;").replace("\n", "&#xA;")
                 .replace("\t", "&#x9;");
