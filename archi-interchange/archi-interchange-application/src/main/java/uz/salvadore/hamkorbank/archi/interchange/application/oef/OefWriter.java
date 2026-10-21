@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import uz.salvadore.hamkorbank.archi.interchange.application.rendering.ArchiFont;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.Size;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing;
@@ -751,10 +752,7 @@ public final class OefWriter {
             });
         }
 
-        /**
-         * Шрифт Archi — строка {@code FontData} SWT: {@code 1|имя|кегль|начертание|…};
-         * начертание — биты: 1 полужирный, 2 курсив.
-         */
+        /** Шрифт и его цвет; строку шрифта разбирает {@link ArchiFont}, как для картинки. */
         private void font(StringBuilder out, DocumentNode node, String kind, int depth) {
             String id = node.archiId().value();
             Optional<String> font = node.attribute("font").filter(v -> !v.isEmpty());
@@ -764,20 +762,18 @@ public final class OefWriter {
                 styleLoss(id, kind, "fontColor", fontColor.get());
             }
             StringBuilder attributes = new StringBuilder();
+            Optional<ArchiFont> parsed = font.flatMap(ArchiFont::parse);
             if (font.isPresent()) {
-                String[] parts = font.get().split("\\|");
-                Optional<Double> height = parts.length > 3 ? parseDouble(parts[2]) : Optional.empty();
-                Optional<Integer> bits = parts.length > 3 ? parseInt(parts[3]) : Optional.empty();
-                if (height.isEmpty() || bits.isEmpty() || parts[1].isBlank()) {
+                if (parsed.isEmpty()) {
                     styleLoss(id, kind, "font", font.get());
                 } else {
-                    attributes.append(" name=\"").append(attr(parts[1])).append('"');
-                    double half = Math.round(height.get() * 2) / 2.0;
+                    attributes.append(" name=\"").append(attr(parsed.get().family())).append('"');
+                    double half = Math.round(parsed.get().sizePt() * 2) / 2.0;
                     if (half >= 1) {
                         attributes.append(" size=\"").append(half == Math.floor(half) ? String.valueOf((long) half)
                                 : String.valueOf(half)).append('"');
                     }
-                    attributes.append(" style=\"").append(fontStyle(bits.get())).append('"');
+                    attributes.append(" style=\"").append(fontStyle(parsed.get())).append('"');
                 }
             }
             if (attributes.isEmpty() && color.isEmpty()) {
@@ -979,14 +975,6 @@ public final class OefWriter {
         }
     }
 
-    private static Optional<Double> parseDouble(String value) {
-        try {
-            return Optional.of(Double.parseDouble(value.strip()));
-        } catch (NumberFormatException notNumber) {
-            return Optional.empty();
-        }
-    }
-
     private static Optional<int[]> rgb(String value) {
         Matcher m = COLOR.matcher(value.strip());
         if (!m.matches()) {
@@ -1000,12 +988,12 @@ public final class OefWriter {
         return " r=\"" + c[0] + "\" g=\"" + c[1] + "\" b=\"" + c[2] + "\"";
     }
 
-    private static String fontStyle(int bits) {
+    private static String fontStyle(ArchiFont font) {
         List<String> styles = new ArrayList<>();
-        if ((bits & 1) != 0) {
+        if (font.bold()) {
             styles.add("bold");
         }
-        if ((bits & 2) != 0) {
+        if (font.italic()) {
             styles.add("italic");
         }
         return styles.isEmpty() ? "plain" : String.join(" ", styles).toLowerCase(Locale.ROOT);

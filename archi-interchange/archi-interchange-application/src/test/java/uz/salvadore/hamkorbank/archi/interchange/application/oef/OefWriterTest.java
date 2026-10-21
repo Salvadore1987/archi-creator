@@ -213,6 +213,31 @@ class OefWriterTest {
     }
 
     @Test
+    @DisplayName("FR-44: строка шрифта без начертания — как в картинке: шрифт переносится, начертание обычное")
+    void fontWithoutStyleIsCarried() {
+        String archimate = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:archimate="http://www.archimatetool.com/archimate" name="М" id="id-m" version="5.0.0">
+                  <folder name="Application" id="id-f1" type="application">
+                    <element xsi:type="archimate:ApplicationComponent" name="А" id="id-a"/>
+                  </folder>
+                  <folder name="Views" id="id-f3" type="diagrams">
+                    <element xsi:type="archimate:ArchimateDiagramModel" name="В" id="id-v">
+                      <child xsi:type="archimate:DiagramObject" id="id-n" archimateElement="id-a" font="1|Arial|10.0">
+                        <bounds x="0" y="0" width="120" height="55"/>
+                      </child>
+                    </element>
+                  </folder>
+                </archimate:model>
+                """;
+        OefWriter.Written written = WRITER.write(read(archimate.getBytes(StandardCharsets.UTF_8)));
+
+        assertTrue(text(written).contains("<font name=\"Arial\" size=\"10\" style=\"plain\"/>"), text(written));
+        assertFalse(written.losses().stream().anyMatch(l -> l.aspect().equals("style:font")),
+                written.losses().toString());
+    }
+
+    @Test
     @DisplayName("INV-IXC-004: тот же документ — те же байты")
     void writingTwiceProducesIdenticalBytes() throws IOException {
         ModelDocument document = read(fixture("all_relationship_types.archimate"));

@@ -23,7 +23,7 @@
 | 0 | `Optional` и в аргументе дженерика параметра или поля — нарушение; перенос `DocumentAssembler` | — (по ходу задачи 1) | `CodingRulesTest#optionalIsNeitherFieldNorParameter`: на старом коде — 4 метода `DocumentAssembler` с `Map<String, Optional<String>>` | ✅ |
 | 1 | Крепление связи к связи — одна функция `Routing` для SVG и OEF, без `computeIfAbsent` | 07-02, 07-03 | `OefWriterTest`: цепочка из двух связей к связи с точками перегиба — файл валиден, точки перегиба как у SVG; `RoutingTest#linkAnchor` | ✅ |
 | 2 | Цвет из файла — только по правилу modeling; иконка красится экранированным значением; Batik без внешних ресурсов | 07-01 | `SvgWriterTest`: `lineColor`/`fillColor` с `"` и `<` у узла с иконкой — сырых символов нет, запись отчёта `style` | ✅ |
-| 3 | Строка шрифта SWT — один разборщик | 07-04 | `ArchiFontTest`; `OefWriterTest`: `1\|Arial\|10.0` переносится | ⬜ |
+| 3 | Строка шрифта SWT — один разборщик | 07-04 | `ArchiFontTest`; `OefWriterTest`: `1\|Arial\|10.0` переносится | ✅ |
 | 4 | Одна запись потери выгрузки и один перевод в `LossEntry` | 07-05 | существующие тесты писателей и выгрузки | ⬜ |
 | 5 | Типографика подписей — токены, общие с канвой | 07-07 | `design-tokens.test.ts`, `SvgWriterTest`; эталоны сверки — байт в байт | ⬜ |
 | 6 | `SvgWriter.label` и `OefWriter` — разбиение без изменения поведения | 07-06 | эталоны байт в байт | ⬜ |
