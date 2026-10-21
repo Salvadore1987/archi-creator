@@ -351,6 +351,22 @@ class GitPublisherTest {
         assertThat(bindings.find(workspace).orElseThrow().status()).isEqualTo(GitBindingStatus.CONFIGURED);
     }
 
+    @Test
+    @DisplayName("Сбой одной модели откладывает только её запись — очередь остальных моделей идёт дальше")
+    void failingModelDoesNotStopTheQueue() throws Exception {
+        ModelId broken = new ModelId(IDS.generate());
+        versions.failing = broken;
+        outbox.enqueue(workspace, broken, 1, clock.instant());
+        commitVersion(1, Fixtures.fixture("unknown_extension"), "Первая");
+
+        assertThat(publishing.publishPending()).isEqualTo(1);
+
+        assertThat(history()).hasSize(1);
+        GitOutbox.Entry deferred = outbox.head(broken).orElseThrow();
+        assertThat(deferred.attempts()).isEqualTo(1);
+        assertThat(deferred.nextAttemptAt()).isAfter(clock.instant());
+    }
+
     private void commitVersion(long versionNo, byte[] xml, String comment) {
         versions.add(new PublishedVersions.Version(workspace, "Неизвестные узлы и атрибуты", versionNo,
                 "architect-git", comment, clock.instant(), "0".repeat(64), xml));
@@ -595,6 +611,7 @@ class GitPublisherTest {
 
         private final Map<Long, Version> versions = new HashMap<>();
         private final Map<Long, GitSha> shas = new HashMap<>();
+        private ModelId failing;
 
         void add(Version version) {
             versions.put(version.versionNo(), version);
@@ -610,6 +627,9 @@ class GitPublisherTest {
 
         @Override
         public Optional<Version> version(ModelId m, long versionNo) {
+            if (m.equals(failing)) {
+                throw new IllegalStateException("snapshot store failed");
+            }
             return Optional.ofNullable(versions.get(versionNo));
         }
 

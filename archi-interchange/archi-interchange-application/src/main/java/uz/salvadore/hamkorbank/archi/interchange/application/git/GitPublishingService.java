@@ -80,6 +80,7 @@ public final class GitPublishingService {
     static final String GITATTRIBUTES = ".gitattributes";
     private static final String GITATTRIBUTES_RESOURCE = "gitattributes";
     private static final int MAX_ATTEMPTS_SHIFT = 10;
+    private static final System.Logger LOG = System.getLogger(GitPublishingService.class.getName());
 
     /** Кто коммитит и как выглядит автор, которого нет в привязке. */
     public record Settings(String committerName, String committerEmail, String authorEmailDomain,
@@ -141,7 +142,7 @@ public final class GitPublishingService {
 
     /**
      * Проход очереди фоновым обработчиком: каждая модель — пока версии публикуются;
-     * отказ сети откладывает модель, расхождение останавливает её до ручного разбора.
+     * отказ сети или иной сбой откладывает модель, расхождение останавливает её до ручного разбора.
      *
      * @return сколько записей закрыто
      */
@@ -268,7 +269,26 @@ public final class GitPublishingService {
         }
     }
 
+    /**
+     * Одна попытка записи. Сбой, кроме недоступной сети, откладывает только эту запись с отсрочкой:
+     * иначе сбойная запись первой в очереди останавливала бы публикацию всех моделей за ней.
+     */
     private Outcome publish(GitOutbox.Entry entry) {
+        try {
+            return attemptEntry(entry);
+        } catch (RuntimeException failure) { // NOPMD - сбой одной записи не останавливает очередь других моделей
+            LOG.log(System.Logger.Level.WARNING, "git publishing of model " + entry.model().value() + " version "
+                    + entry.versionNo() + " failed, retry later", failure);
+            Instant at = clock.instant();
+            unitOfWork.write(() -> {
+                outbox.retryLater(entry.id(), failure.getClass().getSimpleName(), at.plus(backoff(entry.attempts())));
+                return null;
+            });
+            return Outcome.RETRY;
+        }
+    }
+
+    private Outcome attemptEntry(GitOutbox.Entry entry) {
         Instant now = clock.instant();
         Optional<GitBinding> binding = unitOfWork.read(() -> bindings.find(entry.workspace()))
                 .filter(GitBinding::writable);
