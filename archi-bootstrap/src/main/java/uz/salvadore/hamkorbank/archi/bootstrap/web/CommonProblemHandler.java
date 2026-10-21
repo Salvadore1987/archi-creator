@@ -111,7 +111,8 @@ public class CommonProblemHandler {
             HttpStatusCode status = refused.getStatusCode();
             return ResponseEntity.status(status).headers(refused.getHeaders())
                     .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-                    .body(problem(status, ErrorCodes.REQUEST_NOT_SUPPORTED,
+                    .body(problem(status, status.isSameCodeAs(HttpStatus.BAD_REQUEST) ? ErrorCodes.BAD_REQUEST
+                                    : ErrorCodes.REQUEST_NOT_SUPPORTED,
                             text(BootstrapMessages.REQUEST_NOT_SUPPORTED, request.getMethod(),
                                     request.getRequestURI()), request));
         }
@@ -124,8 +125,7 @@ public class CommonProblemHandler {
     private ProblemDetail problem(HttpStatusCode status, String code, String detail, HttpServletRequest request) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setType(URI.create(TYPE_BASE + code.toLowerCase(Locale.ROOT).replace('_', '-')));
-        problem.setTitle(status.isSameCodeAs(HttpStatus.CONFLICT) ? text(BootstrapMessages.TITLE_CONFLICT)
-                : reason(status));
+        problem.setTitle(text(title(status)));
         problem.setInstance(URI.create(request.getRequestURI()));
         problem.setProperty("code", code);
         return problem;
@@ -163,9 +163,19 @@ public class CommonProblemHandler {
         return Optional.empty();
     }
 
-    private static String reason(HttpStatusCode status) {
-        HttpStatus known = HttpStatus.resolve(status.value());
-        return known == null ? String.valueOf(status.value()) : known.getReasonPhrase();
+    /** Ключ заголовка по статусу; статус Spring MVC вне списка — общий «запрос не поддерживается». */
+    private static String title(HttpStatusCode status) {
+        return switch (status.value()) {
+            case 400 -> BootstrapMessages.TITLE_BAD_REQUEST;
+            case 404 -> BootstrapMessages.TITLE_NOT_FOUND;
+            case 405 -> BootstrapMessages.TITLE_METHOD_NOT_ALLOWED;
+            case 406 -> BootstrapMessages.TITLE_NOT_ACCEPTABLE;
+            case 409 -> BootstrapMessages.TITLE_CONFLICT;
+            case 413 -> BootstrapMessages.TITLE_TOO_LARGE;
+            case 415 -> BootstrapMessages.TITLE_UNSUPPORTED_MEDIA_TYPE;
+            case 500 -> BootstrapMessages.TITLE_INTERNAL;
+            default -> BootstrapMessages.TITLE_NOT_SUPPORTED;
+        };
     }
 
     private String text(String key, Object... args) {

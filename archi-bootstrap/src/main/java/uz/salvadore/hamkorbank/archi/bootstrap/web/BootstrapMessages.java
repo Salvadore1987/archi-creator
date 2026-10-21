@@ -31,6 +31,22 @@ public final class BootstrapMessages {
     public static final String INTEGRITY_CONFLICT = "bootstrap.problem.integrity-conflict";
     /** Заголовок ответа об отказе по конфликту. */
     public static final String TITLE_CONFLICT = "bootstrap.problem.title-conflict";
+    /** Заголовок ответа на неразборчивый запрос. */
+    public static final String TITLE_BAD_REQUEST = "bootstrap.problem.title-bad-request";
+    /** Заголовок ответа на адрес, которого нет. */
+    public static final String TITLE_NOT_FOUND = "bootstrap.problem.title-not-found";
+    /** Заголовок ответа на метод, который по адресу не обслуживается. */
+    public static final String TITLE_METHOD_NOT_ALLOWED = "bootstrap.problem.title-method-not-allowed";
+    /** Заголовок ответа, когда ответ нужного клиенту формата не отдаётся. */
+    public static final String TITLE_NOT_ACCEPTABLE = "bootstrap.problem.title-not-acceptable";
+    /** Заголовок ответа на запрос больше допустимого. */
+    public static final String TITLE_TOO_LARGE = "bootstrap.problem.title-too-large";
+    /** Заголовок ответа на тело не того типа. */
+    public static final String TITLE_UNSUPPORTED_MEDIA_TYPE = "bootstrap.problem.title-unsupported-media-type";
+    /** Заголовок ответа на неожиданный сбой сервера. */
+    public static final String TITLE_INTERNAL = "bootstrap.problem.title-internal";
+    /** Заголовок прочих отказов Spring MVC со своим статусом. */
+    public static final String TITLE_NOT_SUPPORTED = "bootstrap.problem.title-not-supported";
     /** Запрос пришёл без аутентификации. */
     public static final String NOT_AUTHENTICATED = "bootstrap.security.not-authenticated";
 

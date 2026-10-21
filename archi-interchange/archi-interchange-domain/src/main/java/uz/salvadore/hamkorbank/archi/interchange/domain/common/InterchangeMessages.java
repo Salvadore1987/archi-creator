@@ -380,8 +380,20 @@ public final class InterchangeMessages {
     public static final String WHERE_WITHOUT = "interchange.mapping.where.without";
     /** Заголовок ответа об ошибке, когда отказ вызван содержимым файла. */
     public static final String TITLE_BAD_FILE = "interchange.problem.bad-file";
-    /** Заголовок ответа об ошибке импорта и выгрузки в остальных случаях. */
-    public static final String TITLE_INTERCHANGE = "interchange.problem.interchange";
+    /** Заголовок ответа об ошибке для статуса 409. */
+    public static final String TITLE_CONFLICT = "interchange.problem.conflict";
+    /** Заголовок ответа об ошибке для статуса 403. */
+    public static final String TITLE_FORBIDDEN = "interchange.problem.forbidden";
+    /** Заголовок ответа об ошибке для статуса 410. */
+    public static final String TITLE_GONE = "interchange.problem.gone";
+    /** Заголовок ответа об ошибке для статуса 500: сервер собрал или прочёл свои данные с дефектом. */
+    public static final String TITLE_INTERNAL = "interchange.problem.internal";
+    /** Заголовок ответа об ошибке для статуса 404. */
+    public static final String TITLE_NOT_FOUND = "interchange.problem.not-found";
+    /** Заголовок ответа об ошибке для статуса 503. */
+    public static final String TITLE_UNAVAILABLE = "interchange.problem.unavailable";
+    /** Заголовок ответа об ошибке для статуса 422. */
+    public static final String TITLE_UNPROCESSABLE = "interchange.problem.unprocessable";
     /** Остаток XML в базе не разбирается. */
     public static final String RESIDUE_CORRUPTED = "interchange.residue.corrupted";
     /** В остатке XML на этом месте ожидалась запись другого вида. */

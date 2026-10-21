@@ -25,7 +25,7 @@ public class ModelingProblemHandler {
 
     @ExceptionHandler(ModelingDomainException.class)
     ProblemDetail modeling(ModelingDomainException e, HttpServletRequest request) {
-        return ProblemFactory.problem(ProblemFactory.status(e.failure()), e.code(), text.text(e.reason()), e.details(),
+        return ProblemFactory.problem(e.failure(), e.code(), text.text(e.reason()), e.details(),
                 request, text);
     }
 }

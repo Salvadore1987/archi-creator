@@ -204,14 +204,14 @@ public final class ModelingMessages {
     public static final String OPAQUE_WITHOUT_RESIDUE = "modeling.opaque.without-residue";
     /** Позиция в родителе не положительна. */
     public static final String SORT_ORDER_POSITIVE = "modeling.order.positive";
-    /** Заголовок ответа об ошибке для статуса 400. */
-    public static final String TITLE_BAD_REQUEST = "modeling.problem.bad-request";
     /** Заголовок ответа об ошибке для статуса 409. */
     public static final String TITLE_CONFLICT = "modeling.problem.conflict";
     /** Заголовок ответа об ошибке для статуса 403. */
     public static final String TITLE_FORBIDDEN = "modeling.problem.forbidden";
     /** Заголовок ответа об ошибке для статуса 410. */
     public static final String TITLE_GONE = "modeling.problem.gone";
+    /** Заголовок ответа об ошибке для статуса 500: сервер сам испортил или не прочёл свои данные. */
+    public static final String TITLE_INTERNAL = "modeling.problem.internal";
     /** Заголовок ответа об ошибке для статуса 404. */
     public static final String TITLE_NOT_FOUND = "modeling.problem.not-found";
     /** Заголовок ответа об ошибке для статуса 503. */
