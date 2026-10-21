@@ -117,6 +117,14 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
         return repoUrl.startsWith("file:");
     }
 
+    /**
+     * Тот же репозиторий и та же ветка: голова ветки, прочитанная по одной привязке, принадлежит
+     * другой, только если они смотрят в одно место.
+     */
+    public boolean sameRemote(GitBinding other) {
+        return repoUrl.equals(other.repoUrl) && branch.equals(other.branch);
+    }
+
     /** Можно ли публиковать: снятая привязка — нет. */
     public boolean writable() {
         return status != GitBindingStatus.DISABLED;

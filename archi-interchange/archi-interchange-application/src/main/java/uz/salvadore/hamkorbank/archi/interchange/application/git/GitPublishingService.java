@@ -405,10 +405,8 @@ public final class GitPublishingService {
         unitOfWork.write(() -> {
             versions.recordGitSha(entry.model(), entry.versionNo(), sha);
             outbox.done(entry.id(), at);
-            GitBinding current = bindings.find(entry.workspace()).orElse(binding);
-            if (current.writable()) {
-                bindings.save(current.committed(newHead, at));
-            }
+            bindings.find(entry.workspace()).filter(GitBinding::writable).filter(b -> b.sameRemote(binding))
+                    .ifPresent(current -> bindings.save(current.committed(newHead, at)));
             return null;
         });
         events.publish(List.of(new GitBindingSnapshotCommittedEvent(version.workspace(), entry.model(),

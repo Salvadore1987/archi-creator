@@ -129,8 +129,8 @@ public final class GitImportService {
                             InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts, Clock clock) {
         this.bindings = bindings;
         this.repository = repository;
-        this.attempts = new GitAttempts(bindings, repository, secrets, sessions, policy, unitOfWork, metrics, texts,
-                clock);
+        this.attempts = new GitAttempts(bindings, repository, secrets, sessions, policy, outbox, versions, unitOfWork,
+                metrics, texts, clock);
         this.states = states;
         this.sessions = sessions;
         this.outbox = outbox;
@@ -212,7 +212,7 @@ public final class GitImportService {
                     session.apply(model, replaced.versionNo(), replaced.opaqueObjects(), at);
                     sessions.save(session);
                     if (adopt) {
-                        adopt(binding, model, replaced, sha, at);
+                        attempts.adopt(binding, model, replaced, sha, at);
                     }
                     return new Applied(replaced, session.pullEvents());
                 });
@@ -235,20 +235,6 @@ public final class GitImportService {
     }
 
     private record Applied(ModelStates.Replaced replaced, List<DomainEvent> events) {
-    }
-
-    /**
-     * Принятая голова ветки: старые версии модели в очереди пропускаются, голова — последний
-     * коммит привязки. Версия без изменений получает идентификатор головы сразу; новую
-     * публикация признает по содержимому каталога.
-     */
-    private void adopt(GitBinding binding, ModelId model, ModelStates.Replaced replaced, GitSha head, Instant at) {
-        long through = replaced.created() ? replaced.versionNo() - 1 : replaced.versionNo();
-        outbox.supersede(model, through, at);
-        if (!replaced.created()) {
-            versions.recordGitSha(model, replaced.versionNo(), head);
-        }
-        bindings.save(bindings.find(binding.workspaceId()).orElse(binding).committed(head, at));
     }
 
     /** Коммит в сессию импорта: каталог модели — документ — снимок, разбор и проверка методологии. */

@@ -292,6 +292,22 @@ class GitImportTest {
     }
 
     @Test
+    @DisplayName("FR-37: привязку сменили, пока шла сеть, — голова старого репозитория новой привязке не пишется")
+    void rebindingDuringNetworkKeepsNewBindingHead() {
+        outbox.enqueue(workspace, model, 3, Instant.EPOCH);
+        repository.commit("main", model("АБС «Ядро»", NODE));
+        GitImportService.Preview preview = imports.preview(ARCHITECT, model, "main");
+        GitBinding rebound = GitBinding.configure(workspace, "file:///other.git", null,
+                SecretRef.of("env:ARCHI_GIT_TOKEN"), List.of());
+        repository.afterFetch = () -> bindings.save(rebound);
+
+        imports.apply(ARCHITECT, model, confirm(preview, null));
+
+        assertEquals(rebound, bindings.find(workspace).orElseThrow());
+        assertEquals(List.of("PENDING"), outbox.statuses());
+    }
+
+    @Test
     @DisplayName("FR-37: импорт головы ветки закрывает старые записи очереди и делает голову коммитом привязки")
     void importOfHeadSupersedesQueue() {
         outbox.enqueue(workspace, model, 2, Instant.EPOCH);

@@ -254,6 +254,21 @@ class GitMergeTest {
     }
 
     @Test
+    @DisplayName("FR-37: слияние головы, совпавшей с моделью, закрывает и запись текущей версии")
+    void mergeOfUnchangedDivergedHeadClosesCurrentVersion() {
+        GitSha head = repository.commit("main", model("АБС «Ядро»", "", ""));
+        outbox.divergeHead(model);
+        GitMergeService.Preview preview = service.preview(ARCHITECT, model, "main", Map.of());
+
+        GitMergeService.Merged merged = service.apply(ARCHITECT, model, confirm(preview, Map.of()));
+
+        assertFalse(merged.created());
+        assertEquals(List.of("SKIPPED"), outbox.statuses());
+        assertEquals(head, bindings.find(workspace).orElseThrow().lastCommitSha());
+        assertEquals(Map.of(4L, head), versions.shas);
+    }
+
+    @Test
     @DisplayName("UC-IXC-007: выбрано всё «наше» — версии нет, но слитый коммит записан")
     void allOursKeepsVersionButRecordsMerge() {
         GitSha proposal = repository.commit("proposal", model("АБС theirs", "", ""));

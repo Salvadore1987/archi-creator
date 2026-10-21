@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
 import java.io.ByteArrayInputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -96,6 +98,8 @@ class GitPublisherTest {
     };
     private final List<Object> events = new ArrayList<>();
     private Path remote;
+    /** Что случается сразу после push — например, администратор перепривязывает пространство. */
+    private Runnable afterPush = () -> { };
     private GitRepositoryPort repository;
     private GitPublishingService publishing;
 
@@ -103,7 +107,19 @@ class GitPublisherTest {
     void setUp() throws Exception {
         remote = temp.resolve("remote.git");
         Git.init().setBare(true).setDirectory(remote.toFile()).setInitialBranch("main").call().close();
-        repository = new JGitRepository(temp.resolve("cache"), "oauth2", Duration.ofSeconds(10));
+        GitRepositoryPort jgit = new JGitRepository(temp.resolve("cache"), "oauth2", Duration.ofSeconds(10));
+        repository = (GitRepositoryPort) Proxy.newProxyInstance(GitRepositoryPort.class.getClassLoader(),
+                new Class<?>[] {GitRepositoryPort.class}, (proxy, method, args) -> {
+                    try {
+                        Object result = method.invoke(jgit, args);
+                        if (method.getName().equals("push")) {
+                            afterPush.run();
+                        }
+                        return result;
+                    } catch (InvocationTargetException e) {
+                        throw e.getCause();
+                    }
+                });
         UnitOfWork direct = new UnitOfWork() {
             @Override
             public <T> T write(Supplier<T> work) {
@@ -349,6 +365,20 @@ class GitPublisherTest {
 
         assertThat(publishing.publishPending()).isEqualTo(1);
         assertThat(bindings.find(workspace).orElseThrow().status()).isEqualTo(GitBindingStatus.CONFIGURED);
+    }
+
+    @Test
+    @DisplayName("FR-37: привязку сменили, пока шёл push, — новая привязка не получает голову старого репозитория")
+    void rebindingDuringPushKeepsNewBindingHead() {
+        GitBinding rebound = GitBinding.configure(workspace, temp.resolve("other.git").toUri().toString(), null,
+                SecretRef.of("env:ARCHI_GIT_TOKEN"), List.of());
+        afterPush = () -> bindings.save(rebound);
+        commitVersion(1, Fixtures.fixture("unknown_extension"), "Первая");
+
+        assertThat(publishing.publishPending()).isEqualTo(1);
+
+        assertThat(bindings.find(workspace).orElseThrow().lastCommitSha()).isNull();
+        assertThat(versions.sha(1)).isPresent();
     }
 
     @Test

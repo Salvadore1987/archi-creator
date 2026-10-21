@@ -378,6 +378,8 @@ final class GitFakes {
         private final Map<GitSha, List<GitSha>> parents = new HashMap<>();
         private final Map<String, GitSha> branches = new HashMap<>();
         final Map<String, GitSha> tags = new HashMap<>();
+        /** Что случается сразу после чтения головы ветки — например, администратор перепривязывает пространство. */
+        Runnable afterFetch = () -> { };
         private int counter;
 
         MemoryRepository(ModelId model) {
@@ -419,7 +421,9 @@ final class GitFakes {
 
         @Override
         public Optional<GitSha> fetch(Remote remote) {
-            return Optional.ofNullable(branches.get(remote.branch()));
+            Optional<GitSha> head = Optional.ofNullable(branches.get(remote.branch()));
+            afterFetch.run();
+            return head;
         }
 
         @Override

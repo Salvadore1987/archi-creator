@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -14,12 +15,15 @@ import java.util.function.Supplier;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.MethodologyCheck;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Remote;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitRepositoryPort.Unreachable;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportPolicy;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.ImportSessionRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMetrics;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.ModelStates;
+import uz.salvadore.hamkorbank.archi.interchange.application.port.PublishedVersions;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.SecretResolver;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
@@ -60,6 +64,8 @@ final class GitAttempts {
     private final GitRemotes remotes;
     private final ImportSessionRepository sessions;
     private final ImportPolicy policy;
+    private final GitOutbox outbox;
+    private final PublishedVersions versions;
     private final UnitOfWork unitOfWork;
     private final InterchangeMetrics metrics;
     private final Clock clock;
@@ -68,9 +74,11 @@ final class GitAttempts {
     private final MethodologyCheck methodology = new MethodologyCheck();
 
     GitAttempts(GitBindingRepository bindings, GitRepositoryPort repository, SecretResolver secrets,
-                ImportSessionRepository sessions, ImportPolicy policy, UnitOfWork unitOfWork,
-                InterchangeMetrics metrics, TextCatalog texts, Clock clock) {
+                ImportSessionRepository sessions, ImportPolicy policy, GitOutbox outbox, PublishedVersions versions,
+                UnitOfWork unitOfWork, InterchangeMetrics metrics, TextCatalog texts, Clock clock) {
         this.bindings = bindings;
+        this.outbox = outbox;
+        this.versions = versions;
         this.repository = repository;
         this.remotes = new GitRemotes(secrets, texts);
         this.sessions = sessions;
@@ -131,6 +139,27 @@ final class GitAttempts {
         return ImportSession.receive(new ImportSessionId(uuids.next()), ImportRequest.of(workspace,
                 model, name, source, uuids.next().toString(), unitOfWork.read(() -> policy.strictImport(workspace)),
                 actor.subject()), clock.instant());
+    }
+
+    /**
+     * Принятая голова ветки — внутри транзакции записи: старые версии модели в очереди пропускаются,
+     * голова — последний коммит привязки. Версия без изменений получает идентификатор головы сразу;
+     * новую публикация признает по содержимому каталога. Привязку сменили, пока шла сеть, — голова
+     * чужого теперь репозитория не принимается, очередь не трогается.
+     *
+     * @param used привязка, по которой читалась голова
+     */
+    void adopt(GitBinding used, ModelId model, ModelStates.Replaced replaced, GitSha head, Instant at) {
+        Optional<GitBinding> current = bindings.find(used.workspaceId()).filter(b -> b.sameRemote(used));
+        if (current.isEmpty()) {
+            return;
+        }
+        long through = replaced.created() ? replaced.versionNo() - 1 : replaced.versionNo();
+        outbox.supersede(model, through, at);
+        if (!replaced.created()) {
+            versions.recordGitSha(model, replaced.versionNo(), head);
+        }
+        bindings.save(current.get().committed(head, at));
     }
 
     /** Нечитаемое дерево — сразу {@code REJECTED} с находкой. */

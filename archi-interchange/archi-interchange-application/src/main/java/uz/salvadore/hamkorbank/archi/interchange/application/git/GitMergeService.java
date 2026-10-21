@@ -181,8 +181,8 @@ public final class GitMergeService {
                            InterchangeEvents events, InterchangeMetrics metrics, TextCatalog texts, Clock clock) {
         this.bindings = bindings;
         this.repository = repository;
-        this.attempts = new GitAttempts(bindings, repository, secrets, sessions, policy, unitOfWork, metrics, texts,
-                clock);
+        this.attempts = new GitAttempts(bindings, repository, secrets, sessions, policy, outbox, versions, unitOfWork,
+                metrics, texts, clock);
         this.states = states;
         this.sessions = sessions;
         this.outbox = outbox;
@@ -308,9 +308,7 @@ public final class GitMergeService {
                     merges.record(model, sha, at);
                     if (sides.absorbsHead() && outbox.head(model)
                             .filter(h -> h.status() == GitOutbox.Status.DIVERGED).isPresent()) {
-                        outbox.supersede(model, replaced.versionNo() - 1, at);
-                        GitSha head = Objects.requireNonNull(sides.head());
-                        bindings.save(bindings.find(binding.workspaceId()).orElse(binding).committed(head, at));
+                        attempts.adopt(binding, model, replaced, Objects.requireNonNull(sides.head()), at);
                     }
                     return new Applied(replaced, session.pullEvents());
                 });
