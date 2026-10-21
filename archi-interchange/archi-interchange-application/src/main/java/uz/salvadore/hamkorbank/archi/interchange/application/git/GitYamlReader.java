@@ -44,6 +44,9 @@ import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlF
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.nested;
 import static uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.promoted;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -63,6 +66,8 @@ import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
+import org.yaml.snakeyaml.error.Mark;
+import org.yaml.snakeyaml.error.MarkedYAMLException;
 import org.yaml.snakeyaml.error.YAMLException;
 import org.yaml.snakeyaml.representer.Representer;
 import org.yaml.snakeyaml.resolver.Resolver;
@@ -86,16 +91,32 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
  * снимка версии из Git.
  *
  * <p>Формат строгий: незнакомый ключ, повтор позиции среди соседей, ссылка на
- * несуществующую папку — отказ с именем файла, а не догадка. Все скаляры читаются
- * строками: {@code 24} и {@code "24"} — одно и то же.
+ * несуществующую папку, повтор идентификатора — отказ с именем файла, а не догадка. Все скаляры
+ * читаются строками: {@code 24} и {@code "24"} — одно и то же; явный тег YAML ({@code !!int}) — отказ.
+ *
+ * <p>Дерево приходит из чужого коммита, поэтому размер каталога ограничен до разбора: число файлов,
+ * их общий объём и объём одного файла.
  */
 public final class GitYamlReader {
 
+    /** Наибольшее число файлов в каталоге модели. */
+    public static final int MAX_FILES = 200_000;
+    /** Наибольший общий объём файлов каталога модели, байт. */
+    public static final long MAX_BYTES = 512L * 1024 * 1024;
     private static final int CODE_POINT_LIMIT = 64 * 1024 * 1024;
+    /** Вложенность YAML с запасом: группа в группе на представлении — несколько уровней на ступень. */
+    private static final int NESTING_LIMIT = 2000;
 
     /** Документ из файлов каталога модели (пути относительно него). */
     public ModelDocument read(Map<String, byte[]> files) {
-        return new Parse(files).document();
+        ModelDocument document = new Parse(files).document();
+        Set<String> ids = new HashSet<>();
+        for (DocumentNode node : document.allNodes()) {
+            node.attribute(A_ID).filter(id -> !ids.add(id)).ifPresent(id -> {
+                throw new InvalidValueException(InterchangeMessages.GIT_ID_REPEATED_IN_MODEL, id);
+            });
+        }
+        return document;
     }
 
     /** Позиции опубликованного дерева — для следующей записи. */
@@ -121,6 +142,11 @@ public final class GitYamlReader {
         private final String rootId;
 
         Parse(Map<String, byte[]> files) {
+            long total = files.values().stream().mapToLong(b -> b.length).sum();
+            if (files.size() > MAX_FILES || total > MAX_BYTES) {
+                throw new InvalidValueException(InterchangeMessages.GIT_DIRECTORY_TOO_LARGE, files.size(), total,
+                        MAX_FILES, MAX_BYTES);
+            }
             Map<String, Object> model = load(files, MODEL_FILE)
                     .orElseThrow(() -> new InvalidValueException(InterchangeMessages.GIT_FILE_MISSING, MODEL_FILE));
             Fields root = new Fields(MODEL_FILE, model);
@@ -181,13 +207,13 @@ public final class GitYamlReader {
             Attributes attributes = fields.attributes(false);
             items(fields, id, id);
             fields.done();
-            if (!folderIds.add(id)) {
-                throw new InvalidValueException(InterchangeMessages.GIT_ID_REPEATED, FOLDERS_FILE, id);
-            }
-            String container = parent.orElse(rootId);
             if (parent.isPresent() && !folderIds.contains(parent.get())) {
                 throw new InvalidValueException(InterchangeMessages.GIT_FOLDER_UNKNOWN, FOLDERS_FILE, parent.get());
             }
+            if (id.equals(rootId) || !folderIds.add(id)) {
+                throw new InvalidValueException(InterchangeMessages.GIT_ID_REPEATED, FOLDERS_FILE, id);
+            }
+            String container = parent.orElse(rootId);
             add(container, new Entry(position, id, FOLDERS_FILE,
                     order -> new DocumentNode(TAG_FOLDER, DocumentOrder.of(order), attributes, build(id))));
         }
@@ -398,23 +424,74 @@ public final class GitYamlReader {
         if (bytes == null) {
             return Optional.empty();
         }
+        Object parsed;
         try {
-            Object parsed = yaml().load(new String(bytes, StandardCharsets.UTF_8));
-            if (!(parsed instanceof Map<?, ?> map)) {
-                throw new InvalidValueException(InterchangeMessages.GIT_FILE_UNREADABLE, path, "");
+            parsed = yaml().load(decode(path, bytes));
+        } catch (MarkedYAMLException e) {
+            Mark mark = e.getProblemMark() != null ? e.getProblemMark() : e.getContextMark();
+            if (mark == null) {
+                throw new InvalidValueException(InterchangeMessages.GIT_FILE_UNREADABLE, path);
             }
-            return Optional.of((Map<String, Object>) map);
+            throw new InvalidValueException(InterchangeMessages.GIT_FILE_UNREADABLE_AT, path, mark.getLine() + 1,
+                    mark.getColumn() + 1);
         } catch (YAMLException e) {
-            throw new InvalidValueException(InterchangeMessages.GIT_FILE_UNREADABLE, path, e.getMessage());
+            throw new InvalidValueException(InterchangeMessages.GIT_FILE_UNREADABLE, path);
+        }
+        if (!(parsed instanceof Map<?, ?> map)) {
+            throw new InvalidValueException(InterchangeMessages.GIT_FILE_NOT_MAPPING, path);
+        }
+        checkShape(path, map);
+        return Optional.of((Map<String, Object>) map);
+    }
+
+    /** Текст файла строго в UTF-8: битая последовательность — отказ, а не символ замены. */
+    private static String decode(String path, byte[] bytes) {
+        try {
+            return StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();
+        } catch (CharacterCodingException e) {
+            throw new InvalidValueException(InterchangeMessages.GIT_FILE_UNREADABLE, path);
         }
     }
 
-    /** SnakeYAML без неявных типов: каждый скаляр — строка, якоря и ссылки запрещены. */
+    /**
+     * Дерево — только из того, что пишет писатель: ключи — непустые строки, значения — строки,
+     * отображения и списки. Явный тег YAML даёт число, двоичные данные или {@code null}-ключ — отказ.
+     */
+    private static void checkShape(String path, Object value) {
+        switch (value) {
+            case String text -> {
+            }
+            case Map<?, ?> map -> map.forEach((key, nested) -> {
+                if (!(key instanceof String name) || name.isEmpty()) {
+                    throw new InvalidValueException(InterchangeMessages.GIT_FIELD_INVALID, path, String.valueOf(key));
+                }
+                if (nested == null) {
+                    throw new InvalidValueException(InterchangeMessages.GIT_FIELD_INVALID, path, name);
+                }
+                checkShape(path, nested);
+            });
+            case List<?> list -> list.forEach(item -> {
+                if (item == null) {
+                    throw new InvalidValueException(InterchangeMessages.GIT_FIELD_INVALID, path, "-");
+                }
+                checkShape(path, item);
+            });
+            default -> throw new InvalidValueException(InterchangeMessages.GIT_FIELD_INVALID, path,
+                    value.getClass().getSimpleName());
+        }
+    }
+
+    /**
+     * SnakeYAML без неявных типов: каждый скаляр — строка. Повтор ключа и ссылки на коллекции
+     * запрещены; ссылка на скаляр даёт ту же строку и вреда не несёт.
+     */
     private static Yaml yaml() {
         LoaderOptions options = new LoaderOptions();
         options.setAllowDuplicateKeys(false);
         options.setMaxAliasesForCollections(0);
         options.setCodePointLimit(CODE_POINT_LIMIT);
+        options.setNestingDepthLimit(NESTING_LIMIT);
         DumperOptions dumper = new DumperOptions();
         return new Yaml(new SafeConstructor(options), new Representer(dumper), dumper, options, new Resolver() {
             @Override

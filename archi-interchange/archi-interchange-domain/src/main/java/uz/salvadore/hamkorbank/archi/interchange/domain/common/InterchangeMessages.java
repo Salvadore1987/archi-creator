@@ -204,12 +204,20 @@ public final class InterchangeMessages {
     public static final String GIT_FILE_MISSING = "interchange.git.file-missing";
     /** Файл каталога модели не читается как YAML. */
     public static final String GIT_FILE_UNREADABLE = "interchange.git.file-unreadable";
+    /** Файл каталога модели не читается как YAML: строка и столбец места. */
+    public static final String GIT_FILE_UNREADABLE_AT = "interchange.git.file-unreadable-at";
+    /** Файл каталога модели — не отображение ключей. */
+    public static final String GIT_FILE_NOT_MAPPING = "interchange.git.file-not-mapping";
+    /** Каталог модели больше допустимого: число файлов или их общий объём. */
+    public static final String GIT_DIRECTORY_TOO_LARGE = "interchange.git.directory-too-large";
     /** Объект в YAML ссылается на папку, которой нет в описании папок. */
     public static final String GIT_FOLDER_UNKNOWN = "interchange.git.folder-unknown";
     /** Версия формата каталога модели в Git не поддерживается. */
     public static final String GIT_FORMAT_VERSION = "interchange.git.format-version";
     /** Идентификатор в файлах YAML каталога модели повторяется. */
     public static final String GIT_ID_REPEATED = "interchange.git.id-repeated";
+    /** Идентификатор встречается в каталоге модели дважды — у объектов разных файлов или вложенных узлов. */
+    public static final String GIT_ID_REPEATED_IN_MODEL = "interchange.git.id-repeated-in-model";
     /** В коммите нет каталога модели. */
     public static final String GIT_MODEL_NOT_IN_COMMIT = "interchange.git.model-not-in-commit";
     /** Позиция объекта в YAML уже занята соседом. */
