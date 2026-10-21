@@ -153,14 +153,13 @@ public final class AdvisorService {
             Optional<RejectionReason> refused = budget.admission();
             if (refused.isPresent()) {
                 throw reject(session, refused.get(), refused.get() == RejectionReason.BUDGET_EXHAUSTED
-                        ? Map.of("resetsAt", period.resetsAt().toString()) : Map.of());
+                        ? resetDetails(period) : Map.of());
             }
             Optional<Duration> wait = rateLimiter.acquire(Map.of(
                     "user:" + requester.subject(), policy.userRequestsPerMinute(),
                     "workspace:" + model.workspaceId(), policy.workspaceRequestsPerMinute()));
             if (wait.isPresent()) {
-                long seconds = Math.max(1, (wait.get().toMillis() + 999) / 1000);
-                throw reject(session, RejectionReason.RATE_LIMITED, Map.of("retryAfterSeconds", seconds));
+                throw reject(session, RejectionReason.RATE_LIMITED, waitDetails(wait.get()));
             }
             ModelContext context = planner.plan(request, model.graph())
                     .orElseThrow(() -> reject(session, RejectionReason.CONTEXT_TOO_LARGE, Map.of()));
@@ -231,7 +230,8 @@ public final class AdvisorService {
         return switch (session.status()) {
             case REQUESTED, STREAMING -> throw new AdvisorDomainException(AdvisorCodes.IDEMPOTENCY, Failure.CONFLICT,
                     Message.of(AdvisorMessages.SESSION_IN_PROGRESS, session.idempotencyKey()));
-            case REJECTED -> throw rejection(Objects.requireNonNull(session.rejectionReason()), Map.of());
+            case REJECTED -> throw rejection(Objects.requireNonNull(session.rejectionReason()),
+                    replayedDetails(session));
             case COMPLETED, FAILED -> new AdvisorStream() {
                 @Override
                 public AdvisorSessionId sessionId() {
@@ -251,6 +251,28 @@ public final class AdvisorService {
                 }
             };
         };
+    }
+
+    /**
+     * Детали отказа отклонённой сессии при повторе ключа: дата сброса — по месяцу обращения,
+     * ожидание — остаток минуты окна частоты от обращения.
+     */
+    private Map<String, Object> replayedDetails(AdvisorSession session) {
+        return switch (Objects.requireNonNull(session.rejectionReason())) {
+            case BUDGET_EXHAUSTED -> resetDetails(BudgetPeriod.containing(session.requestedAt(), policy.budgetZone()));
+            case RATE_LIMITED -> waitDetails(Duration.between(clock.instant(),
+                    session.requestedAt().plus(RateLimiter.WINDOW)));
+            case ADVISOR_DISABLED, CONTEXT_TOO_LARGE, MODEL_DELETED -> Map.of();
+        };
+    }
+
+    private static Map<String, Object> resetDetails(BudgetPeriod period) {
+        return Map.of("resetsAt", period.resetsAt().toString());
+    }
+
+    /** Через сколько секунд повторить — целое вверх, не меньше секунды. */
+    private static Map<String, Object> waitDetails(Duration wait) {
+        return Map.of("retryAfterSeconds", Math.max(1, (wait.toMillis() + 999) / 1000));
     }
 
     /** Действующие выключатель и лимит; вызывается внутри транзакции сценария. */

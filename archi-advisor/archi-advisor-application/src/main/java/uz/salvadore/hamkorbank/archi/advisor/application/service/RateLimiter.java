@@ -15,7 +15,7 @@ import java.util.Optional;
  */
 public final class RateLimiter {
 
-    private static final Duration WINDOW = Duration.ofMinutes(1);
+    static final Duration WINDOW = Duration.ofMinutes(1);
 
     private final Clock clock;
     private final Map<String, Deque<Instant>> windows = new HashMap<>();

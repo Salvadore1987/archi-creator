@@ -83,4 +83,43 @@ class AdvisorIdempotencyTest {
         assertEquals(AdvisorMessages.SESSION_IN_PROGRESS, conflict.reason().key());
         assertEquals(0, fixture.upstreamCalls.size(), "второго потока у внешнего API нет");
     }
+
+    @Test
+    @DisplayName("INV-ADV-003: повтор ключа отказа по бюджету — тот же отказ с датой сброса")
+    void replayedBudgetRejectionKeepsResetDate() {
+        Fixture fixture = new Fixture();
+        fixture.limit = 50L;
+        AdvisorService service = fixture.service();
+        AdvisorRequest review = AdvisorRequest.review(Fixture.MODEL, null);
+        service.ask(Fixture.ALICE, review, "spend", RU).run(new Fixture.Recorded());
+        AdvisorDomainException first = assertThrows(AdvisorDomainException.class,
+                () -> service.ask(Fixture.ALICE, review, "over", RU));
+
+        AdvisorDomainException replay = assertThrows(AdvisorDomainException.class,
+                () -> service.ask(Fixture.ALICE, review, "over", RU));
+
+        assertEquals("BUDGET_EXHAUSTED", replay.code());
+        assertEquals(first.details(), replay.details());
+        assertEquals(first.reason(), replay.reason());
+    }
+
+    @Test
+    @DisplayName("INV-ADV-003: повтор ключа отказа по частоте — тот же отказ с ожиданием")
+    void replayedRateRejectionKeepsWait() {
+        Fixture fixture = new Fixture();
+        AdvisorService service = fixture.service();
+        AdvisorRequest review = AdvisorRequest.review(Fixture.MODEL, null);
+        for (int i = 0; i < fixture.policy.userRequestsPerMinute(); i++) {
+            service.ask(Fixture.ALICE, review, "ok-" + i, RU).run(new Fixture.Recorded());
+        }
+        AdvisorDomainException first = assertThrows(AdvisorDomainException.class,
+                () -> service.ask(Fixture.ALICE, review, "late", RU));
+
+        AdvisorDomainException replay = assertThrows(AdvisorDomainException.class,
+                () -> service.ask(Fixture.ALICE, review, "late", RU));
+
+        assertEquals("RATE_LIMITED", replay.code());
+        assertEquals(Map.of("retryAfterSeconds", 60L), replay.details());
+        assertEquals(first.reason(), replay.reason());
+    }
 }
