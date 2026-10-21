@@ -22,7 +22,7 @@
 | 2 | `detail` отказа разбора — имя параметра, части или путь поля; причина — в журнал | 11-02 | `ProblemFallbackIT`: неверный UUID в пути и в теле — `detail` без `java.` | ✅ |
 | 3 | Заголовок отказа — ключ по статусу на обоих языках у четырёх обработчиков | 11-04 | `LocalizedProblemIT`: `400`, `405`, `409` interchange — заголовок по-английски при `en` | ✅ |
 | 4 | Bean Validation на запросах: обязательные поля и элементы списков, `@Valid` на теле; `422 INVALID_INPUT` контекста | 11-01 | `RestLayerConventionsTest#requestBodiesAreValidated`; `RequestValidationIT`: `[null]` в списке доступа, свойство без ключа, `null` в узлах раскладки и авторах Git — `422` | ✅ |
-| 5 | Переводы запроса и ответа — в мапперы; контроллер их не собирает | 11-06 | `RestLayerConventionsTest#controllersDoNotBuildDtos` | ⬜ |
+| 5 | Переводы запроса и ответа — в мапперы; контроллер их не собирает | 11-06 | `RestLayerConventionsTest#controllersDoNotBuildDtos` | ✅ |
 | 6 | `Location` у созданной папки и ребра | 11-07 | `ViewEditingIT`, `ModelLifecycleIT`: у `201` есть `Location` | ⬜ |
 | 7 | Срок потока SSE — из `spring.mvc.async.request-timeout` | 11-08 | `AdvisorControllerTest`: у эмиттера нет собственного срока | ⬜ |
 | 8 | История версий страницами: `size` (50, не больше 200), `before`; ADR об ограниченных списках моделей и пространств; D-16 | 11-05 | `VersionPageIT`: предел и продолжение | ⬜ |
@@ -65,5 +65,13 @@
   приходит и из контроллеров interchange. На старом коде три случая из пяти отвечали `500`, свойство без
   ключа на несуществующем элементе — `404` (до домена не доходило), помощник без модели проходил:
   его проверял контроллер.
+- **Задача 5.** Правило запрещает контроллеру конструкторы трёх видов: DTO REST-слоя, значения
+  `application.dto` (`PropertyValue`, `StyleValue`, `BendpointValue`) и вложенные типы команд и запросов
+  (`ReplaceAccessListCommand.Entry`, `SaveViewLayoutCommand.NodeBounds`). Сами команды и запросы
+  (`new GetModelQuery(id)`) контроллер собирает по-прежнему — это разбор запроса, как в примере §3.3.8.2.
+  На старом коде — 15 нарушений в пяти контроллерах трёх контекстов и в `SessionController` bootstrap.
+  `SessionController` правилом не охвачен: его DTO лежат в `bootstrap.security.dto`, а сам он разбирает
+  токен — это предмет этапа 12 (безопасность), там и решится, нужен ли ему маппер. Modeling `DtoMapper`
+  переводит теперь в обе стороны; у interchange для импорта — `InterchangeDtoMapper` рядом с `GitDtoMapper`.
 
 ## Итог

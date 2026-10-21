@@ -50,7 +50,7 @@ public class VersionController {
         SaveVersionResponse result = versions.saveVersion(actor, new SaveVersionCommand(id,
                 request == null ? null : request.comment(), key));
         return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)
-                .body(new SaveResult(DtoMapper.version(result.version()), result.created()));
+                .body(DtoMapper.saveResult(result));
     }
 
     /** Откатывает модель к версии; откат фиксируется новой версией. */

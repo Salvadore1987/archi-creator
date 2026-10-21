@@ -67,6 +67,13 @@ class RestLayerConventionsTest {
             c -> c.getPackageName().contains(".application.port") && !c.getPackageName().contains(".port.in")
                     && !c.getSimpleName().equals("TextCatalog"));
 
+    /** Форма REST-слоя или вложенная часть команды и запроса сценария — то, что собирает маппер. */
+    private static final DescribedPredicate<JavaClass> REST_DTO_OR_PART_OF_COMMAND = DescribedPredicate.describe(
+            "DTO REST-слоя, значение DTO сценария или вложенный тип его команды и запроса",
+            c -> c.getPackageName().contains(".adapter.rest.dto")
+                    || c.getPackageName().endsWith(".application.dto")
+                    || c.getPackageName().contains(".application.dto.") && c.getEnclosingClass().isPresent());
+
     private static JavaClasses classes;
 
     @BeforeAll
@@ -157,6 +164,17 @@ class RestLayerConventionsTest {
                 })
                 .because("поле, не заданное в теле, или null в списке иначе доходят до сценария и домена "
                         + "и падают там 500-м вместо отказа формы");
+
+        rule.check(classes);
+    }
+
+    @Test
+    @DisplayName("контроллер не собирает DTO сам: перевод запроса и ответа — в маппере")
+    void controllersDoNotBuildDtos() {
+        ArchRule rule = noClasses().that(CONTROLLER)
+                .should().callConstructorWhere(target(owner(REST_DTO_OR_PART_OF_COMMAND)))
+                .because("перевод тела в команду и результата в ответ — работа маппера на границе; "
+                        + "в контроллере он размазывается по обработчикам и расходится между ними");
 
         rule.check(classes);
     }

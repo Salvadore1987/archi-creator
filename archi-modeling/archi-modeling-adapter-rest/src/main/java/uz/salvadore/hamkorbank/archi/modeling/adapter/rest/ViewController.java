@@ -2,8 +2,6 @@ package uz.salvadore.hamkorbank.archi.modeling.adapter.rest;
 
 import jakarta.validation.Valid;
 import java.net.URI;
-import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.AutoLayoutRequest;
-import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.BendpointDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.CreateViewRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EditEdgeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.EditNodeRequest;
@@ -26,13 +23,10 @@ import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.LayoutPatch;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.MoveNodeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PlaceEdgeRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.PlaceNodeRequest;
-import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.StyleDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewEdgeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewNodeDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewPayload;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.ViewSummary;
-import uz.salvadore.hamkorbank.archi.modeling.application.dto.BendpointValue;
-import uz.salvadore.hamkorbank.archi.modeling.application.dto.StyleValue;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateViewCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EditViewEdgeCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EditViewNodeCommand;
@@ -41,9 +35,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewE
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewNodeCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.RemoveViewEdgeCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.RemoveViewNodeCommand;
-import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.SaveViewLayoutCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetViewQuery;
-import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ProposeViewLayoutQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PlaceViewEdgeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PlaceViewNodeResponse;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.ViewSummaryResponse;
@@ -84,13 +76,7 @@ public class ViewController {
     @PutMapping("/views/{id}/layout")
     public ResponseEntity<Void> layout(EditorIdentity actor, @PathVariable UUID id,
                                        @Valid @RequestBody LayoutPatch patch) {
-        views.saveLayout(actor, new SaveViewLayoutCommand(id,
-                Optional.ofNullable(patch.nodes()).orElse(List.of()).stream()
-                        .map(n -> new SaveViewLayoutCommand.NodeBounds(n.id(), n.x(), n.y(), n.width(), n.height()))
-                        .toList(),
-                Optional.ofNullable(patch.edges()).orElse(List.of()).stream()
-                        .map(e -> new SaveViewLayoutCommand.EdgeBendpoints(e.id(), bendpoints(e.bendpoints())))
-                        .toList()));
+        views.saveLayout(actor, DtoMapper.layout(id, patch));
         return ResponseEntity.noContent().build();
     }
 
@@ -98,7 +84,7 @@ public class ViewController {
     @PostMapping("/views/{id}/auto-layout")
     public LayoutPatch autoLayout(EditorIdentity actor, @PathVariable UUID id,
                                   @Valid @RequestBody AutoLayoutRequest request) {
-        return DtoMapper.layoutPatch(queries.proposeLayout(actor, layoutQuery(id, request)));
+        return DtoMapper.layoutPatch(queries.proposeLayout(actor, DtoMapper.layoutQuery(id, request)));
     }
 
     /**
@@ -130,14 +116,14 @@ public class ViewController {
     public ViewNodeDto editNode(EditorIdentity actor, @PathVariable UUID id,
                                 @Valid @RequestBody EditNodeRequest request) {
         return DtoMapper.node(views.editNode(actor, new EditViewNodeCommand(id, request.label(), request.content(),
-                style(request.style()))));
+                DtoMapper.style(request.style()))));
     }
 
     /** Правит собственный стиль ребра. */
     @PatchMapping("/view-edges/{id}")
     public ViewEdgeDto editEdge(EditorIdentity actor, @PathVariable UUID id,
                                 @Valid @RequestBody EditEdgeRequest request) {
-        return DtoMapper.edge(views.editEdge(actor, new EditViewEdgeCommand(id, style(request.style()))));
+        return DtoMapper.edge(views.editEdge(actor, new EditViewEdgeCommand(id, DtoMapper.style(request.style()))));
     }
 
     /** Удаляет ребро с представления; связь в модели остаётся. */
@@ -152,7 +138,7 @@ public class ViewController {
     public ResponseEntity<ViewEdgeDto> placeEdge(EditorIdentity actor, @PathVariable UUID id,
                                                  @Valid @RequestBody PlaceEdgeRequest request) {
         PlaceViewEdgeResponse edge = views.placeEdge(actor, new PlaceViewEdgeCommand(id, request.relationshipId(),
-                request.sourceId(), request.targetId(), bendpoints(request.bendpoints()), request.id(),
+                request.sourceId(), request.targetId(), DtoMapper.bendpoints(request.bendpoints()), request.id(),
                 request.archiId()));
         ViewEdgeDto body = DtoMapper.edge(edge.edge());
         return edge.created() ? ResponseEntity.status(HttpStatus.CREATED).body(body) : ResponseEntity.ok(body);
@@ -163,26 +149,5 @@ public class ViewController {
     public ResponseEntity<Void> remove(EditorIdentity actor, @PathVariable UUID id) {
         views.removeNode(actor, new RemoveViewNodeCommand(id));
         return ResponseEntity.noContent().build();
-    }
-
-    private static List<BendpointValue> bendpoints(List<BendpointDto> points) {
-        return Optional.ofNullable(points).orElse(List.of()).stream()
-                .map(b -> new BendpointValue(b.startX(), b.startY(), b.endX(), b.endY())).toList();
-    }
-
-    private static ProposeViewLayoutQuery layoutQuery(UUID viewId, AutoLayoutRequest request) {
-        List<ProposeViewLayoutQuery.Node> nodes = request.nodes().stream()
-                .map(n -> new ProposeViewLayoutQuery.Node(n.id(), n.parentId(), n.conceptType(), n.x(), n.y(),
-                        n.width(), n.height()))
-                .toList();
-        List<ProposeViewLayoutQuery.Edge> edges = Optional.ofNullable(request.edges()).orElse(List.of()).stream()
-                .map(e -> new ProposeViewLayoutQuery.Edge(e.id(), e.sourceId(), e.targetId()))
-                .toList();
-        return new ProposeViewLayoutQuery(viewId, request.strategy(), nodes, edges);
-    }
-
-    private static StyleValue style(StyleDto dto) {
-        return dto == null ? null
-                : new StyleValue(dto.fillColor(), dto.font(), dto.fontColor(), dto.lineColor(), dto.textAlignment());
     }
 }

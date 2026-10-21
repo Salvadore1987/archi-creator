@@ -81,8 +81,7 @@ public class InterchangeController {
                                         HttpServletRequest request) {
         ImportArchimateFileResponse result = imports.importArchimateFile(actor,
                 new ImportArchimateFileCommand(workspaceId, file.getOriginalFilename(), bytes(file), key));
-        ImportResult body = new ImportResult(result.sessionId(), result.status(), result.modelId(),
-                result.versionNo(), result.replayed(), FindingMapper.findings(result.findings()));
+        ImportResult body = InterchangeDtoMapper.importResult(result);
         return switch (result.outcome()) {
             case APPLIED -> ResponseEntity.created(URI.create("/api/v1/models/" + body.modelId())).body(body);
             case REPLAYED -> ResponseEntity.ok(body);
@@ -138,15 +137,15 @@ public class InterchangeController {
     /** Настройка импорта рабочего пространства: включён ли строгий режим. */
     @GetMapping("/workspaces/{id}/import-settings")
     public ImportSettings importSettings(EditorIdentity actor, @PathVariable UUID id) {
-        return new ImportSettings(policies.getImportPolicy(actor, new GetImportPolicyQuery(id)).strictImport());
+        return InterchangeDtoMapper.settings(policies.getImportPolicy(actor, new GetImportPolicyQuery(id)));
     }
 
     /** Включает или выключает строгий режим импорта пространства и отдаёт итоговую настройку. */
     @PutMapping("/workspaces/{id}/import-settings")
     public ImportSettings configure(EditorIdentity actor, @PathVariable UUID id,
                                     @Valid @RequestBody ImportSettings settings) {
-        return new ImportSettings(policies.configureImportPolicy(actor,
-                new ConfigureImportPolicyCommand(id, settings.strictImport())).strictImport());
+        return InterchangeDtoMapper.settings(policies.configureImportPolicy(actor,
+                new ConfigureImportPolicyCommand(id, settings.strictImport())));
     }
 
     /** Файл выгрузки: тип, имя для сохранения, версия, отпечаток и число записей отчёта о потерях. */

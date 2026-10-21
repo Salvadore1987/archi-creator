@@ -31,7 +31,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.DeleteMode
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EditModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PurgeModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReleaseLockCommand;
-import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ReplaceAccessListCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.RestoreModelCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetAccessListQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.GetLockQuery;
@@ -72,7 +71,7 @@ public class ModelController {
     /** Рабочие пространства. */
     @GetMapping("/workspaces")
     public List<WorkspaceDto> workspaces() {
-        return workspaces.listWorkspaces().stream().map(w -> new WorkspaceDto(w.id(), w.name())).toList();
+        return workspaces.listWorkspaces().stream().map(DtoMapper::workspace).toList();
     }
 
     /** Без {@code workspaceId} — первое пространство: до мультиарендности оно одно. */
@@ -156,17 +155,13 @@ public class ModelController {
     /** Список доступа модели. */
     @GetMapping("/models/{id}/acl")
     public List<AclEntryDto> acl(EditorIdentity actor, @PathVariable UUID id) {
-        return accessLists.getAccessList(actor, new GetAccessListQuery(id)).entries().stream()
-                .map(e -> new AclEntryDto(e.principalType(), e.principal(), e.access())).toList();
+        return DtoMapper.accessList(accessLists.getAccessList(actor, new GetAccessListQuery(id)));
     }
 
     /** Заменяет список доступа модели целиком и возвращает итог. */
     @PutMapping("/models/{id}/acl")
     public List<AclEntryDto> replaceAcl(EditorIdentity actor, @PathVariable UUID id,
                                         @Valid @RequestBody List<@NotNull @Valid AclEntryDto> entries) {
-        return accessLists.replaceAccessList(actor, new ReplaceAccessListCommand(id, entries.stream()
-                        .map(e -> new ReplaceAccessListCommand.Entry(e.principalType(), e.principal(), e.access()))
-                        .toList()))
-                .entries().stream().map(e -> new AclEntryDto(e.principalType(), e.principal(), e.access())).toList();
+        return DtoMapper.accessList(accessLists.replaceAccessList(actor, DtoMapper.replaceAccessList(id, entries)));
     }
 }
