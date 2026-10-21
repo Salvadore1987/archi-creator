@@ -7,12 +7,14 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
+import org.springframework.core.task.TaskDecorator;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import uz.salvadore.hamkorbank.archi.bootstrap.security.UiSettings;
 
 /**
- * Настройка веб-слоя: фильтр корреляции журнала и разбор текущего редактора из аутентификации в аргумент обработчика.
+ * Настройка веб-слоя: фильтры журнала запроса, его контекст в фоновых задачах и разбор текущего редактора
+ * из аутентификации в аргумент обработчика.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(UiSettings.class)
@@ -33,6 +35,12 @@ public class WebConfiguration implements WebMvcConfigurer {
         FilterRegistrationBean<RequestUserFilter> registration = new FilterRegistrationBean<>(new RequestUserFilter());
         registration.setOrder(Ordered.LOWEST_PRECEDENCE - 10);
         return registration;
+    }
+
+    /** Контекст журнала — в задачи {@code applicationTaskExecutor}: Spring Boot ставит декоратор сам. */
+    @Bean
+    TaskDecorator mdcTaskDecorator() {
+        return new MdcTaskDecorator();
     }
 
     @Override

@@ -18,7 +18,7 @@
 |---|---|---|---|---|
 | 1 | `spec/nfr`: трассировка — объявленный пробел, корреляция по `traceparent`; ключи Keycloak — таймаут и кэш Nimbus, без повторов и предохранителя; мёртвая `management.tracing` убрана | 14-11 | `check-nfr-config.py` — по задаче 6 | ✅ |
 | 2 | Журнал — SLF4J, в коде только `INFO` и `ERROR`, плейсхолдеры вместо склейки; `DEBUG` из `dev` убран | 14-04, 14-05, 14-06 | `LoggingRulesTest`: ArchUnit (нет `System.Logger`, JUL, `debug`/`trace`/`warn`) и сканирование исходников (нет `+` в вызове журнала) | ✅ |
-| 3 | MDC переходит в `applicationTaskExecutor` | 14-09 | `MdcTaskDecoratorTest`, IT исполнителя | ⬜ |
+| 3 | MDC переходит в `applicationTaskExecutor` | 14-09 | `MdcTaskDecoratorTest`, IT исполнителя | ✅ |
 | 4 | Журнал входящих запросов: метод, путь, статус, длительность | 14-07 | `RequestLoggingFilterTest` | ⬜ |
 | 5 | Начало и исход сценария — в журнал, имя сценария — в MDC | 14-08 | `MicrometerUseCaseMetricsTest` | ⬜ |
 | 6 | Таймаут чтения ключей Keycloak — настройкой | 14-10 | `JwksTimeoutTest`; `check-nfr-config.py`: `archi.security.jwks-timeout` | ⬜ |
@@ -41,3 +41,6 @@
   в application interchange и advisor — граница слоя его допускает: запрет касается Spring, JPA и Hibernate,
   а не API журнала. Проверка склейки — по исходникам: поле журнала в проекте одно имя, `LOG`. На старом коде
   падали все три проверки: 12 зависимостей от `System.Logger`, 5 вызовов `debug`/`warn`, 2 склейки.
+- **Задача 3.** Декоратор — свой, а не `ContextPropagatingTaskDecorator`: тот требует библиотеки
+  `context-propagation` и регистрации MDC в ней, а нужен один MDC. Boot сам ставит бин `TaskDecorator`
+  на `applicationTaskExecutor`; это и проверяет IT — на старом коде задача видела пустой `traceId`.
