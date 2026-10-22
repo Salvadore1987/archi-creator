@@ -2,7 +2,7 @@
 # Конвейер сборки.
 #
 # Работы: целостность спеки и сообщения коммитов — сразу; сборка
-# (golden-file → интеграционные → verify с фронтендом и анализом → покрытие);
+# (golden-file → verify с фронтендом и анализом, без интеграционных);
 # Playwright — параллельно сборке: API в сценариях подменяется в браузере,
 # и ни сервер, ни база им не нужны; образ — после сборки: упаковка jar,
 # Trivy, смоук на профиле prod.
@@ -142,23 +142,14 @@ jobs:
           -Dtest='RoundTripGoldenFileTest,XmlEquivalenceTest'
           -Dsurefire.failIfNoSpecifiedTests=false
 
-      # Классы *IT: контекст целиком на postgres:16 в Testcontainers.
-      # Отдельным шагом, как golden-file: падение видно по имени шага.
-      - name: Интеграционные (Testcontainers, postgres:16)
-        run: >-
-          ./mvnw -B --no-transfer-progress -P '!frontend'
-          -pl archi-bootstrap -am verify -DskipUnitTests
-
       # Профиль frontend включён по умолчанию: jar обязан уехать
       # со статикой внутри, и выключать его в CI нельзя.
-      # Интеграционные уже прошли шагом выше — здесь не повторяются.
-      # Без clean: данные покрытия интеграционных тестов (jacoco-it.exec)
-      # остаются в target/ и входят в общий отчёт JaCoCo.
+      # Интеграционные тесты (*IT, Testcontainers) в конвейере не идут —
+      # их гоняет полный ./mvnw verify локально. Порогов покрытия здесь тоже
+      # нет: адаптеры и обработчики REST покрывают только *IT, и без них
+      # tools/check-coverage.py падал бы всегда; он идёт после локального verify.
       - name: mvn verify
         run: ./mvnw -B --no-transfer-progress verify -DskipITs
-
-      - name: Покрытие тестами
-        run: tools/check-coverage.py
 
       - name: Собранный jar
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
