@@ -61,6 +61,7 @@
         <maven-pmd-plugin.version>3.28.0</maven-pmd-plugin.version>
         <pmd.version>7.28.0</pmd.version>
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
+        <spotbugs-maven-plugin.version>4.10.5.0</spotbugs-maven-plugin.version>
 
         <!--
             Node и npm ставит сборка, а не разработчик: иначе версия
@@ -516,6 +517,28 @@
                         <id>agent-it</id>
                         <goals>
                             <goal>prepare-agent-integration</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!--
+                Статический анализ байткода основного кода: ошибки высокой уверенности
+                роняют сборку сразу после компиляции, раньше тестов.
+            -->
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>${spotbugs-maven-plugin.version}</version>
+                <configuration>
+                    <threshold>High</threshold>
+                    <failThreshold>High</failThreshold>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>bugs</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>check</goal>
                         </goals>
                     </execution>
                 </executions>

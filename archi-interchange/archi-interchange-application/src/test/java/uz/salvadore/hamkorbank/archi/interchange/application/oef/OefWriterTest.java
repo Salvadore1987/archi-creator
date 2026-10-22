@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportLoss;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.ShapeEntry;
@@ -236,6 +238,31 @@ class OefWriterTest {
         assertTrue(text(written).contains("<font name=\"Arial\" size=\"10\" style=\"plain\"/>"), text(written));
         assertFalse(written.losses().stream().anyMatch(l -> l.aspect().equals("style:font")),
                 written.losses().toString());
+    }
+
+    @ParameterizedTest(name = "{0} pt -> {1}")
+    @CsvSource({"10.0, ' size=\"10\"'", "9.5, ' size=\"9.5\"'", "9.3, ' size=\"9.5\"'", "9.2, ' size=\"9\"'",
+            "0.2, ''"})
+    @DisplayName("FR-44: размер шрифта — с точностью до половины пункта, меньше пункта не переносится")
+    void fontSizeIsRoundedToHalfPoint(String size, String attribute) {
+        String archimate = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:archimate="http://www.archimatetool.com/archimate" name="М" id="id-m" version="5.0.0">
+                  <folder name="Application" id="id-f1" type="application">
+                    <element xsi:type="archimate:ApplicationComponent" name="А" id="id-a"/>
+                  </folder>
+                  <folder name="Views" id="id-f3" type="diagrams">
+                    <element xsi:type="archimate:ArchimateDiagramModel" name="В" id="id-v">
+                      <child xsi:type="archimate:DiagramObject" id="id-n" archimateElement="id-a" font="1|Arial|%s">
+                        <bounds x="0" y="0" width="120" height="55"/>
+                      </child>
+                    </element>
+                  </folder>
+                </archimate:model>
+                """.formatted(size);
+        OefWriter.Written written = WRITER.write(read(archimate.getBytes(StandardCharsets.UTF_8)));
+
+        assertTrue(text(written).contains("<font name=\"Arial\"" + attribute + " style=\"plain\"/>"), text(written));
     }
 
     @Test

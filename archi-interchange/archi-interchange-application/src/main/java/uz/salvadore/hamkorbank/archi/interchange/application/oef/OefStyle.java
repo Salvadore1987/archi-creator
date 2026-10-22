@@ -89,10 +89,9 @@ final class OefStyle {
                 pass.styleLoss(id, kind, "font", font.get());
             } else {
                 attributes.append(" name=\"").append(attr(parsed.get().family())).append('"');
-                double half = Math.round(parsed.get().sizePt() * 2) / 2.0;
-                if (half >= 1) {
-                    attributes.append(" size=\"").append(half == Math.floor(half) ? String.valueOf((long) half)
-                            : String.valueOf(half)).append('"');
+                long halves = Math.round(parsed.get().sizePt() * 2);
+                if (halves >= 2) {
+                    attributes.append(" size=\"").append(halves / 2).append(halves % 2 == 0 ? "" : ".5").append('"');
                 }
                 attributes.append(" style=\"").append(fontStyle(parsed.get())).append('"');
             }
