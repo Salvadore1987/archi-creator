@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.dto.command;
 
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Поставить на представление элемент, группу или заметку.
@@ -15,6 +16,8 @@ import java.util.UUID;
  * @param id        ключ, выбранный клиентом; {@code null} — выдаёт сервер
  * @param archiId   идентификатор Archi, выбранный клиентом; {@code null} — выдаёт сервер
  */
-public record PlaceViewNodeCommand(UUID viewId, String kind, UUID elementId, String label, String content, int x,
-                                   int y, Integer width, Integer height, UUID parentId, UUID id, String archiId) {
+public record PlaceViewNodeCommand(UUID viewId, @Nullable String kind, @Nullable UUID elementId, @Nullable String label,
+                                   @Nullable String content, int x, int y, @Nullable Integer width,
+                                   @Nullable Integer height, @Nullable UUID parentId, @Nullable UUID id,
+                                   @Nullable String archiId) {
 }

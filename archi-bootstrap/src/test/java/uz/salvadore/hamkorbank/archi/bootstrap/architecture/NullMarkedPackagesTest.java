@@ -34,8 +34,7 @@ class NullMarkedPackagesTest {
     private static final Pattern IMPORTED = Pattern.compile("(?m)^import org\\.jspecify\\.annotations\\.NullMarked;$");
 
     /** Модули, ещё не размеченные: список сокращается по контекстам и исчезает. */
-    private static final List<String> NOT_YET_MARKED = List.of(
-            "archi-modeling/", "archi-advisor/", "archi-bootstrap/");
+    private static final List<String> NOT_YET_MARKED = List.of("archi-bootstrap/");
 
     @Test
     @DisplayName("каждый пакет основного кода размечен @NullMarked")

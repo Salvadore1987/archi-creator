@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /** Строка сессии помощника: параметры обращения, состояние, расход и результат в столбце {@code result}. */
 @Entity
@@ -26,10 +27,10 @@ public class AdvisorSessionEntity {
     public String function;
 
     @Column(name = "view_id", updatable = false)
-    public UUID viewId;
+    public @Nullable UUID viewId;
 
     @Column(name = "element_archi_id", updatable = false)
-    public String elementArchiId;
+    public @Nullable String elementArchiId;
 
     @Column(name = "idempotency_key", nullable = false, updatable = false)
     public String idempotencyKey;
@@ -41,7 +42,7 @@ public class AdvisorSessionEntity {
     public String status;
 
     @Column(name = "context_tokens")
-    public Integer contextTokens;
+    public @Nullable Integer contextTokens;
 
     @Column(name = "context_truncated", nullable = false)
     public boolean contextTruncated;
@@ -53,10 +54,10 @@ public class AdvisorSessionEntity {
     public long completionTokens;
 
     @Column(name = "rejection_reason")
-    public String rejectionReason;
+    public @Nullable String rejectionReason;
 
     @Column(name = "result")
-    public String result;
+    public @Nullable String result;
 
     @Column(name = "requested_by", nullable = false, updatable = false)
     public String requestedBy;
@@ -65,8 +66,8 @@ public class AdvisorSessionEntity {
     public Instant requestedAt;
 
     @Column(name = "first_token_at")
-    public Instant firstTokenAt;
+    public @Nullable Instant firstTokenAt;
 
     @Column(name = "finished_at")
-    public Instant finishedAt;
+    public @Nullable Instant finishedAt;
 }

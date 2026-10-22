@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.metamodel;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Запись каталога: что за тип, какого слоя и с какой фазы поддержан.
@@ -8,7 +9,7 @@ import java.util.Objects;
  * @param phase фаза, в которой тип становится редактируемым; {@code null} — фаза не назначена
  *              (так сейчас у {@code Location} и {@code Grouping}: они пока не отнесены ни к одной)
  */
-public record ConceptDefinition(ArchiType type, ConceptKind kind, Layer layer, MetamodelPhase phase) {
+public record ConceptDefinition(ArchiType type, ConceptKind kind, Layer layer, @Nullable MetamodelPhase phase) {
 
     public ConceptDefinition {
         Objects.requireNonNull(type, "type");

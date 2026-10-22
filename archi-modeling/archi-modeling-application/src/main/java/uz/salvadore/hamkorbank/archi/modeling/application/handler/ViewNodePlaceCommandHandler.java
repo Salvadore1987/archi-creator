@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.handler;
 
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.PlaceViewNodeCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.PlaceViewNodeResponse;
@@ -49,11 +50,13 @@ public final class ViewNodePlaceCommandHandler {
                 throw ModelingDomainException.invalid(Message.of(ModelingMessages.FIELD_NOT_FOR_KIND, ELEMENT_ID,
                         kind));
             }
+            // Элемент задан ровно у узла элемента: проверки выше отвергли оба других сочетания.
+            ElementId elementId = command.elementId() == null ? null : ElementId.of(command.elementId());
             Created<ViewNode> node = kernel.unitOfWork().write(() -> {
                 View view = lookup.view(command.viewId());
                 ArchitectureModel model = kernel.writableModel(view.modelId(), actor);
-                Created<ViewNode> placed = kind == ViewNodeKind.DIAGRAM_OBJECT
-                        ? view.placeElement(model, ElementId.of(command.elementId()), bounds, parentId,
+                Created<ViewNode> placed = elementId != null
+                        ? view.placeElement(model, elementId, bounds, parentId,
                                 () -> ViewNodeId.of(kernel.newId(ids)), () -> kernel.newArchiId(model, view, ids))
                         : new Created<>(view.placeAnnotation(kind, command.label(), command.content(), bounds,
                                 parentId, ViewNodeId.of(kernel.newId(ids)), kernel.newArchiId(model, view, ids)),
@@ -66,7 +69,7 @@ public final class ViewNodePlaceCommandHandler {
     }
 
     /** Вид узла по имени из контракта; не задан — узел элемента. */
-    private static ViewNodeKind kind(String value) {
+    private static ViewNodeKind kind(@Nullable String value) {
         if (value == null) {
             return ViewNodeKind.DIAGRAM_OBJECT;
         }

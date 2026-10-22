@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
@@ -25,7 +26,7 @@ public final class Names {
     }
 
     /** Имя, которое не может быть пустым: модель, новая папка. */
-    public static String required(String name, Message what) {
+    public static String required(@Nullable String name, Message what) {
         if (name == null || name.isBlank()) {
             throw ModelingDomainException.invalid(Message.of(ModelingMessages.NAME_EMPTY, what));
         }
@@ -33,7 +34,7 @@ public final class Names {
     }
 
     /** Имя, которое бывает пустым: у Junction в файле его нет вовсе. */
-    public static String limited(String name, Message what) {
+    public static String limited(@Nullable String name, Message what) {
         if (name == null) {
             throw ModelingDomainException.invalid(Message.of(ModelingMessages.NAME_MISSING, what));
         }

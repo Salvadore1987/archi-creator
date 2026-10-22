@@ -26,9 +26,9 @@ NullAway и вычёркивает модули из списка. Послед�
 | № | Задача | Проверка | Статус |
 |---|---|---|---|
 | 1 | Error Prone + NullAway (ошибка компиляции, только размеченный код) и `jspecify` в родителе; тест: каждый пакет основного кода размечен `@NullMarked` — со списком ещё не размеченных модулей | `NullMarkedPackagesTest`, компилятор | ✅ |
-| 2 | modeling: `@NullMarked` во всех пакетах четырёх модулей, `@Nullable` у необязательного, срабатывания NullAway | компилятор | ⬜ |
+| 2 | modeling: `@NullMarked` во всех пакетах четырёх модулей, `@Nullable` у необязательного, срабатывания NullAway | компилятор | ✅ |
 | 3 | interchange: то же | компилятор | ✅ |
-| 4 | advisor: то же | компилятор | ⬜ |
+| 4 | advisor: то же | компилятор | ✅ |
 | 5 | `archi-bootstrap`: то же; список исключений теста пуст и удалён | компилятор, тест | ⬜ |
 | 6 | Решение ADR, `CLAUDE.md` (зависимости домена, таблица «стиль держит сборка»), D-14 в реестре, граф зависимостей | `check-links.py`, `check-traceability.py` | ⬜ |
 
@@ -43,6 +43,52 @@ NullAway и вычёркивает модули из списка. Послед�
   `.mvn/jvm.config`.
 - **Задача 1, объём.** Пробный прогон без исключений: 302 срабатывания в трёх доменных модулях, и это нижняя
   граница — javac обрывает вывод на 100 ошибках модуля, до application и адаптеров сборка не дошла.
+- **Задача 2.** 28 пакетов modeling: 23 `package-info.java` дополнены `@NullMarked`, 5 созданы (`application.access`,
+  `dto.command`, `dto.query`, `dto.result`, `adapter.rest.dto`). Срабатывания считались волнами: сборка останавливается
+  на первом упавшем модуле, а разметка нижнего слоя рождает срабатывания в верхнем. Domain — 70; application после
+  разметки domain — 64; адаптеры после разметки application — 87 (persistence 53, rest 34). Итог — ноль.
+  Неочевидное:
+  - `equals(Object)` в размеченном пакете принимает только не-`null`: `BaseId`, `BaseEntity` и три класса
+    persistence получили `equals(@Nullable Object)`, иначе `id.equals(parentId)` с необязательным родителем
+    не компилируется.
+  - Большая часть срабатываний — не код, а разметка: компоненты record'ов из Javadoc «`null` — нет»
+    (`ModelRows`, результаты сценариев, команды, DTO REST, заголовки и строки домена) и столбцы без
+    `nullable = false` в JPA-сущностях. Пустой ключ `@IdClass` (`AccessEntryEntity.Key`, `IdempotencyEntity.Key`)
+    заполняет JPA через отражение — его поля `@Nullable`.
+  - `Map.get` по ключу, который есть по построению, переписан явно: `getOrDefault` с тем же значением, что лежит
+    в карте (`JpaModelAccessListRepository.find`, ярусы и соседи в `AutoLayout`), `instanceof`-шаблон вместо
+    `containsKey` + `get` (`ArchitectureModel` при переносе представления), `Objects.requireNonNull` — только
+    там, где наличие и есть контракт: корень папки вида (`ArchitectureModel.root(FolderType)`, новый метод —
+    им же пользуются сценарии создания элемента и представления), узел графа авторазметки, конец связи и ребра
+    при чтении из базы (ограничения `num_nonnulls(...) = 1`).
+  - `BAND_OF_LAYER` в `AutoLayout` (`EnumMap` и распаковка `Integer`) заменён исчерпывающим `switch` по `Layer`:
+    новый слой не скомпилируется, вместо `NullPointerException` при разметке.
+  - Проверка `elementId` в `ViewNodePlaceCommandHandler` стояла снаружи лямбды транзакции, разыменование — внутри;
+    NullAway факты в лямбду не переносит. Ключ элемента переводится до лямбды, ветка выбирается по нему.
+  - Настоящих разыменований `null` не найдено: каждое место держал инвариант агрегата или ограничение таблицы.
+    Лишняя проверка без последствий: `View.editEdge` проверяет `style != null`, хотя сценарий всегда передаёт
+    стиль (`null` из команды превращается в `StyleOverride.NONE`); оставлена — поведение не меняется.
+  - `@SuppressWarnings("NullAway")` не понадобился.
+  - Разметка задела два архитектурных теста. `HexagonalArchitectureTest`: аннотации `@Nullable` — зависимость
+    домена от `org.jspecify.annotations`, она добавлена в разрешённые. `ApplicationLayerTest`: новый
+    `package-info` в `dto.command|query|result` — класс верхнего уровня без суффикса `Command`/`Query`/`Response`,
+    он исключён из правила имени, как уже было в правиле портов. Контексты interchange и advisor наткнутся на то же.
+- **Задача 4.** Срабатываний NullAway в advisor — 49: domain 15, application 10, adapter-rest 4,
+  adapter-persistence 20 (javac показывает модуль, только когда собран предыдущий, поэтому счёт — по проходам после
+  починки предыдущего модуля). Настоящих разыменований `null` нет: все срабатывания — необязательные значения
+  без `@Nullable` (поля и accessor'ы `AdvisorSession`, компоненты record'ов запроса, команд, ответов, DTO
+  и хранимого JSON, столбцы JPA без `NOT NULL`, параметры `@RequestParam`/`@RequestHeader(required = false)`).
+  Необязательность прошла насквозь: `elementId` подсказки и `prompt` плана — `@Nullable` от тела запроса
+  до `AdvisorRequest.explain/plan`, потому что их отсутствие отклоняет конструктор запроса с кодом поля,
+  а не Bean Validation. Неочевидное — `AtomicReference.get()`: NullAway считает его `@Nullable`, хотя расход
+  потока начинается с `TokenUsage.NONE` и `null` туда не пишется; чтение вынесено в `spent(...)`
+  с `Objects.requireNonNullElse(..., TokenUsage.NONE)` — поведение то же. `package-info.java`: 16 дополнены,
+  4 созданы (`adapter.rest.dto`, `application.dto.command|query|result`).
+- **Задача 4, архитектурные тесты.** Разметка уронила два правила ArchUnit, и это коснётся modeling и interchange
+  так же: `HexagonalArchitectureTest.domainDependsOnJdkAndUuidOnly` видит `@NullMarked` на `package-info`
+  как зависимость домена — в разрешённые пакеты добавлен `org.jspecify.annotations..`; `ApplicationLayerTest
+  .dtosFollowStandard` требует от каждого класса `dto.command|query|result` быть record'ом с суффиксом —
+  `package-info` из правил исключён, как уже было в `portsAreContracts`.
 - **Задача 3.** Срабатываний при первом прогоне: domain — 66 (из них 34 в `EntityMerge`, 13 в читателе `.archimate`),
   application — 122 (с учётом тех, что вызвала разметка domain), adapter-rest — 24, adapter-persistence — 9.
   Пакетов 28: в 22 `package-info.java` добавлена разметка, 6 созданы (`adapter.rest.dto`, `application.dto.command`,
@@ -63,14 +109,10 @@ NullAway и вычёркивает модули из списка. Послед�
   карта в мапере REST, как уже было с `authors`.
 - **Задача 3, настоящий дефект.** `OefSchema.violation`: `Optional.of(e.getMessage())` у `SAXException` без текста
   падал NPE вместо отчёта о нарушении схемы; теперь текст — `getMessage()`, а без него — `toString()`.
-- **Задача 3, архитектурные тесты.** Разметка доменных пакетов уронила `HexagonalArchitectureTest`: `package-info`
-  домена зависит от `org.jspecify.annotations` — пакет добавлен в разрешённые домену, как и решено в задаче 1.
-  `ApplicationLayerTest` требовал от каждого класса верхнего уровня в `dto.command|query|result` быть record'ом
-  с суффиксом — `package-info` из правил исключён. Те же падения ждут modeling и advisor.
-- **Задача 3, связь с modeling.** interchange зовёт modeling-application, ещё не размеченный: `ModelRows`, `StyleValue`,
-  `BendpointValue` (`DocumentAssembler`, `DocumentDecomposer`, `ViewScene`), `GetVersionSnapshotQuery` с
-  необязательной версией (обработчики выгрузки), `ImportModelCommand`, `ModelRowRules`, `VersionSnapshotResponse`.
-  После разметки modeling срабатывания в interchange возможны именно там.
+- **Задача 3, связь с modeling.** После слияния с размеченным modeling (задача 2) в interchange — 3 новых срабатывания,
+  все в `DocumentAssembler`: `ModelRows.Node.bounds/style` и `ModelRows.Edge.style` стали `@Nullable` — необязательны
+  они во входящих строках импорта, а строки из хранения несут их всегда (`ModelRowsMapper`). Сборка документа берёт их
+  через `Objects.requireNonNull` с именем поля: NPE остаётся там же, где был при разыменовании.
 
 ## Отменённые варианты
 

@@ -5,6 +5,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.ModelId;
@@ -21,8 +22,8 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.ViewId;
  * @param prompt    описание фрагмента архитектуры для плана; {@code null} — не задано, пустое
  *                  приводится к {@code null}
  */
-public record AdvisorRequest(AdvisorFunction function, ModelId modelId, ViewId viewId, String elementId,
-                             String prompt) {
+public record AdvisorRequest(AdvisorFunction function, ModelId modelId, @Nullable ViewId viewId,
+                             @Nullable String elementId, @Nullable String prompt) {
 
     /** Наибольшая длина описания для плана, в символах. */
     public static final int PROMPT_MAX = 4000;
@@ -76,22 +77,22 @@ public record AdvisorRequest(AdvisorFunction function, ModelId modelId, ViewId v
     }
 
     /** Ревью всей модели или одного представления; {@code viewId} = {@code null} — вся модель. */
-    public static AdvisorRequest review(ModelId modelId, ViewId viewId) {
+    public static AdvisorRequest review(ModelId modelId, @Nullable ViewId viewId) {
         return new AdvisorRequest(AdvisorFunction.REVIEW, modelId, viewId, null, null);
     }
 
     /** Подсказка по элементу с этим {@code archiId}. */
-    public static AdvisorRequest explain(ModelId modelId, String elementId) {
+    public static AdvisorRequest explain(ModelId modelId, @Nullable String elementId) {
         return new AdvisorRequest(AdvisorFunction.EXPLAIN, modelId, null, elementId, null);
     }
 
     /** План фрагмента архитектуры по описанию. */
-    public static AdvisorRequest plan(ModelId modelId, String prompt) {
+    public static AdvisorRequest plan(ModelId modelId, @Nullable String prompt) {
         return new AdvisorRequest(AdvisorFunction.PLAN, modelId, null, null, prompt);
     }
 
     /** Документация по модели, представлению или элементу; не заданная область — {@code null}. */
-    public static AdvisorRequest document(ModelId modelId, ViewId viewId, String elementId) {
+    public static AdvisorRequest document(ModelId modelId, @Nullable ViewId viewId, @Nullable String elementId) {
         return new AdvisorRequest(AdvisorFunction.DOCUMENT, modelId, viewId, elementId, null);
     }
 

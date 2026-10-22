@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 
 import java.time.Instant;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AdvisorSessionId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
@@ -15,7 +16,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
  */
 public record AdvisorSessionCompletedEvent(AdvisorSessionId sessionId, WorkspaceId workspaceId, ModelId modelId,
                                       AdvisorFunction function, SessionStatus outcome,
-                                      RejectionReason rejectionReason, long promptTokens,
+                                      @Nullable RejectionReason rejectionReason, long promptTokens,
                                       long completionTokens, boolean contextTruncated, int findingCount,
                                       long durationMs, String actor, Instant occurredAt)
         implements AdvisorSessionEvent {

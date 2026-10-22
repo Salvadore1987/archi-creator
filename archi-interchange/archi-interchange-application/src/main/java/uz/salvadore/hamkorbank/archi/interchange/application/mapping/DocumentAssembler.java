@@ -177,6 +177,7 @@ public final class DocumentAssembler {
                     content);
         }
 
+        /** Строка из хранения: геометрия и стиль у неё есть всегда, необязательны они лишь в строках импорта. */
         private DocumentNode viewNode(ModelRows.Node node) {
             NodeResidue residue = residue(node.rawXml());
             Map<String, String> typed = new LinkedHashMap<>();
@@ -184,10 +185,11 @@ public final class DocumentAssembler {
             typed.put("id", node.archiId());
             typed.put(XmlSchema.TARGET_CONNECTIONS, targetConnections(node.id(), residue).orElse(null));
             typed.put("name", node.label());
-            style(typed, node.style());
+            style(typed, Objects.requireNonNull(node.style(), "style"));
             typed.put("archimateElement", node.elementId() == null ? null : archiIds.get(node.elementId()));
             Content content = new Content(residue);
-            content.single("bounds", bounds(node.bounds(), residue), XmlSchema.BOUNDS_FIRST);
+            content.single("bounds", bounds(Objects.requireNonNull(node.bounds(), "bounds"), residue),
+                    XmlSchema.BOUNDS_FIRST);
             content.single("content", textOrNull("content", node.content()),
                     XmlSchema.CONTENT_AFTER_BOUNDS);
             UUID id = node.id();
@@ -202,7 +204,7 @@ public final class DocumentAssembler {
             typed.put(XmlSchema.XSI_TYPE, edge.archiType());
             typed.put("id", edge.archiId());
             typed.put(XmlSchema.TARGET_CONNECTIONS, targetConnections(edge.id(), residue).orElse(null));
-            style(typed, edge.style());
+            style(typed, Objects.requireNonNull(edge.style(), "style"));
             typed.put("source", archiIds.get(edge.sourceId()));
             typed.put("target", archiIds.get(edge.targetId()));
             typed.put("archimateRelationship",

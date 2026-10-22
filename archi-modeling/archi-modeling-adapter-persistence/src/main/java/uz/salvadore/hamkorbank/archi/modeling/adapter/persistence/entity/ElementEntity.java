@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /** Строка элемента модели: типизированные поля, место в папке и остаток XML. */
 @Entity
@@ -40,7 +41,7 @@ public class ElementEntity {
     public String name;
 
     @Column(name = "documentation")
-    public String documentation;
+    public @Nullable String documentation;
 
     @Column(name = "sort_order", nullable = false)
     public long sortOrder;
@@ -49,7 +50,7 @@ public class ElementEntity {
     public boolean supported;
 
     @Column(name = "raw_xml")
-    public String rawXml;
+    public @Nullable String rawXml;
 
     @ElementCollection
     @CollectionTable(name = "element_property", joinColumns = @JoinColumn(name = "owner_id"))

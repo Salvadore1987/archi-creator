@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.dto.result;
 
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.StyleValue;
 
 /**
@@ -10,7 +11,8 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.StyleValue;
  * @param elementId элемент узла; {@code null} — у группы и заметки
  * @param style     собственный стиль; {@code null} — нет
  */
-public record ViewNodeResponse(UUID id, UUID parentId, String archiId, String archiType, String kind, UUID elementId,
-                               int x, int y, int width, int height, StyleValue style, String label, String content,
+public record ViewNodeResponse(UUID id, @Nullable UUID parentId, String archiId, String archiType, String kind,
+                               @Nullable UUID elementId, int x, int y, int width, int height,
+                               @Nullable StyleValue style, @Nullable String label, @Nullable String content,
                                long sortOrder) {
 }

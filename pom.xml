@@ -67,7 +67,7 @@
             в nullaway.unannotated (через запятую; пусто — проверяется всё).
         -->
         <nullaway.annotated>uz.salvadore.hamkorbank.archi</nullaway.annotated>
-        <nullaway.unannotated>uz.salvadore.hamkorbank.archi.modeling,uz.salvadore.hamkorbank.archi.advisor,uz.salvadore.hamkorbank.archi.bootstrap</nullaway.unannotated>
+        <nullaway.unannotated>uz.salvadore.hamkorbank.archi.bootstrap</nullaway.unannotated>
         <depgraph-maven-plugin.version>4.0.5</depgraph-maven-plugin.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
         <checkstyle.version>14.3.0</checkstyle.version>

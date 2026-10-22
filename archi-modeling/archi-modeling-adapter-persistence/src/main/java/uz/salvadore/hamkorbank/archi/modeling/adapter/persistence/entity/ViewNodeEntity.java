@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /** Узел представления: вид, элемент, родительский узел, границы относительно родителя, стиль и текст. */
 @Entity
@@ -22,7 +23,7 @@ public class ViewNodeEntity {
     public UUID viewId;
 
     @Column(name = "parent_id")
-    public UUID parentId;
+    public @Nullable UUID parentId;
 
     @Column(name = "archi_id", nullable = false, updatable = false)
     public String archiId;
@@ -34,7 +35,7 @@ public class ViewNodeEntity {
     public String kind;
 
     @Column(name = "element_id")
-    public UUID elementId;
+    public @Nullable UUID elementId;
 
     @Column(name = "x")
     public int x;
@@ -46,29 +47,29 @@ public class ViewNodeEntity {
     public int height;
 
     @Column(name = "fill_color")
-    public String fillColor;
+    public @Nullable String fillColor;
 
     @Column(name = "font")
-    public String font;
+    public @Nullable String font;
 
     @Column(name = "font_color")
-    public String fontColor;
+    public @Nullable String fontColor;
 
     @Column(name = "line_color")
-    public String lineColor;
+    public @Nullable String lineColor;
 
     @Column(name = "text_alignment")
-    public Integer textAlignment;
+    public @Nullable Integer textAlignment;
 
     @Column(name = "label")
-    public String label;
+    public @Nullable String label;
 
     @Column(name = "content")
-    public String content;
+    public @Nullable String content;
 
     @Column(name = "sort_order", nullable = false)
     public long sortOrder;
 
     @Column(name = "raw_xml")
-    public String rawXml;
+    public @Nullable String rawXml;
 }

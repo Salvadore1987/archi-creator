@@ -49,6 +49,6 @@ public final class ElementCreateCommandHandler {
     }
 
     private static FolderId defaultFolder(ArchitectureModel model, ArchiType archiType) {
-        return model.roots().get(FolderType.forLayer(ArchiTypeRegistry.archimate32().layerOf(archiType))).id();
+        return model.root(FolderType.forLayer(ArchiTypeRegistry.archimate32().layerOf(archiType))).id();
     }
 }

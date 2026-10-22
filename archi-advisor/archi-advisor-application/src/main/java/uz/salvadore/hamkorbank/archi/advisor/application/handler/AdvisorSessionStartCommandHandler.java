@@ -344,6 +344,11 @@ public final class AdvisorSessionStartCommandHandler {
             return session.id().value();
         }
 
+        /** Расход по последнему кадру внешнего API; до первого кадра — ноль. */
+        private static TokenUsage spent(AtomicReference<TokenUsage> usage) {
+            return Objects.requireNonNullElse(usage.get(), TokenUsage.NONE);
+        }
+
         @Override
         public void run(StreamSink sink) {
             StringBuilder text = new StringBuilder();
@@ -384,12 +389,12 @@ public final class AdvisorSessionStartCommandHandler {
                 });
                 ModelPlan proposed = plan.get();
                 if (session.function() == AdvisorFunction.PLAN && proposed == null) {
-                    finish(session, () -> session.fail(usage.get(), AuditEntryId.next(kernel.uuids()), kernel.now()));
+                    finish(session, () -> session.fail(spent(usage), AuditEntryId.next(kernel.uuids()), kernel.now()));
                 } else {
                     AdvisorAnswer answer = session.function() == AdvisorFunction.EXPLAIN
                             || session.function() == AdvisorFunction.DOCUMENT
                             ? results.answer(text.toString(), names) : null;
-                    finish(session, () -> session.complete(usage.get(), proposed, answer,
+                    finish(session, () -> session.complete(spent(usage), proposed, answer,
                             AuditEntryId.next(kernel.uuids()), kernel.now()));
                     if (proposed != null) {
                         sink.plan(AdvisorDataMapper.plan(proposed));
@@ -404,7 +409,7 @@ public final class AdvisorSessionStartCommandHandler {
                 LOG.error("advisor stream broken: session {}, {}", session.id(),
                         broken.getClass().getName());
                 if (!session.status().terminal()) {
-                    finish(session, () -> session.fail(usage.get(), AuditEntryId.next(kernel.uuids()), kernel.now()));
+                    finish(session, () -> session.fail(spent(usage), AuditEntryId.next(kernel.uuids()), kernel.now()));
                 }
                 try {
                     sink.meta(AdvisorDataMapper.meta(session));

@@ -2,7 +2,9 @@ package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ElementEntity;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.FolderEntity;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity.ModelEntity;
@@ -82,8 +84,9 @@ final class EntityMapper {
                 raw(e.rawXml));
     }
 
-    private static ConceptRef concept(UUID element, UUID relationship) {
-        return element != null ? ElementId.of(element) : RelationshipId.of(relationship);
+    /** Конец связи — ровно один из двух столбцов: так его держит ограничение таблицы. */
+    private static ConceptRef concept(@Nullable UUID element, @Nullable UUID relationship) {
+        return element != null ? ElementId.of(element) : RelationshipId.of(Objects.requireNonNull(relationship));
     }
 
     // ── Представления ───────────────────────────────────────────────
@@ -241,11 +244,13 @@ final class EntityMapper {
         e.rawXml = d.rawXml() == null ? null : d.rawXml().value();
     }
 
-    private static ViewEndpoint endpoint(UUID node, UUID edge) {
-        return node != null ? ViewNodeId.of(node) : ViewEdgeId.of(edge);
+    /** Конец ребра — ровно один из двух столбцов: так его держит ограничение таблицы. */
+    private static ViewEndpoint endpoint(@Nullable UUID node, @Nullable UUID edge) {
+        return node != null ? ViewNodeId.of(node) : ViewEdgeId.of(Objects.requireNonNull(edge));
     }
 
-    private static StyleOverride style(String fill, String font, String fontColor, String line, Integer alignment) {
+    private static StyleOverride style(@Nullable String fill, @Nullable String font, @Nullable String fontColor,
+                                       @Nullable String line, @Nullable Integer alignment) {
         return new StyleOverride(fill, font, fontColor, line, alignment);
     }
 
@@ -265,7 +270,7 @@ final class EntityMapper {
         }
     }
 
-    private static RawXml raw(String value) {
+    private static @Nullable RawXml raw(@Nullable String value) {
         return value == null || value.isEmpty() ? null : new RawXml(value);
     }
 

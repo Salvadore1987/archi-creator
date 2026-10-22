@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.handler;
 
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.query.ListVersionsQuery;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.VersionResponse;
@@ -40,7 +41,7 @@ public final class VersionListQueryHandler {
     }
 
     /** Размер страницы: не задан — по умолчанию, больше предела — предел, меньше единицы — отказ. */
-    static int pageSize(Integer requested) {
+    static int pageSize(@Nullable Integer requested) {
         if (requested == null) {
             return DEFAULT_PAGE;
         }
@@ -51,7 +52,7 @@ public final class VersionListQueryHandler {
     }
 
     /** Граница страницы: не задана — с последней версии. */
-    private static long before(Long before) {
+    private static long before(@Nullable Long before) {
         if (before == null) {
             return Long.MAX_VALUE;
         }

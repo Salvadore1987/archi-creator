@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.handler;
 
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
@@ -14,7 +15,7 @@ public final class RequestValues {
     }
 
     /** Тип ArchiMate по имени Archi; пустой или неизвестный — отказ. */
-    public static ArchiType archiType(String value) {
+    public static ArchiType archiType(@Nullable String value) {
         if (value == null) {
             throw ModelingDomainException.invalid(Message.of(ModelingMessages.ARCHI_TYPE_REQUESTED, value));
         }
@@ -26,7 +27,7 @@ public final class RequestValues {
     }
 
     /** Вид доступа; {@code null} — не задан, неизвестный — отказ. */
-    public static AccessType accessType(String value) {
+    public static @Nullable AccessType accessType(@Nullable String value) {
         if (value == null) {
             return null;
         }

@@ -3,4 +3,7 @@
  *
  * <p>Контроллеры и DTO. Коды ошибок и статусы — по контракту OpenAPI.
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.modeling.adapter.rest;
+
+import org.jspecify.annotations.NullMarked;

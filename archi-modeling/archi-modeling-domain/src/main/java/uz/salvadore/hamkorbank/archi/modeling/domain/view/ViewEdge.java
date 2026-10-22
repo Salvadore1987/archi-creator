@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 
 import java.util.List;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
@@ -16,9 +17,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
  * @param relationshipId {@code null} у соединений, не отражающих связь модели (заметка → элемент)
  * @param rawXml         остаток XML; {@code null} — нет
  */
-public record ViewEdge(ViewEdgeId id, ArchiId archiId, DiagramType archiType, RelationshipId relationshipId,
+public record ViewEdge(ViewEdgeId id, ArchiId archiId, DiagramType archiType, @Nullable RelationshipId relationshipId,
                        ViewEndpoint source, ViewEndpoint target, List<Bendpoint> bendpoints, StyleOverride style,
-                       SortOrder sortOrder, RawXml rawXml) {
+                       SortOrder sortOrder, @Nullable RawXml rawXml) {
 
     public ViewEdge {
         Objects.requireNonNull(id, "id");

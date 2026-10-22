@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
@@ -52,7 +53,7 @@ public record LayoutGraph(List<Node> nodes, List<Edge> edges) {
      * @param parentId    родитель; {@code null} — узел верхнего уровня
      * @param conceptType тип элемента узла; {@code null} — группа, заметка или иное
      */
-    public record Node(ViewNodeId id, ViewNodeId parentId, ArchiType conceptType, Bounds bounds) {
+    public record Node(ViewNodeId id, @Nullable ViewNodeId parentId, @Nullable ArchiType conceptType, Bounds bounds) {
 
         public Node {
             Objects.requireNonNull(id, "id");

@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * DTO помощника по контракту OpenAPI. Отсутствующее значение — {@code null}, а не
@@ -17,19 +18,19 @@ public final class Dtos {
     }
 
     /** Запрос ревью: модель и, если задано, одно представление вместо всей модели. */
-    public record ReviewRequest(@NotNull UUID modelId, UUID viewId) {
+    public record ReviewRequest(@NotNull UUID modelId, @Nullable UUID viewId) {
     }
 
     /** Запрос подсказки: модель и {@code archiId} элемента. */
-    public record ExplainRequest(@NotNull UUID modelId, String elementId) {
+    public record ExplainRequest(@NotNull UUID modelId, @Nullable String elementId) {
     }
 
     /** Запрос плана: модель и описание фрагмента архитектуры. */
-    public record PlanRequest(@NotNull UUID modelId, String prompt) {
+    public record PlanRequest(@NotNull UUID modelId, @Nullable String prompt) {
     }
 
     /** Запрос документации: по модели, представлению или элементу — не больше одного из двух последних. */
-    public record DocumentRequest(@NotNull UUID modelId, UUID viewId, String elementId) {
+    public record DocumentRequest(@NotNull UUID modelId, @Nullable UUID viewId, @Nullable String elementId) {
     }
 
     /** Ссылка на объект модели: идентификатор Archi и имя. */
@@ -38,11 +39,11 @@ public final class Dtos {
 
     /** Замечание ревью, кадр потока; {@code suggestion} — совет архитектору, а не команда. */
     public record FindingDto(UUID id, String severity, String code, String message, String targetKind,
-                             ElementRefDto target, String suggestion) {
+                             ElementRefDto target, @Nullable String suggestion) {
     }
 
     /** Элемент плана; {@code existingRef} задан, если такой элемент в модели уже есть. */
-    public record PlannedElementDto(String archiType, String name, ElementRefDto existingRef) {
+    public record PlannedElementDto(String archiType, String name, @Nullable ElementRefDto existingRef) {
     }
 
     /** Связь плана между элементами по именам; {@code permitted} — допускает ли её матрица связей. */
@@ -51,7 +52,7 @@ public final class Dtos {
 
     /** План фрагмента архитектуры — описание, а не изменение модели. */
     public record ModelPlanDto(List<PlannedElementDto> elements, List<PlannedRelationDto> relationships,
-                               String notes) {
+                               @Nullable String notes) {
     }
 
     /** Ответ подсказки или документации: Markdown и ссылки на упомянутые объекты. */
@@ -63,7 +64,7 @@ public final class Dtos {
     }
 
     /** Последний кадр потока: исход сессии, причина отказа и расход токенов. */
-    public record SessionMetaDto(UUID sessionId, String outcome, String rejectionReason, long promptTokens,
+    public record SessionMetaDto(UUID sessionId, String outcome, @Nullable String rejectionReason, long promptTokens,
                                  long completionTokens, boolean contextTruncated) {
     }
 
@@ -73,7 +74,7 @@ public final class Dtos {
     }
 
     /** Настройки помощника: выключатель и месячный лимит; лимит {@code null} — значение по умолчанию. */
-    public record SettingsDto(@NotNull Boolean enabled, Long monthlyTokenLimit) {
+    public record SettingsDto(@NotNull Boolean enabled, @Nullable Long monthlyTokenLimit) {
     }
 
     /** Строка отчёта о расходе: автор или функция и их обращения, отказы и токены. */

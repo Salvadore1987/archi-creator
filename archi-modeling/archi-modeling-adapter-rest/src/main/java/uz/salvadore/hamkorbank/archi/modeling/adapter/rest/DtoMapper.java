@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.modeling.adapter.rest;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.AclEntryDto;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.AutoLayoutRequest;
 import uz.salvadore.hamkorbank.archi.modeling.adapter.rest.dto.Dtos.BendpointDto;
@@ -99,7 +100,7 @@ public final class DtoMapper {
     }
 
     /** Связь; {@code edgeId} — ребро, нарисованное вместе с ней, иначе {@code null}. */
-    public static RelationshipDto relationship(RelationshipResponse r, UUID edgeId) {
+    public static RelationshipDto relationship(RelationshipResponse r, @Nullable UUID edgeId) {
         return new RelationshipDto(r.id(), r.folderId(), r.archiId(), r.archiType(), r.sourceId(), r.targetId(),
                 r.name(), r.documentation(), r.accessType(), r.directed(), propertyDtos(r.properties()),
                 r.supported(), r.sortOrder(), edgeId);
@@ -132,7 +133,7 @@ public final class DtoMapper {
     }
 
     /** Ребро новой связи; без {@code view} связь рисуется без ребра. */
-    public static CreateRelationshipCommand.Edge edge(EdgePlacementRequest view) {
+    public static CreateRelationshipCommand.@Nullable Edge edge(@Nullable EdgePlacementRequest view) {
         return view == null ? null : new CreateRelationshipCommand.Edge(view.viewId(), view.sourceNodeId(),
                 view.targetNodeId(), view.edgeId(), view.edgeArchiId());
     }
@@ -153,13 +154,13 @@ public final class DtoMapper {
         return new Finding(f.severity(), f.code(), f.message(), f.targetKind(), f.targetId(), f.suggestion());
     }
 
-    private static StyleDto style(StyleValue s) {
+    private static @Nullable StyleDto style(@Nullable StyleValue s) {
         return s == null ? null
                 : new StyleDto(s.fillColor(), s.font(), s.fontColor(), s.lineColor(), s.textAlignment());
     }
 
     /** Собственный стиль правки; {@code null} — снять. */
-    public static StyleValue style(StyleDto dto) {
+    public static @Nullable StyleValue style(@Nullable StyleDto dto) {
         return dto == null ? null
                 : new StyleValue(dto.fillColor(), dto.font(), dto.fontColor(), dto.lineColor(), dto.textAlignment());
     }
@@ -208,13 +209,13 @@ public final class DtoMapper {
      * Свойства правки; {@code null} — не менять. Значение без {@code value} — пустая строка:
      * так свойство без значения читает и файл.
      */
-    public static List<PropertyValue> properties(List<PropertyDto> properties) {
+    public static @Nullable List<PropertyValue> properties(@Nullable List<PropertyDto> properties) {
         return properties == null ? null : properties.stream()
                 .map(p -> new PropertyValue(p.key(), p.value() == null ? "" : p.value())).toList();
     }
 
     /** Точки перегиба; не переданы — ребро прямое. */
-    public static List<BendpointValue> bendpoints(List<BendpointDto> points) {
+    public static List<BendpointValue> bendpoints(@Nullable List<BendpointDto> points) {
         return Optional.ofNullable(points).orElse(List.of()).stream()
                 .map(b -> new BendpointValue(b.startX(), b.startY(), b.endX(), b.endY())).toList();
     }

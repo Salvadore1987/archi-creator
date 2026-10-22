@@ -31,7 +31,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 class HexagonalArchitectureTest {
 
     private static final String ROOT = "uz.salvadore.hamkorbank.archi";
-    /** Что домену можно кроме своего контекста: JDK (включая StAX и DOM), генератор UUID и аннотации JSpecify. */
+    /** Что домену можно кроме своего контекста: JDK (включая StAX и DOM) и генератор UUID. */
     private static final List<String> DOMAIN_ALLOWED = List.of("java..", "javax.xml..", "org.w3c.dom..",
             "org.xml.sax..", "com.fasterxml.uuid..", "org.jspecify.annotations..");
 
@@ -50,13 +50,14 @@ class HexagonalArchitectureTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("contexts")
-    @DisplayName("Домен зависит только от JDK, генератора UUID и своего контекста")
+    @DisplayName("Домен зависит только от JDK, генератора UUID, аннотаций JSpecify и своего контекста")
     void domainDependsOnJdkAndUuidOnly(String context) {
         String domain = ROOT + "." + context + ".domain..";
         String[] allowed = Stream.concat(DOMAIN_ALLOWED.stream(), Stream.of(domain)).toArray(String[]::new);
         classes().that().resideInAPackage(domain)
                 .should().onlyDependOnClassesThat().resideInAnyPackage(allowed)
-                .because("домен без фреймворков и библиотек: генератор UUID и аннотации null-безопасности")
+                .because("домен без фреймворков и библиотек: его зависимости — генератор UUID "
+                        + "и аннотации null-безопасности")
                 .check(classes);
     }
 

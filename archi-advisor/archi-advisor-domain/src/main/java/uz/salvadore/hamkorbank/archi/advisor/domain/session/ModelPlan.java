@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Описание предлагаемой структуры — не команда. Элементы названы по имени и типу,
@@ -9,7 +10,7 @@ import java.util.List;
  *
  * @param notes пояснение к плану; {@code null} — нет, пустое приводится к {@code null}
  */
-public record ModelPlan(List<PlannedElement> elements, List<PlannedRelation> relationships, String notes) {
+public record ModelPlan(List<PlannedElement> elements, List<PlannedRelation> relationships, @Nullable String notes) {
 
     public ModelPlan {
         elements = List.copyOf(elements);

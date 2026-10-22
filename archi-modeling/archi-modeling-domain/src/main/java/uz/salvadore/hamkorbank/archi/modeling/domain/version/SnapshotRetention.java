@@ -43,7 +43,7 @@ public final class SnapshotRetention {
                 .filter(v -> v.gitSha() != null)
                 .filter(v -> v.label() == null)
                 .filter(v -> v.createdAt().isBefore(horizon))
-                .filter(v -> !lastOfMonth.get(YearMonth.from(v.createdAt().atZone(zone))).equals(v))
+                .filter(v -> !v.equals(lastOfMonth.get(YearMonth.from(v.createdAt().atZone(zone)))))
                 .sorted(Comparator.comparingLong(ModelVersion::versionNo))
                 .toList();
     }

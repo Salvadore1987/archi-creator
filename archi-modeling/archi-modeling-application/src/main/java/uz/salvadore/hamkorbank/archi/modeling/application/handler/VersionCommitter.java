@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.modeling.application.handler;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.application.mapper.ModelRowsMapper;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotWriter;
@@ -30,7 +31,7 @@ public final class VersionCommitter {
      * новая не пишется и возвращается последняя. Снимок собирается из базы, а не из
      * того, что держит вызывающий: так он проверяет и хранение. {@code null} — без комментария.
      */
-    public ModelVersion commit(ArchitectureModel model, EditorIdentity actor, String comment) {
+    public ModelVersion commit(ArchitectureModel model, EditorIdentity actor, @Nullable String comment) {
         ModelContent content = new ModelContent(kernel.models().load(model.id()).orElseThrow(),
                 kernel.views().loadAll(model.id()));
         byte[] xml = snapshotWriter.write(ModelRowsMapper.rows(content));

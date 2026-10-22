@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
@@ -19,14 +20,14 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
  * @param sortOrder позиция в содержимом родителя, общем с рёбрами, исходящими из родителя
  * @param rawXml    остаток XML; {@code null} — нет
  */
-public record ViewNode(ViewNodeId id, ViewNodeId parentId, ArchiId archiId, DiagramType archiType,
-                       ElementId elementId, Bounds bounds, StyleOverride style, String label,
-                       String content, SortOrder sortOrder, RawXml rawXml) {
+public record ViewNode(ViewNodeId id, @Nullable ViewNodeId parentId, ArchiId archiId, DiagramType archiType,
+                       @Nullable ElementId elementId, Bounds bounds, StyleOverride style, @Nullable String label,
+                       @Nullable String content, SortOrder sortOrder, @Nullable RawXml rawXml) {
 
     /** Узел без собственного текста — так размещается элемент. */
-    public ViewNode(ViewNodeId id, ViewNodeId parentId, ArchiId archiId, DiagramType archiType,
-                    ElementId elementId, Bounds bounds, StyleOverride style, SortOrder sortOrder,
-                    RawXml rawXml) {
+    public ViewNode(ViewNodeId id, @Nullable ViewNodeId parentId, ArchiId archiId, DiagramType archiType,
+                    @Nullable ElementId elementId, Bounds bounds, StyleOverride style, SortOrder sortOrder,
+                    @Nullable RawXml rawXml) {
         this(id, parentId, archiId, archiType, elementId, bounds, style, null, null,
                 sortOrder, rawXml);
     }
@@ -56,12 +57,12 @@ public record ViewNode(ViewNodeId id, ViewNodeId parentId, ArchiId archiId, Diag
     }
 
     /** Подпись и текст заметки; {@code null} и пустая строка — текста нет. */
-    public ViewNode withText(String newLabel, String newContent) {
+    public ViewNode withText(@Nullable String newLabel, @Nullable String newContent) {
         return new ViewNode(id, parentId, archiId, archiType, elementId, bounds, style,
                 nonEmpty(newLabel), nonEmpty(newContent), sortOrder, rawXml);
     }
 
-    private static String nonEmpty(String value) {
+    private static @Nullable String nonEmpty(@Nullable String value) {
         return value == null || value.isEmpty() ? null : value;
     }
 
@@ -75,7 +76,7 @@ public record ViewNode(ViewNodeId id, ViewNodeId parentId, ArchiId archiId, Diag
      * Узел в другом родителе: новые координаты относительно него и место в его содержимом.
      * {@code null} — корень представления.
      */
-    public ViewNode withParent(ViewNodeId newParent, Bounds newBounds, SortOrder newOrder) {
+    public ViewNode withParent(@Nullable ViewNodeId newParent, Bounds newBounds, SortOrder newOrder) {
         return new ViewNode(id, newParent, archiId, archiType, elementId, newBounds, style, label, content, newOrder,
                 rawXml);
     }

@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.advisor.adapter.persistence;
 
 import jakarta.persistence.EntityManager;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Repository;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.AdvisorSessionRepository;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AdvisorSessionId;
@@ -123,7 +124,7 @@ public class JpaAdvisorSessionRepository implements AdvisorSessionRepository {
                 reason(row.rejectionReason), row.firstTokenAt, row.finishedAt, audit);
     }
 
-    private static RejectionReason reason(String stored) {
+    private static @Nullable RejectionReason reason(@Nullable String stored) {
         return stored == null ? null : RejectionReason.valueOf(stored);
     }
 }

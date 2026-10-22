@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.application.dto.command;
 
 import java.util.List;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.BendpointValue;
 
 /**
@@ -13,7 +14,7 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.BendpointValue;
  * @param archiId  идентификатор Archi, выбранный клиентом; {@code null} — выдаёт сервер
  */
 public record PlaceViewEdgeCommand(UUID viewId, UUID relationshipId, UUID sourceId, UUID targetId,
-                                   List<BendpointValue> bendpoints, UUID id, String archiId) {
+                                   List<BendpointValue> bendpoints, @Nullable UUID id, @Nullable String archiId) {
 
     public PlaceViewEdgeCommand {
         bendpoints = List.copyOf(bendpoints);

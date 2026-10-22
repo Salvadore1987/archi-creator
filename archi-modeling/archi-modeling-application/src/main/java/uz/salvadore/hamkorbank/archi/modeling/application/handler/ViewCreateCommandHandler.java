@@ -34,7 +34,7 @@ public final class ViewCreateCommandHandler {
                     IdempotentCommand.fingerprint(modelId, command.name(), folderId, ids.id(), ids.archiId()),
                     () -> {
                         ArchitectureModel model = kernel.writableModel(modelId, actor);
-                        FolderId folder = folderId != null ? folderId : model.roots().get(FolderType.DIAGRAMS).id();
+                        FolderId folder = folderId != null ? folderId : model.root(FolderType.DIAGRAMS).id();
                         ViewRef place = model.placeNewView(ViewId.of(kernel.newId(ids)), DiagramType.DIAGRAM_MODEL,
                                 command.name(), folder, kernel.newArchiId(model, ids), kernel.now());
                         kernel.save(model);
