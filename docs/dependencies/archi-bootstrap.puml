@@ -215,6 +215,7 @@ rectangle "spring-boot-webmvc-test\n4.1.1" as org_springframework_boot_spring_bo
 rectangle "spring-boot-resttestclient\n4.1.1" as org_springframework_boot_spring_boot_resttestclient_jar<<test>>
 rectangle "spring-security-crypto\n7.1.1" as org_springframework_security_spring_security_crypto_jar
 rectangle "spring-security-test\n7.1.1" as org_springframework_security_spring_security_test_jar<<test>>
+rectangle "spring-boot-testcontainers\n4.1.1" as org_springframework_boot_spring_boot_testcontainers_jar<<test>>
 rectangle "testcontainers\n2.0.5" as org_testcontainers_testcontainers_jar<<test>>
 rectangle "commons-compress\n1.28.0" as org_apache_commons_commons_compress_jar<<test>>
 rectangle "commons-lang3\n3.20.0" as org_apache_commons_commons_lang3_jar<<test>>
@@ -380,8 +381,7 @@ org_springframework_boot_spring_boot_starter_logging_jar -[#000000]-> org_apache
 org_slf4j_jul_to_slf4j_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
 org_springframework_boot_spring_boot_starter_logging_jar -[#000000]-> org_slf4j_jul_to_slf4j_jar
 org_springframework_boot_spring_boot_starter_jar -[#000000]-> org_springframework_boot_spring_boot_starter_logging_jar
-org_springframework_boot_spring_boot_autoconfigure_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
-org_springframework_boot_spring_boot_starter_jar -[#000000]-> org_springframework_boot_spring_boot_autoconfigure_jar
+org_springframework_boot_spring_boot_starter_jar .[#ABABAB].> org_springframework_boot_spring_boot_autoconfigure_jar
 org_springframework_boot_spring_boot_starter_jar -[#000000]-> jakarta_annotation_jakarta_annotation_api_jar
 org_springframework_boot_spring_boot_starter_jar .[#ABABAB].> org_yaml_snakeyaml_jar
 org_springframework_boot_spring_boot_starter_actuator_jar -[#000000]-> org_springframework_boot_spring_boot_starter_jar
@@ -729,6 +729,8 @@ org_springframework_security_spring_security_test_jar -[#000000]-> org_springfra
 org_springframework_security_spring_security_test_jar .[#ABABAB].> org_springframework_spring_core_jar
 org_springframework_security_spring_security_test_jar .[#ABABAB].> org_springframework_spring_test_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_springframework_security_spring_security_test_jar
+org_springframework_boot_spring_boot_autoconfigure_jar .[#ABABAB].> org_springframework_boot_spring_boot_jar
+org_springframework_boot_spring_boot_testcontainers_jar -[#000000]-> org_springframework_boot_spring_boot_autoconfigure_jar
 org_testcontainers_testcontainers_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
 org_apache_commons_commons_compress_jar .[#ABABAB].> commons_codec_commons_codec_jar
 org_apache_commons_commons_compress_jar .[#ABABAB].> commons_io_commons_io_jar
@@ -743,7 +745,9 @@ com_github_docker_java_docker_java_transport_zerodep_jar -[#000000]-> com_github
 com_github_docker_java_docker_java_transport_zerodep_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
 com_github_docker_java_docker_java_transport_zerodep_jar -[#000000]-> net_java_dev_jna_jna_jar
 org_testcontainers_testcontainers_jar -[#000000]-> com_github_docker_java_docker_java_transport_zerodep_jar
-org_testcontainers_testcontainers_database_commons_jar -[#000000]-> org_testcontainers_testcontainers_jar
+org_springframework_boot_spring_boot_testcontainers_jar -[#000000]-> org_testcontainers_testcontainers_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_springframework_boot_spring_boot_testcontainers_jar
+org_testcontainers_testcontainers_database_commons_jar .[#ABABAB].> org_testcontainers_testcontainers_jar
 org_testcontainers_testcontainers_jdbc_jar -[#000000]-> org_testcontainers_testcontainers_database_commons_jar
 org_testcontainers_testcontainers_postgresql_jar -[#000000]-> org_testcontainers_testcontainers_jdbc_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_testcontainers_testcontainers_postgresql_jar
