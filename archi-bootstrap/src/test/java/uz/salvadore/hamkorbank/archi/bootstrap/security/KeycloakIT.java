@@ -18,6 +18,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -37,6 +38,7 @@ import uz.salvadore.hamkorbank.archi.bootstrap.support.Containers;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = "management.server.port=")
 @AutoConfigureMockMvc
+@ImportTestcontainers(Containers.class)
 class KeycloakIT {
 
     private static final GenericContainer<?> KEYCLOAK = new GenericContainer<>("quay.io/keycloak/keycloak:26.4")
@@ -59,9 +61,6 @@ class KeycloakIT {
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", Containers.POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", Containers.POSTGRES::getUsername);
-        registry.add("spring.datasource.password", Containers.POSTGRES::getPassword);
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", KeycloakIT::issuer);
     }
 
