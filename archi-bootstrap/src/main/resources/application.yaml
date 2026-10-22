@@ -99,6 +99,10 @@ server:
       enabled: false
 
 management:
+  server:
+    # Actuator — на своём порту: состав его наружу не публикует, пробы и метрики
+    # доступны оркестратору и мониторингу внутри сети, а не с адреса интерфейса.
+    port: ${ARCHI_MANAGEMENT_PORT:9090}
   endpoints:
     web:
       exposure:

@@ -16,7 +16,7 @@ const REPO_ROOT = resolve(import.meta.dirname, '../../../..');
  * где пути разойдутся.
  *
  * Прокси нужен профилю `dev`: страница открывается на :5173,
- * а `/api` и `/actuator` уходят на приложение, как будто они того же
+ * а `/api` уходит на приложение, как будто они того же
  * происхождения. Так фронтенд в разработке и в бою видит одни и те же
  * адреса, и CORS в код не просачивается — ни базового URL в сборке,
  * ни ветки «а в разработке спроси по другому адресу».
@@ -46,7 +46,6 @@ export default defineConfig({
     fs: { allow: [REPO_ROOT] },
     proxy: {
       '/api': { target: BACKEND, changeOrigin: false },
-      '/actuator': { target: BACKEND, changeOrigin: false },
     },
   },
   test: {

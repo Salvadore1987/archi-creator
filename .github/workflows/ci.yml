@@ -256,7 +256,7 @@ jobs:
             -e ARCHI_DB_PASSWORD=smoke \
             archi-creator:${{ github.sha }}
           for i in $(seq 1 45); do
-            if curl -fs http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
+            if curl -fs http://localhost:9090/actuator/health | grep -q '"status":"UP"'; then
               echo "health UP"
               exit 0
             fi

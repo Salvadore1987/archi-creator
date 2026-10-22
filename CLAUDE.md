@@ -35,7 +35,7 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 Конфигурация правила одна, в `pluginManagement` родителя.
 
 **Приложение запускается.** `docker compose up -d` поднимает `app`, `postgres:16`
-и `keycloak:26` ([§10.1](docs/archi-creator.md#101-состав)), `/actuator/health` = UP,
+и `keycloak:26` ([§10.1](docs/archi-creator.md#101-состав)), `/actuator/health` на порту Actuator 9090 = UP,
 вход через Keycloak отдаёт JWT с ролью `VIEWER`/`ARCHITECT`/`ADMIN` (FR-28).
 Секреты — из `.env` (образец `.env.example`), в репозиторий не попадают (NFR-06).
 
