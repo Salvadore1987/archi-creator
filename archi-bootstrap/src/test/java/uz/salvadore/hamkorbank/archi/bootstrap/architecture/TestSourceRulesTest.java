@@ -30,8 +30,8 @@ import org.junit.jupiter.api.Test;
 class TestSourceRulesTest {
 
     private static final Path REPOSITORY = Path.of("..");
-    /** Сборка, зависимости и Node — исходников проекта там нет, а файлов десятки тысяч. */
-    private static final Set<String> SKIPPED = Set.of("target", "node_modules", ".node", ".git", ".mvn");
+    /** Сборка, зависимости, Node и рабочие копии агентов — исходников проекта там нет или они чужие. */
+    private static final Set<String> SKIPPED = Set.of("target", "node_modules", ".node", ".git", ".mvn", ".claude");
     /** Аннотации, которыми JUnit помечает тестовый метод. */
     private static final Set<String> TEST_ANNOTATIONS = Set.of(
             "Test", "ParameterizedTest", "RepeatedTest", "TestFactory", "TestTemplate");

@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCAN_SUFFIXES = {".md", ".yaml", ".yml"}
-SKIP_DIRS = {".git", ".idea", "target", "node_modules", ".mvn"}
+SKIP_DIRS = {".git", ".idea", ".claude", "target", "node_modules", ".mvn"}
 
 MD_LINK = re.compile(r"\]\(([^)\s]+)\)")
 BARE_PATH = re.compile(

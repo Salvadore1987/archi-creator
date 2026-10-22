@@ -28,8 +28,8 @@ import org.junit.jupiter.api.Test;
 class DocumentKindRuleTest {
 
     private static final Path REPOSITORY = Path.of("..");
-    /** Сборка, зависимости и Node — исходников проекта там нет, а файлов десятки тысяч. */
-    private static final Set<String> SKIPPED = Set.of("target", "node_modules", ".node", ".git", ".mvn");
+    /** Сборка, зависимости, Node и рабочие копии агентов — исходников проекта там нет или они чужие. */
+    private static final Set<String> SKIPPED = Set.of("target", "node_modules", ".node", ".git", ".mvn", ".claude");
     /** Единственный файл, где вид узла выводится из окончания типа. */
     private static final String OWNER = "/interchange/domain/document/DocumentNode.java";
     /** Типы объектов представления в modeling — константы, а не строки в местах сравнения. */
