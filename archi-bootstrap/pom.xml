@@ -17,7 +17,7 @@
     <description>
         Единственный исполняемый модуль: собирает все контексты в одно приложение,
         держит конфигурацию Spring Boot, безопасность (Keycloak/OIDC), миграции
-        Flyway и — когда появится фронтенд — собранную статику.
+        Flyway и собранную статику фронтенда.
 
         Здесь же живёт пакет security: ресурс-сервер и роли из токена.
     </description>
@@ -216,9 +216,8 @@
 
     <build>
         <!--
-            Jar называется archi-creator-<версия>.jar. Имя сохранено,
-            каталог стал archi-bootstrap/target/ — это учитывается
-            в docker-compose.yml и в CI, когда они появятся.
+            Jar называется archi-creator-<версия>.jar и лежит в archi-bootstrap/target/:
+            оттуда его берут Dockerfile и CI.
         -->
         <finalName>archi-creator-${project.version}</finalName>
         <resources>

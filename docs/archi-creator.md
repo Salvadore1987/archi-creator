@@ -345,7 +345,9 @@ docker compose build && docker compose up -d
 ### 10.4 CI
 
 GitHub Actions / внутренний CI: сборка → юнит-тесты → golden-file тесты →
-интеграционные тесты (Testcontainers) → сборка фронтенда → Playwright → публикация образа.
+интеграционные тесты (Testcontainers) → сборка фронтенда → Playwright → образ:
+сканирование Trivy и смоук на профиле `prod`. Образ в реестр не публикуется — его
+собирает состав на сервере из того же jar ([`ADR-0035`](../spec/adr/0035-image-scanning-without-publishing.md)).
 
 ---
 ## 11. Git-интеграция и формат хранения

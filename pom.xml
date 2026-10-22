@@ -366,7 +366,7 @@
                     Граф зависимостей (https://github.com/ferstl/depgraph-maven-plugin).
                     К жизненному циклу не привязан: сборка от него не зависит, а лишний
                     прогон на каждом mvn package стоил бы секунд без причины. Запускается
-                    руками по закрытии этапа — tools/depgraph.sh, правило в CLAUDE.md.
+                    руками по закрытии этапа — tools/render-depgraph.py.
 
                     Здесь общая часть настроек: формат PlantUML и версии на узлах.
                     Флаги showDuplicates и showConflicts сюда НЕ вынесены — их понимает
