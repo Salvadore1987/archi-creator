@@ -366,6 +366,9 @@
                                 <compilerArgs>
                                     <arg>-XDcompilePolicy=simple</arg>
                                     <arg>--should-stop=ifError=FLOW</arg>
+                                    <!-- Все срабатывания разом, а не первые сто. -->
+                                    <arg>-Xmaxerrs</arg>
+                                    <arg>100000</arg>
                                     <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=${nullaway.annotated} -XepOpt:NullAway:UnannotatedSubPackages=${nullaway.unannotated} -XepExcludedPaths:.*/target/generated-sources/.*</arg>
                                 </compilerArgs>
                             </configuration>
