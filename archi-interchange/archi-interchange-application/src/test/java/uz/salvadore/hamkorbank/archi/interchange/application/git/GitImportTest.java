@@ -280,16 +280,38 @@ class GitImportTest {
     }
 
     @Test
-    @DisplayName("UC-IXC-006: нет ссылки, нет каталога модели, нет привязки — свои отказы")
-    void refusals() {
+    @DisplayName("UC-IXC-006: ссылки нет в репозитории — свой отказ")
+    void unknownRefIsRefused() {
         repository.commitFiles("other", Map.of());
+
         assertEquals(InterchangeCodes.GIT_REF_NOT_FOUND, code(() -> imports.preview(ARCHITECT, model,
                 "nope")));
+    }
+
+    @Test
+    @DisplayName("UC-IXC-006: в коммите ссылки нет каталога модели — свой отказ")
+    void refWithoutModelIsRefused() {
+        repository.commitFiles("other", Map.of());
+
         assertEquals(InterchangeCodes.GIT_MODEL_NOT_IN_REF, code(() -> imports.preview(ARCHITECT, model,
                 "other")));
+    }
+
+    @Test
+    @DisplayName("UC-IXC-006: имя ссылки, которое Git не допускает, — отказ в запросе")
+    void invalidRefNameIsRefused() {
+        repository.commitFiles("other", Map.of());
+
         assertEquals(InterchangeCodes.INVALID_REQUEST, code(() -> imports.preview(ARCHITECT, model,
                 "a..b")));
+    }
+
+    @Test
+    @DisplayName("UC-IXC-006: привязка снята — свой отказ")
+    void disabledBindingIsRefused() {
+        repository.commitFiles("other", Map.of());
         bindings.save(bindings.find(workspace).orElseThrow().disabled());
+
         assertEquals(InterchangeCodes.GIT_NOT_BOUND, code(() -> imports.preview(ARCHITECT, model,
                 "main")));
     }

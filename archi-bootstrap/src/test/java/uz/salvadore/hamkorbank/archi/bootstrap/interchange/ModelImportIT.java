@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uz.salvadore.hamkorbank.archi.bootstrap.roundtrip.XmlEquivalence.assertXmlEquivalent;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -69,9 +68,9 @@ class ModelImportIT extends IntegrationTest {
         byte[] original = Fixtures.reference();
         importFile("warm-up.archimate", original);
 
-        Instant start = Instant.now();
+        long start = System.nanoTime();
         importFile("timed.archimate", original);
-        Duration took = Duration.between(start, Instant.now());
+        Duration took = Duration.ofNanos(System.nanoTime() - start);
 
         assertTrue(took.compareTo(Duration.ofSeconds(3)) <= 0, "импорт занял " + took);
     }

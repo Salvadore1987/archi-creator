@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.interchange.application.git;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
@@ -76,13 +77,22 @@ class GitHandlersTest {
     }
 
     @Test
-    @DisplayName("FR-37: привязку читает, настраивает и снимает только ADMIN")
+    @DisplayName("FR-37: привязку читает, настраивает и снимает только ADMIN — отказ её не меняет")
     void bindingIsAdminOnly() {
+        GitBinding bound = GitBinding.configure(new WorkspaceId(WORKSPACE), "https://git.example.com/a.git", null,
+                SecretRef.of("env:ARCHI_GIT_TOKEN"), List.of());
+        bindings.save(bound);
+
         assertDenied(() -> new GitBindingGetQueryHandler(kernel, bindings)
                 .handle(ARCHITECT, new GetGitBindingQuery(WORKSPACE)));
-        assertDenied(() -> configure(false).handle(ARCHITECT, settings("https://git.example.com/a.git")));
+        assertDenied(() -> configure(false).handle(ARCHITECT, settings("https://git.example.com/b.git")));
         assertDenied(() -> new GitBindingDisableCommandHandler(kernel, bindings)
                 .handle(ARCHITECT, new DisableGitBindingCommand(WORKSPACE)));
+
+        GitBinding kept = bindings.find(new WorkspaceId(WORKSPACE)).orElseThrow();
+        assertSame(bound, kept, "отказанные настройка и снятие привязку не заменили");
+        assertEquals("https://git.example.com/a.git", kept.repoUrl());
+        assertEquals(bound.status(), kept.status());
     }
 
     @Test

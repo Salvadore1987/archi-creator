@@ -38,8 +38,8 @@ class LoggingRulesTest {
 
     private static final String ROOT = "uz.salvadore.hamkorbank.archi";
     private static final Path REPOSITORY = Path.of("..");
-    /** Сборка, зависимости и Node — исходников проекта там нет, а файлов десятки тысяч. */
-    private static final Set<String> SKIPPED = Set.of("target", "node_modules", ".node", ".git", ".mvn");
+    /** Сборка, зависимости, Node и рабочие копии агентов — исходников проекта там нет или они чужие. */
+    private static final Set<String> SKIPPED = Set.of("target", "node_modules", ".node", ".git", ".mvn", ".claude");
     /** Вызов журнала до конца выражения: поле журнала в проекте называется {@code LOG}. */
     private static final Pattern LOG_CALL =
             Pattern.compile("\\bLOG\\s*\\.\\s*\\w+\\s*\\((?:[^;\"]|\"(?:[^\"\\\\]|\\\\.)*\")*;");

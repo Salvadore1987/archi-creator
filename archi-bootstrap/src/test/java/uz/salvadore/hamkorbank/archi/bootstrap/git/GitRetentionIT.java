@@ -58,7 +58,8 @@ class GitRetentionIT extends GitApiTest {
     private UUID modelWithVersions() throws Exception {
         UUID model = importModel(Fixtures.fixture("styled_objects"));
         mvc.perform(post("/api/v1/models/" + model + "/lock").with(architect())).andExpect(status().isOk());
-        List<String> ids = read(mvc.perform(get("/api/v1/models/" + model).with(architect())).andReturn(),
+        List<String> ids = read(mvc.perform(get("/api/v1/models/" + model).with(architect()))
+                .andExpect(status().isOk()).andReturn(),
                 "$.elements[?(@.name == 'АБС')].id");
         for (int i = 2; i <= 3; i++) {
             mvc.perform(patch("/api/v1/elements/" + ids.getFirst()).with(architect())

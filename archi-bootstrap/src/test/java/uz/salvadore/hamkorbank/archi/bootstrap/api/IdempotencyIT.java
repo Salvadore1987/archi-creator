@@ -50,7 +50,7 @@ class IdempotencyIT extends ApiTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"comment\":\"первое\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.version.versionNo").value(2));
         mvc.perform(MockMvcRequestBuilders
-                        .get("/api/v1/models/" + model + "/versions").with(viewer()))
+                        .get("/api/v1/models/" + model + "/versions").with(viewer())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
     }
 }

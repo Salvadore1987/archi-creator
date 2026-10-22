@@ -64,7 +64,11 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.RejectionReason;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.SessionStatus;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
 
-/** Сценарий помощника на подменных портах: хранение в памяти, внешний API — сценарием теста. */
+/**
+ * Сценарий помощника на подменных портах: хранение в памяти, внешний API — сценарием теста.
+ * Хранилища отдают и принимают копии, как настоящие: правка сессии без записи не видна,
+ * а отказ в транзакции записи откатывает все хранилища к её началу.
+ */
 final class Fixture {
 
     static final Instant NOW = Instant.parse("2026-10-12T09:00:00Z");
@@ -105,6 +109,8 @@ final class Fixture {
     /** Что случается, пока сценарий читает модель, — например, параллельное обращение. */
     Runnable duringRead = () -> {
     };
+    /** Открытая транзакция — только на чтение: запись в хранилище в ней — ошибка. */
+    private boolean readOnly;
 
     static ModelGraph graph() {
         return new ModelGraph(
@@ -201,17 +207,20 @@ final class Fixture {
         return new AdvisorSessionRepository() {
             @Override
             public Optional<AdvisorSession> findByKey(String requestedBy, String idempotencyKey) {
-                return Optional.ofNullable(sessions.get(requestedBy + "/" + idempotencyKey));
+                return Optional.ofNullable(sessions.get(requestedBy + "/" + idempotencyKey)).map(Fixture::copy);
             }
 
             @Override
             public boolean claim(AdvisorSession session) {
-                return sessions.putIfAbsent(session.requestedBy() + "/" + session.idempotencyKey(), session) == null;
+                requireWritable();
+                return sessions.putIfAbsent(session.requestedBy() + "/" + session.idempotencyKey(),
+                        copy(session)) == null;
             }
 
             @Override
             public void save(AdvisorSession session) {
-                sessions.put(session.requestedBy() + "/" + session.idempotencyKey(), session);
+                requireWritable();
+                sessions.put(session.requestedBy() + "/" + session.idempotencyKey(), copy(session));
             }
         };
     }
@@ -233,7 +242,10 @@ final class Fixture {
 
             @Override
             public void save(TokenBudget budget) {
-                budgets.put(budget.period(), budget);
+                requireWritable();
+                budgets.put(budget.period(), TokenBudget.restore(budget.id(), budget.workspaceId(), budget.period(),
+                        budget.limitTokens(), budget.consumedTokens(), budget.warningThresholdPercent(),
+                        budget.advisorEnabled(), budget.version()));
             }
 
             private TokenBudget copy(TokenBudget b, BudgetPolicy policy) {
@@ -253,6 +265,7 @@ final class Fixture {
 
             @Override
             public void save(WorkspaceId workspaceId, boolean on, long monthlyTokenLimit) {
+                requireWritable();
                 enabled = on;
                 limit = monthlyTokenLimit;
             }
@@ -285,31 +298,68 @@ final class Fixture {
         };
     }
 
-    /** Транзакция в памяти: номер текущей, вложенная — ошибка сценария, а не молчаливое присоединение. */
+    /**
+     * Транзакция в памяти: номер текущей, вложенная — ошибка сценария, а не молчаливое присоединение.
+     * Отказ внутри откатывает сессии, бюджеты, настройки и события к её началу.
+     */
     UnitOfWork unitOfWork() {
         return new UnitOfWork() {
             @Override
             public <T> T write(Supplier<T> work) {
-                return inTransaction(work);
+                return inTransaction(false, work);
             }
 
             @Override
             public <T> T read(Supplier<T> work) {
-                return inTransaction(work);
+                return inTransaction(true, work);
             }
         };
     }
 
-    private <T> T inTransaction(Supplier<T> work) {
+    private <T> T inTransaction(boolean read, Supplier<T> work) {
         if (transaction != 0) {
             throw new AssertionError("вложенная транзакция");
         }
+        Map<String, AdvisorSession> sessionsBefore = new HashMap<>(sessions);
+        Map<BudgetPeriod, TokenBudget> budgetsBefore = new HashMap<>(budgets);
+        List<DomainEvent> eventsBefore = new ArrayList<>(events);
+        boolean enabledBefore = enabled;
+        Long limitBefore = limit;
         transaction = ++transactions;
+        readOnly = read;
+        boolean committed = false;
         try {
-            return work.get();
+            T result = work.get();
+            committed = true;
+            return result;
         } finally {
             transaction = 0;
+            readOnly = false;
+            if (!committed) {
+                sessions.clear();
+                sessions.putAll(sessionsBefore);
+                budgets.clear();
+                budgets.putAll(budgetsBefore);
+                events.clear();
+                events.addAll(eventsBefore);
+                enabled = enabledBefore;
+                limit = limitBefore;
+            }
         }
+    }
+
+    private void requireWritable() {
+        if (readOnly) {
+            throw new IllegalStateException("запись в транзакции чтения");
+        }
+    }
+
+    /** Сессия так, как её вернёт хранилище: отдельный объект с теми же полями. */
+    static AdvisorSession copy(AdvisorSession s) {
+        return AdvisorSession.restore(s.id(), s.workspaceId(), s.modelId(), s.function(), s.viewId(), s.elementId(),
+                s.idempotencyKey(), s.fingerprint(), s.requestedBy(), s.requestedAt(), s.status(), s.contextSize(),
+                s.contextTruncated(), s.usage(), s.findings(), s.plan(), s.answer(), s.rejectionReason(),
+                s.firstTokenAt(), s.finishedAt(), s.auditEntry());
     }
 
     AdvisorEvents events() {

@@ -753,6 +753,7 @@ public final class EntityMerge {
                 default -> value.tag();
             };
             case RawXmlFragment raw -> ModelChanges.RAW_XML;
+            // недостижимо — вызывающие отсеивают узлы до разбора полей
             case DocumentNode node -> throw new IllegalArgumentException(node.tag());
         };
     }
@@ -819,6 +820,7 @@ public final class EntityMerge {
             case ELEMENT -> CascadeKind.ELEMENT;
             case RELATIONSHIP -> CascadeKind.RELATIONSHIP;
             case VIEW -> CascadeKind.VIEW;
+            // недостижимо — вызывающий пропускает модель
             case MODEL -> throw new IllegalArgumentException(kind.name());
         };
     }

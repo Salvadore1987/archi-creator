@@ -43,7 +43,7 @@ class LocalizedProblemIT extends ApiTest {
                 .andExpect(jsonPath("$.title").value("Не найдено"))
                 .andExpect(jsonPath("$.detail").value(Matchers.startsWith("Не найдено: модель ")));
         mvc.perform(get("/api/v1/models/" + IDS.generate()).with(architect())
-                        .header(HttpHeaders.ACCEPT_LANGUAGE, "de"))
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "de")).andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Не найдено"));
     }
 
@@ -53,13 +53,14 @@ class LocalizedProblemIT extends ApiTest {
         mvc.perform(get("/api/v1/models/zzz").with(architect()).header(HttpHeaders.ACCEPT_LANGUAGE, "en"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Bad request"));
-        mvc.perform(get("/api/v1/models/zzz").with(architect()))
+        mvc.perform(get("/api/v1/models/zzz").with(architect())).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Некорректный запрос"));
         mvc.perform(put("/api/v1/models").with(architect()).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.title").value("Метод не поддерживается"));
 
-        String workspace = read(mvc.perform(get("/api/v1/workspaces").with(admin())).andReturn(), "$[0].id");
+        String workspace = read(mvc.perform(get("/api/v1/workspaces").with(admin()))
+                .andExpect(status().isOk()).andReturn(), "$[0].id");
         mvc.perform(get("/api/v1/workspaces/" + workspace + "/git-binding").with(admin())
                         .header(HttpHeaders.ACCEPT_LANGUAGE, "en"))
                 .andExpect(status().isNotFound())

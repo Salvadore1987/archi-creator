@@ -114,6 +114,9 @@ class ImportRejectionTest {
                 () -> importFile(ImportFakes.file("application"), "key-2"));
 
         assertSame(refusal, thrown);
+        assertEquals(List.of("write"), models.importedIn, "модель записывалась до отказа");
+        assertEquals(List.of(), models.stored, "запись модели откатилась вместе с транзакцией");
+        assertEquals(1, sessions.rows.size(), "отклонённая сессия пережила откат");
         ImportSession session = sessions.rows.values().iterator().next();
         assertEquals(ImportStatus.REJECTED, session.status());
         assertEquals("MDL_TEST", session.findings().getLast().code());

@@ -196,27 +196,52 @@ class AdvisorSessionStartCommandHandlerTest {
     void newRequestCancelsPreviousStream() {
         Fixture fixture = new Fixture();
         Fixture.Advisor service = fixture.service();
-        AdvisorStream first = service.ask(Fixture.ALICE, review(), "k1", RU);
+        service.ask(Fixture.ALICE, review(), "k1", RU);
 
         service.ask(Fixture.ALICE, review(), "k2", RU);
 
         assertTrue(fixture.opened.getFirst().cancelled);
         assertFalse(fixture.opened.get(1).cancelled);
-        first.run(new Fixture.Recorded());
     }
 
     @Test
-    @DisplayName("Роль: план — только архитектору, ревью доступно и наблюдателю")
-    void rolesFollowTheTable() {
+    @DisplayName("Сменённый поток, доработав, не снимает сменивший его: третье обращение отменяет второй поток")
+    void replacedStreamDoesNotReleaseItsSuccessor() {
+        Fixture fixture = new Fixture();
+        Fixture.Advisor service = fixture.service();
+        AdvisorStream first = service.ask(Fixture.ALICE, review(), "k1", RU);
+        service.ask(Fixture.ALICE, review(), "k2", RU);
+        Fixture.Recorded recorded = new Fixture.Recorded();
+
+        first.run(recorded);
+        service.ask(Fixture.ALICE, review(), "k3", RU);
+
+        assertEquals("COMPLETED", recorded.meta.outcome(), "подменный поток отмену не слышит и доигрывает сценарий");
+        assertEquals(SessionStatus.COMPLETED, fixture.sessions.get("alice/k1").status());
+        assertTrue(fixture.opened.get(1).cancelled, "второй поток остался текущим и отменён третьим обращением");
+        assertFalse(fixture.opened.get(2).cancelled);
+    }
+
+    @Test
+    @DisplayName("Роль: план наблюдателю не доступен, сессия до проверки роли не заводится")
+    void viewerIsDeniedPlan() {
         Fixture fixture = new Fixture();
         Fixture.Advisor service = fixture.service();
 
         AdvisorDomainException denied = assertThrows(AdvisorDomainException.class,
                 () -> service.ask(Fixture.VIEWER, AdvisorRequest.plan(Fixture.MODEL, "Платежи"), "k1", RU));
+
         assertEquals("ADV_ACCESS_DENIED", denied.code());
         assertTrue(fixture.sessions.isEmpty(), "до проверки роли сессия не заводится");
+    }
 
-        service.ask(Fixture.VIEWER, review(), "k2", RU).run(new Fixture.Recorded());
+    @Test
+    @DisplayName("Роль: ревью доступно и наблюдателю")
+    void viewerGetsReview() {
+        Fixture fixture = new Fixture();
+
+        fixture.service().ask(Fixture.VIEWER, review(), "k2", RU).run(new Fixture.Recorded());
+
         assertEquals(SessionStatus.COMPLETED, fixture.onlySession().status());
     }
 

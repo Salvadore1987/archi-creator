@@ -104,6 +104,7 @@ public record AdvisorRequest(AdvisorFunction function, ModelId modelId, ViewId v
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(canonical.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(digest);
         } catch (NoSuchAlgorithmException e) {
+            // недостижимо — SHA-256 есть в каждой JVM
             throw new IllegalStateException(e);
         }
     }

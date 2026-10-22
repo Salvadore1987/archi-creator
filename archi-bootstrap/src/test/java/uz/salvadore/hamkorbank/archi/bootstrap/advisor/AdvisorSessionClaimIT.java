@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,7 +51,7 @@ class AdvisorSessionClaimIT extends AdvisorApiTest {
                 assertThat(claimed.await(10, TimeUnit.SECONDS)).isTrue();
                 Future<Boolean> second = pool.submit(() -> tx.execute(
                         status -> sessions.claim(session(workspace, "00000000-0000-7000-8000-0000000000c2"))));
-                Thread.sleep(300);
+                awaitLockWait();
                 assertThat(second.isDone()).as("второе занятие ждёт коммита первого").isFalse();
                 release.countDown();
 
@@ -67,6 +68,16 @@ class AdvisorSessionClaimIT extends AdvisorApiTest {
         AdvisorRequest review = AdvisorRequest.review(ModelId.of(UUIDUtil.uuid("00000000-0000-7000-8000-0000000000b1")),
                 null);
         return AdvisorSession.request(AdvisorSessionId.of(id), workspace, review, "claim-key", "claimer", NOW);
+    }
+
+    /** Ждёт, пока запрос в базе встанет на блокировку: это и есть «второе занятие ждёт», без догадки о времени. */
+    private void awaitLockWait() {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+        while (jdbc.queryForObject("select count(*) from pg_stat_activity"
+                + " where wait_event_type = 'Lock' and datname = current_database()", Long.class) == 0) {
+            assertThat(System.nanoTime()).as("второе занятие не встало на блокировку").isLessThan(deadline);
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10));
+        }
     }
 
     private static void await(CountDownLatch latch) {

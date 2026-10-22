@@ -2,11 +2,16 @@ package uz.salvadore.hamkorbank.archi.bootstrap.advisor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorCodes;
 
 class AdvisorIT extends AdvisorApiTest {
+
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
 
     @Test
     @DisplayName("INV-ADV-005: выключенный помощник закрывает /ai/** с 403 ADVISOR_DISABLED, API не вызывается")
@@ -107,5 +112,59 @@ class AdvisorIT extends AdvisorApiTest {
         assertThat(plan).contains("\"existingRef\":{\"archiId\":\"").contains("\"permitted\":false");
         assertThat(column("select count(*) from element where model_id = ?", Long.class, model))
                 .as("план ничего не создал в модели").containsExactly(1L);
+    }
+
+    @Test
+    @DisplayName("FR-26: документация по элементу — поток с ответом, контекст с элементом ушёл в API")
+    void documentStreamsAnswer() throws Exception {
+        UUID model = lockedModel(architect(), "Документация");
+        UUID crm = element(architect(), model, "ApplicationComponent", "CRM");
+        anthropic.reply(FakeAnthropic.Reply.text("## CRM\n\nСистема работы с клиентами.").usage(120, 30));
+
+        Response response = ask("document", viewer(), "document-1",
+                "{\"modelId\":\"" + model + "\",\"elementId\":\"" + archiIdOf(crm) + "\"}");
+
+        assertThat(response.status()).isEqualTo(200);
+        assertThat(response.frames("answer")).hasSize(1);
+        assertThat(anthropic.requests()).hasSize(1);
+        assertThat(anthropic.requests().getFirst().body()).contains("CRM");
+        assertThat(column("select action from ai_audit_log", String.class)).containsExactly("DOCUMENT");
+    }
+
+    @Test
+    @DisplayName("INV-ADV-005: документация при выключенном помощнике — 403 ADVISOR_DISABLED, API не вызывается")
+    void documentWhenDisabledIsRefused() throws Exception {
+        UUID model = lockedModel(architect(), "Документация выключена");
+        jdbc.update("update workspace set ai_enabled = false");
+
+        Response response = ask("document", architect(), "document-2", "{\"modelId\":\"" + model + "\"}");
+
+        assertThat(response.status()).isEqualTo(403);
+        assertThat(response.body()).contains("\"code\":\"" + AdvisorCodes.ADVISOR_DISABLED + "\"");
+        assertThat(anthropic.requests()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Документация по неизвестному представлению — 404 ADV_NOT_FOUND до вызова API")
+    void documentOfUnknownViewIsNotFound() throws Exception {
+        UUID model = lockedModel(architect(), "Документация без представления");
+
+        Response response = ask("document", architect(), "document-3",
+                "{\"modelId\":\"" + model + "\",\"viewId\":\"" + IDS.generate() + "\"}");
+
+        assertThat(response.status()).isEqualTo(404);
+        assertThat(response.body()).contains("\"code\":\"" + AdvisorCodes.NOT_FOUND + "\"");
+        assertThat(anthropic.requests()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Документация по неизвестной модели — 404 ADV_NOT_FOUND до вызова API")
+    void documentOfUnknownModelIsNotFound() throws Exception {
+        Response response = ask("document", architect(), "document-4",
+                "{\"modelId\":\"" + IDS.generate() + "\"}");
+
+        assertThat(response.status()).isEqualTo(404);
+        assertThat(response.body()).contains("\"code\":\"" + AdvisorCodes.NOT_FOUND + "\"");
+        assertThat(anthropic.requests()).isEmpty();
     }
 }

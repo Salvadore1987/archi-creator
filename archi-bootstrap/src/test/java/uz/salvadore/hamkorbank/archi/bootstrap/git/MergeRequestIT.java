@@ -63,7 +63,7 @@ class MergeRequestIT extends GitApiTest {
                 .andExpect(jsonPath("$.versionNo").value(3))
                 .andExpect(jsonPath("$.created").value(true));
 
-        mvc.perform(get("/api/v1/models/" + model).with(architect()))
+        mvc.perform(get("/api/v1/models/" + model).with(architect())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.elements[?(@.name == 'АБС «Предложение»')]").isNotEmpty())
                 .andExpect(jsonPath("$.elements[?(@.name == 'HamkorMobile 2')]").isNotEmpty());
         assertThat(column("select merged_sha from git_model_merge where model_id = ?", String.class, model))

@@ -23,6 +23,7 @@ import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMet
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
+import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.EnsureDefaultWorkspaceCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.ImportModelCommand;
@@ -50,7 +51,11 @@ import uz.salvadore.hamkorbank.archi.modeling.application.port.in.WorkspaceAppli
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 
-/** Фейки портов импорта: транзакции с видом, сессии в памяти, вход modeling только на приём модели. */
+/**
+ * Фейки портов импорта: транзакции с видом и откатом, сессии в памяти, вход modeling только
+ * на приём модели. Хранилища отдают и принимают копии, как настоящие: правка сессии
+ * без записи не видна следующему чтению, откат возвращает и её.
+ */
 final class ImportFakes {
 
     static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-19T09:00:00Z"), ZoneOffset.UTC);
@@ -98,6 +103,8 @@ final class ImportFakes {
     static ArchimateFileImportCommandHandler handler(ArchiDocumentReader reader, Transactions transactions,
                                                      Sessions sessions, Models models, Policy policy) {
         policy.transactions = transactions;
+        sessions.transactions = transactions;
+        transactions.track(sessions);
         return new ArchimateFileImportCommandHandler(new InterchangeKernel(transactions, events -> { },
                 InterchangeMetrics.NONE, message -> message.key(), CLOCK), sessions, policy, models,
                 new Workspaces(), reader, 2);
@@ -146,14 +153,42 @@ final class ImportFakes {
         }
     }
 
-    /** Транзакции с видом: вложенная присоединяется к внешней, как у {@code TransactionTemplate}. */
+    /** Хранилище, которое транзакция откатывает: снимает копию состояния и возвращается к ней. */
+    interface Store<S> {
+
+        S snapshot();
+
+        void restore(S snapshot);
+    }
+
+    /**
+     * Транзакции с видом: вложенная присоединяется к внешней, как у {@code TransactionTemplate}.
+     * Отказ откатывает отслеживаемые хранилища к началу внешней транзакции; отказ вложенной,
+     * перехваченный внешней, всё равно не даёт ей зафиксироваться.
+     */
     static final class Transactions implements UnitOfWork {
 
         final List<String> opened = new ArrayList<>();
         private final List<String> stack = new ArrayList<>();
+        private final List<Store<?>> stores = new ArrayList<>();
+        private boolean rollbackOnly;
 
         String current() {
             return stack.isEmpty() ? "none" : stack.getFirst();
+        }
+
+        /** Хранилище откатывается вместе с транзакцией. */
+        void track(Store<?> store) {
+            if (!stores.contains(store)) {
+                stores.add(store);
+            }
+        }
+
+        /** Запись в хранилище допустима только в транзакции записи. */
+        void requireWritable() {
+            if (current().equals("read")) {
+                throw new IllegalStateException("запись в транзакции чтения");
+            }
         }
 
         @Override
@@ -167,42 +202,92 @@ final class ImportFakes {
         }
 
         private <T> T run(String kind, Supplier<T> work) {
-            if (stack.isEmpty()) {
+            boolean outermost = stack.isEmpty();
+            List<Object> snapshots = outermost ? stores.stream().<Object>map(Store::snapshot).toList() : List.of();
+            if (outermost) {
                 opened.add(kind);
+                rollbackOnly = false;
             }
             stack.add(kind);
+            boolean completed = false;
             try {
-                return work.get();
+                T result = work.get();
+                if (outermost && rollbackOnly) {
+                    throw new IllegalStateException("транзакция помечена на откат вложенным отказом");
+                }
+                completed = true;
+                return result;
             } finally {
                 stack.removeLast();
+                if (!completed && outermost) {
+                    for (int i = 0; i < stores.size(); i++) {
+                        restore(stores.get(i), snapshots.get(i));
+                    }
+                } else if (!completed) {
+                    rollbackOnly = true;
+                }
             }
+        }
+
+        @SuppressWarnings("unchecked")
+        private static <S> void restore(Store<S> store, Object snapshot) {
+            store.restore((S) snapshot);
         }
     }
 
-    static final class Sessions implements ImportSessionRepository {
+    /** Журнал сессий: хранит и отдаёт копии, как хранилище, которое пишет строки и читает их заново. */
+    static final class Sessions implements ImportSessionRepository, Store<Map<ImportSessionId, ImportSession>> {
 
-        final Map<ImportSessionId, ImportSession> rows = new LinkedHashMap<>();
+        Map<ImportSessionId, ImportSession> rows = new LinkedHashMap<>();
+        private Transactions transactions;
 
         @Override
         public Optional<ImportSession> find(ImportSessionId id) {
-            return Optional.ofNullable(rows.get(id));
+            return Optional.ofNullable(rows.get(id)).map(ImportFakes::copy);
         }
 
         @Override
         public void save(ImportSession session) {
-            rows.put(session.id(), session);
+            if (transactions != null) {
+                transactions.requireWritable();
+            }
+            rows.put(session.id(), copy(session));
         }
 
         @Override
         public Optional<ImportSession> findByIdempotencyKey(WorkspaceId workspaceId, String key) {
-            return rows.values().stream().filter(s -> s.idempotencyKey().equals(key)).findFirst();
+            return rows.values().stream().filter(s -> s.workspaceId().equals(workspaceId))
+                    .filter(s -> s.idempotencyKey().equals(key)).findFirst().map(ImportFakes::copy);
+        }
+
+        /** Строки хранятся копиями и на месте не меняются — снимку достаточно копии карты. */
+        @Override
+        public Map<ImportSessionId, ImportSession> snapshot() {
+            return new LinkedHashMap<>(rows);
+        }
+
+        @Override
+        public void restore(Map<ImportSessionId, ImportSession> snapshot) {
+            rows = snapshot;
         }
     }
 
-    /** Вход modeling: нужен только приём импортированной модели. */
-    static final class Models implements ModelExchangeApplicationService {
+    /** Сессия так, как её вернёт хранилище: поля и находки без разобранного документа. */
+    static ImportSession copy(ImportSession session) {
+        return ImportSession.restore(session.id(), new ImportRequest(session.workspaceId(), session.targetModelId(),
+                        session.sourceName(), session.sourceHash(), session.sourceSize(), session.idempotencyKey(),
+                        session.strictMode(), session.startedBy()), session.startedAt(), session.status(),
+                session.findings(), session.finishedAt(), session.appliedModelId(), session.appliedVersionNo());
+    }
 
+    /** Вход modeling: нужен только приём импортированной модели. */
+    static final class Models implements ModelExchangeApplicationService, Store<List<UUID>> {
+
+        /** В какой транзакции звали приём модели — журнал вызовов, откат его не трогает. */
         final List<String> importedIn = new ArrayList<>();
+
+        /** Записанные модели: запись идёт до отказа, и откат транзакции её снимает. */
+        List<UUID> stored = new ArrayList<>();
 
         /** Отказ, которым ответит запись модели; {@code null} — запись проходит. */
         RuntimeException refusal;
@@ -214,15 +299,29 @@ final class ImportFakes {
 
         Models(Transactions transactions) {
             this.transactions = transactions;
+            transactions.track(this);
         }
 
         @Override
         public ImportModelResponse importModel(EditorIdentity actor, ImportModelCommand command) {
             importedIn.add(transactions.current());
+            transactions.requireWritable();
+            UUID modelId = IDS.generate();
+            stored.add(modelId);
             if (refusal != null) {
                 throw refusal;
             }
-            return new ImportModelResponse(IDS.generate(), 1, 0);
+            return new ImportModelResponse(modelId, 1, 0);
+        }
+
+        @Override
+        public List<UUID> snapshot() {
+            return new ArrayList<>(stored);
+        }
+
+        @Override
+        public void restore(List<UUID> snapshot) {
+            stored = snapshot;
         }
 
         @Override

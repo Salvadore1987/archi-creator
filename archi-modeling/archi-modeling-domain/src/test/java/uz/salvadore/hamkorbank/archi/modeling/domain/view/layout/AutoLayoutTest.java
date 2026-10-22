@@ -185,7 +185,7 @@ class AutoLayoutTest {
     }
 
     @Test
-    @DisplayName("Цикл родителей в графе клиента — отказ в данных, а не сбой разметки")
+    @DisplayName("Цикл родителей из двух узлов в графе клиента — отказ в данных, а не сбой разметки")
     void parentCycleIsRejected() {
         ViewNodeId first = nodeId();
         ViewNodeId second = nodeId();
@@ -195,6 +195,11 @@ class AutoLayoutTest {
         List<LayoutGraph.Edge> edges = List.of(new LayoutGraph.Edge(ViewEdgeId.of(IDS.generate()), root.id(), first));
 
         assertThrows(InvalidValueException.class, () -> new LayoutGraph(List.of(root, a, b), edges));
+    }
+
+    @Test
+    @DisplayName("Узел — родитель сам себе в графе клиента — отказ в данных, а не сбой разметки")
+    void selfParentIsRejected() {
         ViewNodeId self = nodeId();
         LayoutGraph.Node own = new LayoutGraph.Node(self, self, type("Node"), new Bounds(0, 0, 120, 55));
         assertThrows(InvalidValueException.class, () -> new LayoutGraph(List.of(own), List.of()));

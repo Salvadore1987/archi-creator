@@ -132,6 +132,7 @@ public final class ArchiTypeRegistry {
             ConceptDefinition previous = concepts.put(type,
                     new ConceptDefinition(type, kind, layer, phase));
             if (previous != null) {
+                // недостижимо — каталог задан в коде без повторов
                 throw new IllegalStateException(Message.of(ModelingMessages.CATALOG_DUPLICATE, type).toString());
             }
         }

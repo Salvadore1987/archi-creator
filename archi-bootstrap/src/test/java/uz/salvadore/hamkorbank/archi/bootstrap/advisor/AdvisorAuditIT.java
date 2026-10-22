@@ -5,13 +5,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorCodes;
 
 class AdvisorAuditIT extends AdvisorApiTest {
+
+    private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
 
     @Test
     @DisplayName("INV-ADV-001: отклонённое обращение оставляет запись аудита с причиной")
@@ -73,5 +78,32 @@ class AdvisorAuditIT extends AdvisorApiTest {
                         .with(architect()).contentType("application/json")
                         .content("{\"enabled\":true,\"monthlyTokenLimit\":2000}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("FR-27: администратор читает выключатель и лимит пространства")
+    void adminReadsSettings() throws Exception {
+        jdbc.update("update workspace set ai_monthly_token_limit = 5000");
+
+        mvc.perform(get("/api/v1/ai/settings").with(admin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.enabled").value(true))
+                .andExpect(jsonPath("$.monthlyTokenLimit").value(5000));
+    }
+
+    @Test
+    @DisplayName("FR-27: настройки помощника не видны архитектору — 403 ADV_ACCESS_DENIED")
+    void architectCannotReadSettings() throws Exception {
+        mvc.perform(get("/api/v1/ai/settings").with(architect()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(AdvisorCodes.ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("Настройки помощника неизвестного пространства — 404 ADV_NOT_FOUND")
+    void unknownWorkspaceSettingsAreNotFound() throws Exception {
+        mvc.perform(get("/api/v1/ai/settings").param("workspaceId", IDS.generate().toString()).with(admin()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(AdvisorCodes.NOT_FOUND));
     }
 }

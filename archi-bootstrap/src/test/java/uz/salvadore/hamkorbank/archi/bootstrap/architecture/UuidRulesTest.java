@@ -46,8 +46,8 @@ class UuidRulesTest {
 
     private static final String ROOT = "uz.salvadore.hamkorbank.archi";
     private static final Path REPOSITORY = Path.of("..");
-    /** Сборка, зависимости и Node — исходников проекта там нет, а файлов десятки тысяч. */
-    private static final Set<String> SKIPPED = Set.of("target", "node_modules", ".node", ".git", ".mvn");
+    /** Сборка, зависимости, Node и рабочие копии агентов — исходников проекта там нет или они чужие. */
+    private static final Set<String> SKIPPED = Set.of("target", "node_modules", ".node", ".git", ".mvn", ".claude");
     /**
      * Фабрики и конструктор {@code java.util.UUID} в исходнике, с полным именем класса или без,
      * вызовом или ссылкой на метод ({@code UUID::randomUUID}, {@code UUID::new}).

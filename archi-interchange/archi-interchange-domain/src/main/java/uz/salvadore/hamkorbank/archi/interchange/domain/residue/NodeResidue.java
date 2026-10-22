@@ -76,6 +76,7 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
                 xml.close();
             }
         } catch (XMLStreamException e) {
+            // недостижимо — запись XML в строку не отказывает
             throw new IllegalStateException(Message.of(InterchangeMessages.RESIDUE_UNWRITABLE).toString(), e);
         }
         return out.toString();

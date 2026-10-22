@@ -8,6 +8,10 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.LossEntryId;
@@ -37,5 +41,16 @@ class LossEntryTest {
     void entryRequiresKind() {
         assertThrows(NullPointerException.class, () -> new LossEntry(LossEntryId.next(UUIDS), ArchiId.of("id-e1"),
                 null, "raw_xml", "reason"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"' ', причина", "raw_xml, ' '", "'', ''"})
+    @DisplayName("запись потери без потерянной части или без причины не строится")
+    void entryRequiresAspectAndReason(String lostAspect, String reason) {
+        InvalidValueException e = assertThrows(InvalidValueException.class, () -> new LossEntry(
+                LossEntryId.next(UUIDS), ArchiId.of("id-e1"), LossObjectKind.ELEMENT, lostAspect, reason));
+
+        assertEquals(InterchangeCodes.INVALID_REQUEST, e.code());
+        assertEquals(InterchangeMessages.LOSS_WITHOUT_REASON, e.reason().key());
     }
 }

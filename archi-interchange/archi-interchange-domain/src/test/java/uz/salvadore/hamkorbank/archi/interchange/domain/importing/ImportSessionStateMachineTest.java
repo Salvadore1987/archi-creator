@@ -90,7 +90,7 @@ class ImportSessionStateMachineTest {
         Sessions.parse(session, VALID);
         session.validate(List.of(), NOW);
 
-        assertThrows(RuntimeException.class, () -> session.apply(null, 1, 0, NOW));
+        assertThrows(NullPointerException.class, () -> session.apply(null, 1, 0, NOW));
         assertThrows(InvalidValueException.class, () -> session.apply(MODEL, 0, 0, NOW));
 
         assertEquals(ImportStatus.VALIDATED, session.status());

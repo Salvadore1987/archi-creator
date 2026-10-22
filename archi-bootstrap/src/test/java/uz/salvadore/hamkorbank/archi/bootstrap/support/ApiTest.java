@@ -11,7 +11,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -20,10 +19,9 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 /**
- * Основа тестов REST: MockMvc поверх полного контекста, токен — {@code spring-security-test}
- * с ролями в {@code ROLE_*}, как их отдаёт разбор ролей Keycloak.
+ * Основа тестов REST: MockMvc (включён в {@link IntegrationTest}) поверх полного контекста,
+ * токен — {@code spring-security-test} с ролями в {@code ROLE_*}, как их отдаёт разбор ролей Keycloak.
  */
-@AutoConfigureMockMvc
 public abstract class ApiTest extends IntegrationTest {
 
     @Autowired

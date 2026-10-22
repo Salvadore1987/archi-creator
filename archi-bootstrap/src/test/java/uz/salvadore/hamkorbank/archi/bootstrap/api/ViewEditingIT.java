@@ -106,7 +106,7 @@ class ViewEditingIT extends ApiTest {
 
         mvc.perform(delete("/api/v1/view-edges/" + edge).with(architect())).andExpect(status().isNoContent());
         mvc.perform(delete("/api/v1/view-edges/" + edge).with(architect())).andExpect(status().isNotFound());
-        mvc.perform(get("/api/v1/views/" + view).with(architect()))
+        mvc.perform(get("/api/v1/views/" + view).with(architect())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.edges.length()").value(0))
                 .andExpect(jsonPath("$.nodes.length()").value(4));
         saveVersion(model);
@@ -193,7 +193,7 @@ class ViewEditingIT extends ApiTest {
         int appY = ((Number) read(proposal, "$.nodes[?(@.id == '" + appNode + "')].y", 0)).intValue();
         assertTrue(businessY < appY, "бизнес выше приложений");
 
-        mvc.perform(get("/api/v1/views/" + view).with(architect()))
+        mvc.perform(get("/api/v1/views/" + view).with(architect())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.nodes.length()").value(1))
                 .andExpect(jsonPath("$.nodes[0].x").value(0))
                 .andExpect(jsonPath("$.nodes[0].y").value(0));

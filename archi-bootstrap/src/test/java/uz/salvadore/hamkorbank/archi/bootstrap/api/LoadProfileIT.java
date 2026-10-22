@@ -16,10 +16,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.RequestBuilder;
-import org.springframework.test.web.servlet.ResultMatcher;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.ApiTest;
 import uz.salvadore.hamkorbank.archi.bootstrap.support.Fixtures;
 
@@ -46,23 +46,25 @@ class LoadProfileIT extends ApiTest {
                         .with(architect()))
                 .andExpect(status().isCreated()).andReturn(), "$.modelId");
         mvc.perform(post("/api/v1/models/" + model + "/lock").with(architect())).andExpect(status().isOk());
-        List<String> views = read(mvc.perform(get("/api/v1/models/" + model).with(architect())).andReturn(),
+        List<String> views = read(mvc.perform(get("/api/v1/models/" + model).with(architect()))
+                .andExpect(status().isOk()).andReturn(),
                 "$.views[*].id");
         String view = views.getFirst();
-        List<String> nodes = read(mvc.perform(get("/api/v1/views/" + view).with(architect())).andReturn(),
+        List<String> nodes = read(mvc.perform(get("/api/v1/views/" + view).with(architect()))
+                .andExpect(status().isOk()).andReturn(),
                 "$.nodes[*].id");
 
         Map<String, Long> p95 = new LinkedHashMap<>();
         p95.put("CreateElement", measure(i -> post("/api/v1/models/" + model + "/elements").with(architect())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"archiType\":\"archimate:ApplicationComponent\",\"name\":\"Нагрузка " + i + "\"}"),
-                status().isCreated()));
+                HttpStatus.CREATED));
         p95.put("SaveViewLayout", measure(i -> put("/api/v1/views/" + view + "/layout").with(architect())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"nodes\":[{\"id\":\"" + nodes.get(i % nodes.size()) + "\",\"x\":" + (10 + i)
-                        + ",\"y\":20,\"width\":120,\"height\":55}]}"), status().isNoContent()));
-        p95.put("OpenView", measure(i -> get("/api/v1/views/" + view).with(viewer()), status().isOk()));
-        p95.put("OpenModel", measure(i -> get("/api/v1/models/" + model).with(viewer()), status().isOk()));
+                        + ",\"y\":20,\"width\":120,\"height\":55}]}"), HttpStatus.NO_CONTENT));
+        p95.put("OpenView", measure(i -> get("/api/v1/views/" + view).with(viewer()), HttpStatus.OK));
+        p95.put("OpenModel", measure(i -> get("/api/v1/models/" + model).with(viewer()), HttpStatus.OK));
 
         LOG.info("NFR-03 профиль, p95 мс: {}", p95);
         assertTrue(p95.get("CreateElement") <= 300, () -> "CreateElement p95 " + p95);
@@ -71,15 +73,15 @@ class LoadProfileIT extends ApiTest {
         assertTrue(p95.get("OpenModel") <= 1000, () -> "OpenModel p95 " + p95);
     }
 
-    private long measure(IntFunction<RequestBuilder> request, ResultMatcher expected)
+    private long measure(IntFunction<RequestBuilder> request, HttpStatus expected)
             throws Exception {
         for (int i = 0; i < WARM_UP; i++) {
-            mvc.perform(request.apply(i)).andExpect(expected);
+            mvc.perform(request.apply(i)).andExpect(status().is(expected.value()));
         }
         List<Long> millis = new ArrayList<>();
         for (int i = WARM_UP; i < WARM_UP + RUNS; i++) {
             long start = System.nanoTime();
-            mvc.perform(request.apply(i)).andExpect(expected);
+            mvc.perform(request.apply(i)).andExpect(status().is(expected.value()));
             millis.add((System.nanoTime() - start) / 1_000_000);
         }
         millis.sort(Long::compare);

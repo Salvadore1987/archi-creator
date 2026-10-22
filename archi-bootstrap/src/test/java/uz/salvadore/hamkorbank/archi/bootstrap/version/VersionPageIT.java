@@ -29,13 +29,13 @@ class VersionPageIT extends ApiTest {
         }
         String versions = "/api/v1/models/" + model + "/versions";
 
-        mvc.perform(get(versions).with(viewer()))
+        mvc.perform(get(versions).with(viewer())).andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].versionNo", Matchers.contains(4, 3, 2, 1)));
-        mvc.perform(get(versions + "?size=2").with(viewer()))
+        mvc.perform(get(versions + "?size=2").with(viewer())).andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].versionNo", Matchers.contains(4, 3)));
-        mvc.perform(get(versions + "?size=2&before=3").with(viewer()))
+        mvc.perform(get(versions + "?size=2&before=3").with(viewer())).andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].versionNo", Matchers.contains(2, 1)));
-        mvc.perform(get(versions + "?before=1").with(viewer()))
+        mvc.perform(get(versions + "?before=1").with(viewer())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
         mvc.perform(get(versions + "?size=0").with(viewer()))
                 .andExpect(status().isUnprocessableContent())

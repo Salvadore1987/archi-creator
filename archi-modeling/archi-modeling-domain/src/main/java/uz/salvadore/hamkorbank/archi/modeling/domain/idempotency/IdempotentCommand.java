@@ -88,6 +88,7 @@ public final class IdempotentCommand {
             return HexFormat.of().formatHex(MessageDigest.getInstance(DIGEST)
                     .digest(canonical.toString().getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException e) {
+            // недостижимо — SHA-256 есть в каждой JVM
             throw new IllegalStateException(Message.of(ModelingMessages.DIGEST_UNAVAILABLE, DIGEST).toString(), e);
         }
     }

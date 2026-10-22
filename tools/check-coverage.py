@@ -16,11 +16,27 @@
 интеграционных идут без ``clean`` между ними, иначе адаптеры окажутся
 непокрытыми.
 
+Процент строк набирается и позитивными путями, поэтому сверх порога две
+поимённые проверки:
+
+- каждая строка ``throw`` модуля ``domain`` исполнена тестом: отказ домена —
+  правило, и непроверенный отказ не виден в проценте. Ветка, до которой код
+  не доходит по построению, помечается комментарием ``// недостижимо — причина``
+  строкой над ``throw``;
+- каждый обработчик ``@*Mapping`` контроллера модуля ``adapter-rest`` исполнен
+  тестом: операция, которую не вызывает ни один запрос, не проверена ни
+  отображением, ни ролью.
+
 Запуск: tools/check-coverage.py   (из любого каталога, после ./mvnw verify)
-Код выхода 1, если порог не пройден или отчёта нет.
+        tools/check-coverage.py --module <каталог модуля>
+            отказы домена по отчёту юнит-тестов модуля
+            (после ./mvnw -pl <модуль> test jacoco:report)
+Код выхода 1, если порог не пройден, есть непроверенный отказ или обработчик,
+или отчёта нет.
 """
 from __future__ import annotations
 
+import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -51,7 +67,80 @@ def percent(covered: int, total: int) -> float:
     return 100.0 * covered / total if total else 100.0
 
 
+THROW = re.compile(r"\bthrow\b")
+UNREACHABLE = "// недостижимо"
+MAPPING = re.compile(r"^\s*@(?:Get|Post|Put|Patch|Delete|Request)Mapping\b")
+METHOD_NAME = re.compile(r"\b(\w+)\s*\(")
+
+
+def sources(module: Path) -> Path:
+    return module / "src/main/java"
+
+
+def module_dir(name: str) -> Path | None:
+    """Каталог модуля реактора по имени группы отчёта."""
+    found = [p for p in ROOT.glob(f"**/{name}/pom.xml") if "target" not in p.parts and "node_modules" not in p.parts]
+    return found[0].parent if found else None
+
+
+def unreachable(text: list[str], number: int) -> bool:
+    """Помечена ли строка ``throw`` как недостижимая — на ней же или строкой выше."""
+    return UNREACHABLE in text[number - 1] or number > 1 and text[number - 2].strip().startswith(UNREACHABLE)
+
+
+def uncovered_throws(element: ET.Element, module: Path) -> list[str]:
+    """Строки ``throw``, которые не исполнил ни один тест: путь к файлу и номер строки."""
+    missed = []
+    for package in element.iter("package"):
+        for source in package.findall("sourcefile"):
+            path = sources(module) / package.get("name") / source.get("name")
+            text = path.read_text(encoding="utf-8").splitlines()
+            covered = {int(line.get("nr")): int(line.get("ci")) for line in source.findall("line")}
+            for number, line in enumerate(text, 1):
+                if THROW.search(line) and covered.get(number) == 0 and not unreachable(text, number):
+                    missed.append(f"{path.relative_to(ROOT)}:{number}")
+    return missed
+
+
+def uncovered_handlers(element: ET.Element, module: Path) -> list[str]:
+    """Обработчики ``@*Mapping`` контроллеров, которые не исполнил ни один тест."""
+    missed = []
+    for package in element.iter("package"):
+        for cls in package.findall("class"):
+            path = sources(module) / (cls.get("name").split("$")[0] + ".java")
+            if not path.exists():
+                continue
+            text = path.read_text(encoding="utf-8").splitlines()
+            covered = {}
+            for method in cls.findall("method"):
+                calls, _ = lines(method)
+                covered[method.get("name")] = covered.get(method.get("name"), 0) + calls
+            for number, line in enumerate(text, 1):
+                if not MAPPING.match(line) or line.lstrip().startswith("@RequestMapping") and \
+                        any(w in " ".join(text[number:number + 3]) for w in (" class ", " interface ")):
+                    continue
+                for declaration in text[number:number + 6]:
+                    name = METHOD_NAME.search(declaration)
+                    if name and not declaration.lstrip().startswith("@") and name.group(1) in covered:
+                        if covered[name.group(1)] == 0:
+                            missed.append(f"{path.relative_to(ROOT)}:{number} {name.group(1)}")
+                        break
+    return missed
+
+
+def check_module(module: Path) -> int:
+    report = module / "target/site/jacoco/jacoco.xml"
+    if not report.exists():
+        print(f"Нет отчёта {report.relative_to(ROOT)}: сначала ./mvnw -pl {module.relative_to(ROOT)} test jacoco:report.")
+        return 1
+    missed = uncovered_throws(ET.parse(report).getroot(), module)
+    print("\n".join(missed) if missed else "Все отказы модуля исполнены тестами.")
+    return 1 if missed else 0
+
+
 def main() -> int:
+    if len(sys.argv) == 3 and sys.argv[1] == "--module":
+        return check_module((Path.cwd() / sys.argv[2]).resolve())
     if not REPORT.exists():
         print(f"Нет отчёта {REPORT.relative_to(ROOT)}: сначала ./mvnw verify.")
         return 1
@@ -66,11 +155,16 @@ def main() -> int:
         for suffix, threshold in LAYERS:
             if name.endswith(suffix) and percent(covered, total) < threshold:
                 problems.append(f"{name}: {percent(covered, total):.1f} % строк, порог {threshold:.0f} %")
+        module = module_dir(name)
+        if module and name.endswith("-domain"):
+            problems += [f"отказ без теста: {where}" for where in uncovered_throws(group, module)]
+        if module and name.endswith("-adapter-rest"):
+            problems += [f"операция без теста: {where}" for where in uncovered_handlers(group, module)]
     if percent(covered_all, total_all) < TOTAL:
         problems.append(f"весь код: {percent(covered_all, total_all):.1f} % строк, порог {TOTAL:.0f} %")
     if problems:
         print("\n".join(problems))
-        print(f"\nНиже порога: {len(problems)}.")
+        print(f"\nНарушений: {len(problems)}.")
         return 1
     print(f"Покрытие строк: {percent(covered_all, total_all):.1f} %, модулей {len(report.findall('group'))}. "
           "Пороги пройдены.")

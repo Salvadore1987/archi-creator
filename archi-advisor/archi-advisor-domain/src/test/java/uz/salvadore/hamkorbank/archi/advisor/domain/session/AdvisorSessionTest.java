@@ -8,10 +8,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorCodes;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
+import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AdvisorSessionId;
 
 class AdvisorSessionTest {
 
@@ -93,6 +101,52 @@ class AdvisorSessionTest {
 
         explain.complete(TokenUsage.NONE, null, answer, Sessions.audit(), Sessions.NOW);
         assertEquals(answer, explain.answer());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @MethodSource("invalidIdempotencyKeys")
+    @DisplayName("Обращение без ключа идемпотентности или с ключом длиннее предела не создаётся")
+    void invalidIdempotencyKeyIsRejected(String key) {
+        AdvisorRequest request = AdvisorRequest.review(Sessions.MODEL, null);
+
+        InvalidValueException refused = assertThrows(InvalidValueException.class,
+                () -> AdvisorSession.request(AdvisorSessionId.next(Sessions.UUIDS), Sessions.WORKSPACE, request, key,
+                        "alice", Sessions.NOW));
+
+        assertEquals(AdvisorCodes.INVALID_INPUT, refused.code());
+        assertEquals(Message.of(AdvisorMessages.IDEMPOTENCY_KEY_INVALID, AdvisorSession.IDEMPOTENCY_KEY_MAX),
+                refused.reason());
+    }
+
+    @Test
+    @DisplayName("Отрицательный размер контекста — поток не начинается, сессия остаётся в REQUESTED")
+    void negativeContextSizeIsRejected() {
+        AdvisorSession session = Sessions.review();
+
+        InvalidValueException refused = assertThrows(InvalidValueException.class,
+                () -> session.startStreaming(-1, false));
+
+        assertEquals(AdvisorCodes.INVALID_INPUT, refused.code());
+        assertEquals(Message.of(AdvisorMessages.USAGE_NEGATIVE), refused.reason());
+        assertEquals(SessionStatus.REQUESTED, session.status());
+    }
+
+    @Test
+    @DisplayName("Функция плана не завершается без плана")
+    void planFunctionRequiresPlan() {
+        AdvisorSession plan = streaming(AdvisorRequest.plan(Sessions.MODEL, "Платёжный шлюз"));
+
+        InvalidValueException refused = assertThrows(InvalidValueException.class,
+                () -> plan.complete(TokenUsage.NONE, null, null, Sessions.audit(), Sessions.NOW));
+
+        assertEquals(AdvisorCodes.INVALID_INPUT, refused.code());
+        assertEquals(Message.of(AdvisorMessages.PLAN_REQUIRED), refused.reason());
+        assertEquals(SessionStatus.STREAMING, plan.status());
+    }
+
+    private static Stream<String> invalidIdempotencyKeys() {
+        return Stream.of("  ", "k".repeat(AdvisorSession.IDEMPOTENCY_KEY_MAX + 1));
     }
 
     private static AdvisorSession streaming(AdvisorRequest request) {

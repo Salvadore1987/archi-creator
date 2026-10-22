@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -83,7 +82,8 @@ class GitBindingIT extends ApiTest {
         mvc.perform(put(binding()).with(admin()).contentType(MediaType.APPLICATION_JSON).content(SETTINGS))
                 .andExpect(status().isOk());
         mvc.perform(delete(binding()).with(admin())).andExpect(status().isNoContent());
-        mvc.perform(get(binding()).with(admin())).andExpect(jsonPath("$.status").value("DISABLED"));
+        mvc.perform(get(binding()).with(admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("DISABLED"));
     }
 
     @Test
@@ -99,7 +99,7 @@ class GitBindingIT extends ApiTest {
             CompletableFuture.runAsync(() -> jdbc.update(
                     "update git_binding set last_commit_sha = ? where workspace_id = ?", head,
                     workspace.value())).join();
-            bindings.save(read.checked(Instant.now()));
+            bindings.save(read.checked(clock.instant()));
         });
 
         assertEquals(head, jdbc.queryForObject("select last_commit_sha from git_binding where workspace_id = ?",

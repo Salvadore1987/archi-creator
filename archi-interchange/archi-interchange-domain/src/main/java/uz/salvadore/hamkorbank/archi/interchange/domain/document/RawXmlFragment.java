@@ -7,7 +7,8 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.XmlText;
 
 /**
  * Непрозрачный фрагмент: узел, которого кодек не понимает, — дословно и с адресом.
- * Без адреса фрагмент сохранить можно, а воспроизвести — нет.
+ * Без адреса фрагмент сохранить можно, а воспроизвести — нет. Символы — только XML 1.0, как в тексте
+ * и атрибутах: фрагмент приходит и из YAML репозитория, а управляющий символ сделал бы файл нечитаемым.
  *
  * @param xml           разметка фрагмента с внутренними пробелами как в файле;
  *                      префиксы пространств имён — те, что объявлены выше по дереву
@@ -23,5 +24,6 @@ public record RawXmlFragment(String xml, ArchiId parentArchiId, DocumentOrder or
         if (!XmlText.isElement(xml)) {
             throw new InvalidValueException(InterchangeMessages.FRAGMENT_NOT_ELEMENT);
         }
+        XmlText.require(xml, "raw_xml");
     }
 }

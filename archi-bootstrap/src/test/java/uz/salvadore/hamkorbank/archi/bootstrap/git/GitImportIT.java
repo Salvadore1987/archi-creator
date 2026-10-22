@@ -57,7 +57,7 @@ class GitImportIT extends GitApiTest {
         assertThat(versions(model)).containsExactly(1L, 2L);
         assertThat(column("select comment from model_version where model_id = ? and version_no = 2", String.class,
                 model)).containsExactly("принять предложение");
-        mvc.perform(get("/api/v1/models/" + model).with(architect()))
+        mvc.perform(get("/api/v1/models/" + model).with(architect())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.elements[?(@.name == 'АБС «Ядро»')]").isNotEmpty());
         assertThat(sessions(model)).containsExactly("APPLIED");
         assertThat(column("select source_name from import_session where target_model_id = ?", String.class, model))

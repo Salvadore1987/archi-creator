@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.advisor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
 import java.util.UUID;
@@ -45,9 +46,10 @@ class ReviewIT extends AdvisorApiTest {
         UUID placed = element(architect(), model, "ApplicationComponent", "На представлении");
         element(architect(), model, "ApplicationComponent", "Не на представлении");
         UUID view = id(mvc.perform(post("/api/v1/models/" + model + "/views").with(architect())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Обзор\"}")).andReturn());
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Обзор\"}"))
+                .andExpect(status().isCreated()).andReturn());
         mvc.perform(post("/api/v1/views/" + view + "/nodes").with(architect()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"elementId\":\"" + placed + "\",\"x\":0,\"y\":0}"));
+                .content("{\"elementId\":\"" + placed + "\",\"x\":0,\"y\":0}")).andExpect(status().isCreated());
 
         Response response = ask("review", architect(), "review-view",
                 "{\"modelId\":\"" + model + "\",\"viewId\":\"" + view + "\"}");

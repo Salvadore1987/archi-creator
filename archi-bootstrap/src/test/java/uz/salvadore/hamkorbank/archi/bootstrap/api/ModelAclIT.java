@@ -38,7 +38,7 @@ class ModelAclIT extends ApiTest {
         mvc.perform(get("/api/v1/models/" + IDS.generate()).with(as("stranger", "ARCHITECT")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(ModelingCodes.NOT_FOUND));
-        mvc.perform(get("/api/v1/models").with(as("stranger", "ARCHITECT")))
+        mvc.perform(get("/api/v1/models").with(as("stranger", "ARCHITECT"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.id == '" + model + "')]").isEmpty());
 
         SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor auditor =
