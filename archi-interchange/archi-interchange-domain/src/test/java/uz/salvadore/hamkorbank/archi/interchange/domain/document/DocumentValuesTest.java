@@ -36,6 +36,17 @@ class DocumentValuesTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"<feature value=\"\u0001\"/>", "<feature>\uD800</feature>", "<feature>\uFFFE</feature>"})
+    @DisplayName("управляющий символ или одиночный суррогат во фрагменте — отказ при построении, а не нечитаемый файл")
+    void fragmentOutsideXmlCharactersIsRejected(String xml) {
+        InvalidValueException e = assertThrows(InvalidValueException.class,
+                () -> new RawXmlFragment(xml, null, DocumentOrder.of(0)));
+
+        assertEquals(InterchangeMessages.TEXT_NOT_XML, e.reason().key());
+        assertEquals(List.of("raw_xml"), e.reason().args());
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"text", "<!-- comment -->", "<?pi data?>", "<![CDATA[x]]>", "< feature/>", "<feature",
         "<a/>tail"})
     @DisplayName("текст, комментарий, инструкция, CDATA или элемент с хвостом вместо фрагмента — отказ")

@@ -52,6 +52,7 @@ public final class ArchiXmlWriter implements ArchiDocumentWriter {
                     .encode(CharBuffer.wrap(xml));
             out.write(bytes.array(), bytes.arrayOffset() + bytes.position(), bytes.remaining());
         } catch (CharacterCodingException e) {
+            // недостижимо — текст, атрибуты и фрагменты документа проверены на символы XML при построении
             throw new IllegalStateException(Message.of(InterchangeMessages.TEXT_NOT_XML, e.getMessage()).toString(), e);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
