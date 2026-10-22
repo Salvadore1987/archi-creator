@@ -1,0 +1,52 @@
+# Этап 16. Тесты
+
+**Дата:** 2026-10-22. **Репозиторий:** ветка `cr_phase_16`, после `ce533c7` (исправления этапа 15).
+**Стандарт:** коммит `97bce16`, §4.14 (тестирование), §6.15 (тестирование в Boot 4), чеклист §5.3.
+**Объём:** 205 тестовых классов (~21,6 тыс. строк) в 9 модулях, 716 тестовых методов. Выборка по 3–4 класса
+на доменный и application-модуль, весь `archi-bootstrap/.../support/`, все `*IT` пакетов `api` и `interchange`,
+заголовки остальных `*IT`; прочее — `rg`. Полная сборка `./mvnw -P '!frontend' clean verify` (юнит- и интеграционные
+тесты зелёные) и общий отчёт JaCoCo: покрытие строк 92,5 %; каждая строка `throw` основного кода и каждый
+обработчик контроллера сверены с отчётом.
+
+## Находки
+
+| № | Уровень | Правило | Где | Суть | Предложение | Ловит сборка? |
+|---|---|---|---|---|---|---|
+| 16-01 | ОБЯЗАТЕЛЬНО | §4.14.10, §5.3 — позитивный **и** негативный сценарий | домен трёх контекстов, приложение А | Отказы домена не проверены: из 183 строк `throw` доменных модулей тесты не исполняют 90 — modeling 48 из 92, interchange 29 из 60, advisor 13 из 31. Без теста: `ModelVersion.publishedAs` с другим SHA, `snapshotPurged` помеченной версии, `ACCESS_TYPE_MISPLACED`, `OPAQUE_NOT_EDITABLE`, `VIEW_NOT_EDITABLE`, `GIT_BINDING_DISABLED`, `ExportJob.render` не из `REQUESTED`, ключ идемпотентности сессии помощника, порог бюджета и т. д. Порог строк (90 %) пройден за счёт позитивных путей — modeling 90,9 % | скрипт покрытия: каждая строка `throw` модуля `domain` исполнена тестом; негативные тесты на все места | нет → `check-coverage.py` |
+| 16-02 | ОБЯЗАТЕЛЬНО | §4.14.3 — REST-адаптер проверяется запросом; §5.3 | `ContentController`, `VersionController`, `InterchangeController`, `AdvisorController`, `AdvisorSettingsController` | 10 операций контракта не вызывает ни один тест: `PATCH /relationships/{id}`, `PATCH /models/{id}/tree/{itemId}`, `POST /models/{id}/tree/move`, `POST /models/{id}/tree/delete`, `GET /metamodel/elements`, `POST /models/{id}/versions/{no}/restore`, `PUT /models/{id}/versions/{no}/label`, `GET`/`PUT /workspaces/{id}/import-settings`, `POST /ai/document`, `GET /ai/settings`. Отображение запроса, роль и отказы этих операций не проверены ничем; `VersionLabelCommandHandler`, `TreeItemsMoveCommandHandler`, `TreeItemRenameCommandHandler`, `ElementTypeListQueryHandler` не исполняются вовсе | скрипт покрытия: каждый обработчик `@*Mapping` контроллера исполнен тестом; тесты API с отказом роли и «не найдено» | нет → `check-coverage.py` |
+| 16-03 | ОБЯЗАТЕЛЬНО | §6.15.2 №2 — фейк порта ведёт себя как адаптер | `InMemoryPorts` (modeling), `ImportFakes`, `GitFakes` (interchange), `Fixture` (advisor) | Фейки расходятся с настоящими адаптерами там, где тесты на это опираются: `UnitOfWork` не откатывает (настоящий — откатывает на любом исключении), и проверки «отказ ничего не создал» и «сессия после отката» (`ClientIdsScenariosTest`, `ImportRejectionTest`) ничего не доказывают; `read` пускает запись; `ViewRepository.loadAll` отдаёт хранимые экземпляры, а `load` — копии; `ModelRepository.list` и `findByIdempotencyKey` не смотрят на пространство; ключ идемпотентности — склейка без разделителя; сессии импорта и помощника хранятся и отдаются одним изменяемым экземпляром, и забытый `save` тест не заметит | откат в фейках `UnitOfWork`, запись в `read` — отказ; копии при чтении и записи; фильтр по пространству | нет → тест на старом фейке |
+| 16-04 | ОБЯЗАТЕЛЬНО | ADR-0021 — имя теста фразой, отчёт читается по `@DisplayName` | 7 классов, 16 методов: `DocumentValuesTest`, `GitValuesTest`, `ArchiIdTest` (interchange-domain), `NestingRulesTest`, `ArchiTypeRegistryTest` (modeling-domain), `XmlEquivalenceTest`, `SettingsValidationTest` | Без `@DisplayName`. Правило не держит ничто: Checkstyle тестовые имена не проверяет, подчёркивание в имени метода тоже прошло бы | проверка исходников всех модулей: у каждого `@Test`/`@ParameterizedTest` — `@DisplayName`, в имени метода нет `_` | нет → тест исходников |
+| 16-05 | ОБЯЗАТЕЛЬНО | §4.14.10 — время через `Clock`, а не системные часы | `FolderTreeTest:57`, `LossReportJsonTest:24`, `ImportIT:93,95,112`, `ModelPersistenceIT:111,126`, `GitBindingIT:102`, `RealmRolesTest:88`, `ModelImportIT:72` | Тесты берут системное время (`Instant.now()`, `Clock.systemUTC()`) рядом с зафиксированным `NOW` в соседних строках. Сейчас исход от него не зависит, но правило проекта «время фиксируется в тестах» сборка не держит | проверка исходников тестов: без `Instant.now()`, `LocalDate[Time].now()`, `Clock.system*()`; замер — `System.nanoTime()` | нет → тест исходников |
+| 16-06 | РЕКОМЕНДУЕТСЯ | §4.14.4 — один сценарий на тест | `ArchitectureModelTest:161,179`, `ModelAccessListTest:24`, `ModelLockTest:28,59`, `ModelVersionTest:23,58`, `ViewEditingTest:52,79`, `ModelingScenariosTest:57,72,111,133,157,223`, `ClientIdsScenariosTest:108,141,186,206`, `AdvisorRequestTest:17,36,47`, `AdvisorAdminHandlersTest:33`, `AdvisorSessionStartCommandHandlerTest:184`, `GitImportTest:283`, `TokenBudgetTest:72` | В одном тесте — несколько несвязанных сценариев (переименование, удаление, четыре разных отказа), действие и проверка чередуются. Упавший тест не говорит, какой сценарий сломан | разделить; таблицу отказов одного правила — `@ParameterizedTest` | нет (семантика) |
+| 16-07 | РЕКОМЕНДУЕТСЯ | §4.14.10 — проверка, которая может упасть | `ImportSessionStateMachineTest:93`, `AdvisorAdminHandlersTest:37`, `ImportPolicyHandlersTest:69`, `GitHandlersTest:80`, `AdvisorSessionStartCommandHandlerTest:179`, `RoundTripApiIT:71,82`, `BatchViewExportIT:37,60`, `ViewImageExportIT:39,107`, `PhaseTwoIT:131`, `LoadProfileIT:49,52`, `AdvisorStreamingIT:61`, `ObservabilityIT:38` | Слабые проверки: `assertThrows(RuntimeException.class, …)` проходит на любом исключении; отказ без кода (`ACCESS_DENIED` и отказ проверки неразличимы); отказ в привязке не проверяет, что привязка не изменилась; ответ читается `andReturn()` без статуса — ошибка 4xx/5xx выходит разбором JSON или сравнением с телом ошибки; число потерь `≥ 2` вместо точного; счётчики Prometheus общего контекста растут от чужих классов | точный тип и код отказа; статус до разбора тела; приращение счётчика до и после | нет (семантика) |
+| 16-08 | РЕКОМЕНДУЕТСЯ | §6.15.2 №3 — кэш контекстов | `IntegrationTest`, `ApiTest`, `AdvisorApiTest`, `AdvisorRateLimitIT` | Наборы `@SpringBootTest` дают ~10 контекстов. Два самых больших расходятся одной аннотацией: `ApiTest` добавляет к `IntegrationTest` `@AutoConfigureMockMvc`, и классы `IntegrationTest` (9 классов) держат свой контекст с пулом Hikari (минимум 5 соединений) и своим проходом очереди Git каждые 10 s по той же базе. Помощнику — ещё два контекста ради одного свойства | `@AutoConfigureMockMvc` в `IntegrationTest`; свойства помощника — в общем наборе; в тестах `minimum-idle: 1` | нет |
+| 16-09 | РЕКОМЕНДУЕТСЯ | §6.15.2 №1 — `@ServiceConnection` | `IntegrationTest:41`, `KeycloakIT:62` | Адрес, имя и пароль базы передаются вручную `@DynamicPropertySource`, в `KeycloakIT` — копией | `spring-boot-testcontainers`, контейнер Postgres с `@ServiceConnection` через `@ImportTestcontainers`; адрес Keycloak остаётся `@DynamicPropertySource` (своего соединения у него нет) | нет |
+| 16-10 | РЕКОМЕНДУЕТСЯ | §4.14.10 — тест не зависит от скорости машины | `AdvisorSessionClaimIT:53` | `Thread.sleep(300)`, затем «второе занятие ещё ждёт»: на медленной машине проверка проходит и без блокировки — тест слабее, чем выглядит | дождаться, что второй запрос стоит на блокировке (`pg_stat_activity.wait_event_type = 'Lock'`), и только потом отпустить первый | нет |
+| 16-11 | кандидат в реестр | §4.14.10 — не делить изменяемое состояние, время не в функциональных тестах | `ArchiReaderPerformanceTest`, `ModelImportIT:66`, `LoadProfileIT:68`, `JwksTimeoutsTest:32`, `AdvisorStreamingIT:89` | Замеры по часам в общей сборке: на перегруженном CI-раннере могут упасть. Это гейты NFR-02, NFR-03 и потоковой отдачи помощника, а не случайные утверждения: в отдельный профиль они ушли бы из обязательной проверки | оставить в сборке как гейты нефункциональных требований — решение владельца | — |
+| 16-12 | ПРОЕКТ | реестр отклонений этого плана | `docs/plans/code-review.md`, D-17 | D-17 (JaCoCo и пороги) стоит «нарушение», а исправлено находкой 01-14: общий отчёт, `check-coverage.py`, шаг CI | статус — «исправлено (01-14)» | — |
+
+## Что проверено и в порядке
+
+- **Инструменты (§4.14.1):** JUnit 5, AssertJ и JUnit Assertions, ArchUnit, Testcontainers `postgres:16` и `keycloak:26`
+  — те же образы, что в `docker-compose.yml`; H2 нет. Mockito нет вовсе: сценарии — на фейках портов (§6.15.2 №2).
+- **Стратегия по слоям (§4.14.3):** домен — чистые юнит-тесты без Spring и моков (держит enforcer); handler'ы —
+  на фейках; адаптеры хранения и REST — интеграционными тестами `archi-bootstrap` на настоящей базе: в модулях
+  адаптеров своих тестов нет (кроме `WriteConflictsTest`), покрытие строк адаптеров 83–92 % при пороге 50 %.
+  Слайсов `@WebMvcTest`/`@DataJpaTest` нет — REST проверяется поверх полного контекста, так дешевле одного
+  общего контекста, чем десятка слайсов.
+- **Boot 4 (§6.15.1):** `@MockBean`/`@SpyBean` нет; `@AutoConfigureMockMvc` из `boot.webmvc.test.autoconfigure`;
+  `spring-boot-starter-webmvc-test` рядом с `spring-boot-starter-test`; `TestRestTemplate` не используется.
+- **`@Disabled` нет.** UUID в тестах — только JUG (`UuidRulesTest`).
+- **Покрытие (§4.14.2, D-17):** пороги стандарта по слоям держит `check-coverage.py` в CI; на прогоне —
+  домены 90,9–94,5 %, application 93,0–94,7 %, адаптеры 82,9–92,3 %, всего 92,5 %.
+- **Контейнер базы — один на прогон** (`Containers`, §4.14.8 «singleton-контейнер»).
+- **Пространство по умолчанию одно:** `workspace()` берёт первое из списка, а `limit 1` без `order by`
+  в `AdvisorSessionClaimIT` безопасен — тесты пространств не создают, API для этого нет.
+
+## Снятые гипотезы
+
+- `PhaseTwoIT` прогоняет миграцию `V5` по всей базе, а не по своей модели: миграция лишь переворачивает флаг
+  у строк мотивации и стратегии — то же, что она делает на любой развёрнутой базе.
+- Проход очереди Git в каждом кэшированном контексте закрывает чужие записи `outbox_event`: `GitApiTest` закрывает
+  открытые записи до и после каждого теста, и сценарии публикации зовут проход сами. Лишние проходы — довод
+  в 16-08, а не отдельная находка.
