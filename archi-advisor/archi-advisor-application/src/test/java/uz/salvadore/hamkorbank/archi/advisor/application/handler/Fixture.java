@@ -100,6 +100,8 @@ final class Fixture {
     /** В какой транзакции читались настройки и бюджет. */
     int settingsReadIn;
     int budgetReadIn;
+    /** Была ли открыта транзакция, когда сценарий обновлял датчик бюджета. */
+    final List<Boolean> budgetGaugeInTransaction = new ArrayList<>();
     /** Что случается, пока сценарий читает модель, — например, параллельное обращение. */
     Runnable duringRead = () -> {
     };
@@ -314,7 +316,7 @@ final class Fixture {
         return published -> events.addAll(published);
     }
 
-    static AdvisorMetrics metrics() {
+    AdvisorMetrics metrics() {
         return new AdvisorMetrics() {
             @Override
             public <T> T observe(String useCase, Supplier<T> work) {
@@ -335,6 +337,7 @@ final class Fixture {
 
             @Override
             public void budget(TokenBudget budget) {
+                budgetGaugeInTransaction.add(transaction != 0);
             }
 
             @Override

@@ -25,7 +25,7 @@
 | 6 | Ресурсы — `try-with-resources`, объекты — `equals` | 15-07 | PMD `CloseResource`, `CompareObjectsWithEquals` | ✅ |
 | 7 | Обработчик контроллера — один метод входного порта | 15-08 | `RestLayerConventionsTest` | ✅ |
 | 8 | Имя класса не повторяет класс JDK | 15-09 | `CodingRulesTest` | ✅ |
-| 9 | Датчик бюджета — после коммита | 15-11 | `AdvisorAdminHandlersTest` | ⬜ |
+| 9 | Датчик бюджета — после коммита | 15-11 | `AdvisorAdminHandlersTest` | ✅ |
 | 10 | Порядок объявлений, перегрузки рядом | 15-06 | Checkstyle `DeclarationOrder`, `OverloadMethodsDeclarationOrder` | ⬜ |
 
 ## Расхождения плана с фактом
