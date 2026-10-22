@@ -29,7 +29,7 @@ NullAway и вычёркивает модули из списка. Послед�
 | 2 | modeling: `@NullMarked` во всех пакетах четырёх модулей, `@Nullable` у необязательного, срабатывания NullAway | компилятор | ✅ |
 | 3 | interchange: то же | компилятор | ✅ |
 | 4 | advisor: то же | компилятор | ✅ |
-| 5 | `archi-bootstrap`: то же; список исключений теста пуст и удалён | компилятор, тест | ⬜ |
+| 5 | `archi-bootstrap`: то же; список исключений теста пуст и удалён | компилятор, тест | ✅ |
 | 6 | Решение ADR, `CLAUDE.md` (зависимости домена, таблица «стиль держит сборка»), D-14 в реестре, граф зависимостей | `check-links.py`, `check-traceability.py` | ⬜ |
 
 ## Расхождения плана с фактом
@@ -113,6 +113,17 @@ NullAway и вычёркивает модули из списка. Послед�
   все в `DocumentAssembler`: `ModelRows.Node.bounds/style` и `ModelRows.Edge.style` стали `@Nullable` — необязательны
   они во входящих строках импорта, а строки из хранения несут их всегда (`ModelRowsMapper`). Сборка документа берёт их
   через `Objects.requireNonNull` с именем поля: NPE остаётся там же, где был при разыменовании.
+- **Задача 5.** В `archi-bootstrap` 22 срабатывания в 8 пакетах (javac печатает каждое дважды — в счётчике 44):
+  реализации портов, у которых параметр в порте стал `@Nullable` (`AdvisorMetrics.session`, `WorkspaceDirectory.resolve`,
+  `GitRepositoryPort.push`), переопределения Spring (`HandlerMethodArgumentResolver`), `MessageSource.getMessage`
+  с текстом по умолчанию (Spring размечен, результат `@Nullable` — `requireNonNullElse(…, key)`), необязательный
+  клиент Anthropic без ключа, ответ обработчика ошибок на начатый ответ (`null` — тело не пишется). `package-info.java`:
+  6 дополнены, 2 созданы — корневой пакет класса запуска и `security.dto`. Оба переходных списка удалены: свойства
+  `nullaway.unannotated` больше нет, `NullMarkedPackagesTest` без исключений. Настоящих дефектов нет.
+- **Задача 5, SpotBugs против NullAway.** `Objects.requireNonNull` на `@Nullable`-параметре вспомогательного метода
+  SpotBugs считает ошибкой высокой уверенности (`NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE`): проверка
+  наличия стоит в месте выборки (`SharedNotation.group`), а не внутри метода с `@Nullable`-параметром. Interchange
+  наткнулся на то же в `DocumentAssembler`.
 
 ## Отменённые варианты
 

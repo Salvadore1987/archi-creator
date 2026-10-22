@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.AdvisorMetrics;
 import uz.salvadore.hamkorbank.archi.advisor.domain.budget.BudgetPeriod;
 import uz.salvadore.hamkorbank.archi.advisor.domain.budget.TokenBudget;
@@ -47,7 +48,7 @@ public final class AdvisorMicrometerMetrics implements AdvisorMetrics {
     }
 
     @Override
-    public void session(AdvisorFunction function, SessionStatus outcome, RejectionReason reason) {
+    public void session(AdvisorFunction function, SessionStatus outcome, @Nullable RejectionReason reason) {
         Counter.builder("advisor.sessions").tag("function", function.name()).tag("outcome", outcome.name())
                 .tag("rejection_reason", reason == null ? "none" : reason.name()).register(registry).increment();
     }

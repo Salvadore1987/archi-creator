@@ -9,4 +9,7 @@
  * что может, перечислено не здесь, а в таблице ролей application-слоя каждого
  * контекста: правило принадлежит use case'у, а не фильтру.
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.bootstrap.security;
+
+import org.jspecify.annotations.NullMarked;

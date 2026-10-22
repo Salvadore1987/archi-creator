@@ -26,7 +26,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
@@ -62,7 +64,7 @@ public final class AnthropicLlmClient implements LlmPort {
     };
 
     private final AiSettings settings;
-    private final AnthropicClient client;
+    private final @Nullable AnthropicClient client;
     private final CircuitBreaker breaker;
 
     public AnthropicLlmClient(AiSettings settings, CircuitBreakerRegistry breakers) {
@@ -154,7 +156,8 @@ public final class AnthropicLlmClient implements LlmPort {
     private static Tool tool(ToolSpec spec) {
         Tool.InputSchema.Properties.Builder properties = Tool.InputSchema.Properties.builder();
         @SuppressWarnings("unchecked")
-        Map<String, Object> declared = (Map<String, Object>) spec.inputSchema().get("properties");
+        Map<String, Object> declared = (Map<String, Object>) Objects.requireNonNull(
+                spec.inputSchema().get("properties"), "properties");
         declared.forEach((name, schema) -> properties.putAdditionalProperty(name, JsonValue.from(schema)));
         @SuppressWarnings("unchecked")
         List<String> required = (List<String>) spec.inputSchema().get("required");
@@ -264,7 +267,7 @@ public final class AnthropicLlmClient implements LlmPort {
             response.close();
         }
 
-        private static Map<String, Object> parse(StringBuilder json) {
+        private static Map<String, Object> parse(@Nullable StringBuilder json) {
             try {
                 return json == null || json.isEmpty() ? Map.of() : JSON.readValue(json.toString(), MAP);
             } catch (JacksonException unreadable) {

@@ -10,7 +10,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
@@ -33,9 +32,6 @@ class NullMarkedPackagesTest {
     private static final Pattern MARKED = Pattern.compile("(?m)^@NullMarked\\s*$");
     private static final Pattern IMPORTED = Pattern.compile("(?m)^import org\\.jspecify\\.annotations\\.NullMarked;$");
 
-    /** Модули, ещё не размеченные: список сокращается по контекстам и исчезает. */
-    private static final List<String> NOT_YET_MARKED = List.of("archi-bootstrap/");
-
     @Test
     @DisplayName("каждый пакет основного кода размечен @NullMarked")
     void everyMainPackageIsNullMarked() throws IOException {
@@ -51,7 +47,6 @@ class NullMarkedPackagesTest {
             public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
                 String path = REPOSITORY.relativize(file).toString();
                 if (path.endsWith(".java") && path.contains("/src/main/java/")
-                        && NOT_YET_MARKED.stream().noneMatch(path::startsWith)
                         && !marked(file.resolveSibling("package-info.java"))) {
                     violations.add(REPOSITORY.relativize(file.getParent()).toString());
                 }

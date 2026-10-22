@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -53,11 +54,11 @@ public final class SharedNotation {
 
         Map<String, Object> tokens = tokens(text(TOKENS));
         Map<String, LayerPaint> layers = new LinkedHashMap<>();
-        map(tokens.get("layers")).forEach((key, value) -> layers.put(key,
+        map(group(tokens, "layers")).forEach((key, value) -> layers.put(key,
                 new LayerPaint(String.valueOf(map(value).get("fill")), String.valueOf(map(value).get("border")))));
         Map<String, String> values = new LinkedHashMap<>();
         for (String group : VALUE_GROUPS) {
-            map(tokens.get(group)).forEach((key, value) -> values.put(key, String.valueOf(map(value).get("value"))));
+            map(group(tokens, group)).forEach((key, value) -> values.put(key, String.valueOf(map(value).get("value"))));
         }
 
         Map<String, String> icons = new LinkedHashMap<>();
@@ -98,6 +99,11 @@ public final class SharedNotation {
 
     private static Size size(JsonNode node) {
         return new Size(node.get("width").asDouble(), node.get("height").asDouble());
+    }
+
+    /** Группа токенов: файл токенов её объявляет, без неё нотацию не собрать. */
+    private static Object group(Map<String, Object> tokens, String name) {
+        return Objects.requireNonNull(tokens.get(name), name);
     }
 
     @SuppressWarnings("unchecked")

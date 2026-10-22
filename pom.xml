@@ -62,12 +62,8 @@
         <java-uuid-generator.version>5.2.0</java-uuid-generator.version>
         <error-prone.version>2.51.0</error-prone.version>
         <nullaway.version>0.14.2</nullaway.version>
-        <!--
-            Пакеты, которые NullAway проверяет: весь код проекта, кроме перечисленных
-            в nullaway.unannotated (через запятую; пусто — проверяется всё).
-        -->
+        <!-- NullAway проверяет весь код проекта. -->
         <nullaway.annotated>uz.salvadore.hamkorbank.archi</nullaway.annotated>
-        <nullaway.unannotated>uz.salvadore.hamkorbank.archi.bootstrap</nullaway.unannotated>
         <depgraph-maven-plugin.version>4.0.5</depgraph-maven-plugin.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
         <checkstyle.version>14.3.0</checkstyle.version>
@@ -369,7 +365,7 @@
                                     <!-- Все срабатывания разом, а не первые сто. -->
                                     <arg>-Xmaxerrs</arg>
                                     <arg>100000</arg>
-                                    <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=${nullaway.annotated} -XepOpt:NullAway:UnannotatedSubPackages=${nullaway.unannotated} -XepExcludedPaths:.*/target/generated-sources/.*</arg>
+                                    <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=${nullaway.annotated} -XepExcludedPaths:.*/target/generated-sources/.*</arg>
                                 </compilerArgs>
                             </configuration>
                         </execution>

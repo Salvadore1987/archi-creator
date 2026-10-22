@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.security;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -38,7 +39,7 @@ final class SessionDtoMapper {
         return new UiConfig(oidc.enabled() ? new OidcConfig(oidc.authority(), oidc.clientId()) : null);
     }
 
-    private static String firstPresent(String... candidates) {
+    private static String firstPresent(@Nullable String... candidates) {
         return Arrays.stream(candidates).filter(c -> c != null && !c.isBlank()).findFirst().orElse("");
     }
 }
