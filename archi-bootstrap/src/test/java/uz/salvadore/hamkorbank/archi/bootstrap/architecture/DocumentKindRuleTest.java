@@ -20,7 +20,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Связь ли узел документа, представление ли — решает один метод, {@code DocumentNode.kind()};
- * группа ли объект представления, заметка ли, линия связи ли — {@code DocumentNode.viewObject()}.
+ * группа ли объект представления, заметка ли, линия связи ли — {@code DocumentNode.viewObject()},
+ * а в modeling — константы {@code DiagramType}.
  * Проверка {@code xsi:type} в другом месте основного кода — второе правило того же, которое
  * однажды разойдётся с первым. ArchUnit строковых аргументов не видит, поэтому проверяются исходники.
  */
@@ -31,26 +32,29 @@ class DocumentKindRuleTest {
     private static final Set<String> SKIPPED = Set.of("target", "node_modules", ".node", ".git", ".mvn");
     /** Единственный файл, где вид узла выводится из окончания типа. */
     private static final String OWNER = "/interchange/domain/document/DocumentNode.java";
+    /** Типы объектов представления в modeling — константы, а не строки в местах сравнения. */
+    private static final String MODELING_OWNER = "/modeling/domain/view/DiagramType.java";
     private static final Pattern SUFFIX_CHECK = Pattern.compile("\\.endsWith\\(\\s*\"\\w*(?:Relationship|Model)\"");
-    /** Типы объектов представления Archi; у modeling свой {@code DiagramType}, правило — для interchange. */
+    /** Типы объектов представления Archi. */
     private static final Pattern VIEW_OBJECT_TYPE = Pattern.compile(
             "\"archimate:(?:DiagramObject|Group|Note|DiagramModelReference|Connection|DiagramModelConnection)\"");
 
     @Test
     @DisplayName("вид узла по окончанию xsi:type выводит только DocumentNode")
     void onlyDocumentNodeClassifiesByTypeSuffix() throws IOException {
-        assertThat(violations(SUFFIX_CHECK, "/")).as("вид узла документа в обход DocumentNode.kind()").isEmpty();
+        assertThat(violations(SUFFIX_CHECK, Set.of(OWNER)))
+                .as("вид узла документа в обход DocumentNode.kind()").isEmpty();
     }
 
     @Test
-    @DisplayName("вид объекта представления по xsi:type в interchange выводит только DocumentNode")
+    @DisplayName("вид объекта представления по xsi:type выводят только DocumentNode и DiagramType")
     void onlyDocumentNodeClassifiesViewObjects() throws IOException {
-        assertThat(violations(VIEW_OBJECT_TYPE, "/interchange/"))
-                .as("вид объекта представления в обход DocumentNode.viewObject()").isEmpty();
+        assertThat(violations(VIEW_OBJECT_TYPE, Set.of(OWNER, MODELING_OWNER)))
+                .as("вид объекта представления в обход DocumentNode.viewObject() и DiagramType").isEmpty();
     }
 
-    /** Совпадения шаблона в основном коде модулей, путь которых содержит {@code scope}, кроме владельца. */
-    private static List<String> violations(Pattern pattern, String scope) throws IOException {
+    /** Совпадения шаблона в основном коде всех модулей, кроме файлов-владельцев правила. */
+    private static List<String> violations(Pattern pattern, Set<String> owners) throws IOException {
         List<String> violations = new ArrayList<>();
         Files.walkFileTree(REPOSITORY, new SimpleFileVisitor<>() {
             @Override
@@ -62,8 +66,8 @@ class DocumentKindRuleTest {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
                 String path = file.toString().replace('\\', '/');
-                if (path.endsWith(".java") && path.contains("/src/main/java/") && path.contains(scope)
-                        && !path.endsWith(OWNER)) {
+                if (path.endsWith(".java") && path.contains("/src/main/java/")
+                        && owners.stream().noneMatch(path::endsWith)) {
                     scan(file, pattern, violations);
                 }
                 return FileVisitResult.CONTINUE;
