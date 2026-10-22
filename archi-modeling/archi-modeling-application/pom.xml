@@ -12,6 +12,11 @@
 
     <artifactId>archi-modeling-application</artifactId>
 
+    <properties>
+        <!-- Ни Spring, ни JPA, ни Hibernate, ни Jackson. Правило — в pluginManagement родителя. -->
+        <ban-framework.phase>validate</ban-framework.phase>
+    </properties>
+
     <name>Archi Creator :: Modeling :: Application</name>
     <description>
         Сценарии modeling: use case'ы, входящие и исходящие порты.
@@ -26,15 +31,5 @@
             <artifactId>archi-modeling-domain</artifactId>
         </dependency>
     </dependencies>
-
-    <build>
-        <plugins>
-            <!-- Запрет Spring, JPA и Hibernate. Правило — в pluginManagement родителя. -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-enforcer-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
 
 </project>

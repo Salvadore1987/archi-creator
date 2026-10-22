@@ -490,3 +490,18 @@ decisions:
       sections: ['§4.14.10']
     note: |
       Тесты с пределом по времени проверяют числа NFR-02 и NFR-03 на каждом коммите; предел — число требования, замер — не меньше чем втрое ниже. Найдено на этапе 16 ревью кода (D-24).
+
+  - id: ADR-0035
+    title: Уязвимости ищет Trivy по образу, образ из CI не публикуется
+    status: accepted
+    date: 2026-10-22
+    kind: process
+    adr_file: 0035-image-scanning-without-publishing.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    implemented: 2026-10-22
+    deviates_from:
+      standard: java-spring-code-guidelines-v2@97bce16
+      sections: ['§4.16.5', '§4.16.6']
+    note: |
+      Одна проверка — Trivy по собранному образу: библиотеки jar, пакеты ОС, секреты; HIGH и CRITICAL с исправлением роняют конвейер. dependency-check-maven не подключается, реестра образов и деплоя из CI нет — образ собирается составом на сервере. Найдено на этапе 17 ревью кода (D-25).

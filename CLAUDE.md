@@ -344,8 +344,9 @@ macOS и старый Проводник его не создают. Измен�
 Контуры добавляемых узлов — узлы React Flow вне документа: их изменения размеров
 в состояние канвы не идут, иначе ResizeObserver зацикливается.
 
-Тестов на сервере: 1069 юнит-тестов (`./mvnw test`) и 178 интеграционных `*IT` на
-Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker).
+Тестов на сервере: 1074 юнит-теста (`./mvnw test`) и 180 интеграционных `*IT` на
+Testcontainers `postgres:16` и `keycloak:26` (failsafe, `./mvnw verify`; нужен Docker; в CI не идут —
+только локально, перед пушем).
 Во фронтенде: 67 юнит-тестов vitest (`npm test`, гоняется фазой `test` Maven)
 и 87 сценариев Playwright (`npm run e2e`, API подменяется — сервер не нужен; в CI —
 работа `e2e`, два потока).
@@ -403,7 +404,7 @@ git config core.hooksPath .githooks # включить хук commit-msg, оди
 четвёртый вызывается хуком сам; пятый — по закрытии этапа; шестой — после правки
 комментариев в коде; седьмой — после правки сообщений и строк в коде; восьмой —
 после правки `spec/nfr/` или чисел в `application.yaml`; девятый — после полного
-`./mvnw verify` (в CI — шаг после сборки); десятый — после правки кода Java.
+`./mvnw verify` (в CI его нет: без `*IT` адаптеры не покрыты); десятый — после правки кода Java.
 
 ### Граф зависимостей
 
@@ -460,6 +461,8 @@ jar'а в репозитории нет.
 |---|---|---|
 | Строка ≤ 120, без табуляции; импорты — без `*`, без лишних, статические первым блоком, остальные одним по алфавиту; Javadoc у публичных типов, публичных и protected методов (кроме `@Override`) и публичных констант основного кода | Checkstyle, `config/checkstyle.xml` | `validate` |
 | Сложность метода ≤ 25, нет пустого `catch` (и с комментарием), нет `var`, нет `System.out` и `printStackTrace`, не ловятся `NullPointerException`, `RuntimeException`, `Exception`, `Throwable`, `Error` — в основном коде и тестах | PMD, `config/pmd-ruleset.xml` | `process-test-classes` |
+| Воспроизводимая сборка: задан `project.build.outputTimestamp`, плагины плана сборки его соблюдают; одна версия каждой библиотеки в дереве модуля (тестовый classpath включительно); стартеры Spring Boot 4 по новым именам | `maven-artifact-plugin` (`check-buildplan`), enforcer | `validate` |
+| Ошибки высокой уверенности в байткоде основного кода (сравнение `double` на равенство, разыменование `null` и т. п.) | SpotBugs, порог High | `process-classes` |
 | Параметры публичных методов без `?`; зависимости только конструктором, поля бинов `final`; связи JPA без `EAGER`; `findAll()` порта без предела — только в списке исключений; Jackson 3, не 2; сущности агрегата меняет только агрегат | ArchUnit, `CodingRulesTest` | `test` |
 | Типы домена ([`ADR-0027`](spec/adr/0027-domain-types-and-absence.md)): `Optional` не поле и не параметр — ни типом, ни аргументом дженерика (`Function<K, Optional<V>>`); только результат поиска и локальная переменная; ключи `*Id` — `BaseId`; корни агрегатов из раздела `aggregates:` спецификации — `AggregateRoot` без публичных конструкторов; исключения домена — `DomainException` контекста; события — `{Агрегат}{Действие}Event` через тип агрегата | ArchUnit, `CodingRulesTest` | `test` |
 | Покрытие строк: `domain` 90 %, `application` 80 %, адаптеры 50 %, весь код 60 %; каждая строка `throw` домена исполнена тестом (недостижимая — строка `// недостижимо — причина` над ней); каждый обработчик `@*Mapping` вызван тестом | JaCoCo + `tools/check-coverage.py` | после `verify` |
@@ -662,7 +665,7 @@ Co-Authored-By: …
 | [`spec/application/<bc>/usecases/`](spec/application/) | Use case'ы `UC-<BC>-NNN`: Given/When/Then, порты, отказы |
 | [`spec/ui/`](spec/ui/README.md) | Слой интерфейса: правила `UI-NNN`, токены стиля, контракт геометрии фигур |
 | [`spec/contracts/<bc>/`](spec/contracts/) | OpenAPI и AsyncAPI |
-| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 34 записи, двадцать две с файлами MADR |
+| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 35 записей, двадцать три с файлами MADR |
 | [`spec/nfr/<bc>.yaml`](spec/nfr/) | SLO, latency, throughput, security по контекстам |
 
 Правила при правке `spec/`:

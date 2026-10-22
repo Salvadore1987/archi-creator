@@ -17,7 +17,7 @@
     <description>
         Единственный исполняемый модуль: собирает все контексты в одно приложение,
         держит конфигурацию Spring Boot, безопасность (Keycloak/OIDC), миграции
-        Flyway и — когда появится фронтенд — собранную статику.
+        Flyway и собранную статику фронтенда.
 
         Здесь же живёт пакет security: ресурс-сервер и роли из токена.
     </description>
@@ -144,7 +144,7 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
         </dependency>
 
         <!--
@@ -216,9 +216,8 @@
 
     <build>
         <!--
-            Jar называется archi-creator-<версия>.jar. Имя сохранено,
-            каталог стал archi-bootstrap/target/ — это учитывается
-            в docker-compose.yml и в CI, когда они появятся.
+            Jar называется archi-creator-<версия>.jar и лежит в archi-bootstrap/target/:
+            оттуда его берут Dockerfile и CI.
         -->
         <finalName>archi-creator-${project.version}</finalName>
         <resources>
@@ -288,6 +287,28 @@
                     </execution>
                 </executions>
             </plugin>
+            <!--
+                Состав зависимостей приложения (SBOM, CycloneDX) — в jar, откуда его отдаёт
+                /actuator/sbom: по нему видно, задевает ли запущенный образ новая уязвимость.
+            -->
+            <plugin>
+                <groupId>org.cyclonedx</groupId>
+                <artifactId>cyclonedx-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>sbom</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>makeBom</goal>
+                        </goals>
+                        <configuration>
+                            <outputFormat>json</outputFormat>
+                            <outputName>application.cdx</outputName>
+                            <outputDirectory>${project.build.outputDirectory}/META-INF/sbom</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -304,16 +325,11 @@
             <!--
                 Бэкенд журнала один — Logback из стартера Spring Boot. Второй на classpath
                 SLF4J не отвергает: печатает предупреждение и молча берёт один из двух.
-                Запрет Spring из родителя (ban-framework) здесь выключен: Spring — суть модуля.
             -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
                 <executions>
-                    <execution>
-                        <id>ban-framework</id>
-                        <phase>none</phase>
-                    </execution>
                     <execution>
                         <id>single-logging-backend</id>
                         <phase>validate</phase>

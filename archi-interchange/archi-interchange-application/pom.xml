@@ -12,6 +12,11 @@
 
     <artifactId>archi-interchange-application</artifactId>
 
+    <properties>
+        <!-- Ни Spring, ни JPA, ни Hibernate, ни Jackson. Правило — в pluginManagement родителя. -->
+        <ban-framework.phase>validate</ban-framework.phase>
+    </properties>
+
     <name>Archi Creator :: Interchange :: Application</name>
     <description>
         Сценарии interchange: use case'ы, входящие и исходящие порты.
@@ -45,15 +50,5 @@
             <artifactId>slf4j-api</artifactId>
         </dependency>
     </dependencies>
-
-    <build>
-        <plugins>
-            <!-- Граница слоя: запрет Spring, JPA и Hibernate. Правило — в pluginManagement родителя. -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-enforcer-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
 
 </project>
