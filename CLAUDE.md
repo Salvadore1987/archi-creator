@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 и fat jar. Код есть во всех трёх контекстах во всех четырёх слоях.
 
 ```
-archi-<bc>/archi-<bc>-domain              только java-uuid-generator (+ junit в test)
+archi-<bc>/archi-<bc>-domain              только java-uuid-generator и jspecify (+ junit в test)
 archi-<bc>/archi-<bc>-application         -> domain (interchange — ещё и modeling-application)
 archi-<bc>/archi-<bc>-adapter-rest        -> application + Spring Web
 archi-<bc>/archi-<bc>-adapter-persistence -> application + Spring Data JPA
@@ -463,6 +463,7 @@ jar'а в репозитории нет.
 | Сложность метода ≤ 25, нет пустого `catch` (и с комментарием), нет `var`, нет `System.out` и `printStackTrace`, не ловятся `NullPointerException`, `RuntimeException`, `Exception`, `Throwable`, `Error` — в основном коде и тестах | PMD, `config/pmd-ruleset.xml` | `process-test-classes` |
 | Воспроизводимая сборка: задан `project.build.outputTimestamp`, плагины плана сборки его соблюдают; одна версия каждой библиотеки в дереве модуля (тестовый classpath включительно); стартеры Spring Boot 4 по новым именам | `maven-artifact-plugin` (`check-buildplan`), enforcer | `validate` |
 | Ошибки высокой уверенности в байткоде основного кода (сравнение `double` на равенство, разыменование `null` и т. п.) | SpotBugs, порог High | `process-classes` |
+| Null-безопасность ([`ADR-0036`](spec/adr/0036-null-safety-jspecify.md)): каждый пакет основного кода — `package-info.java` с `@NullMarked`, необязательное значение — `@Nullable` (JSpecify), разыменование и передача `null` мимо разметки — ошибка; подавлений нет, тесты не проверяются | NullAway (Error Prone), `NullMarkedPackagesTest` | `compile`, `test` |
 | Параметры публичных методов без `?`; зависимости только конструктором, поля бинов `final`; связи JPA без `EAGER`; `findAll()` порта без предела — только в списке исключений; Jackson 3, не 2; сущности агрегата меняет только агрегат | ArchUnit, `CodingRulesTest` | `test` |
 | Типы домена ([`ADR-0027`](spec/adr/0027-domain-types-and-absence.md)): `Optional` не поле и не параметр — ни типом, ни аргументом дженерика (`Function<K, Optional<V>>`); только результат поиска и локальная переменная; ключи `*Id` — `BaseId`; корни агрегатов из раздела `aggregates:` спецификации — `AggregateRoot` без публичных конструкторов; исключения домена — `DomainException` контекста; события — `{Агрегат}{Действие}Event` через тип агрегата | ArchUnit, `CodingRulesTest` | `test` |
 | Покрытие строк: `domain` 90 %, `application` 80 %, адаптеры 50 %, весь код 60 %; каждая строка `throw` домена исполнена тестом (недостижимая — строка `// недостижимо — причина` над ней); каждый обработчик `@*Mapping` вызван тестом | JaCoCo + `tools/check-coverage.py` | после `verify` |
@@ -665,7 +666,7 @@ Co-Authored-By: …
 | [`spec/application/<bc>/usecases/`](spec/application/) | Use case'ы `UC-<BC>-NNN`: Given/When/Then, порты, отказы |
 | [`spec/ui/`](spec/ui/README.md) | Слой интерфейса: правила `UI-NNN`, токены стиля, контракт геометрии фигур |
 | [`spec/contracts/<bc>/`](spec/contracts/) | OpenAPI и AsyncAPI |
-| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 35 записей, двадцать три с файлами MADR |
+| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 36 записей, двадцать четыре с файлами MADR |
 | [`spec/nfr/<bc>.yaml`](spec/nfr/) | SLO, latency, throughput, security по контекстам |
 
 Правила при правке `spec/`:

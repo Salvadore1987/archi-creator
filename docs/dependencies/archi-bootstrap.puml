@@ -409,7 +409,7 @@ io_micrometer_micrometer_jakarta9_jar .[#ABABAB].> io_micrometer_micrometer_comm
 io_micrometer_micrometer_jakarta9_jar .[#ABABAB].> io_micrometer_micrometer_observation_jar
 org_springframework_boot_spring_boot_starter_actuator_jar -[#000000]-> io_micrometer_micrometer_jakarta9_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_springframework_boot_spring_boot_starter_actuator_jar
-io_micrometer_micrometer_registry_prometheus_jar -[#000000]-> org_jspecify_jspecify_jar
+io_micrometer_micrometer_registry_prometheus_jar .[#ABABAB].> org_jspecify_jspecify_jar
 io_micrometer_micrometer_core_jar .[#ABABAB].> org_jspecify_jspecify_jar
 io_micrometer_micrometer_core_jar .[#ABABAB].> io_micrometer_micrometer_commons_jar
 io_micrometer_micrometer_core_jar .[#ABABAB].> io_micrometer_micrometer_observation_jar
@@ -751,6 +751,7 @@ org_testcontainers_testcontainers_database_commons_jar .[#ABABAB].> org_testcont
 org_testcontainers_testcontainers_jdbc_jar -[#000000]-> org_testcontainers_testcontainers_database_commons_jar
 org_testcontainers_testcontainers_postgresql_jar -[#000000]-> org_testcontainers_testcontainers_jdbc_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_testcontainers_testcontainers_postgresql_jar
+uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> org_jspecify_jspecify_jar
 org_junit_jupiter_junit_jupiter_api_jar -[#000000]-> org_opentest4j_opentest4j_jar
 org_junit_platform_junit_platform_commons_jar .[#ABABAB].> org_apiguardian_apiguardian_api_jar
 org_junit_platform_junit_platform_commons_jar .[#ABABAB].> org_jspecify_jspecify_jar

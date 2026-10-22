@@ -1,5 +1,5 @@
 ---
-version: 1.9
+version: 1.10
 last_modified: 2026-10-22
 ---
 
@@ -505,3 +505,15 @@ decisions:
       sections: ['§4.16.5', '§4.16.6']
     note: |
       Одна проверка — Trivy по собранному образу: библиотеки jar, пакеты ОС, секреты; HIGH и CRITICAL с исправлением роняют конвейер. dependency-check-maven не подключается, реестра образов и деплоя из CI нет — образ собирается составом на сервере. Найдено на этапе 17 ревью кода (D-25).
+
+  - id: ADR-0036
+    title: Null-безопасность — разметка JSpecify и NullAway при компиляции
+    status: accepted
+    date: 2026-10-22
+    kind: architecture
+    adr_file: 0036-null-safety-jspecify.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    implemented: 2026-10-22
+    note: |
+      Каждый пакет основного кода размечен @NullMarked, необязательное значение — @Nullable; NullAway проверяет основной код при компиляции, срабатывание — ошибка. jspecify — вторая разрешённая зависимость домена. Дополняет ADR-0027, закрывает нарушение D-14 ревью кода.

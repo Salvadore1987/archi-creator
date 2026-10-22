@@ -8,11 +8,11 @@ skinparam rectangle {
 }
 rectangle "archi-modeling-domain\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_modeling_domain_jar_compile
 rectangle "java-uuid-generator\n5.2.0" as com_fasterxml_uuid_java_uuid_generator_jar_compile
+rectangle "jspecify\n1.0.1" as org_jspecify_jspecify_jar_compile
 rectangle "junit-jupiter-api\n6.0.3" as org_junit_jupiter_junit_jupiter_api_jar_test<<test>>
 rectangle "opentest4j\n1.3.0" as org_opentest4j_opentest4j_jar_test<<test>>
 rectangle "junit-platform-commons\n6.0.3" as org_junit_platform_junit_platform_commons_jar_test<<test>>
 rectangle "apiguardian-api\n1.1.2" as org_apiguardian_apiguardian_api_jar_test<<test>>
-rectangle "jspecify\n1.0.1" as org_jspecify_jspecify_jar_test<<test>>
 rectangle "junit-jupiter\n6.0.3" as org_junit_jupiter_junit_jupiter_jar_test<<test>>
 rectangle "junit-jupiter-params\n6.0.3" as org_junit_jupiter_junit_jupiter_params_jar_test<<test>>
 rectangle "junit-jupiter-engine\n6.0.3" as org_junit_jupiter_junit_jupiter_engine_jar_test<<test>>
@@ -63,7 +63,6 @@ rectangle "jakarta.validation-api\n3.1.1" as jakarta_validation_jakarta_validati
 rectangle "jboss-logging\n3.6.3.Final" as org_jboss_logging_jboss_logging_jar_compile
 rectangle "classmate\n1.7.3" as com_fasterxml_classmate_jar_compile
 rectangle "spring-boot-starter-validation\n4.1.1" as org_springframework_boot_spring_boot_starter_validation_jar_compile
-rectangle "jspecify\n1.0.1" as org_jspecify_jspecify_jar_compile
 rectangle "archi-modeling-adapter-persistence\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_modeling_adapter_persistence_jar_compile
 rectangle "spring-boot-starter-data-jpa\n4.1.1" as org_springframework_boot_spring_boot_starter_data_jpa_jar_compile
 rectangle "HikariCP\n7.0.2" as com_zaxxer_HikariCP_jar_compile
@@ -115,9 +114,9 @@ rectangle "spring-boot-actuator-autoconfigure\n4.1.1" as org_springframework_boo
 rectangle "spring-boot-actuator\n4.1.1" as org_springframework_boot_spring_boot_actuator_jar_compile
 rectangle "spring-boot-health\n4.1.1" as org_springframework_boot_spring_boot_health_jar_compile
 rectangle "micrometer-jakarta9\n1.17.1" as io_micrometer_micrometer_jakarta9_jar_compile
-rectangle "micrometer-registry-prometheus\n1.17.1" as io_micrometer_micrometer_registry_prometheus_jar_runtime<<runtime>>
 rectangle "micrometer-core\n1.17.1" as io_micrometer_micrometer_core_jar_compile
 rectangle "HdrHistogram\n2.2.2" as org_hdrhistogram_HdrHistogram_jar_runtime<<runtime>>
+rectangle "micrometer-registry-prometheus\n1.17.1" as io_micrometer_micrometer_registry_prometheus_jar_runtime<<runtime>>
 rectangle "prometheus-metrics-core\n1.7.0" as io_prometheus_prometheus_metrics_core_jar_runtime<<runtime>>
 rectangle "prometheus-metrics-model\n1.7.0" as io_prometheus_prometheus_metrics_model_jar_runtime<<runtime>>
 rectangle "prometheus-metrics-config\n1.7.0" as io_prometheus_prometheus_metrics_config_jar_runtime<<runtime>>
@@ -234,10 +233,10 @@ rectangle "testcontainers-jdbc\n2.0.5" as org_testcontainers_testcontainers_jdbc
 rectangle "testcontainers-database-commons\n2.0.5" as org_testcontainers_testcontainers_database_commons_jar_test<<test>>
 rectangle "testcontainers-postgresql\n2.0.5" as org_testcontainers_testcontainers_postgresql_jar_test<<test>>
 uz_salvadore_hamkorbank_archi_modeling_domain_jar_compile -[#000000]-> com_fasterxml_uuid_java_uuid_generator_jar_compile
+uz_salvadore_hamkorbank_archi_modeling_domain_jar_compile -[#000000]-> org_jspecify_jspecify_jar_compile
 org_junit_jupiter_junit_jupiter_api_jar_test -[#000000]-> org_opentest4j_opentest4j_jar_test
 org_junit_jupiter_junit_jupiter_api_jar_test -[#000000]-> org_junit_platform_junit_platform_commons_jar_test
 org_junit_jupiter_junit_jupiter_api_jar_test -[#000000]-> org_apiguardian_apiguardian_api_jar_test
-org_junit_jupiter_junit_jupiter_api_jar_test -[#000000]-> org_jspecify_jspecify_jar_test
 org_junit_jupiter_junit_jupiter_jar_test -[#000000]-> org_junit_jupiter_junit_jupiter_api_jar_test
 org_junit_jupiter_junit_jupiter_jar_test -[#000000]-> org_junit_jupiter_junit_jupiter_params_jar_test
 org_junit_jupiter_junit_jupiter_engine_jar_test -[#000000]-> org_junit_platform_junit_platform_engine_jar_test
@@ -290,7 +289,6 @@ org_hibernate_validator_hibernate_validator_jar_compile -[#000000]-> com_fasterx
 org_springframework_boot_spring_boot_validation_jar_compile -[#000000]-> org_hibernate_validator_hibernate_validator_jar_compile
 org_springframework_boot_spring_boot_starter_validation_jar_compile -[#000000]-> org_springframework_boot_spring_boot_validation_jar_compile
 uz_salvadore_hamkorbank_archi_modeling_adapter_rest_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_validation_jar_compile
-org_junit_jupiter_junit_jupiter_api_jar_test -[#000000]-> org_jspecify_jspecify_jar_compile
 uz_salvadore_hamkorbank_archi_modeling_adapter_rest_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_modeling_adapter_persistence_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_modeling_application_jar_compile
 org_springframework_boot_spring_boot_starter_data_jpa_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_jar_compile
@@ -337,6 +335,7 @@ org_springframework_boot_spring_boot_starter_data_jpa_jar_compile -[#000000]-> o
 uz_salvadore_hamkorbank_archi_modeling_adapter_persistence_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_data_jpa_jar_compile
 uz_salvadore_hamkorbank_archi_modeling_adapter_persistence_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_interchange_domain_jar_compile -[#000000]-> com_fasterxml_uuid_java_uuid_generator_jar_compile
+uz_salvadore_hamkorbank_archi_interchange_domain_jar_compile -[#000000]-> org_jspecify_jspecify_jar_compile
 uz_salvadore_hamkorbank_archi_interchange_domain_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_interchange_application_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_domain_jar_compile
 uz_salvadore_hamkorbank_archi_interchange_application_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_modeling_application_jar_compile
@@ -351,6 +350,7 @@ uz_salvadore_hamkorbank_archi_interchange_adapter_persistence_jar_compile -[#000
 uz_salvadore_hamkorbank_archi_interchange_adapter_persistence_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_data_jpa_jar_compile
 uz_salvadore_hamkorbank_archi_interchange_adapter_persistence_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_advisor_domain_jar_compile -[#000000]-> com_fasterxml_uuid_java_uuid_generator_jar_compile
+uz_salvadore_hamkorbank_archi_advisor_domain_jar_compile -[#000000]-> org_jspecify_jspecify_jar_compile
 uz_salvadore_hamkorbank_archi_advisor_domain_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_advisor_application_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_advisor_domain_jar_compile
 uz_salvadore_hamkorbank_archi_advisor_application_jar_compile -[#000000]-> org_slf4j_slf4j_api_jar_compile
@@ -379,7 +379,6 @@ org_springframework_boot_spring_boot_starter_actuator_jar_compile -[#000000]-> o
 org_springframework_boot_spring_boot_starter_actuator_jar_compile -[#000000]-> io_micrometer_micrometer_observation_jar_compile
 org_springframework_boot_spring_boot_starter_actuator_jar_compile -[#000000]-> io_micrometer_micrometer_jakarta9_jar_compile
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_actuator_jar_compile
-io_micrometer_micrometer_registry_prometheus_jar_runtime -[#000000]-> org_jspecify_jspecify_jar_compile
 io_micrometer_micrometer_core_jar_compile -[#000000]-> org_hdrhistogram_HdrHistogram_jar_runtime
 io_micrometer_micrometer_registry_prometheus_jar_runtime -[#000000]-> io_micrometer_micrometer_core_jar_compile
 io_prometheus_prometheus_metrics_core_jar_runtime -[#000000]-> io_prometheus_prometheus_metrics_model_jar_runtime
