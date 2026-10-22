@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.BendpointValue;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.ModelRows;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.StyleValue;
@@ -222,7 +223,7 @@ public final class ModelRowsMapper {
         return edgeIds.contains(id) ? ViewEdgeId.of(id) : ViewNodeId.of(id);
     }
 
-    private static StyleOverride style(StyleValue style) {
+    private static StyleOverride style(@Nullable StyleValue style) {
         return style == null ? new StyleOverride(null, null, null, null, null)
                 : new StyleOverride(style.fillColor(), style.font(), style.fontColor(), style.lineColor(),
                         style.textAlignment());
@@ -237,11 +238,11 @@ public final class ModelRowsMapper {
         return rows.stream().map(p -> new PropertyEntry(p.key(), p.value(), SortOrder.of(p.sortOrder()))).toList();
     }
 
-    private static RawXml rawXml(String value) {
+    private static @Nullable RawXml rawXml(@Nullable String value) {
         return value == null ? null : new RawXml(value);
     }
 
-    private static String rawXml(RawXml raw) {
+    private static @Nullable String rawXml(@Nullable RawXml raw) {
         return raw == null ? null : raw.value();
     }
 

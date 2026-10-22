@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.application.handler;
 
 import java.util.List;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.command.CreateRelationshipCommand;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.CreateRelationshipResponse;
@@ -74,7 +75,7 @@ public final class RelationshipCreateCommandHandler {
 
     /** Отпечаток команды по полям, без {@code toString} её частей: новое поле не сдвинет старые ключи. */
     private static String fingerprint(CreateRelationshipCommand command, ModelId modelId, ArchiType archiType,
-                                      FolderId folderId, AccessType accessType) {
+                                      @Nullable FolderId folderId, @Nullable AccessType accessType) {
         CreateRelationshipCommand.Edge edge = command.edge();
         return IdempotentCommand.fingerprint(modelId, archiType.value(), command.sourceId(), command.targetId(),
                 command.name(), folderId, accessType, command.directed(), command.id(), command.archiId(),

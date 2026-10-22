@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.dto.command;
 
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Создать связь и, если просят, её ребро на представлении.
@@ -17,9 +18,10 @@ import java.util.UUID;
  * @param edge           ребро на представлении; {@code null} — не рисуется
  * @param idempotencyKey ключ повтора; {@code null} — без идемпотентности
  */
-public record CreateRelationshipCommand(UUID modelId, String archiType, UUID sourceId, UUID targetId, String name,
-                                        UUID folderId, String accessType, Boolean directed, UUID id, String archiId,
-                                        Edge edge, String idempotencyKey) {
+public record CreateRelationshipCommand(UUID modelId, String archiType, UUID sourceId, UUID targetId,
+                                        @Nullable String name, @Nullable UUID folderId, @Nullable String accessType,
+                                        @Nullable Boolean directed, @Nullable UUID id, @Nullable String archiId,
+                                        @Nullable Edge edge, @Nullable String idempotencyKey) {
 
     /**
      * Ребро новой связи: концы — узлы или рёбра представления.
@@ -27,6 +29,7 @@ public record CreateRelationshipCommand(UUID modelId, String archiType, UUID sou
      * @param edgeId      ключ ребра, выбранный клиентом; {@code null} — выдаёт сервер
      * @param edgeArchiId идентификатор Archi ребра, выбранный клиентом; {@code null} — выдаёт сервер
      */
-    public record Edge(UUID viewId, UUID sourceEndpoint, UUID targetEndpoint, UUID edgeId, String edgeArchiId) {
+    public record Edge(UUID viewId, UUID sourceEndpoint, UUID targetEndpoint, @Nullable UUID edgeId,
+                       @Nullable String edgeArchiId) {
     }
 }

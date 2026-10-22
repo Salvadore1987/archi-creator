@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.dto.command;
 
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Создать пустую модель.
@@ -8,5 +9,5 @@ import java.util.UUID;
  * @param workspaceId    пространство; {@code null} — первое, до мультиарендности оно одно
  * @param idempotencyKey ключ повтора; {@code null} — без идемпотентности
  */
-public record CreateModelCommand(UUID workspaceId, String name, String idempotencyKey) {
+public record CreateModelCommand(@Nullable UUID workspaceId, String name, @Nullable String idempotencyKey) {
 }

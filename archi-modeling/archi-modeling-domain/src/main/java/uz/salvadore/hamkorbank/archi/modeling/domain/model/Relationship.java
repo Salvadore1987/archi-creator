@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 
 import java.util.List;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
@@ -20,10 +21,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType;
  * @param rawXml        остаток XML; {@code null} — нет
  */
 public record Relationship(RelationshipId id, FolderId folderId, ArchiId archiId, ArchiType archiType,
-                           ConceptRef source, ConceptRef target, String name,
-                           String documentation, AccessType accessType,
-                           Boolean directed, List<PropertyEntry> properties, SortOrder sortOrder,
-                           boolean supported, RawXml rawXml) {
+                           ConceptRef source, ConceptRef target, @Nullable String name,
+                           @Nullable String documentation, @Nullable AccessType accessType,
+                           @Nullable Boolean directed, List<PropertyEntry> properties, SortOrder sortOrder,
+                           boolean supported, @Nullable RawXml rawXml) {
 
     public Relationship {
         Objects.requireNonNull(id, "id");
@@ -54,7 +55,7 @@ public record Relationship(RelationshipId id, FolderId folderId, ArchiId archiId
      * Та же связь с новыми именем, документацией и свойствами; концы и тип не меняются.
      * {@code null} в имени или документации — значения нет.
      */
-    public Relationship edited(String newName, String newDocumentation,
+    public Relationship edited(@Nullable String newName, @Nullable String newDocumentation,
                                List<PropertyEntry> newProperties) {
         return new Relationship(id, folderId, archiId, archiType, source, target, newName, newDocumentation,
                 accessType, directed, newProperties, sortOrder, supported, rawXml);

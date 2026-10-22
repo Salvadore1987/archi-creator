@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.dto.command;
 
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.StyleValue;
 
 /**
@@ -10,5 +11,6 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.StyleValue;
  * @param content текст заметки; {@code null} — не менять
  * @param style   стиль целиком; {@code null} — не менять
  */
-public record EditViewNodeCommand(UUID nodeId, String label, String content, StyleValue style) {
+public record EditViewNodeCommand(UUID nodeId, @Nullable String label, @Nullable String content,
+                                  @Nullable StyleValue style) {
 }

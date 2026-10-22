@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.modeling.adapter.persistence.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /** Свойство {@code key/value} в таблице {@code *_property}. */
 @Embeddable
@@ -42,7 +43,7 @@ public class PropertyEmbeddable {
     }
 
     @Override
-    public boolean equals(Object other) {
+    public boolean equals(@Nullable Object other) {
         return other instanceof PropertyEmbeddable p && p.sortOrder == sortOrder && p.key.equals(key)
                 && p.value.equals(value);
     }

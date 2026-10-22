@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 
 import java.util.Set;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
@@ -9,8 +10,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
  * Собственный стиль объекта — сильнее токена слоя. Пустое переопределение
  * и его отсутствие — одно и то же. {@code null} в любом поле — значение берётся из токена слоя.
  */
-public record StyleOverride(String fillColor, String font, String fontColor,
-                            String lineColor, Integer textAlignment) {
+public record StyleOverride(@Nullable String fillColor, @Nullable String font, @Nullable String fontColor,
+                            @Nullable String lineColor, @Nullable Integer textAlignment) {
 
     /** Отсутствие собственного стиля: всё берётся из токенов слоя. */
     public static final StyleOverride NONE =
@@ -40,11 +41,11 @@ public record StyleOverride(String fillColor, String font, String fontColor,
     }
 
     /** Подходит ли строка как цвет: {@code #} и шесть шестнадцатеричных цифр. */
-    public static boolean validColor(String value) {
+    public static boolean validColor(@Nullable String value) {
         return value != null && COLOR.matcher(value).matches();
     }
 
-    private static void requireColorIfSet(String value, String name) {
+    private static void requireColorIfSet(@Nullable String value, String name) {
         if (value != null && !validColor(value)) {
             throw new InvalidValueException(ModelingMessages.COLOR_FORMAT, name, value);
         }

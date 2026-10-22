@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
@@ -127,7 +128,7 @@ public final class ArchiTypeRegistry {
             }
         }
 
-        void add(String name, ConceptKind kind, Layer layer, MetamodelPhase phase) {
+        void add(String name, ConceptKind kind, Layer layer, @Nullable MetamodelPhase phase) {
             ArchiType type = ArchiType.ofSimpleName(name);
             ConceptDefinition previous = concepts.put(type,
                     new ConceptDefinition(type, kind, layer, phase));

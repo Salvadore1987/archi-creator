@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.DomainEvent;
@@ -56,11 +57,11 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     private final WorkspaceId workspaceId;
     private final ArchiId archiId;
     private String name;
-    private String documentation;
+    private @Nullable String documentation;
     private final String archiVersion;
     private ModelStatus status;
     private List<PropertyEntry> properties;
-    private final RawXml rawXml;
+    private final @Nullable RawXml rawXml;
     private final String createdBy;
     private final Instant createdAt;
     private Instant updatedAt;
@@ -243,7 +244,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     }
 
     /** Новая документация модели; {@code null} и пустая строка — документации нет. */
-    public void changeDocumentation(String newDocumentation, Instant now) {
+    public void changeDocumentation(@Nullable String newDocumentation, Instant now) {
         XmlText.require(newDocumentation, Message.of(ModelingMessages.FIELD_DOCUMENTATION));
         requireActive();
         documentation = nonEmpty(newDocumentation);
@@ -317,8 +318,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
             } else if (relationships.contains(RelationshipId.of(itemId))) {
                 Relationship relationship = relationships.get(RelationshipId.of(itemId)).orElseThrow();
                 relationships.put(relationship.id(), relationship.movedTo(targetId, nextOrderIn(targetId)));
-            } else {
-                ViewRef view = views.get(ViewId.of(itemId));
+            } else if (views.get(ViewId.of(itemId)) instanceof ViewRef view) {
                 ViewRef moved = new ViewRef(view.id(), targetId, view.archiId(), view.archiType(), view.name(),
                         nextOrderIn(targetId));
                 views.put(view.id(), moved);
@@ -353,8 +353,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
             Relationship relationship = relationships.get(RelationshipId.of(itemId)).orElseThrow();
             requireSameRoot(relationship.folderId(), targetRoot,
                     Message.of(ModelingMessages.RELATIONSHIP, relationship.archiId()));
-        } else if (views.containsKey(ViewId.of(itemId))) {
-            ViewRef view = views.get(ViewId.of(itemId));
+        } else if (views.get(ViewId.of(itemId)) instanceof ViewRef view) {
             requireSameRoot(view.folderId(), targetRoot, Message.of(ModelingMessages.VIEW, view.name()));
         } else {
             throw ModelingDomainException.notFound(Message.of(ModelingMessages.OBJECT_IN_MODEL, itemId));
@@ -401,7 +400,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
      * Правка имени, документации и свойств элемента; нередактируемый тип отклоняется.
      * {@code null} и пустая строка в документации — документации нет.
      */
-    public Element updateElement(ElementId elementId, String newName, String newDocumentation,
+    public Element updateElement(ElementId elementId, String newName, @Nullable String newDocumentation,
                                  List<PropertyEntry> newProperties, Instant now) {
         XmlText.require(newName, Message.of(ModelingMessages.FIELD_NAME));
         XmlText.require(newDocumentation, Message.of(ModelingMessages.FIELD_DOCUMENTATION));
@@ -437,7 +436,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
      * существующая связь. {@code null} и пустая строка в имени — имени нет.
      */
     public Created<Relationship> addRelationship(ArchiType archiType, ConceptRef source, ConceptRef target,
-                                                 String relationshipName, RelationshipId newId,
+                                                 @Nullable String relationshipName, RelationshipId newId,
                                                  ArchiId newArchiId, Instant now) {
         XmlText.require(relationshipName, Message.of(ModelingMessages.FIELD_NAME));
         return addRelationship(archiType, source, target, relationshipName, null, null,
@@ -450,8 +449,8 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
      * только у Association. {@code null} в любом из необязательных аргументов — не задан.
      */
     public Created<Relationship> addRelationship(ArchiType archiType, ConceptRef source, ConceptRef target,
-                                                 String relationshipName, FolderId folderId,
-                                                 AccessType accessType, Boolean directed,
+                                                 @Nullable String relationshipName, @Nullable FolderId folderId,
+                                                 @Nullable AccessType accessType, @Nullable Boolean directed,
                                                  RelationshipId newId, ArchiId newArchiId, Instant now) {
         return addRelationship(archiType, source, target, relationshipName, folderId, accessType, directed,
                 () -> newId, () -> newArchiId, now);
@@ -462,8 +461,8 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
      * у дубля их не запрашивают — заданные клиентом не проверяются.
      */
     public Created<Relationship> addRelationship(ArchiType archiType, ConceptRef source, ConceptRef target,
-                                                 String relationshipName, FolderId folderId,
-                                                 AccessType accessType, Boolean directed,
+                                                 @Nullable String relationshipName, @Nullable FolderId folderId,
+                                                 @Nullable AccessType accessType, @Nullable Boolean directed,
                                                  Supplier<RelationshipId> newId, Supplier<ArchiId> newArchiId,
                                                  Instant now) {
         XmlText.require(relationshipName, Message.of(ModelingMessages.FIELD_NAME));
@@ -486,7 +485,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
             return new Created<>(duplicate.get(), false);
         }
         RelationMatrix.archimate32().requirePermitted(sourceType, targetType, type);
-        FolderId folder = folderId != null ? folderId : roots().get(FolderType.RELATIONS).id();
+        FolderId folder = folderId != null ? folderId : root(FolderType.RELATIONS).id();
         requireSameRoot(folder, FolderType.RELATIONS,
                 Message.of(ModelingMessages.RELATIONSHIP_OF_TYPE, archiType.simpleName()));
         ArchiId archiId = newArchiId.get();
@@ -500,8 +499,8 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     }
 
     /** Правка имени, документации и свойств связи; {@code null} и пустая строка — значения нет. */
-    public Relationship updateRelationship(RelationshipId relationshipId, String newName,
-                                           String newDocumentation, List<PropertyEntry> newProperties,
+    public Relationship updateRelationship(RelationshipId relationshipId, @Nullable String newName,
+                                           @Nullable String newDocumentation, List<PropertyEntry> newProperties,
                                            Instant now) {
         XmlText.require(newName, Message.of(ModelingMessages.FIELD_NAME));
         XmlText.require(newDocumentation, Message.of(ModelingMessages.FIELD_DOCUMENTATION));
@@ -647,6 +646,11 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
         return roots;
     }
 
+    /** Корневая папка данного вида: все девять корней у модели есть всегда, недостающие дописываются. */
+    public ModelFolder root(FolderType type) {
+        return Objects.requireNonNull(roots().get(type), "root");
+    }
+
     /** Корень поддерева, в котором лежит папка; цикл в дереве — нарушение структуры папок. */
     public ModelFolder rootOf(FolderId folderId) {
         return rootOf(requireFolder(folderId));
@@ -695,7 +699,7 @@ public final class ArchitectureModel extends AggregateRoot<ModelId> {
     }
 
     /** Пустая строка — значения нет. */
-    private static String nonEmpty(String value) {
+    private static @Nullable String nonEmpty(@Nullable String value) {
         return value == null || value.isEmpty() ? null : value;
     }
 

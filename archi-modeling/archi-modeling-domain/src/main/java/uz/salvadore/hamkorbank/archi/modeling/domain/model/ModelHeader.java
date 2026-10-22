@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
@@ -20,8 +21,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
  * @param version       оптимистичная блокировка строки
  */
 public record ModelHeader(ModelId id, WorkspaceId workspaceId, ArchiId archiId, String name,
-                          String documentation, String archiVersion, ModelStatus status,
-                          List<PropertyEntry> properties, RawXml rawXml, String createdBy,
+                          @Nullable String documentation, String archiVersion, ModelStatus status,
+                          List<PropertyEntry> properties, @Nullable RawXml rawXml, String createdBy,
                           Instant createdAt, Instant updatedAt, long version) {
 
     /** Версия Archi, которая пишется в файл новой модели. */
@@ -54,7 +55,7 @@ public record ModelHeader(ModelId id, WorkspaceId workspaceId, ArchiId archiId, 
     }
 
     /** Подходит ли строка как версия Archi: три числа через точку. */
-    public static boolean validArchiVersion(String value) {
+    public static boolean validArchiVersion(@Nullable String value) {
         return value != null && ARCHI_VERSION.matcher(value).matches();
     }
 }

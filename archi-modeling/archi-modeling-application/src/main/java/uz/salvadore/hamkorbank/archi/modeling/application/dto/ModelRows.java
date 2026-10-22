@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.modeling.application.dto;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Содержимое модели строками из простых значений — то, чем modeling обменивается с раскладкой
@@ -30,8 +31,8 @@ public record ModelRows(Header header, List<Folder> folders, List<Element> eleme
      * @param documentation описание; {@code null} — нет
      * @param archiVersion  версия Archi из файла как есть; недопустимую modeling заменит своей по умолчанию
      */
-    public record Header(String archiId, String name, String documentation, String archiVersion,
-                         List<Property> properties, String rawXml) {
+    public record Header(String archiId, String name, @Nullable String documentation, @Nullable String archiVersion,
+                         List<Property> properties, @Nullable String rawXml) {
 
         public Header {
             properties = List.copyOf(properties);
@@ -48,13 +49,14 @@ public record ModelRows(Header header, List<Folder> folders, List<Element> eleme
      * @param parentId {@code null} — корневая
      * @param type     тип корневой папки значением из файла; у вложенной — {@code null}
      */
-    public record Folder(UUID id, UUID parentId, String archiId, String name, String type, long sortOrder,
-                         String rawXml) {
+    public record Folder(UUID id, @Nullable UUID parentId, String archiId, String name, @Nullable String type,
+                         long sortOrder, @Nullable String rawXml) {
     }
 
     /** Элемент; поддержан ли его тип, решает modeling по каталогу. */
     public record Element(UUID id, UUID folderId, String archiId, String archiType, String name,
-                          String documentation, List<Property> properties, long sortOrder, String rawXml) {
+                          @Nullable String documentation, List<Property> properties, long sortOrder,
+                          @Nullable String rawXml) {
 
         public Element {
             properties = List.copyOf(properties);
@@ -68,9 +70,10 @@ public record ModelRows(Header header, List<Folder> folders, List<Element> eleme
      * @param accessType вид доступа значением из файла; {@code null} — не задан
      * @param directed   направленность связи влияния; {@code null} — не задана
      */
-    public record Relationship(UUID id, UUID folderId, String archiId, String archiType, UUID sourceId,
-                               UUID targetId, String name, String documentation, String accessType,
-                               Boolean directed, List<Property> properties, long sortOrder, String rawXml) {
+    public record Relationship(UUID id, UUID folderId, String archiId, String archiType, UUID sourceId, UUID targetId,
+                               @Nullable String name, @Nullable String documentation, @Nullable String accessType,
+                               @Nullable Boolean directed, List<Property> properties, long sortOrder,
+                               @Nullable String rawXml) {
 
         public Relationship {
             properties = List.copyOf(properties);
@@ -83,8 +86,8 @@ public record ModelRows(Header header, List<Folder> folders, List<Element> eleme
      * @param viewpoint {@code null} — без точки зрения
      */
     public record View(UUID id, UUID folderId, String archiId, String archiType, String name,
-                       String documentation, String viewpoint, List<Property> properties, long sortOrder,
-                       String rawXml, List<Node> nodes, List<Edge> edges) {
+                       @Nullable String documentation, @Nullable String viewpoint, List<Property> properties,
+                       long sortOrder, @Nullable String rawXml, List<Node> nodes, List<Edge> edges) {
 
         public View {
             properties = List.copyOf(properties);
@@ -102,8 +105,9 @@ public record ModelRows(Header header, List<Folder> folders, List<Element> eleme
      * @param label     подпись; {@code null} — нет
      * @param content   текст заметки; {@code null} — нет
      */
-    public record Node(UUID id, UUID parentId, String archiId, String archiType, UUID elementId, Box bounds,
-                       StyleValue style, String label, String content, long sortOrder, String rawXml) {
+    public record Node(UUID id, @Nullable UUID parentId, String archiId, String archiType, @Nullable UUID elementId,
+                       @Nullable Box bounds, @Nullable StyleValue style, @Nullable String label,
+                       @Nullable String content, long sortOrder, @Nullable String rawXml) {
     }
 
     /**
@@ -111,9 +115,9 @@ public record ModelRows(Header header, List<Folder> folders, List<Element> eleme
      *
      * @param relationshipId связь модели; {@code null} — соединение без связи
      */
-    public record Edge(UUID id, String archiId, String archiType, UUID relationshipId, UUID sourceId,
-                       UUID targetId, List<BendpointValue> bendpoints, StyleValue style, long sortOrder,
-                       String rawXml) {
+    public record Edge(UUID id, String archiId, String archiType, @Nullable UUID relationshipId, UUID sourceId,
+                       UUID targetId, List<BendpointValue> bendpoints, @Nullable StyleValue style, long sortOrder,
+                       @Nullable String rawXml) {
 
         public Edge {
             bendpoints = List.copyOf(bendpoints);

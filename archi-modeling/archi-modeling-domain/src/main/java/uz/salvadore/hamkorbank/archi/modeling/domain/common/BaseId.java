@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.common;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Ключ сущности: типизированная обёртка над значением. Два ключа равны, только если
@@ -24,7 +25,7 @@ public abstract class BaseId<T> {
     }
 
     @Override
-    public boolean equals(Object other) {
+    public boolean equals(@Nullable Object other) {
         return other != null && other.getClass() == getClass() && value.equals(((BaseId<?>) other).value);
     }
 
