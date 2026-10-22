@@ -133,7 +133,17 @@ class ClientIdsScenariosTest {
                 () -> createElement("CRM", null, "не id", null));
         assertEquals(ModelingCodes.INVALID_INPUT, invalid.code());
         assertEquals(Failure.UNPROCESSABLE, invalid.failure());
-        assertEquals(1, ports.models.get(model).elements().size(), "отказ ничего не создал");
+        ElementResponse actor = ports.element(ALICE, model, ACTOR, "Клиент");
+        ViewNodeResponse actorNode = ports.place(ALICE, view.id(), actor.id(), new Bounds(300, 10, 120, 55));
+        ModelingDomainException edgeIdOfNode = assertThrows(ModelingDomainException.class,
+                () -> ports.relationships.createRelationship(ALICE, new CreateRelationshipCommand(model.value(),
+                        SERVING.value(), component.id(), actor.id(), null, null, null, null, null, null,
+                        new CreateRelationshipCommand.Edge(view.id(), node.id(), actorNode.id(), node.id(), null),
+                        null)));
+        assertEquals("MDL_ID_TAKEN", edgeIdOfNode.code(), "ключ ребра занят узлом — уже после записи связи");
+
+        assertEquals(2, ports.models.get(model).elements().size(), "отказ ничего не создал");
+        assertTrue(ports.models.get(model).relationships().values().isEmpty(), "связь до отказа откатилась");
     }
 
     @Test

@@ -35,6 +35,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ImportSessionId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
+import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportRequest;
 import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportSession;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.UnitOfWork;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
@@ -187,6 +188,10 @@ final class GitFakes {
         }
     }
 
+    /**
+     * Журнал сессий хранит и отдаёт копии, как хранилище строк: правка сессии на месте
+     * без записи не видна, а откат возвращает и сессию, изменённую после чтения.
+     */
     static final class MemorySessions implements ImportSessionRepository, Store<Map<ImportSessionId, ImportSession>> {
 
         Map<ImportSessionId, ImportSession> rows = new LinkedHashMap<>();
@@ -194,7 +199,7 @@ final class GitFakes {
 
         @Override
         public Optional<ImportSession> find(ImportSessionId id) {
-            return Optional.ofNullable(rows.get(id));
+            return Optional.ofNullable(rows.get(id)).map(MemorySessions::copy);
         }
 
         @Override
@@ -202,14 +207,25 @@ final class GitFakes {
             if (failSaves) {
                 throw new IllegalStateException("журнал недоступен");
             }
-            rows.put(session.id(), session);
+            rows.put(session.id(), copy(session));
         }
 
         @Override
         public Optional<ImportSession> findByIdempotencyKey(WorkspaceId workspaceId, String key) {
-            return rows.values().stream().filter(s -> s.idempotencyKey().equals(key)).findFirst();
+            return rows.values().stream().filter(s -> s.workspaceId().equals(workspaceId))
+                    .filter(s -> s.idempotencyKey().equals(key)).findFirst().map(MemorySessions::copy);
         }
 
+        /** Сессия так, как её вернёт хранилище: поля и находки без разобранного документа. */
+        private static ImportSession copy(ImportSession session) {
+            return ImportSession.restore(session.id(), new ImportRequest(session.workspaceId(),
+                            session.targetModelId(), session.sourceName(), session.sourceHash(), session.sourceSize(),
+                            session.idempotencyKey(), session.strictMode(), session.startedBy()),
+                    session.startedAt(), session.status(), session.findings(), session.finishedAt(),
+                    session.appliedModelId(), session.appliedVersionNo());
+        }
+
+        /** Строки хранятся копиями и на месте не меняются — снимку достаточно копии карты. */
         @Override
         public Map<ImportSessionId, ImportSession> snapshot() {
             return new LinkedHashMap<>(rows);
@@ -221,12 +237,16 @@ final class GitFakes {
         }
     }
 
-    static final class MemoryOutbox implements GitOutbox, Store<Map<UUID, String>> {
+    static final class MemoryOutbox implements GitOutbox, Store<MemoryOutbox.State> {
 
         private record Row(UUID id, WorkspaceId workspace, ModelId model, long versionNo) {
         }
 
-        private final List<Row> rows = new ArrayList<>();
+        /** Строки очереди и их статусы — откат возвращает и то и другое. */
+        record State(List<Row> rows, Map<UUID, String> statuses) {
+        }
+
+        private List<Row> rows = new ArrayList<>();
         private Map<UUID, String> statuses = new LinkedHashMap<>();
 
         List<String> statuses() {
@@ -296,13 +316,14 @@ final class GitFakes {
         }
 
         @Override
-        public Map<UUID, String> snapshot() {
-            return new LinkedHashMap<>(statuses);
+        public State snapshot() {
+            return new State(new ArrayList<>(rows), new LinkedHashMap<>(statuses));
         }
 
         @Override
-        public void restore(Map<UUID, String> snapshot) {
-            statuses = snapshot;
+        public void restore(State snapshot) {
+            rows = snapshot.rows();
+            statuses = snapshot.statuses();
         }
     }
 

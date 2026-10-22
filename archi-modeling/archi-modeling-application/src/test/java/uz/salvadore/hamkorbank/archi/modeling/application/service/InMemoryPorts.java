@@ -131,7 +131,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
 /**
  * Порты modeling в памяти — проверка сценариев без базы. Хранилище отдаёт копию
  * агрегата через {@code restore}, как настоящее: изменения, не записанные {@code save},
- * не видны следующему чтению.
+ * не видны следующему чтению. Транзакция — тоже как настоящая: отказ внутри записи
+ * откатывает все хранилища к началу внешней транзакции, а в транзакции чтения
+ * запись в хранилище — ошибка теста.
  */
 final class InMemoryPorts {
 
@@ -146,19 +148,19 @@ final class InMemoryPorts {
     final Map<ModelId, ModelLock> locks = new HashMap<>();
     final List<ModelVersion> versions = new ArrayList<>();
     final Map<ModelId, ModelAccessList> acl = new HashMap<>();
-    final Map<String, IdempotencyRecord> keys = new HashMap<>();
+    final Map<IdempotencyRecord.Key, IdempotencyRecord> keys = new HashMap<>();
     final List<DomainEvent> published = new ArrayList<>();
     final Workspace workspace = Workspace.restore(WorkspaceId.of(IDS.generate()), "Банк", NOW);
 
     final UnitOfWork unitOfWork = new UnitOfWork() {
         @Override
         public <T> T write(Supplier<T> work) {
-            return inTransaction(work);
+            return transaction(false, work);
         }
 
         @Override
         public <T> T read(Supplier<T> work) {
-            return inTransaction(work);
+            return transaction(true, work);
         }
     };
 
@@ -175,16 +177,19 @@ final class InMemoryPorts {
 
         @Override
         public List<ModelHeader> list(WorkspaceId workspaceId) {
-            return models.values().stream().map(ArchitectureModel::header).toList();
+            return models.values().stream().map(ArchitectureModel::header)
+                    .filter(h -> h.workspaceId().equals(workspaceId)).toList();
         }
 
         @Override
         public void save(ArchitectureModel model) {
+            requireWritable();
             models.put(model.id(), copy(model));
         }
 
         @Override
         public void replaceContent(ModelContent content) {
+            requireWritable();
             save(content.model());
             views.values().removeIf(v -> v.modelId().equals(content.model().id()));
             content.views().forEach(viewRepository::save);
@@ -192,6 +197,7 @@ final class InMemoryPorts {
 
         @Override
         public void purge(ModelId id) {
+            requireWritable();
             models.remove(id);
         }
 
@@ -233,13 +239,13 @@ final class InMemoryPorts {
     final ViewRepository viewRepository = new ViewRepository() {
         @Override
         public Optional<View> load(ViewId id) {
-            return Optional.ofNullable(views.get(id)).map(v -> View.restore(v.header(), v.nodes().values(),
-                    v.edges().values()));
+            return Optional.ofNullable(views.get(id)).map(InMemoryPorts::copy);
         }
 
         @Override
         public List<View> loadAll(ModelId modelId) {
-            return views.values().stream().filter(v -> v.modelId().equals(modelId)).toList();
+            return views.values().stream().filter(v -> v.modelId().equals(modelId)).map(InMemoryPorts::copy)
+                    .toList();
         }
 
         @Override
@@ -266,11 +272,13 @@ final class InMemoryPorts {
 
         @Override
         public void save(View view) {
-            views.put(view.id(), View.restore(view.header(), view.nodes().values(), view.edges().values()));
+            requireWritable();
+            views.put(view.id(), copy(view));
         }
 
         @Override
         public void delete(ViewId id) {
+            requireWritable();
             views.remove(id);
         }
     };
@@ -283,11 +291,13 @@ final class InMemoryPorts {
 
         @Override
         public void save(ModelLock lock) {
+            requireWritable();
             locks.put(lock.modelId(), lock);
         }
 
         @Override
         public void delete(ModelId modelId) {
+            requireWritable();
             locks.remove(modelId);
         }
     };
@@ -317,6 +327,7 @@ final class InMemoryPorts {
 
         @Override
         public void save(ModelVersion version) {
+            requireWritable();
             versions.removeIf(v -> v.id().equals(version.id()));
             versions.add(version);
         }
@@ -341,6 +352,7 @@ final class InMemoryPorts {
 
         @Override
         public void save(ModelAccessList list) {
+            requireWritable();
             acl.put(list.modelId(), list);
         }
     };
@@ -348,12 +360,13 @@ final class InMemoryPorts {
     final IdempotencyRepository idempotencyRepository = new IdempotencyRepository() {
         @Override
         public Optional<IdempotencyRecord> find(String scope, String actor, String key) {
-            return Optional.ofNullable(keys.get(scope + actor + key));
+            return Optional.ofNullable(keys.get(new IdempotencyRecord.Key(scope, actor, key)));
         }
 
         @Override
         public void save(IdempotencyRecord record) {
-            keys.put(record.scope() + record.actor() + record.key(), record);
+            requireWritable();
+            keys.put(new IdempotencyRecord.Key(record.scope(), record.actor(), record.key()), record);
         }
     };
 
@@ -436,13 +449,60 @@ final class InMemoryPorts {
 
     /** Глубина вложенных транзакций: больше нуля — работа идёт внутри транзакции. */
     private int transactionDepth;
+    /** Внешняя транзакция открыта на чтение: вложенные к ней присоединяются и тоже только читают. */
+    private boolean readOnly;
+    /** Вложенная транзакция завершилась отказом: внешняя уже не зафиксируется. */
+    private boolean rollbackOnly;
 
-    private <T> T inTransaction(Supplier<T> work) {
+    /**
+     * Транзакция с распространением «присоединиться к текущей»: вложенный вызов работает
+     * в транзакции внешнего. Отказ откатывает всё к началу внешней транзакции; если внешняя
+     * перехватила отказ вложенной и завершилась успешно, фиксация всё равно не происходит.
+     */
+    private <T> T transaction(boolean read, Supplier<T> work) {
+        if (transactionDepth > 0) {
+            return joined(work);
+        }
+        Snapshot before = new Snapshot();
+        readOnly = read;
+        rollbackOnly = false;
         transactionDepth++;
+        boolean committed = false;
         try {
-            return work.get();
+            T result = work.get();
+            if (rollbackOnly) {
+                throw new IllegalStateException("транзакция помечена на откат вложенным отказом");
+            }
+            committed = true;
+            return result;
         } finally {
+            if (!committed) {
+                before.restore();
+            }
             transactionDepth--;
+            readOnly = false;
+            rollbackOnly = false;
+        }
+    }
+
+    private <T> T joined(Supplier<T> work) {
+        transactionDepth++;
+        boolean completed = false;
+        try {
+            T result = work.get();
+            completed = true;
+            return result;
+        } finally {
+            if (!completed) {
+                rollbackOnly = true;
+            }
+            transactionDepth--;
+        }
+    }
+
+    private void requireWritable() {
+        if (readOnly) {
+            throw new IllegalStateException("запись в транзакции чтения");
         }
     }
 
@@ -493,6 +553,41 @@ final class InMemoryPorts {
     private static ArchitectureModel copy(ArchitectureModel model) {
         return ArchitectureModel.restore(model.header(), model.folders().values(), model.elements().values(),
                 model.relationships().values(), model.views());
+    }
+
+    private static View copy(View view) {
+        return View.restore(view.header(), view.nodes().values(), view.edges().values());
+    }
+
+    /**
+     * Состояние всех хранилищ на начало транзакции. Значения в хранилищах не меняются
+     * на месте — запись кладёт новую копию, — поэтому копии самих коллекций достаточно.
+     */
+    private final class Snapshot {
+        private final Map<ModelId, ArchitectureModel> models = new LinkedHashMap<>(InMemoryPorts.this.models);
+        private final Map<ViewId, View> views = new LinkedHashMap<>(InMemoryPorts.this.views);
+        private final Map<ModelId, ModelLock> locks = new HashMap<>(InMemoryPorts.this.locks);
+        private final List<ModelVersion> versions = new ArrayList<>(InMemoryPorts.this.versions);
+        private final Map<ModelId, ModelAccessList> acl = new HashMap<>(InMemoryPorts.this.acl);
+        private final Map<IdempotencyRecord.Key, IdempotencyRecord> keys = new HashMap<>(InMemoryPorts.this.keys);
+        private final List<DomainEvent> published = new ArrayList<>(InMemoryPorts.this.published);
+
+        void restore() {
+            replace(InMemoryPorts.this.models, models);
+            replace(InMemoryPorts.this.views, views);
+            replace(InMemoryPorts.this.locks, locks);
+            replace(InMemoryPorts.this.acl, acl);
+            replace(InMemoryPorts.this.keys, keys);
+            InMemoryPorts.this.versions.clear();
+            InMemoryPorts.this.versions.addAll(versions);
+            InMemoryPorts.this.published.clear();
+            InMemoryPorts.this.published.addAll(published);
+        }
+
+        private static <K, V> void replace(Map<K, V> target, Map<K, V> source) {
+            target.clear();
+            target.putAll(source);
+        }
     }
 
     /** Часы, которые тест переводит вперёд — истечение блокировки. */

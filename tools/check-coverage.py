@@ -16,19 +16,23 @@
 интеграционных идут без ``clean`` между ними, иначе адаптеры окажутся
 непокрытыми.
 
-Процент строк набирается и позитивными путями, поэтому сверх порога
-поимённая проверка:
+Процент строк набирается и позитивными путями, поэтому сверх порога две
+поимённые проверки:
 
 - каждая строка ``throw`` модуля ``domain`` исполнена тестом: отказ домена —
   правило, и непроверенный отказ не виден в проценте. Ветка, до которой код
   не доходит по построению, помечается комментарием ``// недостижимо — причина``
-  строкой над ``throw``.
+  строкой над ``throw``;
+- каждый обработчик ``@*Mapping`` контроллера модуля ``adapter-rest`` исполнен
+  тестом: операция, которую не вызывает ни один запрос, не проверена ни
+  отображением, ни ролью.
 
 Запуск: tools/check-coverage.py   (из любого каталога, после ./mvnw verify)
         tools/check-coverage.py --module <каталог модуля>
             отказы домена по отчёту юнит-тестов модуля
             (после ./mvnw -pl <модуль> test jacoco:report)
-Код выхода 1, если порог не пройден, есть непроверенный отказ или отчёта нет.
+Код выхода 1, если порог не пройден, есть непроверенный отказ или обработчик,
+или отчёта нет.
 """
 from __future__ import annotations
 
@@ -65,6 +69,8 @@ def percent(covered: int, total: int) -> float:
 
 THROW = re.compile(r"\bthrow\b")
 UNREACHABLE = "// недостижимо"
+MAPPING = re.compile(r"^\s*@(?:Get|Post|Put|Patch|Delete|Request)Mapping\b")
+METHOD_NAME = re.compile(r"\b(\w+)\s*\(")
 
 
 def sources(module: Path) -> Path:
@@ -95,6 +101,31 @@ def uncovered_throws(element: ET.Element, module: Path) -> list[str]:
                     missed.append(f"{path.relative_to(ROOT)}:{number}")
     return missed
 
+
+def uncovered_handlers(element: ET.Element, module: Path) -> list[str]:
+    """Обработчики ``@*Mapping`` контроллеров, которые не исполнил ни один тест."""
+    missed = []
+    for package in element.iter("package"):
+        for cls in package.findall("class"):
+            path = sources(module) / (cls.get("name").split("$")[0] + ".java")
+            if not path.exists():
+                continue
+            text = path.read_text(encoding="utf-8").splitlines()
+            covered = {}
+            for method in cls.findall("method"):
+                calls, _ = lines(method)
+                covered[method.get("name")] = covered.get(method.get("name"), 0) + calls
+            for number, line in enumerate(text, 1):
+                if not MAPPING.match(line) or line.lstrip().startswith("@RequestMapping") and \
+                        any(w in " ".join(text[number:number + 3]) for w in (" class ", " interface ")):
+                    continue
+                for declaration in text[number:number + 6]:
+                    name = METHOD_NAME.search(declaration)
+                    if name and not declaration.lstrip().startswith("@") and name.group(1) in covered:
+                        if covered[name.group(1)] == 0:
+                            missed.append(f"{path.relative_to(ROOT)}:{number} {name.group(1)}")
+                        break
+    return missed
 
 
 def check_module(module: Path) -> int:
@@ -127,6 +158,8 @@ def main() -> int:
         module = module_dir(name)
         if module and name.endswith("-domain"):
             problems += [f"отказ без теста: {where}" for where in uncovered_throws(group, module)]
+        if module and name.endswith("-adapter-rest"):
+            problems += [f"операция без теста: {where}" for where in uncovered_handlers(group, module)]
     if percent(covered_all, total_all) < TOTAL:
         problems.append(f"весь код: {percent(covered_all, total_all):.1f} % строк, порог {TOTAL:.0f} %")
     if problems:
