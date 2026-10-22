@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
 
-import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,7 +53,7 @@ class FolderTreeTest {
         ModelFolder core = model.createFolder(masters.id(), "Ядро", FolderId.next(UUIDS), Models.archiId(), NOW);
 
         ModelingDomainException cycle = assertThrows(ModelingDomainException.class,
-                () -> model.moveToFolder(core.id(), List.of(masters.id().value()), Instant.now()));
+                () -> model.moveToFolder(core.id(), List.of(masters.id().value()), NOW));
 
         assertEquals("INV-MDL-009", cycle.code());
         assertEquals(application, model.folders().get(masters.id()).orElseThrow().parentId());

@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.support;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,10 @@ public abstract class IntegrationTest {
 
     @Autowired
     protected WorkspaceApplicationService workspaces;
+
+    /** Часы приложения: время в тестах — то же, по которому сервер считает сроки. */
+    @Autowired
+    protected Clock clock;
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {

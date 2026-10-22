@@ -20,6 +20,7 @@ class GitValuesTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"main", "feature/x", "refs/heads/main", "v1.0", "0a1b2c3", "release-2026.10"})
+    @DisplayName("допустимое имя Git принимается и ссылкой, и веткой привязки")
     void validNamesAreAcceptedAsRefAndBranch(String name) {
         assertDoesNotThrow(() -> GitRef.of(name));
         assertDoesNotThrow(() -> binding(name));
@@ -28,6 +29,7 @@ class GitValuesTest {
     @ParameterizedTest
     @ValueSource(strings = {"-x", "/x", ".hidden", "feature/.x", "a.lock/b", "a..b", "a//b", "a/", "a.", "a b",
         "a@{1}", "a.lock"})
+    @DisplayName("имя, которое Git не допускает, — отказ и ссылке, и ветке привязки")
     void invalidNamesAreRejectedAsRefAndBranch(String name) {
         assertThrows(InvalidValueException.class, () -> GitRef.of(name));
         assertThrows(InvalidValueException.class, () -> binding(name));
@@ -41,6 +43,7 @@ class GitValuesTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"Анна\rИванова", "Анна\tИванова", "Анна\u0007", "Анна\u007f"})
+    @DisplayName("управляющий символ в имени автора — отказ")
     void controlCharactersInAuthorNameAreRejected(String name) {
         assertThrows(InvalidValueException.class, () -> new GitAuthor("subject", name, "anna@example.com"));
     }
@@ -62,6 +65,7 @@ class GitValuesTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"env:ARCHI_GIT_TOKEN", "env:ARCHI_GIT_TOKEN_2", "env:ARCHI_GIT_LANDSCAPE"})
+    @DisplayName("переменная токена Git принимается ссылкой на секрет")
     void gitTokenVariablesAreAccepted(String ref) {
         assertDoesNotThrow(() -> SecretRef.of(ref));
     }
@@ -88,6 +92,7 @@ class GitValuesTest {
     @ParameterizedTest
     @ValueSource(strings = {"ssh://git@git.example.com/a.git", "git@git.example.com:ea/a.git",
         "https://git.example.com/a@b.git", "https://git.example.com:8443/a.git"})
+    @DisplayName("адрес без учётных данных принимается, и @ в пути — не учётные данные")
     void urlsWithoutCredentialsAreAccepted(String url) {
         assertDoesNotThrow(() -> GitBinding.configure(WORKSPACE, url, null, SecretRef.of("env:ARCHI_GIT_TOKEN"),
                 List.of()));

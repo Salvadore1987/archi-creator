@@ -108,7 +108,7 @@ class ModelPersistenceIT extends IntegrationTest {
     @Test
     @DisplayName("отказ записи блокировки, не связанный с гонкой, не выдаётся за занятую блокировку")
     void nonConflictWriteFailureIsNotReportedAsLockConflict() {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         ModelLock ofMissingModel = ModelLock.restore(ModelId.of(IDS.generate()), ARCHITECT.subject(), now,
                 now.plusSeconds(60));
 
@@ -123,7 +123,7 @@ class ModelPersistenceIT extends IntegrationTest {
     void concurrentTakeoverOfExpiredLockConflicts() {
         ModelId model = ModelId.of(lifecycle.createModel(ARCHITECT,
                 new CreateModelCommand(workspace().value(), "Две руки", null)).id());
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         jdbc.update("insert into model_lock (model_id, owner, acquired_at, expires_at) values (?, 'gone', ?, ?)",
                 model.value(), Timestamp.from(now.minusSeconds(7200)), Timestamp.from(now.minusSeconds(3600)));
         TransactionTemplate tx = new TransactionTemplate(transactions);

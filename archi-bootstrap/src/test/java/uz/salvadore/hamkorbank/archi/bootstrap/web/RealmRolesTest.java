@@ -29,6 +29,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 class RealmRolesTest {
 
     private static final String PREFIX = "spring.security.oauth2.resourceserver.jwt.";
+    private static final Instant ISSUED = Instant.parse("2026-10-01T09:00:00Z");
 
     private final ExpressionJwtGrantedAuthoritiesConverter converter = converterFromConfiguration();
 
@@ -85,6 +86,6 @@ class RealmRolesTest {
     }
 
     private static Jwt jwt(Map<String, Object> claims) {
-        return new Jwt("token-value", Instant.now(), Instant.now().plusSeconds(300), Map.of("alg", "RS256"), claims);
+        return new Jwt("token-value", ISSUED, ISSUED.plusSeconds(300), Map.of("alg", "RS256"), claims);
     }
 }

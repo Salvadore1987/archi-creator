@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -90,9 +89,9 @@ class ImportIT extends IntegrationTest {
         new TransactionTemplate(transactions).executeWithoutResult(status -> {
             ImportSession session = ImportSession.receive(id, ImportRequest.of(new WorkspaceId(workspace().value()),
                     null, "twice.archimate", new byte[] {1}, "twice-" + id.value(), false, "architect-it"),
-                    Instant.now());
+                    clock.instant());
             session.reject(List.of(new ImportFinding(new FindingId(IDS.generate()), Severity.ERROR, "IXC_TEST",
-                    Message.of(InterchangeMessages.IMPORT_IN_PROGRESS), null, null)), Instant.now());
+                    Message.of(InterchangeMessages.IMPORT_IN_PROGRESS), null, null)), clock.instant());
             sessions.save(session);
             sessions.save(session);
         });
@@ -109,7 +108,7 @@ class ImportIT extends IntegrationTest {
 
         assertEquals(ImportStatus.APPLIED, stored.status());
         assertThrows(IllegalImportTransitionException.class,
-                () -> stored.apply(new ModelId(IDS.generate()), 1, 0, Instant.now()));
+                () -> stored.apply(new ModelId(IDS.generate()), 1, 0, clock.instant()));
     }
 
     @Test

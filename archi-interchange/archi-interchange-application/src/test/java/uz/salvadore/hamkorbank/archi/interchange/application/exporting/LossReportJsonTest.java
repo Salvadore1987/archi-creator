@@ -7,6 +7,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -21,7 +23,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.UuidV7;
 
 class LossReportJsonTest {
 
-    private static final UuidV7 UUIDS = new UuidV7(Clock.systemUTC());
+    private static final UuidV7 UUIDS = new UuidV7(Clock.fixed(Instant.parse("2026-10-01T09:00:00Z"), ZoneOffset.UTC));
 
     @Test
     @DisplayName("отчёт пакета картинок: представления в порядке архива, у каждого — файл и свои записи")
