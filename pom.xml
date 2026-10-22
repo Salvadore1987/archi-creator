@@ -45,6 +45,8 @@
         -->
         <skipUnitTests>false</skipUnitTests>
         <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
+        <!-- Запрет фреймворка выключен; модули domain и application ставят validate. -->
+        <ban-framework.phase>none</ban-framework.phase>
         <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
         <archunit.version>1.5.1</archunit.version>
         <anthropic-java.version>2.71.0</anthropic-java.version>
@@ -127,7 +129,7 @@
             <!--
                 Аннотации JetBrains приходят дважды: 13.0 — от kotlin-stdlib клиента Anthropic,
                 17.0.0 — от duct-tape в Testcontainers. Это метаданные компиляции, на работу
-                не влияют; версия закреплена старшая, чтобы граф не показывал конфликта.
+                не влияют; версия закреплена старшая — иначе сходимость версий роняет сборку.
             -->
             <dependency>
                 <groupId>org.jetbrains</groupId>
@@ -192,7 +194,7 @@
                 commons-io приходит двумя версиями: 2.17.0 от xmlgraphics-commons (Batik)
                 и 2.20.0 от commons-compress (Testcontainers). Ближе к корню старшая не
                 оказывается, поэтому версия закреплена здесь — новая из двух, совместима
-                с обеими.
+                с обеими; без неё сходимость версий роняет сборку.
             -->
             <dependency>
                 <groupId>commons-io</groupId>
@@ -373,11 +375,9 @@
                 <!--
                     Граница домена держится сборкой. Отсутствия зависимости
                     достаточно, пока её никто не вернул, — это правило останавливает
-                    возврат. Подключается в модулях domain и application; объявить
-                    плагин достаточно, конфигурация приходит отсюда.
-
-                    Осознанно НЕ включено в родительский build/plugins: иначе правило
-                    унаследовали бы и адаптеры, которым Spring нужен.
+                    возврат. Плагин подключён во всех модулях (build/plugins ниже),
+                    а запрет фреймворка включается свойством ban-framework.phase=validate
+                    только в модулях domain и application: адаптерам Spring нужен.
                 -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -386,7 +386,7 @@
                     <executions>
                         <execution>
                             <id>ban-framework</id>
-                            <phase>validate</phase>
+                            <phase>${ban-framework.phase}</phase>
                             <goals>
                                 <goal>enforce</goal>
                             </goals>
@@ -417,6 +417,40 @@
         </pluginManagement>
 
         <plugins>
+            <!--
+                Правила сборки всех модулей: одна версия каждой библиотеки в дереве
+                модуля, Maven и JDK не старше тех, на которых проект собирается.
+                Расхождение версий иначе видно только на графе зависимостей.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>build-rules</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>[3.9,)</version>
+                                </requireMavenVersion>
+                                <requireJavaVersion>
+                                    <version>[${maven.compiler.release},)</version>
+                                </requireJavaVersion>
+                                <!-- Тестовый classpath — тоже: тесты идут на нём. -->
+                                <dependencyConvergence>
+                                    <excludedScopes>
+                                        <scope>provided</scope>
+                                    </excludedScopes>
+                                </dependencyConvergence>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <!--
                 Длина строки и табуляция — для основного кода и тестов всех модулей.
                 Фаза validate: нарушение видно раньше компиляции и тестов.

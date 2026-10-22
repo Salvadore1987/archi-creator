@@ -304,16 +304,11 @@
             <!--
                 Бэкенд журнала один — Logback из стартера Spring Boot. Второй на classpath
                 SLF4J не отвергает: печатает предупреждение и молча берёт один из двух.
-                Запрет Spring из родителя (ban-framework) здесь выключен: Spring — суть модуля.
             -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
                 <executions>
-                    <execution>
-                        <id>ban-framework</id>
-                        <phase>none</phase>
-                    </execution>
                     <execution>
                         <id>single-logging-backend</id>
                         <phase>validate</phase>

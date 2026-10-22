@@ -12,12 +12,17 @@
 
     <artifactId>archi-advisor-domain</artifactId>
 
+    <properties>
+        <!-- Ни Spring, ни JPA, ни Hibernate, ни Jackson. Правило — в pluginManagement родителя. -->
+        <ban-framework.phase>validate</ban-framework.phase>
+    </properties>
+
     <name>Archi Creator :: Advisor :: Domain</name>
     <description>
         Доменная модель advisor: агрегаты, сущности, value objects, инварианты.
 
         Единственная зависимость — генератор UUID; фреймворков здесь нет
-        и быть не должно: это и есть гарантия чистоты домена. Правило enforcer'а ниже
+        и быть не должно: это и есть гарантия чистоты домена. Правило enforcer'а (свойство выше)
         останавливает возврат Spring и JPA, если кто-то попробует.
     </description>
 
@@ -27,15 +32,5 @@
             <artifactId>java-uuid-generator</artifactId>
         </dependency>
     </dependencies>
-
-    <build>
-        <plugins>
-            <!-- Запрет Spring, JPA и Hibernate. Правило — в pluginManagement родителя. -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-enforcer-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
 
 </project>
