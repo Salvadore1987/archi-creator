@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.DomainEvent;
@@ -37,33 +38,33 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
     private final WorkspaceId workspaceId;
     private final ModelId modelId;
     private final AdvisorFunction function;
-    private final ViewId viewId;
-    private final String elementId;
+    private final @Nullable ViewId viewId;
+    private final @Nullable String elementId;
     private final String idempotencyKey;
     private final String fingerprint;
     private final String requestedBy;
     private final Instant requestedAt;
 
     private SessionStatus status;
-    private Integer contextSize;
+    private @Nullable Integer contextSize;
     private boolean contextTruncated;
     private TokenUsage usage;
     private final List<Finding> findings;
-    private ModelPlan plan;
-    private AdvisorAnswer answer;
-    private RejectionReason rejectionReason;
-    private Instant firstTokenAt;
-    private Instant finishedAt;
-    private AuditEntry auditEntry;
+    private @Nullable ModelPlan plan;
+    private @Nullable AdvisorAnswer answer;
+    private @Nullable RejectionReason rejectionReason;
+    private @Nullable Instant firstTokenAt;
+    private @Nullable Instant finishedAt;
+    private @Nullable AuditEntry auditEntry;
     private final List<DomainEvent> events = new ArrayList<>();
 
     private AdvisorSession(AdvisorSessionId id, WorkspaceId workspaceId, ModelId modelId, AdvisorFunction function,
-                           ViewId viewId, String elementId, String idempotencyKey,
+                           @Nullable ViewId viewId, @Nullable String elementId, String idempotencyKey,
                            String fingerprint, String requestedBy, Instant requestedAt, SessionStatus status,
-                           Integer contextSize, boolean contextTruncated, TokenUsage usage,
-                           List<Finding> findings, ModelPlan plan, AdvisorAnswer answer,
-                           RejectionReason rejectionReason, Instant firstTokenAt,
-                           Instant finishedAt, AuditEntry auditEntry) {
+                           @Nullable Integer contextSize, boolean contextTruncated, TokenUsage usage,
+                           List<Finding> findings, @Nullable ModelPlan plan, @Nullable AdvisorAnswer answer,
+                           @Nullable RejectionReason rejectionReason, @Nullable Instant firstTokenAt,
+                           @Nullable Instant finishedAt, @Nullable AuditEntry auditEntry) {
         super(id);
         this.workspaceId = Objects.requireNonNull(workspaceId, "workspaceId");
         this.modelId = Objects.requireNonNull(modelId, "modelId");
@@ -100,14 +101,14 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
 
     /** Сессия из хранения — как есть, без проверок переходов и без событий. */
     public static AdvisorSession restore(AdvisorSessionId id, WorkspaceId workspaceId, ModelId modelId,
-                                         AdvisorFunction function, ViewId viewId,
-                                         String elementId, String idempotencyKey, String fingerprint,
+                                         AdvisorFunction function, @Nullable ViewId viewId,
+                                         @Nullable String elementId, String idempotencyKey, String fingerprint,
                                          String requestedBy, Instant requestedAt, SessionStatus status,
-                                         Integer contextSize, boolean contextTruncated, TokenUsage usage,
-                                         List<Finding> findings, ModelPlan plan,
-                                         AdvisorAnswer answer, RejectionReason rejectionReason,
-                                         Instant firstTokenAt, Instant finishedAt,
-                                         AuditEntry auditEntry) {
+                                         @Nullable Integer contextSize, boolean contextTruncated, TokenUsage usage,
+                                         List<Finding> findings, @Nullable ModelPlan plan,
+                                         @Nullable AdvisorAnswer answer, @Nullable RejectionReason rejectionReason,
+                                         @Nullable Instant firstTokenAt, @Nullable Instant finishedAt,
+                                         @Nullable AuditEntry auditEntry) {
         return new AdvisorSession(id, workspaceId, modelId, function, viewId, elementId, idempotencyKey, fingerprint,
                 requestedBy, requestedAt, status, contextSize, contextTruncated, usage, findings, plan, answer,
                 rejectionReason, firstTokenAt, finishedAt, auditEntry);
@@ -152,7 +153,7 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
      * Ответ получен целиком. План обязателен у функции плана, ответ — у подсказки и документации;
      * у ревью нет ни того ни другого — его результат в находках. Результат чужой функции — отказ.
      */
-    public void complete(TokenUsage usage, ModelPlan plan, AdvisorAnswer answer,
+    public void complete(TokenUsage usage, @Nullable ModelPlan plan, @Nullable AdvisorAnswer answer,
                          AuditEntryId auditId, Instant now) {
         require(SessionStatus.STREAMING, AdvisorMessages.COMMAND_COMPLETE);
         boolean plans = function == AdvisorFunction.PLAN;
@@ -225,12 +226,12 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
     }
 
     /** Представление, если область — одно представление; {@code null} — область не представление. */
-    public ViewId viewId() {
+    public @Nullable ViewId viewId() {
         return viewId;
     }
 
     /** Элемент, {@code archiId}, если область — элемент; {@code null} — область не элемент. */
-    public String elementId() {
+    public @Nullable String elementId() {
         return elementId;
     }
 
@@ -260,7 +261,7 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
     }
 
     /** Размер контекста в токенах; {@code null}, пока поток не начался. */
-    public Integer contextSize() {
+    public @Nullable Integer contextSize() {
         return contextSize;
     }
 
@@ -280,32 +281,32 @@ public final class AdvisorSession extends AggregateRoot<AdvisorSessionId> {
     }
 
     /** План — у завершённой функции плана; у прочих {@code null}. */
-    public ModelPlan plan() {
+    public @Nullable ModelPlan plan() {
         return plan;
     }
 
     /** Ответ — у завершённых подсказки и документации; у прочих {@code null}. */
-    public AdvisorAnswer answer() {
+    public @Nullable AdvisorAnswer answer() {
         return answer;
     }
 
     /** Причина отказа — у отклонённой сессии; у прочих {@code null}. */
-    public RejectionReason rejectionReason() {
+    public @Nullable RejectionReason rejectionReason() {
         return rejectionReason;
     }
 
     /** Когда пришёл первый токен ответа; {@code null} — ещё не пришёл. */
-    public Instant firstTokenAt() {
+    public @Nullable Instant firstTokenAt() {
         return firstTokenAt;
     }
 
     /** Когда сессия стала терминальной; {@code null} — ещё не стала. */
-    public Instant finishedAt() {
+    public @Nullable Instant finishedAt() {
         return finishedAt;
     }
 
     /** Запись аудита — есть ровно тогда, когда сессия терминальна; иначе {@code null}. */
-    public AuditEntry auditEntry() {
+    public @Nullable AuditEntry auditEntry() {
         return auditEntry;
     }
 }

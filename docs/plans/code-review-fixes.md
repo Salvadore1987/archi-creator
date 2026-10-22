@@ -28,7 +28,7 @@ NullAway и вычёркивает модули из списка. Послед�
 | 1 | Error Prone + NullAway (ошибка компиляции, только размеченный код) и `jspecify` в родителе; тест: каждый пакет основного кода размечен `@NullMarked` — со списком ещё не размеченных модулей | `NullMarkedPackagesTest`, компилятор | ✅ |
 | 2 | modeling: `@NullMarked` во всех пакетах четырёх модулей, `@Nullable` у необязательного, срабатывания NullAway | компилятор | ⬜ |
 | 3 | interchange: то же | компилятор | ⬜ |
-| 4 | advisor: то же | компилятор | ⬜ |
+| 4 | advisor: то же | компилятор | ✅ |
 | 5 | `archi-bootstrap`: то же; список исключений теста пуст и удалён | компилятор, тест | ⬜ |
 | 6 | Решение ADR, `CLAUDE.md` (зависимости домена, таблица «стиль держит сборка»), D-14 в реестре, граф зависимостей | `check-links.py`, `check-traceability.py` | ⬜ |
 
@@ -43,6 +43,22 @@ NullAway и вычёркивает модули из списка. Послед�
   `.mvn/jvm.config`.
 - **Задача 1, объём.** Пробный прогон без исключений: 302 срабатывания в трёх доменных модулях, и это нижняя
   граница — javac обрывает вывод на 100 ошибках модуля, до application и адаптеров сборка не дошла.
+- **Задача 4.** Срабатываний NullAway в advisor — 49: domain 15, application 10, adapter-rest 4,
+  adapter-persistence 20 (javac показывает модуль, только когда собран предыдущий, поэтому счёт — по проходам после
+  починки предыдущего модуля). Настоящих разыменований `null` нет: все срабатывания — необязательные значения
+  без `@Nullable` (поля и accessor'ы `AdvisorSession`, компоненты record'ов запроса, команд, ответов, DTO
+  и хранимого JSON, столбцы JPA без `NOT NULL`, параметры `@RequestParam`/`@RequestHeader(required = false)`).
+  Необязательность прошла насквозь: `elementId` подсказки и `prompt` плана — `@Nullable` от тела запроса
+  до `AdvisorRequest.explain/plan`, потому что их отсутствие отклоняет конструктор запроса с кодом поля,
+  а не Bean Validation. Неочевидное — `AtomicReference.get()`: NullAway считает его `@Nullable`, хотя расход
+  потока начинается с `TokenUsage.NONE` и `null` туда не пишется; чтение вынесено в `spent(...)`
+  с `Objects.requireNonNullElse(..., TokenUsage.NONE)` — поведение то же. `package-info.java`: 16 дополнены,
+  4 созданы (`adapter.rest.dto`, `application.dto.command|query|result`).
+- **Задача 4, архитектурные тесты.** Разметка уронила два правила ArchUnit, и это коснётся modeling и interchange
+  так же: `HexagonalArchitectureTest.domainDependsOnJdkAndUuidOnly` видит `@NullMarked` на `package-info`
+  как зависимость домена — в разрешённые пакеты добавлен `org.jspecify.annotations..`; `ApplicationLayerTest
+  .dtosFollowStandard` требует от каждого класса `dto.command|query|result` быть record'ом с суффиксом —
+  `package-info` из правил исключён, как уже было в `portsAreContracts`.
 
 ## Отменённые варианты
 

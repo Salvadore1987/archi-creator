@@ -6,4 +6,7 @@
  *
  * <p>Зависит только от домена.
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.advisor.application;
+
+import org.jspecify.annotations.NullMarked;

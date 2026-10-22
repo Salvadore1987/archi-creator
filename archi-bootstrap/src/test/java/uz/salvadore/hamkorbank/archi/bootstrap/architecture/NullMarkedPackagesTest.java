@@ -35,7 +35,7 @@ class NullMarkedPackagesTest {
 
     /** Модули, ещё не размеченные: список сокращается по контекстам и исчезает. */
     private static final List<String> NOT_YET_MARKED = List.of(
-            "archi-modeling/", "archi-interchange/", "archi-advisor/", "archi-bootstrap/");
+            "archi-modeling/", "archi-interchange/", "archi-bootstrap/");
 
     @Test
     @DisplayName("каждый пакет основного кода размечен @NullMarked")

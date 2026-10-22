@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.advisor.adapter.rest;
 
 import jakarta.validation.Valid;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,19 +32,19 @@ public class AdvisorSettingsController {
 
     /** Включён ли помощник и в каком состоянии бюджет текущего месяца. */
     @GetMapping("/status")
-    public StatusDto status(Requester requester, @RequestParam(required = false) UUID workspaceId) {
+    public StatusDto status(Requester requester, @RequestParam(required = false) @Nullable UUID workspaceId) {
         return DtoMapper.status(admin.getAdvisorStatus(requester, new GetAdvisorStatusQuery(workspaceId)));
     }
 
     /** Выключатель и месячный лимит токенов пространства. */
     @GetMapping("/settings")
-    public SettingsDto settings(Requester requester, @RequestParam(required = false) UUID workspaceId) {
+    public SettingsDto settings(Requester requester, @RequestParam(required = false) @Nullable UUID workspaceId) {
         return DtoMapper.settings(admin.getAdvisorSettings(requester, new GetAdvisorSettingsQuery(workspaceId)));
     }
 
     /** Изменить выключатель и лимит; без поля {@code enabled} — отказ формы запроса. */
     @PutMapping("/settings")
-    public SettingsDto change(Requester requester, @RequestParam(required = false) UUID workspaceId,
+    public SettingsDto change(Requester requester, @RequestParam(required = false) @Nullable UUID workspaceId,
                               @Valid @RequestBody SettingsDto body) {
         return DtoMapper.settings(admin.configureAdvisor(requester,
                 new ConfigureAdvisorCommand(workspaceId, body.enabled(), body.monthlyTokenLimit())));
@@ -51,8 +52,8 @@ public class AdvisorSettingsController {
 
     /** Расход токенов за период — по авторам и по функциям. */
     @GetMapping("/usage")
-    public UsageDto usage(Requester requester, @RequestParam(required = false) UUID workspaceId,
-                          @RequestParam(required = false) String period) {
+    public UsageDto usage(Requester requester, @RequestParam(required = false) @Nullable UUID workspaceId,
+                          @RequestParam(required = false) @Nullable String period) {
         return DtoMapper.usage(admin.getTokenUsage(requester, new GetTokenUsageQuery(workspaceId, period)));
     }
 }

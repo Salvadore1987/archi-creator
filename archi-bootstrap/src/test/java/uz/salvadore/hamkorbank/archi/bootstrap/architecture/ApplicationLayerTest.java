@@ -106,12 +106,15 @@ class ApplicationLayerTest {
     void dtosFollowStandard(Context context) {
         String application = context.application();
         classes().that().resideInAPackage(application + ".dto.command..").and().areTopLevelClasses()
+                .and().doNotHaveSimpleName("package-info")
                 .should().haveSimpleNameEndingWith("Command").andShould().beRecords()
                 .check(classes);
         classes().that().resideInAPackage(application + ".dto.query..").and().areTopLevelClasses()
+                .and().doNotHaveSimpleName("package-info")
                 .should().haveSimpleNameEndingWith("Query").andShould().beRecords()
                 .check(classes);
         classes().that().resideInAPackage(application + ".dto.result..").and().areTopLevelClasses()
+                .and().doNotHaveSimpleName("package-info")
                 .should().haveSimpleNameEndingWith("Response").andShould().beRecords()
                 .check(classes);
         classes().that().resideInAPackage(application + ".dto..")

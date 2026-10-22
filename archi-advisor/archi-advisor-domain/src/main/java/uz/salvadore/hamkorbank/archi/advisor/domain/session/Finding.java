@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.FindingId;
@@ -15,7 +16,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.FindingId;
  *                   пустой приводится к {@code null}
  */
 public record Finding(FindingId id, Severity severity, String code, String message, TargetKind targetKind,
-                      ElementRef target, String suggestion) {
+                      ElementRef target, @Nullable String suggestion) {
 
     /** Наибольшая длина текста замечания и совета, в символах. */
     public static final int TEXT_MAX = 2000;

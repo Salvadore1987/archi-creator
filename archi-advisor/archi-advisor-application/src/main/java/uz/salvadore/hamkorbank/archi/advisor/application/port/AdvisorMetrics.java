@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.advisor.application.port;
 
 import java.time.Duration;
 import java.util.function.Supplier;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.advisor.domain.budget.TokenBudget;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorFunction;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.RejectionReason;
@@ -21,7 +22,7 @@ public interface AdvisorMetrics {
      * Исход сессии: завершена, неуспешна или отклонена и по какой причине;
      * {@code reason} = {@code null} — не отклонена.
      */
-    void session(AdvisorFunction function, SessionStatus outcome, RejectionReason reason);
+    void session(AdvisorFunction function, SessionStatus outcome, @Nullable RejectionReason reason);
 
     /** Время от обращения до первого токена ответа. */
     void firstToken(AdvisorFunction function, Duration sinceRequest);

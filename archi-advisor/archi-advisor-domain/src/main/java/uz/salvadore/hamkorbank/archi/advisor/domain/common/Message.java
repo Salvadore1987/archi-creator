@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.advisor.domain.common;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Сообщение пользователю — ключ ресурса и аргументы, а не готовый текст. Текст
@@ -19,7 +20,7 @@ public record Message(String key, List<Object> args) {
     }
 
     /** Сообщение по ключу; {@code null} среди аргументов становится пустой строкой. */
-    public static Message of(String key, Object... args) {
+    public static Message of(String key, @Nullable Object... args) {
         return new Message(key, Arrays.asList(args));
     }
 

@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.advisor.application.mapper;
 
 import java.util.List;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.advisor.application.dto.command.ExplainElementCommand;
 import uz.salvadore.hamkorbank.archi.advisor.application.dto.command.GenerateDocumentationCommand;
 import uz.salvadore.hamkorbank.archi.advisor.application.dto.command.PlanModelCommand;
@@ -52,7 +53,7 @@ public final class AdvisorDataMapper {
     }
 
     /** Пространство запроса; {@code null} — по умолчанию. */
-    public static WorkspaceId workspace(UUID workspaceId) {
+    public static @Nullable WorkspaceId workspace(@Nullable UUID workspaceId) {
         return workspaceId == null ? null : WorkspaceId.of(workspaceId);
     }
 
@@ -95,7 +96,7 @@ public final class AdvisorDataMapper {
         return new ElementRefResponse(ref.archiId(), ref.name());
     }
 
-    private static ViewId view(UUID viewId) {
+    private static @Nullable ViewId view(@Nullable UUID viewId) {
         return viewId == null ? null : ViewId.of(viewId);
     }
 }
