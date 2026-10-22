@@ -440,6 +440,20 @@
                                 <requireJavaVersion>
                                     <version>[${maven.compiler.release},)</version>
                                 </requireJavaVersion>
+                                <!--
+                                    Стартеры под именами Spring Boot 3: в 4.x это устаревшие псевдонимы
+                                    новых (webmvc, aspectj, webservices, security-oauth2-*).
+                                -->
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>org.springframework.boot:spring-boot-starter-web</exclude>
+                                        <exclude>org.springframework.boot:spring-boot-starter-aop</exclude>
+                                        <exclude>org.springframework.boot:spring-boot-starter-web-services</exclude>
+                                        <exclude>org.springframework.boot:spring-boot-starter-oauth2-resource-server</exclude>
+                                        <exclude>org.springframework.boot:spring-boot-starter-oauth2-client</exclude>
+                                    </excludes>
+                                    <message>Стартер Spring Boot 3 — нужно имя Spring Boot 4.</message>
+                                </bannedDependencies>
                                 <!-- Тестовый classpath — тоже: тесты идут на нём. -->
                                 <dependencyConvergence>
                                     <excludedScopes>
