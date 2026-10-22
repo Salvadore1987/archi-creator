@@ -21,7 +21,7 @@
 | 3 | MDC переходит в `applicationTaskExecutor` | 14-09 | `MdcTaskDecoratorTest`, IT исполнителя | ✅ |
 | 4 | Журнал входящих запросов: метод, путь, статус, длительность | 14-07 | `RequestLoggingFilterTest` | ✅ |
 | 5 | Начало и исход сценария — в журнал, имя сценария — в MDC | 14-08 | `MicrometerUseCaseMetricsTest` | ✅ |
-| 6 | Таймаут чтения ключей Keycloak — настройкой | 14-10 | `JwksTimeoutTest`; `check-nfr-config.py`: `archi.security.jwks-timeout` | ⬜ |
+| 6 | Таймаут чтения ключей Keycloak — настройкой | 14-10 | `JwksTimeoutsTest`, `SettingsValidationTest`; `check-nfr-config.py`: `archi.security.jwks-timeout` | ✅ |
 | 7 | Actuator — на отдельном порту, состав его не публикует | 14-01 | `ManagementPortIT` на настоящих портах | ⬜ |
 | 8 | `readiness` — с базой, `build-info` — сборкой | 14-02, 14-03 | `ManagementPortIT` | ⬜ |
 | 9 | `model_id` в тегах метрик — решением ADR | 14-12 | — | ⬜ |
@@ -54,3 +54,8 @@
   Отказ сценария пишется `INFO` с кодом и без стека: это результат, а не сбой; неожиданный сбой со стеком
   по-прежнему пишет `CommonProblemHandler` — двойной записи стека нет. Вложенный сценарий (выгрузка зовёт
   чтение содержимого modeling) возвращает в MDC имя внешнего.
+- **Задача 6.** Таймауты ставит `JwkSetUriJwtDecoderBuilderCustomizer`: Spring Boot применяет его и к декодеру
+  по `issuer-uri` (prod), и по `jwk-set-uri` (состав). Клиент — `RestTemplate`, хотя чеклист Boot 4 его
+  не допускает в новом коде: построитель декодера Spring Security принимает только `RestOperations`.
+  Тест — молчащий сокет на loopback: соединение ложится в очередь, ответа нет; декодер отказывает за 0,5 s.
+  На старом коде теста не собрать (настройки нет), а сверка `check-nfr-config.py` без настройки падает.

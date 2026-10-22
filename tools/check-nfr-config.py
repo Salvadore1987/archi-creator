@@ -47,6 +47,7 @@ PAIRS = [
     ("archi.interchange.max-parallel-rasterizations", "number", "interchange",
      "concurrency.max_parallel_rasterizations"),
     ("archi.interchange.rasterization-wait", "ms", "interchange", "concurrency.rasterization_wait"),
+    ("archi.security.jwks-timeout", "duration", "modeling", "upstream_calls.keycloak_jwks.timeout"),
     ("archi.git.timeout", "duration", "interchange", "upstream_calls.git_remote.timeout"),
     ("archi.git.retry-base", "duration", "interchange", "upstream_calls.git_remote.retries.initial_interval"),
     ("archi.git.retry-max", "duration", "interchange", "upstream_calls.git_remote.retries.max_interval"),

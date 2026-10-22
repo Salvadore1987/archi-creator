@@ -183,6 +183,9 @@ archi:
       slow-call-threshold: 60s
       sliding-window-size: 10
       wait-in-open-state: 60s
+  security:
+    # Предел соединения и чтения при обращении к Keycloak за метаданными и ключами.
+    jwks-timeout: 3s
   web:
     cors:
       # Пустой список = CORS закрыт. В dev список расширяется

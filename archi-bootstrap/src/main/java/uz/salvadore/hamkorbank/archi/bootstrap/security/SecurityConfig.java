@@ -40,13 +40,19 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  */
 @Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
-@EnableConfigurationProperties(CorsSettings.class)
+@EnableConfigurationProperties({CorsSettings.class, JwksSettings.class})
 @Profile("!dev | prod")
 public class SecurityConfig {
 
     private static final String API = "/api/**";
     /** Статика SPA: сам интерфейс открыт, данные за ним — нет. */
     private static final String[] SPA = {"/", "/index.html", "/assets/**"};
+
+    /** Обращения декодера JWT к Keycloak — с пределами из настроек, а не по полминуты по умолчанию. */
+    @Bean
+    JwksTimeouts jwksTimeouts(JwksSettings settings) {
+        return new JwksTimeouts(settings);
+    }
 
     /**
      * Actuator: пробы живучести и сведения о сборке нужны оркестратору до всякого токена,
