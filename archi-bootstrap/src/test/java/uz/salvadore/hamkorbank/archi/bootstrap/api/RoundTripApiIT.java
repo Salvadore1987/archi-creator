@@ -62,13 +62,15 @@ class RoundTripApiIT extends ApiTest {
                         .with(architect()))
                 .andExpect(status().isCreated()).andReturn(), "$.modelId");
         mvc.perform(post("/api/v1/models/" + modelId + "/lock").with(architect())).andExpect(status().isOk());
-        List<String> ids = read(mvc.perform(get("/api/v1/models/" + modelId).with(architect())).andReturn(),
+        List<String> ids = read(mvc.perform(get("/api/v1/models/" + modelId).with(architect()))
+                .andExpect(status().isOk()).andReturn(),
                 "$.elements[?(@.name == 'АБС')].id");
         String element = ids.getFirst();
         mvc.perform(patch("/api/v1/elements/" + element).with(architect()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"АБС «Ядро»\"}")).andExpect(status().isOk());
 
         byte[] beforeSave = mvc.perform(get("/api/v1/models/" + modelId + "/export").with(viewer()))
+                .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsByteArray();
         assertXmlEquivalent(original, beforeSave);
 
@@ -76,10 +78,11 @@ class RoundTripApiIT extends ApiTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"comment\":\"переименование\"}"))
                 .andExpect(status().isCreated());
         String afterSave = new String(mvc.perform(get("/api/v1/models/" + modelId + "/export").with(viewer()))
+                .andExpect(status().isOk())
                 .andExpect(header().string("X-Archi-Version-No", "2"))
                 .andReturn().getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
         assertEquals(true, afterSave.contains("name=\"АБС «Ядро»\""));
-        mvc.perform(get("/api/v1/models/" + modelId + "/export?version=1").with(viewer()))
+        mvc.perform(get("/api/v1/models/" + modelId + "/export?version=1").with(viewer())).andExpect(status().isOk())
                 .andExpect(header().string("X-Archi-Version-No", "1"));
     }
 }

@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.advisor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -22,7 +23,8 @@ class AdvisorSecurityIT extends AdvisorApiTest {
         Response ok = ask("review", architect(), "secret-1", "{\"modelId\":\"" + model + "\"}");
         anthropic.failWith(401);
         Response failed = ask("review", architect(), "secret-2", "{\"modelId\":\"" + model + "\"}");
-        String metrics = mvc.perform(get("/actuator/prometheus").with(admin())).andReturn().getResponse()
+        String metrics = mvc.perform(get("/actuator/prometheus").with(admin()))
+                .andExpect(status().isOk()).andReturn().getResponse()
                 .getContentAsString(StandardCharsets.UTF_8);
 
         assertThat(anthropic.requests().getFirst().apiKey()).isEqualTo(API_KEY);

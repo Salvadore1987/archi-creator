@@ -28,10 +28,10 @@ class SessionIT extends ApiTest {
                 .andExpect(jsonPath("$.roles[1]").value("ADMIN"));
 
         mvc.perform(get("/api/v1/me").with(jwt().jwt(j -> j.subject("u-2").claim("preferred_username", "boris"))
-                        .authorities(new SimpleGrantedAuthority("ROLE_VIEWER"))))
+                        .authorities(new SimpleGrantedAuthority("ROLE_VIEWER")))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.displayName").value("boris"))
                 .andExpect(jsonPath("$.roles[0]").value("VIEWER"));
-        mvc.perform(get("/api/v1/me").with(jwt().jwt(j -> j.subject("u-3"))))
+        mvc.perform(get("/api/v1/me").with(jwt().jwt(j -> j.subject("u-3")))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.displayName").value("u-3"))
                 .andExpect(jsonPath("$.roles.length()").value(0));
 

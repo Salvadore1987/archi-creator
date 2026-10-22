@@ -128,7 +128,8 @@ class PhaseTwoIT extends ApiTest {
     }
 
     private String elementId(String model, String name) throws Exception {
-        List<String> ids = read(mvc.perform(get("/api/v1/models/" + model).with(architect())).andReturn(),
+        List<String> ids = read(mvc.perform(get("/api/v1/models/" + model).with(architect()))
+                .andExpect(status().isOk()).andReturn(),
                 "$.elements[?(@.name == '" + name + "')].id");
         return ids.getFirst();
     }

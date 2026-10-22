@@ -34,7 +34,8 @@ class BatchViewExportIT extends ApiTest {
                         .with(architect()))
                 .andExpect(status().isCreated()).andReturn(), "$.modelId");
         mvc.perform(post("/api/v1/models/" + model + "/lock").with(architect())).andExpect(status().isOk());
-        List<String> iabs = read(mvc.perform(get("/api/v1/models/" + model).with(architect())).andReturn(),
+        List<String> iabs = read(mvc.perform(get("/api/v1/models/" + model).with(architect()))
+                .andExpect(status().isOk()).andReturn(),
                 "$.elements[?(@.name == 'IABS')].id");
         mvc.perform(patch("/api/v1/elements/" + iabs.getFirst()).with(architect())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"IABS Новый\"}"))
@@ -58,7 +59,7 @@ class BatchViewExportIT extends ApiTest {
         assertThat(images).allSatisfy(n -> assertThat(first.get(n)).doesNotContain("Новый"));
 
         Map<String, String> latest = unzip(mvc.perform(get("/api/v1/models/" + model + "/views/export")
-                        .with(viewer()))
+                        .with(viewer())).andExpect(status().isOk())
                 .andExpect(header().string("X-Archi-Version-No", "2"))
                 .andReturn().getResponse().getContentAsByteArray());
         assertThat(latest.values().stream().filter(svg -> svg.contains("Новый<")))

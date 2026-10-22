@@ -128,7 +128,8 @@ abstract class GitApiTest extends ApiTest {
     }
 
     protected void rename(UUID model, String from, String to) throws Exception {
-        List<String> ids = read(mvc.perform(get("/api/v1/models/" + model).with(architect())).andReturn(),
+        List<String> ids = read(mvc.perform(get("/api/v1/models/" + model).with(architect()))
+                .andExpect(status().isOk()).andReturn(),
                 "$.elements[?(@.name == '" + from + "')].id");
         mvc.perform(patch("/api/v1/elements/" + ids.getFirst()).with(architect())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"" + to + "\"}"))

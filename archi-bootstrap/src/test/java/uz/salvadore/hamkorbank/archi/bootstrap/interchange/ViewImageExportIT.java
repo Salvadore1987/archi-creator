@@ -36,7 +36,7 @@ class ViewImageExportIT extends ApiTest {
                 .andExpect(header().string("X-Archi-Version-No", "1"))
                 .andReturn().getResponse();
         // Шрифты Arial и Consolas из файла на сервере заменены Inter — это потери картинки.
-        assertThat(Integer.parseInt(response.getHeader("X-Archi-Loss-Count"))).isGreaterThanOrEqualTo(2);
+        assertThat(Integer.parseInt(response.getHeader("X-Archi-Loss-Count"))).isEqualTo(2);
         String svg = new String(response.getContentAsByteArray(), StandardCharsets.UTF_8);
         assertThat(svg).startsWith("<?xml").contains("<svg ", "@font-face", ">АБС<");
 
@@ -104,7 +104,8 @@ class ViewImageExportIT extends ApiTest {
     }
 
     private String firstView(String model) throws Exception {
-        List<String> views = read(mvc.perform(get("/api/v1/models/" + model).with(viewer())).andReturn(),
+        List<String> views = read(mvc.perform(get("/api/v1/models/" + model).with(viewer()))
+                .andExpect(status().isOk()).andReturn(),
                 "$.views[*].id");
         return views.getFirst();
     }

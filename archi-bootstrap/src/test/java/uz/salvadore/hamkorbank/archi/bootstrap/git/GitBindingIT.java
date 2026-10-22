@@ -82,7 +82,8 @@ class GitBindingIT extends ApiTest {
         mvc.perform(put(binding()).with(admin()).contentType(MediaType.APPLICATION_JSON).content(SETTINGS))
                 .andExpect(status().isOk());
         mvc.perform(delete(binding()).with(admin())).andExpect(status().isNoContent());
-        mvc.perform(get(binding()).with(admin())).andExpect(jsonPath("$.status").value("DISABLED"));
+        mvc.perform(get(binding()).with(admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("DISABLED"));
     }
 
     @Test

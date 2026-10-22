@@ -66,9 +66,11 @@ class ImportPolicyHandlersTest {
     @Test
     @DisplayName("FR-49: строгость меняет только ADMIN — ARCHITECT получает отказ, настройка не меняется")
     void onlyAdminConfigures() {
-        assertThrows(InterchangeException.class, () -> configure.handle(ImportFakes.ARCHITECT,
-                new ConfigureImportPolicyCommand(ImportFakes.WORKSPACE, true)));
+        InterchangeException denied = assertThrows(InterchangeException.class,
+                () -> configure.handle(ImportFakes.ARCHITECT,
+                        new ConfigureImportPolicyCommand(ImportFakes.WORKSPACE, true)));
 
+        assertEquals(InterchangeCodes.ACCESS_DENIED, denied.code());
         assertFalse(policy.strictImport(new WorkspaceId(ImportFakes.WORKSPACE)));
     }
 }

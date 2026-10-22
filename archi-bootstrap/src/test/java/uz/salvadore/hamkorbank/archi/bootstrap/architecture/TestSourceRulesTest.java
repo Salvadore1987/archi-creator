@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Правила тестовых исходников всех модулей: отчёт читается по {@code @DisplayName}, имя метода — фраза
- * в camelCase, время в тестах зафиксировано, а не взято с системных часов.
+ * в camelCase, время в тестах зафиксировано, а не взято с системных часов, ответ MockMvc проверен по статусу.
  *
  * <p>Проверка по исходникам, а не по байткоду: тестовые классы других модулей в classpath этого модуля
  * не приходят, а их скомпилированные копии в {@code target} могут отстать от исходника. Комментарии
@@ -46,6 +46,9 @@ class TestSourceRulesTest {
             "\\b(?:Instant|LocalDate|LocalDateTime|LocalTime|OffsetDateTime|ZonedDateTime|Year|YearMonth)"
                     + "\\s*\\.\\s*now\\s*\\(|\\bClock\\s*\\.\\s*system(?:UTC|DefaultZone|)\\s*\\("
                     + "|\\bSystem\\s*\\.\\s*currentTimeMillis\\s*\\(");
+
+    /** Запрос MockMvc: проверка статуса ищется в его инструкции до точки с запятой. */
+    private static final Pattern MOCK_MVC_CALL = Pattern.compile("\\bmvc\\s*\\.\\s*perform\\s*\\(");
 
     /** Нарушения текущего прохода: обход отдаёт их через лямбды, которые ничего не возвращают. */
     private final List<String> found = new ArrayList<>();
@@ -82,6 +85,24 @@ class TestSourceRulesTest {
             }
         });
         assertThat(violations).as("системное время в тестах").isEmpty();
+    }
+
+    @Test
+    @DisplayName("ответ MockMvc читается после проверки статуса: ошибка видна кодом, а не разбором тела")
+    void mockMvcResponsesHaveStatusChecked() {
+        List<String> violations = scanTests((file, code) -> {
+            Matcher call = MOCK_MVC_CALL.matcher(code);
+            while (call.find()) {
+                String statement = code.substring(call.start(), statementEnd(code, call.start()));
+                String head = code.substring(code.lastIndexOf('\n', call.start()) + 1, call.start()).strip();
+                boolean handedOver = head.startsWith("return") || head.startsWith("ResultActions");
+                boolean statusRead = statement.contains("getStatus()") || statement.contains("asyncDispatch");
+                if (!statement.contains("status()") && !handedOver && !statusRead) {
+                    record(file, code, call.start(), "mvc.perform без проверки статуса");
+                }
+            }
+        });
+        assertThat(violations).as("ответы MockMvc без проверки статуса").isEmpty();
     }
 
     private List<String> scanTests(BiConsumer<Path, String> check) {
@@ -135,6 +156,25 @@ class TestSourceRulesTest {
     private void record(Path file, String code, int offset, String what) {
         int line = 1 + (int) code.substring(0, offset).chars().filter(c -> c == '\n').count();
         found.add(REPOSITORY.relativize(file) + ":" + line + ": " + what);
+    }
+
+    /**
+     * Конец инструкции: точка с запятой вне скобок. Ответ, отданный вызывающему ({@code return},
+     * {@code ResultActions}), проверяет вызывающий; статус асинхронного ответа читается из результата.
+     */
+    private static int statementEnd(String code, int from) {
+        int depth = 0;
+        for (int i = from; i < code.length(); i++) {
+            char c = code.charAt(i);
+            if (c == '(' || c == '{' || c == '[') {
+                depth++;
+            } else if (c == ')' || c == '}' || c == ']') {
+                depth--;
+            } else if (c == ';' && depth <= 0) {
+                return i;
+            }
+        }
+        return code.length();
     }
 
     /** Исходник без комментариев и без содержимого строк и символов; переводы строк сохранены. */

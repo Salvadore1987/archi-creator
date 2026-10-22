@@ -97,7 +97,8 @@ class GitExportIT extends GitApiTest {
 
     private String elementNamed(UUID model, String name) throws Exception {
         mvc.perform(post("/api/v1/models/" + model + "/lock").with(architect())).andExpect(status().isOk());
-        List<String> ids = read(mvc.perform(get("/api/v1/models/" + model).with(architect())).andReturn(),
+        List<String> ids = read(mvc.perform(get("/api/v1/models/" + model).with(architect()))
+                .andExpect(status().isOk()).andReturn(),
                 "$.elements[?(@.name == '" + name + "')].id");
         return ids.getFirst();
     }

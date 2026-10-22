@@ -12,7 +12,10 @@ import uz.salvadore.hamkorbank.archi.advisor.application.dto.command.ConfigureAd
 import uz.salvadore.hamkorbank.archi.advisor.application.dto.query.GetAdvisorSettingsQuery;
 import uz.salvadore.hamkorbank.archi.advisor.application.dto.query.GetAdvisorStatusQuery;
 import uz.salvadore.hamkorbank.archi.advisor.application.dto.result.AdvisorStatusResponse;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorCodes;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Requester;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorRequest;
@@ -57,8 +60,11 @@ class AdvisorAdminHandlersTest {
     void architectDoesNotChangeSettings() {
         Fixture fixture = new Fixture();
 
-        assertThrows(AdvisorDomainException.class,
+        AdvisorDomainException denied = assertThrows(AdvisorDomainException.class,
                 () -> fixture.admin().configureAdvisor(Fixture.ALICE, new ConfigureAdvisorCommand(null, false, 10L)));
+
+        assertEquals(AdvisorCodes.ACCESS_DENIED, denied.code());
+        assertEquals(Failure.FORBIDDEN, denied.failure());
     }
 
     @Test
@@ -66,8 +72,12 @@ class AdvisorAdminHandlersTest {
     void zeroLimitIsRejected() {
         Fixture fixture = new Fixture();
 
-        assertThrows(AdvisorDomainException.class,
+        AdvisorDomainException rejected = assertThrows(AdvisorDomainException.class,
                 () -> fixture.admin().configureAdvisor(ADMIN, new ConfigureAdvisorCommand(null, false, 0L)));
+
+        assertEquals(AdvisorCodes.INVALID_INPUT, rejected.code());
+        assertEquals(Failure.UNPROCESSABLE, rejected.failure());
+        assertEquals(AdvisorMessages.LIMIT_NOT_POSITIVE, rejected.reason().key());
     }
 
     @Test
