@@ -289,6 +289,8 @@
                 <executions>
                     <execution>
                         <goals>
+                            <!-- Версия и время сборки — в /actuator/info: какой образ запущен. -->
+                            <goal>build-info</goal>
                             <goal>repackage</goal>
                         </goals>
                     </execution>

@@ -441,7 +441,8 @@ RFC 9457 Problem Details (прежде RFC 7807) с обязательным р�
 ### 8.4 Логирование и наблюдаемость
 
 - Структурированные логи (JSON) с `traceId`, пользователем и id модели.
-- Spring Boot Actuator: `/actuator/health`, `/actuator/metrics`, `/actuator/prometheus`.
+- Spring Boot Actuator на отдельном порту 9090 (`ARCHI_MANAGEMENT_PORT`), наружу не публикуется:
+  `/actuator/health`, `/actuator/metrics`, `/actuator/prometheus`.
 - Отдельные метрики: длительность импорта/экспорта, размер модели, число обращений к ИИ
   и потраченные токены, частота конфликтов блокировки.
 

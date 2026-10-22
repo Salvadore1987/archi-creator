@@ -35,7 +35,7 @@ archi-bootstrap                           все 12 + Spring Boot, здесь ja
 Конфигурация правила одна, в `pluginManagement` родителя.
 
 **Приложение запускается.** `docker compose up -d` поднимает `app`, `postgres:16`
-и `keycloak:26` ([§10.1](docs/archi-creator.md#101-состав)), `/actuator/health` = UP,
+и `keycloak:26` ([§10.1](docs/archi-creator.md#101-состав)), `/actuator/health` на порту Actuator 9090 = UP,
 вход через Keycloak отдаёт JWT с ролью `VIEWER`/`ARCHITECT`/`ADMIN` (FR-28).
 Секреты — из `.env` (образец `.env.example`), в репозиторий не попадают (NFR-06).
 
@@ -661,7 +661,7 @@ Co-Authored-By: …
 | [`spec/application/<bc>/usecases/`](spec/application/) | Use case'ы `UC-<BC>-NNN`: Given/When/Then, порты, отказы |
 | [`spec/ui/`](spec/ui/README.md) | Слой интерфейса: правила `UI-NNN`, токены стиля, контракт геометрии фигур |
 | [`spec/contracts/<bc>/`](spec/contracts/) | OpenAPI и AsyncAPI |
-| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 31 запись, девятнадцать с файлами MADR |
+| [`spec/adr/decisions.yaml`](spec/adr/decisions.yaml) | Единственный регистр решений: 32 записи, двадцать с файлами MADR |
 | [`spec/nfr/<bc>.yaml`](spec/nfr/) | SLO, latency, throughput, security по контекстам |
 
 Правила при правке `spec/`:

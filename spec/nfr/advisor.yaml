@@ -1,6 +1,6 @@
 ---
 version: 0.1
-last_modified: 2026-10-12
+last_modified: 2026-10-21
 bounded_context: advisor
 target_module: archi-bootstrap
 ---
@@ -240,13 +240,10 @@ observability:
       severity: ticket
 
   tracing:
-    sampler: parent_based_traceidratio
-    ratio: 1.0
+    sampler: none
     note: |
-      Полная трассировка: обращений мало, каждое дорогое, и разбор
-      «почему ответ шёл минуту и сколько это стоило» без трассы не делается.
-      Содержимое промпта в спаны не попадает — только размеры и тайминги.
-    propagator: w3c_tracecontext
+      Трассировки нет — как в modeling: корреляция журнала по traceId
+      из traceparent, спанов нет.
 
   logging:
     level: INFO

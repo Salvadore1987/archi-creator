@@ -145,7 +145,7 @@ public class GitConfiguration {
             try {
                 publishing.publishPendingVersions();
             } catch (RuntimeException e) { // NOPMD - сбой одного прохода не останавливает расписание
-                LOG.warn("git publishing pass failed", e);
+                LOG.error("git publishing pass failed", e);
             }
         }, settings.pollInterval());
     }

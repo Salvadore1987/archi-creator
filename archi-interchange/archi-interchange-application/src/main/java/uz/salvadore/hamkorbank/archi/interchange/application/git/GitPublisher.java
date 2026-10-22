@@ -15,6 +15,8 @@ import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
@@ -80,7 +82,7 @@ public final class GitPublisher {
     static final String GITATTRIBUTES = ".gitattributes";
     private static final String GITATTRIBUTES_RESOURCE = "gitattributes";
     private static final int MAX_ATTEMPTS_SHIFT = 10;
-    private static final System.Logger LOG = System.getLogger(GitPublisher.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(GitPublisher.class);
 
     /**
      * Кто коммитит и как выглядит автор, которого нет в привязке; паузы повтора.
@@ -280,8 +282,8 @@ public final class GitPublisher {
         try {
             return attemptEntry(entry);
         } catch (RuntimeException failure) { // NOPMD - сбой одной записи не останавливает очередь других моделей
-            LOG.log(System.Logger.Level.WARNING, "git publishing of model " + entry.model().value() + " version "
-                    + entry.versionNo() + " failed, retry later", failure);
+            LOG.error("git publishing of model {} version {} failed, retry later", entry.model().value(),
+                    entry.versionNo(), failure);
             Instant at = clock.instant();
             unitOfWork.write(() -> {
                 outbox.retryLater(entry.id(), failure.getClass().getSimpleName(), at.plus(backoff(entry.attempts())));
@@ -406,8 +408,8 @@ public final class GitPublisher {
         try {
             return previous.isEmpty() ? GitPositions.none() : reader.positions(previous);
         } catch (InvalidValueException unreadable) {
-            LOG.log(System.Logger.Level.WARNING, "git positions of model " + push.entry().model().value()
-                    + " in commit " + push.head() + " are unreadable, the directory is renumbered", unreadable);
+            LOG.error("git positions of model {} in commit {} are unreadable, the directory is renumbered",
+                    push.entry().model().value(), push.head(), unreadable);
             return GitPositions.none();
         }
     }

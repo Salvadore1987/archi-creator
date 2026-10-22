@@ -20,8 +20,11 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
  * <p>Ресурс-сервер настроен на JWKS, который не запрашивается при старте: токены
  * в тестах кладёт {@code spring-security-test}, Keycloak не нужен. С настоящим
  * Keycloak — {@code KeycloakIT}.
+ *
+ * <p>Actuator здесь — на порту приложения: без сервера ({@code MOCK}) отдельный порт не поднимается,
+ * и MockMvc эндпоинтов бы не видел. Отдельный порт проверяет {@code ManagementPortIT}.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = "management.server.port=")
 public abstract class IntegrationTest {
 
     protected static final EditorIdentity ARCHITECT = EditorIdentity.of("architect-it", Role.ARCHITECT);

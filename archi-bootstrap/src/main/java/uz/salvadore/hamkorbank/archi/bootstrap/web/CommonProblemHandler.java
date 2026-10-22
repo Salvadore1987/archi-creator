@@ -89,7 +89,7 @@ public class CommonProblemHandler {
             MissingServletRequestPartException.class, MethodArgumentTypeMismatchException.class,
             MultipartException.class})
     ProblemDetail badRequest(Exception e, HttpServletRequest request) {
-        LOG.debug("request not parsed: {} {}: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
+        LOG.info("request not parsed: {} {}: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
         return problem(HttpStatus.BAD_REQUEST, ErrorCodes.BAD_REQUEST,
                 text(BootstrapMessages.BAD_REQUEST, unreadable(e)), request);
     }
@@ -130,7 +130,7 @@ public class CommonProblemHandler {
     @ExceptionHandler(Exception.class)
     ResponseEntity<ProblemDetail> unexpected(Exception e, HttpServletRequest request, HttpServletResponse response) {
         if (response.isCommitted()) {
-            LOG.debug("failure after response started: {} {}", request.getMethod(), request.getRequestURI(), e);
+            LOG.info("failure after response started: {} {}", request.getMethod(), request.getRequestURI(), e);
             return null;
         }
         if (e instanceof ErrorResponse refused) {

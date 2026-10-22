@@ -39,3 +39,4 @@
 | 11. REST-адаптеры | [`11-rest.md`](11-rest.md) | 9 |
 | 12. Bootstrap: проводка, конфигурация, безопасность | [`12-bootstrap-security.md`](12-bootstrap-security.md) | 12 |
 | 13. Bootstrap: интеграции и мосты | [`13-bootstrap-integracii.md`](13-bootstrap-integracii.md) | 7 |
+| 14. Логирование и наблюдаемость | [`14-logirovanie-nablyudaemost.md`](14-logirovanie-nablyudaemost.md) | 12 |

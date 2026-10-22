@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
 import uz.salvadore.hamkorbank.archi.bootstrap.advisor.AiSettings;
 import uz.salvadore.hamkorbank.archi.bootstrap.git.GitSettings;
 import uz.salvadore.hamkorbank.archi.bootstrap.security.CorsSettings;
+import uz.salvadore.hamkorbank.archi.bootstrap.security.JwksSettings;
 import uz.salvadore.hamkorbank.archi.bootstrap.security.UiSettings;
 
 /** Недопустимая настройка роняет приложение на старте, а не первый запрос. */
@@ -51,7 +52,8 @@ class SettingsValidationTest {
         "archi.modeling.retention-cron=",
         "archi.ai.circuit-breaker.failure-rate-threshold=101",
         "archi.git.committer-name=",
-        "archi.git.timeout=500ms"})
+        "archi.git.timeout=500ms",
+        "archi.security.jwks-timeout=0s"})
     @DisplayName("недопустимое значение — отказ старта")
     void invalidValueFailsStartup(String property) {
         runner.withPropertyValues(property).run(context -> assertNotNull(context.getStartupFailure(), property));
@@ -70,7 +72,7 @@ class SettingsValidationTest {
     /** Все классы настроек приложения — так же, как их включают конфигурации. */
     @Configuration(proxyBeanMethods = false)
     @EnableConfigurationProperties({ModelingSettings.class, InterchangeSettings.class, AiSettings.class,
-        GitSettings.class, CorsSettings.class, UiSettings.class})
+        GitSettings.class, CorsSettings.class, UiSettings.class, JwksSettings.class})
     static class AllSettings {
     }
 }

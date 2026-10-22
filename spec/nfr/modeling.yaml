@@ -1,6 +1,6 @@
 ---
 version: 0.2
-last_modified: 2026-10-08
+last_modified: 2026-10-21
 bounded_context: modeling
 target_module: archi-bootstrap
 ---
@@ -86,17 +86,19 @@ upstream_calls:
   # а не потребитель. Обращения к Keycloak — проверка подписи токена по
   # кэшированному JWKS, а не вызов на запрос.
   keycloak_jwks:
+    # Метаданные issuer'а и ключи читаются при первом токене, дальше — из кэша.
     timeout: 3s
     retries:
-      count: 2
-      backoff: exponential
-      initial_interval: 200ms
-    circuit_breaker:
-      failure_rate_threshold: 50
-      slow_call_threshold: 2s
-      sliding_window_size: 20
-      wait_duration_in_open_state: 30s
-    fallback: cached            # кэшированный JWKS остаётся валидным до ротации ключей
+      count: 0
+    fallback: cached
+    note: |
+      Ключи живут в кэше декодера пять минут и перечитываются раньше, если
+      пришёл токен с незнакомым kid. Повторов и предохранителя нет: обращение
+      к Keycloak — раз в пять минут, а не на каждый запрос, и отказ одного
+      чтения отвечает 401 только тем запросам, что пришли в эту секунду;
+      следующий токен прочитает ключи заново. Таймаут — на соединение и на
+      чтение: чтение идёт под блокировкой, и зависший Keycloak без него
+      держал бы все запросы с токеном.
 
 storage:
   database: relational / PostgreSQL 16
@@ -206,9 +208,13 @@ observability:
         показывает: пользователи наступают друг другу на правки.
 
   tracing:
-    sampler: parent_based_traceidratio
-    ratio: 0.1
-    propagator: w3c_tracecontext
+    sampler: none
+    note: |
+      Трассировки нет: в составе развёртывания нет коллектора, которому
+      отдавать спаны. Запросы связывает в журнале traceId — из заголовка
+      W3C traceparent, если он пришёл, иначе новый; он же уходит клиенту
+      заголовком X-Trace-Id. Включение трассировки — вместе с коллектором:
+      тогда же решается доля выборки (одна на приложение, а не на контекст).
 
   logging:
     level: INFO

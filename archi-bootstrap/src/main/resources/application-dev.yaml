@@ -40,5 +40,4 @@ management:
 
 logging:
   level:
-    uz.salvadore.hamkorbank.archi: DEBUG
     org.flywaydb: INFO

@@ -35,7 +35,7 @@ import uz.salvadore.hamkorbank.archi.bootstrap.support.Containers;
  * токен через {@code spring-security-test}; этот — единственный, где путь от входа
  * до отказа роли пройден целиком.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = "management.server.port=")
 @AutoConfigureMockMvc
 class KeycloakIT {
 

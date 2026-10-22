@@ -25,6 +25,11 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>archi-advisor-domain</artifactId>
         </dependency>
+        <!-- Журнал — API SLF4J; реализацию (Logback) приносит модуль сборки. -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

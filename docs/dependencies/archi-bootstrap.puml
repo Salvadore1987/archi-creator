@@ -347,6 +347,7 @@ uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank
 uz_salvadore_hamkorbank_archi_interchange_application_jar .[#ABABAB].> uz_salvadore_hamkorbank_archi_interchange_domain_jar
 uz_salvadore_hamkorbank_archi_interchange_application_jar .[#ABABAB].> uz_salvadore_hamkorbank_archi_modeling_application_jar
 uz_salvadore_hamkorbank_archi_interchange_application_jar -[#000000]-> org_yaml_snakeyaml_jar
+uz_salvadore_hamkorbank_archi_interchange_application_jar -[#000000]-> org_slf4j_slf4j_api_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_application_jar
 uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar .[#ABABAB].> uz_salvadore_hamkorbank_archi_interchange_application_jar
 uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar .[#ABABAB].> org_springframework_boot_spring_boot_starter_web_jar
@@ -358,6 +359,7 @@ uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank
 uz_salvadore_hamkorbank_archi_advisor_domain_jar .[#ABABAB].> com_fasterxml_uuid_java_uuid_generator_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_advisor_domain_jar
 uz_salvadore_hamkorbank_archi_advisor_application_jar .[#ABABAB].> uz_salvadore_hamkorbank_archi_advisor_domain_jar
+uz_salvadore_hamkorbank_archi_advisor_application_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> uz_salvadore_hamkorbank_archi_advisor_application_jar
 uz_salvadore_hamkorbank_archi_advisor_adapter_rest_jar .[#ABABAB].> uz_salvadore_hamkorbank_archi_advisor_application_jar
 uz_salvadore_hamkorbank_archi_advisor_adapter_rest_jar .[#ABABAB].> org_springframework_boot_spring_boot_starter_web_jar
@@ -471,7 +473,7 @@ com_anthropic_anthropic_java_jar -[#000000]-> org_jetbrains_kotlin_kotlin_stdlib
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> com_anthropic_anthropic_java_jar
 io_github_resilience4j_resilience4j_core_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
 io_github_resilience4j_resilience4j_circuitbreaker_jar -[#000000]-> io_github_resilience4j_resilience4j_core_jar
-io_github_resilience4j_resilience4j_circuitbreaker_jar -[#000000]-> org_slf4j_slf4j_api_jar
+io_github_resilience4j_resilience4j_circuitbreaker_jar .[#ABABAB].> org_slf4j_slf4j_api_jar
 uz_salvadore_hamkorbank_archi_bootstrap_jar -[#000000]-> io_github_resilience4j_resilience4j_circuitbreaker_jar
 io_github_resilience4j_resilience4j_micrometer_jar .[#ABABAB].> io_micrometer_micrometer_core_jar
 io_github_resilience4j_resilience4j_micrometer_jar .[#ABABAB].> io_micrometer_micrometer_observation_jar
