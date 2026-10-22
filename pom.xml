@@ -28,6 +28,11 @@
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <!--
+            Время файлов в jar и время сборки в build-info: с ним один коммит даёт
+            одни байты jar. Меняется вместе с версией проекта.
+        -->
+        <project.build.outputTimestamp>2026-10-22T00:00:00Z</project.build.outputTimestamp>
 
         <spring-boot.version>4.1.1</spring-boot.version>
         <!-- Поверх BOM Spring Boot, см. dependencyManagement. -->
@@ -62,6 +67,7 @@
         <pmd.version>7.28.0</pmd.version>
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
         <spotbugs-maven-plugin.version>4.10.5.0</spotbugs-maven-plugin.version>
+        <maven-artifact-plugin.version>3.7.0</maven-artifact-plugin.version>
 
         <!--
             Node и npm ставит сборка, а не разработчик: иначе версия
@@ -517,6 +523,24 @@
                         <id>agent-it</id>
                         <goals>
                             <goal>prepare-agent-integration</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!--
+                Воспроизводимость: время сборки задано, и плагины плана сборки — версий,
+                которые его соблюдают. Иначе два прогона одного коммита дают разные jar.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-artifact-plugin</artifactId>
+                <version>${maven-artifact-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>reproducible</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check-buildplan</goal>
                         </goals>
                     </execution>
                 </executions>
