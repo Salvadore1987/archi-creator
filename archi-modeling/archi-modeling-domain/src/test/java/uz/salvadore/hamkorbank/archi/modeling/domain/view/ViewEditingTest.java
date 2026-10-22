@@ -34,45 +34,63 @@ class ViewEditingTest {
             DiagramType.DIAGRAM_MODEL, "Контекст", Models.root(model, FolderType.DIAGRAMS), Models.archiId(), NOW));
 
     @Test
-    @DisplayName("UC-MDL-008: вложенный узел встаёт в конец содержимого контейнера, цикл вложенности — отказ")
+    @DisplayName("UC-MDL-008: вложенный узел встаёт в конец содержимого контейнера")
     void nodeMovesIntoContainerAtEndOfContent() {
-        Element node = Models.element(model, "Node", FolderType.TECHNOLOGY, "Сервер");
-        Element software = Models.element(model, "SystemSoftware", FolderType.TECHNOLOGY, "СУБД");
-        Element device = Models.element(model, "Device", FolderType.TECHNOLOGY, "Стойка");
-        ViewNode server = view.placeElement(model, node.id(), new Bounds(0, 0, 400, 300), null,
-                ViewNodeId.next(UUIDS), Models.archiId()).value();
-        ViewNode inside = view.placeElement(model, device.id(), BOX, server.id(),
-                ViewNodeId.next(UUIDS), Models.archiId()).value();
-        ViewNode dbms = view.placeElement(model, software.id(), new Bounds(500, 40, 120, 55), null,
-                ViewNodeId.next(UUIDS), Models.archiId()).value();
+        Rack rack = rack();
 
-        ViewNode moved = view.moveToParent(dbms.id(), server.id(), 200, 40);
+        ViewNode moved = view.moveToParent(rack.dbms().id(), rack.server().id(), 200, 40);
 
-        assertEquals(server.id(), moved.parentId());
+        assertEquals(rack.server().id(), moved.parentId());
         assertEquals(new Bounds(200, 40, 120, 55), moved.bounds(), "координаты — относительно контейнера");
-        assertTrue(moved.sortOrder().value() > inside.sortOrder().value(), "в конце содержимого контейнера");
-        assertEquals(inside.sortOrder(), view.requireNode(inside.id()).sortOrder(), "соседи не перенумерованы");
+        assertTrue(moved.sortOrder().value() > rack.inside().sortOrder().value(), "в конце содержимого контейнера");
+        assertEquals(rack.inside().sortOrder(), view.requireNode(rack.inside().id()).sortOrder(),
+                "соседи не перенумерованы");
+    }
 
-        ViewNode back = view.moveToParent(dbms.id(), null, 700, 40);
+    @Test
+    @DisplayName("UC-MDL-008: узел выносится из контейнера на верхний уровень")
+    void nodeMovesBackToTopLevel() {
+        Rack rack = rack();
+        view.moveToParent(rack.dbms().id(), rack.server().id(), 200, 40);
+
+        ViewNode back = view.moveToParent(rack.dbms().id(), null, 700, 40);
+
         assertNull(back.parentId());
-        assertEquals("INV-MDL-008", assertThrows(ModelingDomainException.class,
-                () -> view.moveToParent(server.id(), inside.id(), 0, 0)).code(), "контейнер внутри себя");
-        assertEquals("INV-MDL-008", assertThrows(ModelingDomainException.class,
-                () -> view.moveToParent(server.id(), server.id(), 0, 0)).code());
+    }
 
-        ViewNode same = view.moveToParent(inside.id(), server.id(), 30, 30);
-        assertEquals(inside.sortOrder(), same.sortOrder(), "в том же родителе место не меняется");
+    @Test
+    @DisplayName("INV-MDL-008: контейнер не вкладывается в своё содержимое")
+    void containerIsNotMovedIntoItsChild() {
+        Rack rack = rack();
+
+        assertEquals("INV-MDL-008", assertThrows(ModelingDomainException.class,
+                () -> view.moveToParent(rack.server().id(), rack.inside().id(), 0, 0)).code(), "контейнер внутри себя");
+    }
+
+    @Test
+    @DisplayName("INV-MDL-008: узел не вкладывается сам в себя")
+    void nodeIsNotMovedIntoItself() {
+        Rack rack = rack();
+
+        assertEquals("INV-MDL-008", assertThrows(ModelingDomainException.class,
+                () -> view.moveToParent(rack.server().id(), rack.server().id(), 0, 0)).code());
+    }
+
+    @Test
+    @DisplayName("UC-MDL-008: перенос внутри того же родителя не меняет места в содержимом")
+    void moveWithinSameParentKeepsPlace() {
+        Rack rack = rack();
+
+        ViewNode same = view.moveToParent(rack.inside().id(), rack.server().id(), 30, 30);
+
+        assertEquals(rack.inside().sortOrder(), same.sortOrder(), "в том же родителе место не меняется");
     }
 
     @Test
     @DisplayName("UC-MDL-008: группа и заметка — узлы без элемента, подпись у группы, текст у заметки")
     void groupAndNoteHaveNoElement() {
-        ViewNode group = view.placeAnnotation(ViewNodeKind.GROUP, "Ядро", null,
-                Bounds.ofNew(ViewNodeKind.GROUP, 0, 0, null, null), null,
-                ViewNodeId.next(UUIDS), Models.archiId());
-        ViewNode note = view.placeAnnotation(ViewNodeKind.NOTE, null, "Строка 1\nСтрока 2",
-                Bounds.ofNew(ViewNodeKind.NOTE, 20, 20, null, null), group.id(),
-                ViewNodeId.next(UUIDS), Models.archiId());
+        ViewNode group = group();
+        ViewNode note = note(group);
 
         assertEquals(DiagramType.GROUP, group.archiType());
         assertNull(group.elementId());
@@ -81,17 +99,42 @@ class ViewEditingTest {
         assertEquals("Строка 1\nСтрока 2", note.content());
         assertEquals(new Bounds(20, 20, 185, 80), note.bounds());
         assertEquals(group.id(), note.parentId());
+    }
 
+    @Test
+    @DisplayName("UC-MDL-008: без элемента размещаются только группа и заметка")
+    void diagramObjectWithoutElementIsRejected() {
         assertEquals("MDL_INVALID_INPUT", assertThrows(ModelingDomainException.class, () -> view.placeAnnotation(
                 ViewNodeKind.DIAGRAM_OBJECT, null, null, BOX, null,
                 ViewNodeId.next(UUIDS), Models.archiId())).code(), "без элемента — только группа и заметка");
+    }
+
+    @Test
+    @DisplayName("UC-MDL-008: у заметки нет подписи — подпись отклоняется")
+    void labelOnNoteIsRejected() {
+        ViewNode note = note(group());
+
         assertEquals("MDL_INVALID_INPUT", assertThrows(ModelingDomainException.class, () -> view.editNode(note.id(),
                 "Подпись", null, null)).code(), "у заметки нет подписи");
+    }
+
+    @Test
+    @DisplayName("INV-MDL-008: заметка не контейнер — в неё ничего не вкладывается")
+    void noteIsNotContainer() {
+        ViewNode note = note(group());
+
         assertEquals("INV-MDL-008", assertThrows(ModelingDomainException.class, () -> view.placeAnnotation(
                 ViewNodeKind.NOTE, null, null, BOX, note.id(),
                 ViewNodeId.next(UUIDS), Models.archiId())).code(), "заметка не контейнер");
+    }
+
+    @Test
+    @DisplayName("UC-MDL-008: пустая подпись группы — подписи нет")
+    void emptyGroupLabelMeansNoLabel() {
+        ViewNode group = group();
 
         ViewNode renamed = view.editNode(group.id(), "", null, null);
+
         assertNull(renamed.label(), "пустая подпись — подписи нет");
     }
 
@@ -221,5 +264,34 @@ class ViewEditingTest {
         assertEquals(Failure.CONFLICT, rejected.failure());
         assertEquals(ModelingMessages.ARCHI_ID_TAKEN_ON_VIEW, rejected.reason().key());
         assertEquals(0, view.nodes().size());
+    }
+
+    private Rack rack() {
+        Element node = Models.element(model, "Node", FolderType.TECHNOLOGY, "Сервер");
+        Element software = Models.element(model, "SystemSoftware", FolderType.TECHNOLOGY, "СУБД");
+        Element device = Models.element(model, "Device", FolderType.TECHNOLOGY, "Стойка");
+        ViewNode server = view.placeElement(model, node.id(), new Bounds(0, 0, 400, 300), null,
+                ViewNodeId.next(UUIDS), Models.archiId()).value();
+        ViewNode inside = view.placeElement(model, device.id(), BOX, server.id(),
+                ViewNodeId.next(UUIDS), Models.archiId()).value();
+        ViewNode dbms = view.placeElement(model, software.id(), new Bounds(500, 40, 120, 55), null,
+                ViewNodeId.next(UUIDS), Models.archiId()).value();
+        return new Rack(server, inside, dbms);
+    }
+
+    private ViewNode group() {
+        return view.placeAnnotation(ViewNodeKind.GROUP, "Ядро", null,
+                Bounds.ofNew(ViewNodeKind.GROUP, 0, 0, null, null), null,
+                ViewNodeId.next(UUIDS), Models.archiId());
+    }
+
+    private ViewNode note(ViewNode group) {
+        return view.placeAnnotation(ViewNodeKind.NOTE, null, "Строка 1\nСтрока 2",
+                Bounds.ofNew(ViewNodeKind.NOTE, 20, 20, null, null), group.id(),
+                ViewNodeId.next(UUIDS), Models.archiId());
+    }
+
+    /** Сервер-контейнер с устройством внутри и СУБД на верхнем уровне. */
+    private record Rack(ViewNode server, ViewNode inside, ViewNode dbms) {
     }
 }

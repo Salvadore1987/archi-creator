@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.lock;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -30,19 +31,32 @@ class ModelLockTest {
     private static final ModelId MODEL = ModelId.next(Models.UUIDS);
 
     @Test
-    @DisplayName("INV-MDL-006: запись без своей действующей блокировки отклоняется с 409")
-    void writeWithoutHeldLockIsRejected() {
+    @DisplayName("INV-MDL-006: запись без блокировки отклоняется с 409")
+    void writeWithoutLockIsRejected() {
         ModelingDomainException noLock = assertThrows(ModelingDomainException.class,
                 () -> ModelLock.requireWriteAccess(MODEL, null, "alice", NOW));
+
         assertEquals("INV-MDL-006", noLock.code());
         assertEquals(Failure.CONFLICT, noLock.failure());
+    }
 
+    @Test
+    @DisplayName("INV-MDL-006: запись под чужой блокировкой отклоняется, отказ называет владельца")
+    void writeUnderForeignLockNamesOwner() {
         ModelLock bobs = ModelLock.acquire(MODEL, null, BOB, NOW, TTL).lock();
+
         ModelingDomainException foreign = assertThrows(ModelingDomainException.class,
                 () -> ModelLock.requireWriteAccess(MODEL, bobs, "alice", NOW));
-        assertEquals("bob", foreign.details().get("lockOwner"), "клиент показывает владельца блокировки");
 
-        ModelLock.requireWriteAccess(MODEL, bobs, "bob", NOW);
+        assertEquals("bob", foreign.details().get("lockOwner"), "клиент показывает владельца блокировки");
+    }
+
+    @Test
+    @DisplayName("INV-MDL-006: своя действующая блокировка даёт право записи")
+    void ownLockGrantsWriteAccess() {
+        ModelLock bobs = ModelLock.acquire(MODEL, null, BOB, NOW, TTL).lock();
+
+        assertDoesNotThrow(() -> ModelLock.requireWriteAccess(MODEL, bobs, "bob", NOW));
     }
 
     @Test
@@ -54,28 +68,65 @@ class ModelLockTest {
         assertEquals(LockStatus.EXPIRED, alices.status(later));
         assertThrows(ModelingDomainException.class,
                 () -> ModelLock.requireWriteAccess(MODEL, alices, "alice", later));
+    }
+
+    @Test
+    @DisplayName("INV-MDL-006: просроченную блокировку захватывает другой, прежняя закрывается как истёкшая")
+    void expiredLockIsTakenOver() {
+        ModelLock alices = ModelLock.acquire(MODEL, null, ALICE, NOW, TTL).lock();
+        Instant later = NOW.plus(TTL);
 
         ModelLock.Acquisition takeover = ModelLock.acquire(MODEL, alices, BOB, later, TTL);
+
         assertEquals("bob", takeover.lock().owner());
         assertEquals(LockReleaseReason.EXPIRED, takeover.expiredPrevious().reason());
     }
 
     @Test
-    @DisplayName("UC-MDL-005: второй захват — 409, свой — продление, чужую снимает только ADMIN")
-    void onlyOneEditorAndAdminForcesRelease() {
+    @DisplayName("UC-MDL-005: второй захват чужим редактором — 409")
+    void secondEditorCannotAcquire() {
         ModelLock alices = ModelLock.acquire(MODEL, null, ALICE, NOW, TTL).lock();
 
         ModelingDomainException second = assertThrows(ModelingDomainException.class,
                 () -> ModelLock.acquire(MODEL, alices, BOB, NOW, TTL));
+
         assertEquals("INV-MDL-006", second.code());
+    }
+
+    @Test
+    @DisplayName("UC-MDL-005: повторный захват своей блокировки продлевает её")
+    void ownerReacquiringRenewsLock() {
+        ModelLock alices = ModelLock.acquire(MODEL, null, ALICE, NOW, TTL).lock();
 
         ModelLock renewed = ModelLock.acquire(MODEL, alices, ALICE, NOW.plusSeconds(60), TTL).lock();
+
         assertTrue(renewed.expiresAt().isAfter(alices.expiresAt()));
+    }
+
+    @Test
+    @DisplayName("UC-MDL-005: чужую блокировку архитектор не снимает — 403")
+    void otherArchitectCannotRelease() {
+        ModelLock alices = ModelLock.acquire(MODEL, null, ALICE, NOW, TTL).lock();
 
         assertEquals(Failure.FORBIDDEN, assertThrows(ModelingDomainException.class,
                 () -> alices.release(BOB, NOW)).failure());
+    }
+
+    @Test
+    @DisplayName("UC-MDL-005: ADMIN снимает чужую блокировку принудительно")
+    void adminForcesRelease() {
+        ModelLock alices = ModelLock.acquire(MODEL, null, ALICE, NOW, TTL).lock();
+
         ModelLockReleasedEvent forced = alices.release(ADMIN, NOW);
+
         assertEquals(LockReleaseReason.FORCED_BY_ADMIN, forced.reason());
+    }
+
+    @Test
+    @DisplayName("UC-MDL-005: владелец снимает свою блокировку сам")
+    void ownerReleasesOwnLock() {
+        ModelLock alices = ModelLock.acquire(MODEL, null, ALICE, NOW, TTL).lock();
+
         assertEquals(LockReleaseReason.RELEASED_BY_OWNER, alices.release(ALICE, NOW).reason());
     }
 

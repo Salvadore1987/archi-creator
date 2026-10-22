@@ -22,14 +22,18 @@ class AdvisorAdminHandlersTest {
     private static final Requester ADMIN = Requester.of("root", Role.ADMIN);
 
     @Test
-    @DisplayName("INV-ADV-006: повышение лимита возвращает бюджет из EXHAUSTED, расход прежний")
-    void raisingLimitReopensAdvisor() {
-        Fixture fixture = new Fixture();
-        fixture.limit = 100L;
-        fixture.service().ask(Fixture.ALICE, AdvisorRequest.review(Fixture.MODEL, null), "k",
-                Locale.ENGLISH).run(new Fixture.Recorded());
+    @DisplayName("INV-ADV-006: расход сверх лимита переводит бюджет в EXHAUSTED")
+    void spendingOverLimitExhaustsBudget() {
+        Fixture fixture = exhausted();
+
         assertEquals("EXHAUSTED",
                 fixture.admin().getAdvisorStatus(Fixture.ALICE, new GetAdvisorStatusQuery(null)).budgetStatus());
+    }
+
+    @Test
+    @DisplayName("INV-ADV-006: повышение лимита возвращает бюджет из EXHAUSTED, расход прежний")
+    void raisingLimitReopensAdvisor() {
+        Fixture fixture = exhausted();
 
         fixture.admin().configureAdvisor(ADMIN, new ConfigureAdvisorCommand(null, true, 10_000L));
 
@@ -49,16 +53,30 @@ class AdvisorAdminHandlersTest {
     }
 
     @Test
-    @DisplayName("FR-27: выключатель и лимит меняет только администратор; лимит положительный")
-    void onlyAdminChangesSettings() {
+    @DisplayName("FR-27: выключатель и лимит не меняет архитектор")
+    void architectDoesNotChangeSettings() {
         Fixture fixture = new Fixture();
 
         assertThrows(AdvisorDomainException.class,
                 () -> fixture.admin().configureAdvisor(Fixture.ALICE, new ConfigureAdvisorCommand(null, false, 10L)));
+    }
+
+    @Test
+    @DisplayName("FR-27: лимит — положительный")
+    void zeroLimitIsRejected() {
+        Fixture fixture = new Fixture();
+
         assertThrows(AdvisorDomainException.class,
                 () -> fixture.admin().configureAdvisor(ADMIN, new ConfigureAdvisorCommand(null, false, 0L)));
+    }
+
+    @Test
+    @DisplayName("FR-27: администратор выключает помощника и меняет лимит")
+    void adminChangesSettings() {
+        Fixture fixture = new Fixture();
 
         fixture.admin().configureAdvisor(ADMIN, new ConfigureAdvisorCommand(null, false, 10L));
+
         assertFalse(fixture.admin().getAdvisorStatus(Fixture.VIEWER, new GetAdvisorStatusQuery(null)).enabled());
         assertEquals(10L,
                 fixture.admin().getAdvisorSettings(ADMIN, new GetAdvisorSettingsQuery(null)).monthlyTokenLimit());
@@ -72,5 +90,13 @@ class AdvisorAdminHandlersTest {
 
         assertEquals(5_000_000L,
                 fixture.admin().getAdvisorSettings(ADMIN, new GetAdvisorSettingsQuery(null)).monthlyTokenLimit());
+    }
+
+    private static Fixture exhausted() {
+        Fixture fixture = new Fixture();
+        fixture.limit = 100L;
+        fixture.service().ask(Fixture.ALICE, AdvisorRequest.review(Fixture.MODEL, null), "k",
+                Locale.ENGLISH).run(new Fixture.Recorded());
+        return fixture;
     }
 }

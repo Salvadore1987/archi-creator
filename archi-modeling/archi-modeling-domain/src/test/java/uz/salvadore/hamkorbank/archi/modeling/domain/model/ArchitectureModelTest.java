@@ -49,6 +49,11 @@ class ArchitectureModelTest {
                 List.of(unknown), List.of(), () -> FolderId.next(UUIDS), Models::archiId);
 
         assertEquals(2, model.opaqueCount());
+    }
+
+    @Test
+    @DisplayName("в новой модели непрозрачных объектов нет")
+    void emptyModelHasNoOpaqueObjects() {
         assertEquals(0, Models.empty().opaqueCount());
     }
 
@@ -64,6 +69,13 @@ class ArchitectureModelTest {
 
         assertEquals("INV-MDL-001", taken.code());
         assertEquals(1, model.elements().size());
+    }
+
+    @Test
+    @DisplayName("INV-MDL-001: archi_id папки тоже занят в модели")
+    void folderArchiIdIsTaken() {
+        ArchitectureModel model = Models.empty();
+
         assertTrue(model.archiIdTaken(model.roots().get(FolderType.DIAGRAMS).archiId()),
                 "папки — тоже объекты с archi_id");
     }
@@ -119,13 +131,22 @@ class ArchitectureModelTest {
         assertTrue(capability.supported());
         assertEquals("Мгновенные платежи", renamed.name());
         assertEquals(capability.id(), realizes.target());
+    }
+
+    @Test
+    @DisplayName("FR-08: связь Capability, которой нет в матрице, отклоняется")
+    void capabilityRelationOutsideMatrixIsRejected() {
+        ArchitectureModel model = Models.empty();
+        Element capability = Models.element(model, "Capability", FolderType.STRATEGY, "Платежи");
+        Element component = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
+
         assertThrows(RelationNotPermittedException.class,
                 () -> Models.relate(model, "AssignmentRelationship", capability.id(), component.id()));
     }
 
     @Test
-    @DisplayName("INV-MDL-007: связь по матрице, дубль возвращает существующую")
-    void relationshipIsCheckedByMatrixAndNotDuplicated() {
+    @DisplayName("INV-MDL-007: дубль связи возвращает существующую")
+    void duplicateRelationshipReturnsExisting() {
         ArchitectureModel model = Models.empty();
         Element component = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
         Element actor = Models.element(model, "BusinessActor", FolderType.BUSINESS, "Клиент");
@@ -138,6 +159,15 @@ class ArchitectureModelTest {
         assertFalse(again.created());
         assertEquals(serving.id(), again.value().id());
         assertEquals(Models.root(model, FolderType.RELATIONS), serving.folderId());
+    }
+
+    @Test
+    @DisplayName("INV-MDL-007: связь, которой нет в матрице, отклоняется")
+    void relationshipOutsideMatrixIsRejected() {
+        ArchitectureModel model = Models.empty();
+        Element component = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
+        Element actor = Models.element(model, "BusinessActor", FolderType.BUSINESS, "Клиент");
+
         assertThrows(RelationNotPermittedException.class,
                 () -> Models.relate(model, "AssignmentRelationship", component.id(), actor.id()));
     }
@@ -160,42 +190,95 @@ class ArchitectureModelTest {
     }
 
     @Test
-    @DisplayName("Переименование представления — правила модели: длина имени, активная модель")
-    void renamingViewFollowsModelRules() {
+    @DisplayName("Представление переименовывается")
+    void viewIsRenamed() {
         ArchitectureModel model = Models.empty();
-        ViewRef view = model.placeNewView(ViewId.next(UUIDS), DiagramType.DIAGRAM_MODEL, "Контекст",
-                Models.root(model, FolderType.DIAGRAMS), Models.archiId(), NOW);
-
-        assertThrows(ModelingDomainException.class, () -> model.renameView(view.id(), "x".repeat(Names.MAX + 1), NOW));
-        assertThrows(ModelingDomainException.class, () -> new ViewRef(view.id(), view.folderId(), view.archiId(),
-                view.archiType(), "x".repeat(Names.MAX + 1), view.sortOrder()));
+        ViewRef view = contextView(model);
 
         model.renameView(view.id(), "Ландшафт", NOW);
+
         assertEquals("Ландшафт", model.view(view.id()).orElseThrow().name());
+    }
+
+    @Test
+    @DisplayName("Имя представления длиннее предела при переименовании отклоняется")
+    void tooLongViewNameIsRejectedOnRename() {
+        ArchitectureModel model = Models.empty();
+        ViewRef view = contextView(model);
+
+        assertThrows(ModelingDomainException.class, () -> model.renameView(view.id(), "x".repeat(Names.MAX + 1), NOW));
+    }
+
+    @Test
+    @DisplayName("Ссылка на представление с именем длиннее предела не создаётся")
+    void tooLongViewNameIsRejectedInViewRef() {
+        ArchitectureModel model = Models.empty();
+        ViewRef view = contextView(model);
+
+        assertThrows(ModelingDomainException.class, () -> new ViewRef(view.id(), view.folderId(), view.archiId(),
+                view.archiType(), "x".repeat(Names.MAX + 1), view.sortOrder()));
+    }
+
+    @Test
+    @DisplayName("Представление удалённой модели не переименовывается")
+    void viewOfDeletedModelIsNotRenamed() {
+        ArchitectureModel model = Models.empty();
+        ViewRef view = contextView(model);
 
         model.delete(Models.ARCHITECT, NOW);
+
         assertThrows(ModelingDomainException.class, () -> model.renameView(view.id(), "Другое", NOW));
     }
 
     @Test
-    @DisplayName("Текст, которого не может быть в файле Archi, отклоняется на входе — выгрузка не ломается")
-    void textOutsideXmlIsRejected() {
+    @DisplayName("Имя нового элемента с символом вне XML отклоняется — выгрузка не ломается")
+    void elementNameOutsideXmlIsRejected() {
         ArchitectureModel model = Models.empty();
         FolderId application = Models.root(model, FolderType.APPLICATION);
-        Element element = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
 
         assertThrows(ModelingDomainException.class, () -> model.addElement(
                 ArchiType.ofSimpleName("ApplicationComponent"), "а\u0001б", application, ElementId.next(UUIDS),
                 Models.archiId(), NOW));
+    }
+
+    @Test
+    @DisplayName("Описание элемента с одиночным суррогатом отклоняется — выгрузка не ломается")
+    void documentationOutsideXmlIsRejected() {
+        ArchitectureModel model = Models.empty();
+        Element element = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
+
         assertThrows(ModelingDomainException.class, () -> model.updateElement(element.id(), "АБС", "текст\uD800",
                 List.of(), NOW));
+    }
+
+    @Test
+    @DisplayName("Значение свойства с символом вне XML отклоняется — выгрузка не ломается")
+    void propertyValueOutsideXmlIsRejected() {
+        ArchitectureModel model = Models.empty();
+        Element element = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
+
         assertThrows(ModelingDomainException.class, () -> model.updateElement(element.id(), "АБС", null,
                 List.of(new PropertyEntry("ключ", "\uFFFE", SortOrder.ofPosition(0))), NOW));
+    }
+
+    @Test
+    @DisplayName("Имя папки с управляющим символом отклоняется — выгрузка не ломается")
+    void folderNameOutsideXmlIsRejected() {
+        ArchitectureModel model = Models.empty();
+        FolderId application = Models.root(model, FolderType.APPLICATION);
+
         assertThrows(ModelingDomainException.class, () -> model.createFolder(application, "\u0007",
-                     FolderId.next(UUIDS),
-                Models.archiId(), NOW));
+                FolderId.next(UUIDS), Models.archiId(), NOW));
+    }
+
+    @Test
+    @DisplayName("Табуляция и перевод строки — допустимый текст файла Archi, они сохраняются")
+    void tabAndNewlineAreKept() {
+        ArchitectureModel model = Models.empty();
+        Element element = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
 
         Element kept = model.updateElement(element.id(), "АБС\tтаб", "строка\nстрока", List.of(), NOW);
+
         assertEquals("АБС\tтаб", kept.name());
     }
 
@@ -250,5 +333,10 @@ class ArchitectureModelTest {
         assertEquals(ModelingCodes.TYPE_NOT_EDITABLE, rejected.code());
         assertEquals(ModelingMessages.OPAQUE_NOT_EDITABLE, rejected.reason().key());
         assertEquals("Ташкент", model.elements().get(location.id()).orElseThrow().name());
+    }
+
+    private static ViewRef contextView(ArchitectureModel model) {
+        return model.placeNewView(ViewId.next(UUIDS), DiagramType.DIAGRAM_MODEL, "Контекст",
+                Models.root(model, FolderType.DIAGRAMS), Models.archiId(), NOW);
     }
 }

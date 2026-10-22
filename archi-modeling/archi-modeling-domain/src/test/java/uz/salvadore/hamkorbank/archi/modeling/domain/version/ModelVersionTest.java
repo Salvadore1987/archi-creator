@@ -36,7 +36,15 @@ class ModelVersionTest {
         assertEquals(1, first.versionNo());
         assertEquals(2, second.versionNo());
         assertEquals(3, third.versionNo());
+    }
+
+    @Test
+    @DisplayName("INV-MDL-010: метка версии не меняет её номера")
+    void labelKeepsVersionNumber() {
+        ModelVersion second = version(version(null));
+
         ModelVersion labelled = second.labelled("AS-IS на аудит");
+
         assertEquals(2, labelled.versionNo(), "метка не меняет номера");
         assertEquals("AS-IS на аудит", labelled.label());
     }
@@ -62,12 +70,25 @@ class ModelVersionTest {
     }
 
     @Test
-    @DisplayName("FR-47: очищенный снимок без Git — 410, восстанавливать неоткуда")
-    void purgedSnapshotIsGone() {
+    @DisplayName("FR-47: снимок зафиксированной версии доступен")
+    void committedSnapshotIsAvailable() {
         ModelVersion first = version(null);
+
         assertArrayEquals(new byte[] {1, 2, 3}, first.requireSnapshot());
+    }
+
+    @Test
+    @DisplayName("FR-47: без Git снимок не очищается — восстанавливать было бы неоткуда")
+    void snapshotWithoutGitIsNotPurged() {
+        ModelVersion first = version(null);
 
         assertThrows(ModelingDomainException.class, () -> first.snapshotPurged(false), "без Git снимок не чистится");
+    }
+
+    @Test
+    @DisplayName("FR-47: очищенный снимок — 410")
+    void purgedSnapshotIsGone() {
+        ModelVersion first = version(null);
         ModelVersion bound = ModelVersion.restore(first.id(), MODEL, 1, "a", null, null,
                 first.createdAt(), first.snapshot(), HASH, "b".repeat(40));
         ModelingDomainException gone = assertThrows(ModelingDomainException.class,

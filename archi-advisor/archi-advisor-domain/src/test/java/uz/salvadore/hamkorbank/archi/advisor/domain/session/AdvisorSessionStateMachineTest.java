@@ -23,33 +23,57 @@ class AdvisorSessionStateMachineTest {
         assertEquals(List.of(Message.of(AdvisorMessages.STATUS_STREAMING), Message.of(AdvisorMessages.COMMAND_REJECT)),
                 late.reason().args(), "состояние и команда — ключами, а не именами констант");
         assertEquals(SessionStatus.STREAMING, streaming.status());
+    }
 
+    @Test
+    @DisplayName("INV-ADV-002: до потока сессия отклоняется и ничего не тратит")
+    void requestedSessionIsRejected() {
         AdvisorSession requested = Sessions.review();
+
         requested.reject(RejectionReason.BUDGET_EXHAUSTED, Sessions.audit(), Sessions.NOW);
+
         assertEquals(SessionStatus.REJECTED, requested.status());
         assertEquals(0, requested.usage().total(), "отклонённая сессия ничего не потратила");
     }
 
     @Test
-    @DisplayName("INV-ADV-002: терминальная сессия не дополняется")
-    void terminalSessionIsImmutable() {
-        AdvisorSession session = Sessions.review();
-        session.startStreaming(100, false);
-        session.complete(new TokenUsage(1, 1), null, null, Sessions.audit(), Sessions.NOW);
+    @DisplayName("INV-ADV-002: к завершённой сессии находка не добавляется")
+    void completedSessionTakesNoFindings() {
+        AdvisorSession session = completed();
 
         assertThrows(IllegalSessionTransitionException.class, () -> session.addFinding(Sessions.finding("id-1")));
+    }
+
+    @Test
+    @DisplayName("INV-ADV-002: завершённая сессия не переводится в FAILED")
+    void completedSessionDoesNotFail() {
+        AdvisorSession session = completed();
+
         assertThrows(IllegalSessionTransitionException.class,
                 () -> session.fail(TokenUsage.NONE, Sessions.audit(), Sessions.NOW));
+    }
+
+    @Test
+    @DisplayName("INV-ADV-002: завершённая сессия не открывает поток заново")
+    void completedSessionDoesNotStreamAgain() {
+        AdvisorSession session = completed();
+
         assertThrows(IllegalSessionTransitionException.class, () -> session.startStreaming(1, false));
     }
 
     @Test
-    @DisplayName("INV-ADV-002: FAILED достижим и из REQUESTED, и из STREAMING")
-    void failIsReachableFromRequestedAndStreaming() {
+    @DisplayName("INV-ADV-002: FAILED достижим из REQUESTED")
+    void failIsReachableFromRequested() {
         AdvisorSession requested = Sessions.review();
-        requested.fail(TokenUsage.NONE, Sessions.audit(), Sessions.NOW);
-        assertEquals(SessionStatus.FAILED, requested.status());
 
+        requested.fail(TokenUsage.NONE, Sessions.audit(), Sessions.NOW);
+
+        assertEquals(SessionStatus.FAILED, requested.status());
+    }
+
+    @Test
+    @DisplayName("INV-ADV-002: FAILED достижим из STREAMING, израсходованное до обрыва учтено")
+    void failIsReachableFromStreaming() {
         AdvisorSession streaming = Sessions.review();
         streaming.startStreaming(10, true);
         streaming.fail(new TokenUsage(10, 3), Sessions.audit(), Sessions.NOW);
@@ -64,5 +88,12 @@ class AdvisorSessionStateMachineTest {
         explain.startStreaming(10, false);
 
         assertThrows(IllegalSessionTransitionException.class, () -> explain.addFinding(Sessions.finding("id-1")));
+    }
+
+    private static AdvisorSession completed() {
+        AdvisorSession session = Sessions.review();
+        session.startStreaming(100, false);
+        session.complete(new TokenUsage(1, 1), null, null, Sessions.audit(), Sessions.NOW);
+        return session;
     }
 }

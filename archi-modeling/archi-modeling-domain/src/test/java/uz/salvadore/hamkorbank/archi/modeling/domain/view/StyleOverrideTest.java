@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
@@ -19,11 +18,11 @@ class StyleOverrideTest {
         assertEquals(alignment, alignment(alignment).textAlignment());
     }
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(ints = {3, 0})
     @DisplayName("Выравнивание вне набора Archi отклоняется, как цвет не того формата")
-    void unknownAlignmentIsRejected() {
-        assertThrows(InvalidValueException.class, () -> alignment(3));
-        assertThrows(InvalidValueException.class, () -> alignment(0));
+    void unknownAlignmentIsRejected(int alignment) {
+        assertThrows(InvalidValueException.class, () -> alignment(alignment));
     }
 
     @ParameterizedTest

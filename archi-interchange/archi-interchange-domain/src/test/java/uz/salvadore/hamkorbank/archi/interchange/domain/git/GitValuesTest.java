@@ -58,9 +58,14 @@ class GitValuesTest {
     }
 
     @Test
-    @DisplayName("управляющий символ в субъекте и почте автора — отказ")
-    void controlCharactersInSubjectAndEmailAreRejected() {
+    @DisplayName("управляющий символ в субъекте автора — отказ")
+    void controlCharacterInSubjectIsRejected() {
         assertThrows(InvalidValueException.class, () -> new GitAuthor("sub\rject", "Анна", "anna@example.com"));
+    }
+
+    @Test
+    @DisplayName("управляющий символ в почте автора — отказ")
+    void controlCharacterInEmailIsRejected() {
         assertThrows(InvalidValueException.class, () -> new GitAuthor("subject", "Анна", "anna\u0000@example.com"));
     }
 

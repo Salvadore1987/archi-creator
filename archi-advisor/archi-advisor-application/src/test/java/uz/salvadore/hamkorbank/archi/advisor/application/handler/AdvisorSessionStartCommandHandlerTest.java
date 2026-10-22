@@ -206,17 +206,25 @@ class AdvisorSessionStartCommandHandlerTest {
     }
 
     @Test
-    @DisplayName("Роль: план — только архитектору, ревью доступно и наблюдателю")
-    void rolesFollowTheTable() {
+    @DisplayName("Роль: план наблюдателю не доступен, сессия до проверки роли не заводится")
+    void viewerIsDeniedPlan() {
         Fixture fixture = new Fixture();
         Fixture.Advisor service = fixture.service();
 
         AdvisorDomainException denied = assertThrows(AdvisorDomainException.class,
                 () -> service.ask(Fixture.VIEWER, AdvisorRequest.plan(Fixture.MODEL, "Платежи"), "k1", RU));
+
         assertEquals("ADV_ACCESS_DENIED", denied.code());
         assertTrue(fixture.sessions.isEmpty(), "до проверки роли сессия не заводится");
+    }
 
-        service.ask(Fixture.VIEWER, review(), "k2", RU).run(new Fixture.Recorded());
+    @Test
+    @DisplayName("Роль: ревью доступно и наблюдателю")
+    void viewerGetsReview() {
+        Fixture fixture = new Fixture();
+
+        fixture.service().ask(Fixture.VIEWER, review(), "k2", RU).run(new Fixture.Recorded());
+
         assertEquals(SessionStatus.COMPLETED, fixture.onlySession().status());
     }
 
