@@ -27,10 +27,10 @@ public class JpaGitBindingRepository implements GitBindingRepository {
                         GitBindingEntity.class)
                 .setParameter("w", workspaceId.value())
                 .getResultStream().findFirst().map(e -> GitBinding.restore(
-                new WorkspaceId(e.workspaceId), e.repoUrl, e.branch, SecretRef.of(e.tokenRef),
-                GitBindingStatus.valueOf(e.status), e.lastCommitSha == null ? null : GitSha.of(e.lastCommitSha),
-                e.lastCheckedAt,
-                e.authors.stream().map(a -> new GitAuthor(a.subject, a.name, a.email)).toList()));
+                        new WorkspaceId(e.workspaceId), e.repoUrl, e.branch, SecretRef.of(e.tokenRef),
+                        GitBindingStatus.valueOf(e.status),
+                        e.lastCommitSha == null ? null : GitSha.of(e.lastCommitSha), e.lastCheckedAt,
+                        e.authors.stream().map(a -> new GitAuthor(a.subject, a.name, a.email)).toList()));
     }
 
     @Override
