@@ -460,3 +460,18 @@ decisions:
       sections: ['§4.5.3']
     note: |
       Тег model_id — только у метрик, объявленных спецификацией «по модели»: моделей десятки, ряд на модель отвечает, какая растёт и где ждут блокировку. Найдено на этапе 14 ревью кода (D-22).
+
+  - id: ADR-0033
+    title: Выходные порты — пакет application.port, контракт порта рядом с интерфейсом
+    status: accepted
+    date: 2026-10-22
+    kind: architecture
+    adr_file: 0033-output-port-package.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    implemented: 2026-10-22
+    deviates_from:
+      standard: java-spring-code-guidelines-v2@97bce16
+      sections: ['§3.6.1']
+    note: |
+      Выходные порты — интерфейсы в application.port, рядом — record'ы, перечисления и исключения их сигнатуры; класса с поведением в пакете портов нет. Держит HexagonalArchitectureTest. Найдено на этапе 15 ревью кода (D-23).
