@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
@@ -196,5 +197,58 @@ class ArchitectureModelTest {
 
         Element kept = model.updateElement(element.id(), "АБС\tтаб", "строка\nстрока", List.of(), NOW);
         assertEquals("АБС\tтаб", kept.name());
+    }
+
+    @Test
+    @DisplayName("Вид доступа задаётся только у связи Access")
+    void accessTypeOutsideAccessIsRejected() {
+        ArchitectureModel model = Models.empty();
+        Element component = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
+        Element actor = Models.element(model, "BusinessActor", FolderType.BUSINESS, "Клиент");
+
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class, () -> model.addRelationship(
+                ArchiType.ofSimpleName("ServingRelationship"), component.id(), actor.id(), null, null,
+                AccessType.READ, null, RelationshipId.next(UUIDS), Models.archiId(), NOW));
+
+        assertEquals(ModelingCodes.INVALID_INPUT, rejected.code());
+        assertEquals(ModelingMessages.ACCESS_TYPE_MISPLACED, rejected.reason().key());
+        assertEquals(0, model.relationships().size());
+    }
+
+    @Test
+    @DisplayName("Направленность задаётся только у связи Association")
+    void directedOutsideAssociationIsRejected() {
+        ArchitectureModel model = Models.empty();
+        Element component = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
+        Element actor = Models.element(model, "BusinessActor", FolderType.BUSINESS, "Клиент");
+
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class, () -> model.addRelationship(
+                ArchiType.ofSimpleName("ServingRelationship"), component.id(), actor.id(), null, null,
+                null, Boolean.TRUE, RelationshipId.next(UUIDS), Models.archiId(), NOW));
+
+        assertEquals(ModelingCodes.INVALID_INPUT, rejected.code());
+        assertEquals(ModelingMessages.DIRECTED_MISPLACED, rejected.reason().key());
+        assertEquals(0, model.relationships().size());
+    }
+
+    @Test
+    @DisplayName("FR-08: opaque-элемент из файла хранится, но не правится")
+    void opaqueElementIsNotEditable() {
+        FolderId other = FolderId.next(UUIDS);
+        Element location = new Element(ElementId.next(UUIDS), other, Models.archiId(),
+                ArchiType.ofSimpleName("Location"), "Ташкент", null, List.of(), SortOrder.ofPosition(0), false,
+                new RawXml("<element/>"));
+        ModelHeader header = new ModelHeader(ModelId.next(UUIDS), WorkspaceId.next(UUIDS), Models.archiId(), "Файл",
+                null, "5.0.0", ModelStatus.ACTIVE, List.of(), null, "a", NOW, NOW, 0);
+        ArchitectureModel model = ArchitectureModel.imported(header,
+                List.of(FolderTreeInitializer.root(FolderType.OTHER, other, Models.archiId(), SortOrder.ofPosition(0))),
+                List.of(location), List.of(), List.of(), () -> FolderId.next(UUIDS), Models::archiId);
+
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> model.updateElement(location.id(), "Самарканд", null, List.of(), NOW));
+
+        assertEquals(ModelingCodes.TYPE_NOT_EDITABLE, rejected.code());
+        assertEquals(ModelingMessages.OPAQUE_NOT_EDITABLE, rejected.reason().key());
+        assertEquals("Ташкент", model.elements().get(location.id()).orElseThrow().name());
     }
 }

@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.residue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeDomainException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 class NodeResidueTest {
@@ -43,6 +45,32 @@ class NodeResidueTest {
                     () -> NodeResidue.decode(broken), broken);
             assertEquals(InterchangeCodes.RESIDUE_CORRUPTED, e.code(), broken);
         }
+    }
+
+    @Test
+    @DisplayName("остаток с чужим корневым элементом — отказ «остаток повреждён» с причиной в записи")
+    void residueWithForeignRootIsCorrupted() {
+        InterchangeDomainException e = assertThrows(InterchangeDomainException.class,
+                () -> NodeResidue.decode("<q><s o=\"1\" t=\"bounds\"/></q>"));
+
+        assertEquals(InterchangeCodes.RESIDUE_CORRUPTED, e.code());
+        assertEquals(InterchangeMessages.RESIDUE_CORRUPTED, e.reason().key());
+        InvalidValueException cause = assertInstanceOf(InvalidValueException.class, e.getCause());
+        assertEquals(InterchangeMessages.RESIDUE_RECORD_EXPECTED, cause.reason().key());
+        assertEquals(List.of("r"), cause.reason().args());
+    }
+
+    @Test
+    @DisplayName("значение остатка хранит атрибуты целиком: заглушка столбца в нём недопустима")
+    void valueWithTypedAttributeIsRejected() {
+        List<ResidueAttribute> attributes = List.of(ResidueAttribute.literal("name", "a"),
+                ResidueAttribute.placeholder("key"));
+
+        InvalidValueException e = assertThrows(InvalidValueException.class,
+                () -> new ResidueItem.Value(1000, "property", attributes, null));
+
+        assertEquals(InterchangeCodes.INVALID_REQUEST, e.code());
+        assertEquals(InterchangeMessages.UNTYPED_VALUE_LITERAL, e.reason().key());
     }
 
     @Test

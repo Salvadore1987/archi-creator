@@ -1,11 +1,15 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.document;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 class DocumentValuesTest {
@@ -37,5 +41,28 @@ class DocumentValuesTest {
     @DisplayName("текст, комментарий, инструкция, CDATA или элемент с хвостом вместо фрагмента — отказ")
     void fragmentOtherThanElementIsRejected(String xml) {
         assertThrows(InvalidValueException.class, () -> new RawXmlFragment(xml, null, DocumentOrder.of(0)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {-1, Integer.MIN_VALUE})
+    @DisplayName("позиция среди соседей не бывает отрицательной")
+    void negativeOrderIsRejected(int value) {
+        InvalidValueException e = assertThrows(InvalidValueException.class, () -> DocumentOrder.of(value));
+
+        assertEquals(InterchangeCodes.INVALID_REQUEST, e.code());
+        assertEquals(InterchangeMessages.ORDER_NEGATIVE, e.reason().key());
+        assertEquals(List.of(value), e.reason().args());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"bounds2", "feature", "child", "Documentation"})
+    @DisplayName("значение документа — только из тегов, которые читатель понимает как значения")
+    void valueWithForeignTagIsRejected(String tag) {
+        InvalidValueException e = assertThrows(InvalidValueException.class,
+                () -> new DocumentValue(tag, DocumentOrder.of(0), Attributes.of(), "x"));
+
+        assertEquals(InterchangeCodes.INVALID_REQUEST, e.code());
+        assertEquals(InterchangeMessages.NOT_DOCUMENT_VALUE, e.reason().key());
+        assertEquals(List.of(tag), e.reason().args());
     }
 }

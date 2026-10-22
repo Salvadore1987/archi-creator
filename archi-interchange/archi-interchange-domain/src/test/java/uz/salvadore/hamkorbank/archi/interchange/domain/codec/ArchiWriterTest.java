@@ -2,16 +2,31 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.codec;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
+import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attributes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
+import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentOrder;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
+import uz.salvadore.hamkorbank.archi.interchange.domain.document.RawXmlFragment;
 
 class ArchiWriterTest {
 
@@ -121,5 +136,66 @@ class ArchiWriterTest {
         assertEquals(Optional.of("строка\nвторая\tтаб"), element.attribute("name"));
         assertEquals(Optional.of("CR\rLF & <тег>"), element.documentation());
         assertEquals(Optional.of("A & B <x> \"q\""), reread.folders().getFirst().attribute("name"));
+    }
+
+    @Test
+    @DisplayName("документ без пространства имён Archi в корне не пишется и ничего не выводит")
+    void documentWithoutArchiNamespaceIsRejected() {
+        ModelDocument document = new ModelDocument(Attributes.of("name", "М", "id", Xml.MODEL_ID), List.of());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        InvalidValueException e = assertThrows(InvalidValueException.class, () -> writer.write(document, out));
+
+        assertEquals(InterchangeCodes.INVALID_REQUEST, e.code());
+        assertEquals(InterchangeMessages.NAMESPACE_MISSING, e.reason().key());
+        assertEquals(List.of(ModelDocument.NAMESPACE), e.reason().args());
+        assertEquals(0, out.size());
+    }
+
+    @Test
+    @DisplayName("одиночный суррогат во фрагменте не кодируется в UTF-8 — отказ записи, а не искажённый файл")
+    void unencodableFragmentIsRejected() {
+        ModelDocument document = new ModelDocument(Attributes.of("xmlns:archimate", ModelDocument.NAMESPACE,
+                "id", Xml.MODEL_ID), List.of(new RawXmlFragment("<feature value=\"\uD800\"/>", null,
+                DocumentOrder.of(0))));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> writer.write(document, out));
+
+        assertTrue(e.getMessage().startsWith(InterchangeMessages.TEXT_NOT_XML), e.getMessage());
+        assertInstanceOf(CharacterCodingException.class, e.getCause());
+        assertEquals(0, out.size());
+    }
+
+    @Test
+    @DisplayName("сбой потока вывода доходит до вызывающего непроверяемым исключением с исходной причиной")
+    void outputFailureIsPropagated() throws IOException {
+        ModelDocument document = Xml.read(Xml.model(STYLED));
+        IOException failure = new IOException("disk full");
+        try (OutputStream broken = new FailingOutputStream(failure)) {
+            UncheckedIOException e = assertThrows(UncheckedIOException.class, () -> writer.write(document, broken));
+
+            assertSame(failure, e.getCause());
+        }
+    }
+
+    /** Поток, который отказывает в каждой записи одним и тем же исключением. */
+    private static final class FailingOutputStream extends OutputStream {
+
+        private final IOException failure;
+
+        FailingOutputStream(IOException failure) {
+            this.failure = failure;
+        }
+
+        @Override
+        public void write(int b) throws IOException {
+            throw failure;
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException {
+            throw failure;
+        }
     }
 }

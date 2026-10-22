@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.common;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -9,6 +10,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ElementId;
@@ -44,5 +47,14 @@ class SortOrderTest {
         assertEquals(SortOrder.of(1000), SortOrder.afterLast(List.of()));
         assertEquals("1000,2000,3000", List.of(0, 1, 2).stream().map(SortOrder::ofPosition)
                 .map(s -> String.valueOf(s.value())).collect(Collectors.joining(",")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = {0, -1000})
+    @DisplayName("INV-MDL-005: позиция в родителе — положительное число")
+    void nonPositiveOrderIsRejected(long value) {
+        InvalidValueException rejected = assertThrows(InvalidValueException.class, () -> new SortOrder(value));
+
+        assertEquals(ModelingMessages.SORT_ORDER_POSITIVE, rejected.reason().key());
     }
 }

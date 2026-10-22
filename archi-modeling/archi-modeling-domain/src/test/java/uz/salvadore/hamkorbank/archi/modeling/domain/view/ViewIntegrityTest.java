@@ -12,14 +12,18 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Models;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Relationship;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.RelationshipId;
 
 class ViewIntegrityTest {
 
@@ -148,6 +152,117 @@ class ViewIntegrityTest {
         ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
                 () -> View.imported(view.header(), List.of(group), List.of(), model));
         assertEquals("INV-MDL-001", rejected.code());
+    }
+
+    @Test
+    @DisplayName("INV-MDL-008: представление импортируется только в свою модель")
+    void importedViewOfOtherModelIsRejected() {
+        ArchitectureModel model = Models.empty();
+        View view = newView(model);
+
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> View.imported(view.header(), List.of(), List.of(), Models.empty()));
+
+        assertEquals(ModelingCodes.VIEW_REFERENCE, rejected.code());
+        assertEquals(ModelingMessages.VIEW_OF_OTHER_MODEL, rejected.reason().key());
+    }
+
+    @Test
+    @DisplayName("INV-MDL-008: узел импортированного представления изображает элемент своей модели")
+    void importedNodeOfForeignElementIsRejected() {
+        ArchitectureModel model = Models.empty();
+        Element foreign = Models.element(Models.empty(), "BusinessActor", FolderType.BUSINESS, "Клиент");
+        ViewNode node = new ViewNode(ViewNodeId.next(UUIDS), null, Models.archiId(), DiagramType.DIAGRAM_OBJECT,
+                foreign.id(), BOX, StyleOverride.NONE, SortOrder.ofPosition(0), null);
+
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> View.imported(newView(model).header(), List.of(node), List.of(), model));
+
+        assertEquals(ModelingCodes.VIEW_REFERENCE, rejected.code());
+        assertEquals(ModelingMessages.NODE_ELEMENT_ELSEWHERE, rejected.reason().key());
+    }
+
+    @Test
+    @DisplayName("INV-MDL-008: родитель узла импортированного представления лежит на том же представлении")
+    void importedNodeWithParentElsewhereIsRejected() {
+        ArchitectureModel model = Models.empty();
+        ViewNode orphan = group(ViewNodeId.next(UUIDS), ViewNodeId.next(UUIDS));
+
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> View.imported(newView(model).header(), List.of(orphan), List.of(), model));
+
+        assertEquals(ModelingCodes.VIEW_REFERENCE, rejected.code());
+        assertEquals(ModelingMessages.NODE_PARENT_ELSEWHERE, rejected.reason().key());
+    }
+
+    @Test
+    @DisplayName("INV-MDL-008: узлы импортированного представления не вложены друг в друга по кругу")
+    void importedNestingCycleIsRejected() {
+        ArchitectureModel model = Models.empty();
+        ViewNodeId first = ViewNodeId.next(UUIDS);
+        ViewNodeId second = ViewNodeId.next(UUIDS);
+
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> View.imported(newView(model).header(), List.of(group(first, second), group(second, first)),
+                        List.of(), model));
+
+        assertEquals(ModelingCodes.VIEW_REFERENCE, rejected.code());
+        assertEquals(ModelingMessages.NODE_NESTING_CYCLE, rejected.reason().key());
+    }
+
+    @Test
+    @DisplayName("INV-MDL-001: ребро импортированного представления не берёт archi_id узла")
+    void importedEdgeCannotReuseNodeArchiId() {
+        ArchitectureModel model = Models.empty();
+        ViewNode source = group(ViewNodeId.next(UUIDS), null);
+        ViewNode target = group(ViewNodeId.next(UUIDS), null);
+        ViewEdge edge = edge(source.archiId(), null, source.id(), target.id());
+
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> View.imported(newView(model).header(), List.of(source, target), List.of(edge), model));
+
+        assertEquals(ModelingCodes.ARCHI_ID_UNIQUE, rejected.code());
+        assertEquals(ModelingMessages.ARCHI_ID_REPEATED_ON_VIEW, rejected.reason().key());
+    }
+
+    @Test
+    @DisplayName("INV-MDL-008: концы ребра импортированного представления лежат на том же представлении")
+    void importedEdgeWithEndElsewhereIsRejected() {
+        ArchitectureModel model = Models.empty();
+        ViewNode target = group(ViewNodeId.next(UUIDS), null);
+        ViewEdge edge = edge(Models.archiId(), null, ViewNodeId.next(UUIDS), target.id());
+
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> View.imported(newView(model).header(), List.of(target), List.of(edge), model));
+
+        assertEquals(ModelingCodes.VIEW_REFERENCE, rejected.code());
+        assertEquals(ModelingMessages.EDGE_END_ELSEWHERE, rejected.reason().key());
+    }
+
+    @Test
+    @DisplayName("INV-MDL-008: ребро импортированного представления изображает связь своей модели")
+    void importedEdgeOfForeignRelationshipIsRejected() {
+        ArchitectureModel model = Models.empty();
+        ViewNode source = group(ViewNodeId.next(UUIDS), null);
+        ViewNode target = group(ViewNodeId.next(UUIDS), null);
+        ViewEdge edge = edge(Models.archiId(), RelationshipId.next(UUIDS), source.id(), target.id());
+
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> View.imported(newView(model).header(), List.of(source, target), List.of(edge), model));
+
+        assertEquals(ModelingCodes.VIEW_REFERENCE, rejected.code());
+        assertEquals(ModelingMessages.EDGE_RELATIONSHIP_ELSEWHERE, rejected.reason().key());
+    }
+
+    private static ViewNode group(ViewNodeId id, ViewNodeId parentId) {
+        return new ViewNode(id, parentId, Models.archiId(), DiagramType.GROUP, null, BOX, StyleOverride.NONE,
+                SortOrder.ofPosition(0), null);
+    }
+
+    private static ViewEdge edge(ArchiId archiId, RelationshipId relationshipId, ViewEndpoint source,
+                                 ViewEndpoint target) {
+        return new ViewEdge(ViewEdgeId.next(UUIDS), archiId, DiagramType.CONNECTION, relationshipId, source, target,
+                List.of(), StyleOverride.NONE, SortOrder.ofPosition(0), null);
     }
 
     private static View newView(ArchitectureModel model) {

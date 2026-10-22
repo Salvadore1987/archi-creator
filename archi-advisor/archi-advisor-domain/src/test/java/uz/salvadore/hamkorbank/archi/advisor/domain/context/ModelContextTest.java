@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.advisor.domain.context;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.uuid.impl.UUIDUtil;
@@ -12,6 +13,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorCodes;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.ViewId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorFunction;
 
@@ -139,5 +146,17 @@ class ModelContextTest {
         assertEquals(30, catalog.elements().size());
         assertTrue(catalog.relationships().isEmpty());
         assertTrue(catalog.elements().stream().allMatch(e -> e.documentation() == null));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"-1, 0", "0, -1"})
+    @DisplayName("Отрицательная оценка токенов или размер области — контекст не создаётся")
+    void negativeSizesAreRejected(int tokenEstimate, int scopeSize) {
+        InvalidValueException refused = assertThrows(InvalidValueException.class,
+                () -> new ModelContext(AdvisorFunction.REVIEW, List.of(), List.of(), List.of(), tokenEstimate, false,
+                        scopeSize));
+
+        assertEquals(AdvisorCodes.INVALID_INPUT, refused.code());
+        assertEquals(Message.of(AdvisorMessages.USAGE_NEGATIVE), refused.reason());
     }
 }

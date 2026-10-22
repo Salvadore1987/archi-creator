@@ -13,6 +13,12 @@ import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ExportJobId;
@@ -86,6 +92,32 @@ class ExportJobTest {
         delivered.render(1, FILE, LossReport.lossless());
         delivered.deliver(NOW);
         assertThrows(IllegalExportTransitionException.class, () -> delivered.fail("поздно"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = {0, -1})
+    @DisplayName("задание выгрузки с номером версии меньше единицы не создаётся")
+    void requestWithoutPositiveVersionIsRejected(long version) {
+        InvalidValueException e = assertThrows(InvalidValueException.class, () -> job(ExportFormat.SVG, version));
+
+        assertEquals(InterchangeCodes.INVALID_REQUEST, e.code());
+        assertEquals(InterchangeMessages.EXPORT_VERSION_POSITIVE, e.reason().key());
+    }
+
+    @Test
+    @DisplayName("доставка до отрисовки отклоняется и называет команду и состояние ключами")
+    void deliverBeforeRenderIsRejected() {
+        ExportJob job = job(ExportFormat.SVG, 2);
+
+        IllegalExportTransitionException e = assertThrows(IllegalExportTransitionException.class,
+                () -> job.deliver(NOW));
+
+        assertEquals(InterchangeCodes.EXPORT_TRANSITION, e.code());
+        assertEquals(InterchangeMessages.EXPORT_TRANSITION, e.reason().key());
+        assertEquals(List.of(Message.of(InterchangeMessages.COMMAND_DELIVER_EXPORT),
+                Message.of(InterchangeMessages.STATUS_EXPORT_REQUESTED)), e.reason().args());
+        assertEquals(ExportStatus.REQUESTED, job.status());
+        assertEquals(List.of(), job.pullEvents());
     }
 
     @Test

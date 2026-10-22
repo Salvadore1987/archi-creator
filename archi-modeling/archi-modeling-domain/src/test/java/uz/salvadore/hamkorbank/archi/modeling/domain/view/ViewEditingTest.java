@@ -9,12 +9,18 @@ import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.NOW;
 import static uz.salvadore.hamkorbank.archi.modeling.domain.model.Models.UUIDS;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ArchitectureModel;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Element;
+import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.FolderType;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Models;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.Relationship;
@@ -154,5 +160,66 @@ class ViewEditingTest {
 
         assertEquals(BOX, view.requireNode(node.id()).bounds());
         assertFalse(view.nodes().changed(), "отклонённая разметка ничего не оставила для записи");
+    }
+
+    @Test
+    @DisplayName("UC-MDL-008: текст бывает только у заметки — у группы он отклоняется")
+    void contentOnGroupIsRejected() {
+        ViewNode group = view.placeAnnotation(ViewNodeKind.GROUP, "Ядро", null, BOX, null,
+                ViewNodeId.next(UUIDS), Models.archiId());
+
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> view.editNode(group.id(), null, "Текст", null));
+
+        assertEquals(ModelingCodes.INVALID_INPUT, rejected.code());
+        assertEquals(ModelingMessages.NODE_TEXT_NOT_APPLICABLE, rejected.reason().key());
+        assertNull(view.requireNode(group.id()).content());
+    }
+
+    @Test
+    @DisplayName("FR-08: представление не-ArchiMate хранится, но не правится")
+    void sketchViewIsNotEditable() {
+        View sketch = View.restore(new ViewHeader(ViewId.next(UUIDS), model.id(), FolderId.next(UUIDS),
+                Models.archiId(), new DiagramType("archimate:SketchModel"), "Набросок", null, null, List.of(),
+                SortOrder.ofPosition(0), null, 0), List.of(), List.of());
+
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> sketch.placeAnnotation(ViewNodeKind.GROUP, "Ядро", null, BOX, null,
+                        ViewNodeId.next(UUIDS), Models.archiId()));
+
+        assertEquals(ModelingCodes.TYPE_NOT_EDITABLE, rejected.code());
+        assertEquals(ModelingMessages.VIEW_NOT_EDITABLE, rejected.reason().key());
+        assertEquals(0, sketch.nodes().size());
+    }
+
+    @Test
+    @DisplayName("INV-MDL-008: ребро соединяет только узлы этого представления")
+    void edgeToEndpointOutsideViewIsRejected() {
+        Element component = Models.element(model, "ApplicationComponent", FolderType.APPLICATION, "АБС");
+        Element actor = Models.element(model, "BusinessActor", FolderType.BUSINESS, "Клиент");
+        Relationship serving = Models.relate(model, "ServingRelationship", component.id(), actor.id());
+        ViewNode a = view.placeElement(model, actor.id(), BOX, null, ViewNodeId.next(UUIDS),
+                Models.archiId()).value();
+
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> view.connect(model, serving.id(), ViewNodeId.next(UUIDS), a.id(), ViewEdgeId.next(UUIDS),
+                        Models.archiId()));
+
+        assertEquals(ModelingCodes.VIEW_REFERENCE, rejected.code());
+        assertEquals(ModelingMessages.ENDPOINT_ELSEWHERE, rejected.reason().key());
+        assertEquals(0, view.edges().size());
+    }
+
+    @Test
+    @DisplayName("INV-MDL-001: новый узел не берёт archi_id, занятый на представлении")
+    void nodeWithTakenArchiIdIsRejected() {
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> view.placeAnnotation(ViewNodeKind.GROUP, "Ядро", null, BOX, null,
+                        ViewNodeId.next(UUIDS), view.archiId()));
+
+        assertEquals(ModelingCodes.ARCHI_ID_UNIQUE, rejected.code());
+        assertEquals(Failure.CONFLICT, rejected.failure());
+        assertEquals(ModelingMessages.ARCHI_ID_TAKEN_ON_VIEW, rejected.reason().key());
+        assertEquals(0, view.nodes().size());
     }
 }

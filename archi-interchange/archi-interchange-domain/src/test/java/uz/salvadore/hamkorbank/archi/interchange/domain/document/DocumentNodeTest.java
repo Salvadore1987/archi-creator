@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 
 class DocumentNodeTest {
@@ -64,6 +68,28 @@ class DocumentNodeTest {
     @DisplayName("атрибут не может повториться")
     void duplicateAttributeIsRejected() {
         assertThrows(InvalidValueException.class, () -> Attributes.of("id", "a", "id", "b"));
+    }
+
+    @Test
+    @DisplayName("пары имя–значение без значения у последнего имени не собираются в атрибуты")
+    void oddNamesAndValuesAreRejected() {
+        InvalidValueException e = assertThrows(InvalidValueException.class,
+                () -> Attributes.of("id", "id-e1", "name"));
+
+        assertEquals(InterchangeCodes.INVALID_REQUEST, e.code());
+        assertEquals(InterchangeMessages.ATTRIBUTE_PAIRS_EXPECTED, e.reason().key());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"documentation", "model", "diagram", "Element"})
+    @DisplayName("узел документа — только из тегов, которые читатель понимает как узлы")
+    void nodeWithForeignTagIsRejected(String tag) {
+        InvalidValueException e = assertThrows(InvalidValueException.class,
+                () -> new DocumentNode(tag, DocumentOrder.of(0), Attributes.of("id", ID.value()), List.of()));
+
+        assertEquals(InterchangeCodes.INVALID_REQUEST, e.code());
+        assertEquals(InterchangeMessages.NOT_DOCUMENT_NODE, e.reason().key());
+        assertEquals(List.of(tag), e.reason().args());
     }
 
     @Test

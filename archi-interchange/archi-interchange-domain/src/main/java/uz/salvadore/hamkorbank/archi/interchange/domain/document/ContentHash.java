@@ -28,6 +28,7 @@ public record ContentHash(String value) {
         try {
             return new ContentHash(HexFormat.of().formatHex(MessageDigest.getInstance(DIGEST).digest(content)));
         } catch (NoSuchAlgorithmException e) {
+            // недостижимо — SHA-256 есть в каждой JVM
             throw new IllegalStateException(Message.of(InterchangeMessages.DIGEST_UNAVAILABLE, DIGEST).toString(), e);
         }
     }

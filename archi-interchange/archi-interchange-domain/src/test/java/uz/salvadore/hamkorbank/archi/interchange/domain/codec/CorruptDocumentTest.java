@@ -8,6 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
+import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 
 /**
  * Повреждённые данные отклоняются — с кодом, объектом и строкой.
@@ -212,6 +213,17 @@ class CorruptDocumentTest {
                 """);
 
         assertEquals(InterchangeCodes.MALFORMED_XML, defect.code());
+    }
+
+    @Test
+    @DisplayName("отказ «файл повреждён» без единого дефекта не строится")
+    void corruptionWithoutDefectsIsRejected() {
+        List<DocumentDefect> none = List.of();
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> new CorruptDocumentException(none));
+
+        assertEquals(InterchangeMessages.CORRUPT_WITHOUT_DEFECTS, e.getMessage());
     }
 
     private static DocumentDefect single(String xml) {

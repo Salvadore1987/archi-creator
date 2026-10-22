@@ -11,10 +11,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingCodes;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 
 class IdempotentCommandTest {
 
@@ -81,5 +86,20 @@ class IdempotentCommandTest {
         assertThrows(IllegalArgumentException.class, () -> IdempotentCommand.fingerprint("a", new Composite("x", 1)));
         assertEquals(IdempotentCommand.fingerprint("a", 1, true, null),
                 IdempotentCommand.fingerprint("a", 1, true, null));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidKeys")
+    @DisplayName("Ключ идемпотентности не пустой и не длиннее предела")
+    void invalidKeyIsRejected(String key) {
+        ModelingDomainException rejected = assertThrows(ModelingDomainException.class,
+                () -> IdempotentCommand.requireValidKey(key));
+
+        assertEquals(ModelingCodes.INVALID_INPUT, rejected.code());
+        assertEquals(ModelingMessages.IDEMPOTENCY_KEY_INVALID, rejected.reason().key());
+    }
+
+    static Stream<String> invalidKeys() {
+        return Stream.of(null, "", "   ", "k".repeat(IdempotencyRecord.KEY_MAX + 1));
     }
 }

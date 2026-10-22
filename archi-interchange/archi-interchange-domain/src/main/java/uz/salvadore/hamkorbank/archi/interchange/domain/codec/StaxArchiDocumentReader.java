@@ -334,6 +334,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
                     attributes.get("target").ifPresent(target ->
                             connectionsByTarget.computeIfAbsent(target, t -> new ArrayList<>()).add(id));
                 }
+                // недостижимо — сюда приходят только теги узлов документа
                 default -> throw new IllegalStateException(tag);
             }
             attributes.get("targetConnections").ifPresent(listed -> {

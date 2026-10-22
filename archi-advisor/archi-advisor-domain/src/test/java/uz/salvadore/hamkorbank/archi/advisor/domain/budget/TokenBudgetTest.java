@@ -13,7 +13,12 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorCodes;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.UuidV7;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.TokenBudgetId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
@@ -140,5 +145,17 @@ class TokenBudgetTest {
         assertEquals("2027-01", period.value(), "по поясу учёта это уже январь");
         assertEquals(LocalDate.of(2027, 2, 1), period.resetsAt());
         assertThrows(InvalidValueException.class, () -> BudgetPeriod.parse("2026-13"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 100, -1, 101})
+    @DisplayName("Порог предупреждения вне 1–99 % — бюджет из хранения не восстанавливается")
+    void thresholdOutOfRangeIsRejected(int percent) {
+        InvalidValueException refused = assertThrows(InvalidValueException.class,
+                () -> TokenBudget.restore(TokenBudgetId.next(UUIDS), WorkspaceId.of(UUIDS.next()), OCTOBER, 100, 0,
+                        percent, true, 0));
+
+        assertEquals(AdvisorCodes.INVALID_INPUT, refused.code());
+        assertEquals(Message.of(AdvisorMessages.THRESHOLD_INVALID, percent), refused.reason());
     }
 }

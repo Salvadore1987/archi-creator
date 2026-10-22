@@ -6,7 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorCodes;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
+import uz.salvadore.hamkorbank.archi.advisor.domain.common.Message;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.ViewId;
 
 class AdvisorRequestTest {
@@ -55,5 +58,17 @@ class AdvisorRequestTest {
         assertThrows(InvalidValueException.class,
                 () -> new AdvisorRequest(AdvisorFunction.DOCUMENT, Sessions.MODEL, view, null, "план"));
         assertEquals(view, AdvisorRequest.review(Sessions.MODEL, view).viewId());
+    }
+
+    @Test
+    @DisplayName("Документация — по представлению или по элементу, но не по обоим сразу")
+    void documentWithViewAndElementIsRejected() {
+        ViewId view = ViewId.of(Sessions.UUIDS.next());
+
+        InvalidValueException refused = assertThrows(InvalidValueException.class,
+                () -> AdvisorRequest.document(Sessions.MODEL, view, "id-e1"));
+
+        assertEquals(AdvisorCodes.INVALID_INPUT, refused.code());
+        assertEquals(Message.of(AdvisorMessages.DOCUMENT_TARGET_AMBIGUOUS), refused.reason());
     }
 }

@@ -97,13 +97,16 @@ public final class RelationMatrix {
     private static RelationMatrix load() {
         try (InputStream in = RelationMatrix.class.getResourceAsStream(RESOURCE)) {
             if (in == null) {
+                // недостижимо — матрица лежит в том же jar, что и класс
                 throw new IllegalStateException(
                         Message.of(ModelingMessages.MATRIX_RESOURCE_MISSING, RESOURCE).toString());
             }
             return new RelationMatrix(parse(in));
         } catch (IOException e) {
+            // недостижимо — ресурс читается из jar, а не с диска
             throw new UncheckedIOException(e);
         } catch (XMLStreamException e) {
+            // недостижимо — матрица в jar — таблица Archi без правок
             throw new IllegalStateException(Message.of(ModelingMessages.MATRIX_UNREADABLE, RESOURCE).toString(), e);
         }
     }
@@ -125,6 +128,7 @@ public final class RelationMatrix {
                 }
                 case "target" -> {
                     if (targets == null) {
+                        // недостижимо — матрица в jar — таблица Archi без правок
                         throw new IllegalStateException(
                                 Message.of(ModelingMessages.MATRIX_TARGET_OUTSIDE_SOURCE, RESOURCE).toString());
                     }

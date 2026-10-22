@@ -8,9 +8,13 @@ import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainException;
+import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Role;
 import uz.salvadore.hamkorbank.archi.modeling.domain.event.ModelLockReleasedEvent;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
@@ -73,5 +77,15 @@ class ModelLockTest {
         ModelLockReleasedEvent forced = alices.release(ADMIN, NOW);
         assertEquals(LockReleaseReason.FORCED_BY_ADMIN, forced.reason());
         assertEquals(LockReleaseReason.RELEASED_BY_OWNER, alices.release(ALICE, NOW).reason());
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = {0, -60})
+    @DisplayName("Блокировка истекает строго позже, чем захвачена")
+    void lockExpiresAfterAcquisition(long seconds) {
+        InvalidValueException rejected = assertThrows(InvalidValueException.class,
+                () -> ModelLock.restore(MODEL, "alice", NOW, NOW.plusSeconds(seconds)));
+
+        assertEquals(ModelingMessages.LOCK_EXPIRES_BEFORE_ACQUIRED, rejected.reason().key());
     }
 }
