@@ -9,6 +9,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.health.actuate.endpoint.HealthEndpointGroups;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalManagementPort;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -30,6 +32,9 @@ class ManagementPortIT extends IntegrationTest {
     @LocalManagementPort
     private int managementPort;
 
+    @Autowired
+    private HealthEndpointGroups groups;
+
     @Test
     @DisplayName("Actuator — на своём порту, а не на порту приложения")
     void actuatorOnOwnPort() throws Exception {
@@ -46,6 +51,21 @@ class ManagementPortIT extends IntegrationTest {
     @DisplayName("на порту Actuator метрики по-прежнему закрыты токеном")
     void metricsStillProtected() throws Exception {
         assertThat(get(managementPort, "/actuator/prometheus").statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    @DisplayName("готовность смотрит на базу, живучесть — только на само приложение")
+    void readinessIncludesDatabase() {
+        assertThat(groups.get("readiness").isMember("db")).isTrue();
+        assertThat(groups.get("liveness").isMember("db")).isFalse();
+    }
+
+    @Test
+    @DisplayName("/actuator/info называет версию сборки")
+    void infoCarriesBuild() throws Exception {
+        HttpResponse<String> info = get(managementPort, "/actuator/info");
+        assertThat(info.statusCode()).isEqualTo(200);
+        assertThat(info.body()).contains("\"build\"").contains("\"version\":\"1.0-SNAPSHOT\"");
     }
 
     private HttpResponse<String> get(int port, String path) throws IOException, InterruptedException {

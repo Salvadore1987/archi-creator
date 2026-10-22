@@ -23,7 +23,7 @@
 | 5 | Начало и исход сценария — в журнал, имя сценария — в MDC | 14-08 | `MicrometerUseCaseMetricsTest` | ✅ |
 | 6 | Таймаут чтения ключей Keycloak — настройкой | 14-10 | `JwksTimeoutsTest`, `SettingsValidationTest`; `check-nfr-config.py`: `archi.security.jwks-timeout` | ✅ |
 | 7 | Actuator — на отдельном порту, состав его не публикует | 14-01 | `ManagementPortIT` на настоящих портах | ✅ |
-| 8 | `readiness` — с базой, `build-info` — сборкой | 14-02, 14-03 | `ManagementPortIT` | ⬜ |
+| 8 | `readiness` — с базой, `build-info` — сборкой | 14-02, 14-03 | `ManagementPortIT` | ✅ |
 | 9 | `model_id` в тегах метрик — решением ADR | 14-12 | — | ⬜ |
 
 ## Расхождения плана с фактом
@@ -66,3 +66,7 @@
   без сервера отдельный порт не поднимается. Отдельный порт проверяет `ManagementPortIT` на случайных
   портах — на старом коде порт Actuator совпадал с портом приложения. Прокси `/actuator` в Vite убран:
   интерфейс к Actuator не ходит, а на 8080 его больше нет.
+- **Задача 8.** В `readiness` — только база: Keycloak в группу не входит, ключи читаются при первом токене
+  и живут в кэше, а без Keycloak приложение по-прежнему отдаёт интерфейс и `ui-config`. Живучесть — умолчание Boot
+  (`livenessState`), тест закрепляет, что базы в ней нет. Цель `build-info` стоит рядом с `repackage`
+  и выполняется в своей фазе `generate-resources`, поэтому файл есть и в тестах.

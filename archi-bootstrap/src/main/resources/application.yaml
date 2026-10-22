@@ -114,6 +114,12 @@ management:
       probes:
         enabled: true
       show-details: when-authorized
+      group:
+        # Без базы приложение не обслуживает ни одного запроса — принимать их ему рано.
+        # Живучесть (liveness) остаётся состоянием самого приложения: отказ базы
+        # не должен перезапускать его.
+        readiness:
+          include: readinessState,db
   metrics:
     tags:
       application: ${spring.application.name}
