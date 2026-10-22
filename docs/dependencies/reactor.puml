@@ -19,16 +19,27 @@ rectangle "junit-jupiter-engine\n6.0.3" as org_junit_jupiter_junit_jupiter_engin
 rectangle "junit-platform-engine\n6.0.3" as org_junit_platform_junit_platform_engine_jar_test<<test>>
 rectangle "archi-modeling-application\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_modeling_application_jar_compile
 rectangle "archi-modeling-adapter-rest\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_modeling_adapter_rest_jar_compile
-rectangle "jackson-databind\n3.1.5" as tools_jackson_core_jackson_databind_jar_compile
+rectangle "logback-classic\n1.5.38" as ch_qos_logback_logback_classic_jar_compile
+rectangle "logback-core\n1.5.38" as ch_qos_logback_logback_core_jar_compile
+rectangle "slf4j-api\n2.0.18" as org_slf4j_slf4j_api_jar_compile
+rectangle "spring-boot-starter-logging\n4.1.1" as org_springframework_boot_spring_boot_starter_logging_jar_compile
+rectangle "log4j-to-slf4j\n2.25.5" as org_apache_logging_log4j_log4j_to_slf4j_jar_compile
+rectangle "log4j-api\n2.25.5" as org_apache_logging_log4j_log4j_api_jar_compile
+rectangle "jul-to-slf4j\n2.0.18" as org_slf4j_jul_to_slf4j_jar_compile
+rectangle "spring-boot-starter\n4.1.1" as org_springframework_boot_spring_boot_starter_jar_compile
+rectangle "spring-boot-autoconfigure\n4.1.1" as org_springframework_boot_spring_boot_autoconfigure_jar_compile
+rectangle "jakarta.annotation-api\n3.0.0" as jakarta_annotation_jakarta_annotation_api_jar_compile
+rectangle "snakeyaml\n2.6" as org_yaml_snakeyaml_jar_compile
+rectangle "spring-boot-starter-webmvc\n4.1.1" as org_springframework_boot_spring_boot_starter_webmvc_jar_compile
+rectangle "jackson-databind\n3.1.8" as tools_jackson_core_jackson_databind_jar_compile
 rectangle "jackson-annotations\n2.21" as com_fasterxml_jackson_core_jackson_annotations_jar_compile
-rectangle "jackson-core\n3.1.5" as tools_jackson_core_jackson_core_jar_compile
+rectangle "jackson-core\n3.1.8" as tools_jackson_core_jackson_core_jar_compile
 rectangle "spring-boot-jackson\n4.1.1" as org_springframework_boot_spring_boot_jackson_jar_compile
 rectangle "spring-boot-starter-jackson\n4.1.1" as org_springframework_boot_spring_boot_starter_jackson_jar_compile
-rectangle "spring-boot-starter-web\n4.1.1" as org_springframework_boot_spring_boot_starter_web_jar_compile
 rectangle "spring-boot-starter-tomcat-runtime\n4.1.1" as org_springframework_boot_spring_boot_starter_tomcat_runtime_jar_compile
 rectangle "spring-boot-web-server\n4.1.1" as org_springframework_boot_spring_boot_web_server_jar_compile
-rectangle "tomcat-embed-core\n11.0.24" as org_apache_tomcat_embed_tomcat_embed_core_jar_compile
-rectangle "tomcat-embed-websocket\n11.0.24" as org_apache_tomcat_embed_tomcat_embed_websocket_jar_compile
+rectangle "tomcat-embed-core\n11.0.27" as org_apache_tomcat_embed_tomcat_embed_core_jar_compile
+rectangle "tomcat-embed-websocket\n11.0.27" as org_apache_tomcat_embed_tomcat_embed_websocket_jar_compile
 rectangle "spring-boot-starter-tomcat\n4.1.1" as org_springframework_boot_spring_boot_starter_tomcat_jar_compile
 rectangle "spring-boot-tomcat\n4.1.1" as org_springframework_boot_spring_boot_tomcat_jar_compile
 rectangle "spring-core\n7.0.9" as org_springframework_spring_core_jar_compile
@@ -45,24 +56,13 @@ rectangle "spring-boot-servlet\n4.1.1" as org_springframework_boot_spring_boot_s
 rectangle "spring-webmvc\n7.0.9" as org_springframework_spring_webmvc_jar_compile
 rectangle "spring-aop\n7.0.9" as org_springframework_spring_aop_jar_compile
 rectangle "spring-expression\n7.0.9" as org_springframework_spring_expression_jar_compile
-rectangle "logback-classic\n1.5.38" as ch_qos_logback_logback_classic_jar_compile
-rectangle "logback-core\n1.5.38" as ch_qos_logback_logback_core_jar_compile
-rectangle "slf4j-api\n2.0.18" as org_slf4j_slf4j_api_jar_compile
-rectangle "spring-boot-starter-logging\n4.1.1" as org_springframework_boot_spring_boot_starter_logging_jar_compile
-rectangle "log4j-to-slf4j\n2.25.5" as org_apache_logging_log4j_log4j_to_slf4j_jar_compile
-rectangle "log4j-api\n2.25.5" as org_apache_logging_log4j_log4j_api_jar_compile
-rectangle "jul-to-slf4j\n2.0.18" as org_slf4j_jul_to_slf4j_jar_compile
-rectangle "spring-boot-starter\n4.1.1" as org_springframework_boot_spring_boot_starter_jar_compile
-rectangle "spring-boot-autoconfigure\n4.1.1" as org_springframework_boot_spring_boot_autoconfigure_jar_compile
-rectangle "jakarta.annotation-api\n3.0.0" as jakarta_annotation_jakarta_annotation_api_jar_compile
-rectangle "snakeyaml\n2.6" as org_yaml_snakeyaml_jar_compile
-rectangle "spring-boot-starter-validation\n4.1.1" as org_springframework_boot_spring_boot_starter_validation_jar_compile
 rectangle "spring-boot-validation\n4.1.1" as org_springframework_boot_spring_boot_validation_jar_compile
-rectangle "tomcat-embed-el\n11.0.24" as org_apache_tomcat_embed_tomcat_embed_el_jar_compile
+rectangle "tomcat-embed-el\n11.0.27" as org_apache_tomcat_embed_tomcat_embed_el_jar_compile
 rectangle "hibernate-validator\n9.1.3.Final" as org_hibernate_validator_hibernate_validator_jar_compile
 rectangle "jakarta.validation-api\n3.1.1" as jakarta_validation_jakarta_validation_api_jar_compile
 rectangle "jboss-logging\n3.6.3.Final" as org_jboss_logging_jboss_logging_jar_compile
 rectangle "classmate\n1.7.3" as com_fasterxml_classmate_jar_compile
+rectangle "spring-boot-starter-validation\n4.1.1" as org_springframework_boot_spring_boot_starter_validation_jar_compile
 rectangle "jspecify\n1.0.1" as org_jspecify_jspecify_jar_compile
 rectangle "archi-modeling-adapter-persistence\n1.0-SNAPSHOT" as uz_salvadore_hamkorbank_archi_modeling_adapter_persistence_jar_compile
 rectangle "spring-boot-starter-data-jpa\n4.1.1" as org_springframework_boot_spring_boot_starter_data_jpa_jar_compile
@@ -125,14 +125,14 @@ rectangle "prometheus-metrics-tracer-common\n1.7.0" as io_prometheus_prometheus_
 rectangle "prometheus-metrics-exposition-formats\n1.7.0" as io_prometheus_prometheus_metrics_exposition_formats_jar_runtime<<runtime>>
 rectangle "prometheus-metrics-exposition-textformats\n1.7.0" as io_prometheus_prometheus_metrics_exposition_textformats_jar_runtime<<runtime>>
 rectangle "anthropic-java-core\n2.71.0" as com_anthropic_anthropic_java_core_jar_compile
-rectangle "jackson-core\n2.21.5" as com_fasterxml_jackson_core_jackson_core_jar_compile
-rectangle "jackson-databind\n2.21.5" as com_fasterxml_jackson_core_jackson_databind_jar_compile
+rectangle "jackson-core\n2.21.8" as com_fasterxml_jackson_core_jackson_core_jar_compile
+rectangle "jackson-databind\n2.21.8" as com_fasterxml_jackson_core_jackson_databind_jar_compile
 rectangle "error_prone_annotations\n2.50.0" as com_google_errorprone_error_prone_annotations_jar_compile
 rectangle "standardwebhooks\n1.2.0" as com_standardwebhooks_standardwebhooks_jar_compile
 rectangle "swagger-annotations\n2.2.50" as io_swagger_core_v3_swagger_annotations_jar_compile
-rectangle "jackson-datatype-jdk8\n2.21.5" as com_fasterxml_jackson_datatype_jackson_datatype_jdk8_jar_runtime<<runtime>>
-rectangle "jackson-datatype-jsr310\n2.21.5" as com_fasterxml_jackson_datatype_jackson_datatype_jsr310_jar_runtime<<runtime>>
-rectangle "jackson-module-kotlin\n2.21.5" as com_fasterxml_jackson_module_jackson_module_kotlin_jar_runtime<<runtime>>
+rectangle "jackson-datatype-jdk8\n2.21.8" as com_fasterxml_jackson_datatype_jackson_datatype_jdk8_jar_runtime<<runtime>>
+rectangle "jackson-datatype-jsr310\n2.21.8" as com_fasterxml_jackson_datatype_jackson_datatype_jsr310_jar_runtime<<runtime>>
+rectangle "jackson-module-kotlin\n2.21.8" as com_fasterxml_jackson_module_jackson_module_kotlin_jar_runtime<<runtime>>
 rectangle "kotlin-reflect\n2.3.21" as org_jetbrains_kotlin_kotlin_reflect_jar_runtime<<runtime>>
 rectangle "jsonschema-generator\n4.38.0" as com_github_victools_jsonschema_generator_jar_runtime<<runtime>>
 rectangle "jsonschema-module-jackson\n4.38.0" as com_github_victools_jsonschema_module_jackson_jar_runtime<<runtime>>
@@ -184,7 +184,7 @@ rectangle "spring-security-oauth2-core\n7.1.1" as org_springframework_security_s
 rectangle "nimbus-jose-jwt\n10.9.1" as com_nimbusds_nimbus_jose_jwt_jar_compile
 rectangle "spring-boot-security-oauth2-resource-server\n4.1.1" as org_springframework_boot_spring_boot_security_oauth2_resource_server_jar_compile
 rectangle "spring-security-oauth2-resource-server\n7.1.1" as org_springframework_security_spring_security_oauth2_resource_server_jar_compile
-rectangle "spring-boot-starter-oauth2-resource-server\n4.1.1" as org_springframework_boot_spring_boot_starter_oauth2_resource_server_jar_compile
+rectangle "spring-boot-starter-security-oauth2-resource-server\n4.1.1" as org_springframework_boot_spring_boot_starter_security_oauth2_resource_server_jar_compile
 rectangle "spring-boot-flyway\n4.1.1" as org_springframework_boot_spring_boot_flyway_jar_compile
 rectangle "flyway-core\n12.4.0" as org_flywaydb_flyway_core_jar_compile
 rectangle "flyway-database-postgresql\n12.4.0" as org_flywaydb_flyway_database_postgresql_jar_compile
@@ -215,7 +215,6 @@ rectangle "spring-test\n7.0.9" as org_springframework_spring_test_jar_test<<test
 rectangle "xmlunit-core\n2.11.0" as org_xmlunit_xmlunit_core_jar_test<<test>>
 rectangle "spring-boot-starter-webmvc-test\n4.1.1" as org_springframework_boot_spring_boot_starter_webmvc_test_jar_test<<test>>
 rectangle "spring-boot-starter-jackson-test\n4.1.1" as org_springframework_boot_spring_boot_starter_jackson_test_jar_test<<test>>
-rectangle "spring-boot-starter-webmvc\n4.1.1" as org_springframework_boot_spring_boot_starter_webmvc_jar_test<<test>>
 rectangle "spring-boot-webmvc-test\n4.1.1" as org_springframework_boot_spring_boot_webmvc_test_jar_test<<test>>
 rectangle "spring-boot-resttestclient\n4.1.1" as org_springframework_boot_spring_boot_resttestclient_jar_test<<test>>
 rectangle "spring-security-core\n7.1.1" as org_springframework_security_spring_security_core_jar_compile
@@ -247,32 +246,6 @@ uz_salvadore_hamkorbank_archi_modeling_domain_jar_compile -[#000000]-> org_junit
 uz_salvadore_hamkorbank_archi_modeling_application_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_modeling_domain_jar_compile
 uz_salvadore_hamkorbank_archi_modeling_application_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_modeling_adapter_rest_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_modeling_application_jar_compile
-tools_jackson_core_jackson_databind_jar_compile -[#000000]-> com_fasterxml_jackson_core_jackson_annotations_jar_compile
-tools_jackson_core_jackson_databind_jar_compile -[#000000]-> tools_jackson_core_jackson_core_jar_compile
-org_springframework_boot_spring_boot_jackson_jar_compile -[#000000]-> tools_jackson_core_jackson_databind_jar_compile
-org_springframework_boot_spring_boot_starter_jackson_jar_compile -[#000000]-> org_springframework_boot_spring_boot_jackson_jar_compile
-org_springframework_boot_spring_boot_starter_web_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_jackson_jar_compile
-org_springframework_boot_spring_boot_starter_tomcat_runtime_jar_compile -[#000000]-> org_springframework_boot_spring_boot_web_server_jar_compile
-org_springframework_boot_spring_boot_starter_tomcat_runtime_jar_compile -[#000000]-> org_apache_tomcat_embed_tomcat_embed_core_jar_compile
-org_springframework_boot_spring_boot_starter_tomcat_runtime_jar_compile -[#000000]-> org_apache_tomcat_embed_tomcat_embed_websocket_jar_compile
-org_springframework_boot_spring_boot_starter_tomcat_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_tomcat_runtime_jar_compile
-org_springframework_boot_spring_boot_starter_tomcat_jar_compile -[#000000]-> org_springframework_boot_spring_boot_tomcat_jar_compile
-org_springframework_boot_spring_boot_starter_web_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_tomcat_jar_compile
-org_springframework_spring_core_jar_compile -[#000000]-> commons_logging_commons_logging_jar_compile
-org_springframework_boot_spring_boot_jar_compile -[#000000]-> org_springframework_spring_core_jar_compile
-org_springframework_boot_spring_boot_jar_compile -[#000000]-> org_springframework_spring_context_jar_compile
-org_springframework_boot_spring_boot_http_converter_jar_compile -[#000000]-> org_springframework_boot_spring_boot_jar_compile
-org_springframework_spring_web_jar_compile -[#000000]-> org_springframework_spring_beans_jar_compile
-io_micrometer_micrometer_observation_jar_compile -[#000000]-> io_micrometer_micrometer_commons_jar_compile
-org_springframework_spring_web_jar_compile -[#000000]-> io_micrometer_micrometer_observation_jar_compile
-org_springframework_boot_spring_boot_http_converter_jar_compile -[#000000]-> org_springframework_spring_web_jar_compile
-org_springframework_boot_spring_boot_starter_web_jar_compile -[#000000]-> org_springframework_boot_spring_boot_http_converter_jar_compile
-org_springframework_boot_spring_boot_webmvc_jar_compile -[#000000]-> org_springframework_boot_spring_boot_servlet_jar_compile
-org_springframework_spring_webmvc_jar_compile -[#000000]-> org_springframework_spring_aop_jar_compile
-org_springframework_spring_webmvc_jar_compile -[#000000]-> org_springframework_spring_expression_jar_compile
-org_springframework_boot_spring_boot_webmvc_jar_compile -[#000000]-> org_springframework_spring_webmvc_jar_compile
-org_springframework_boot_spring_boot_starter_web_jar_compile -[#000000]-> org_springframework_boot_spring_boot_webmvc_jar_compile
-uz_salvadore_hamkorbank_archi_modeling_adapter_rest_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_web_jar_compile
 ch_qos_logback_logback_classic_jar_compile -[#000000]-> ch_qos_logback_logback_core_jar_compile
 ch_qos_logback_logback_classic_jar_compile -[#000000]-> org_slf4j_slf4j_api_jar_compile
 org_springframework_boot_spring_boot_starter_logging_jar_compile -[#000000]-> ch_qos_logback_logback_classic_jar_compile
@@ -283,7 +256,33 @@ org_springframework_boot_spring_boot_starter_jar_compile -[#000000]-> org_spring
 org_springframework_boot_spring_boot_starter_jar_compile -[#000000]-> org_springframework_boot_spring_boot_autoconfigure_jar_compile
 org_springframework_boot_spring_boot_starter_jar_compile -[#000000]-> jakarta_annotation_jakarta_annotation_api_jar_compile
 org_springframework_boot_spring_boot_starter_jar_compile -[#000000]-> org_yaml_snakeyaml_jar_compile
-org_springframework_boot_spring_boot_starter_validation_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_jar_compile
+org_springframework_boot_spring_boot_starter_webmvc_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_jar_compile
+tools_jackson_core_jackson_databind_jar_compile -[#000000]-> com_fasterxml_jackson_core_jackson_annotations_jar_compile
+tools_jackson_core_jackson_databind_jar_compile -[#000000]-> tools_jackson_core_jackson_core_jar_compile
+org_springframework_boot_spring_boot_jackson_jar_compile -[#000000]-> tools_jackson_core_jackson_databind_jar_compile
+org_springframework_boot_spring_boot_starter_jackson_jar_compile -[#000000]-> org_springframework_boot_spring_boot_jackson_jar_compile
+org_springframework_boot_spring_boot_starter_webmvc_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_jackson_jar_compile
+org_springframework_boot_spring_boot_starter_tomcat_runtime_jar_compile -[#000000]-> org_springframework_boot_spring_boot_web_server_jar_compile
+org_springframework_boot_spring_boot_starter_tomcat_runtime_jar_compile -[#000000]-> org_apache_tomcat_embed_tomcat_embed_core_jar_compile
+org_springframework_boot_spring_boot_starter_tomcat_runtime_jar_compile -[#000000]-> org_apache_tomcat_embed_tomcat_embed_websocket_jar_compile
+org_springframework_boot_spring_boot_starter_tomcat_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_tomcat_runtime_jar_compile
+org_springframework_boot_spring_boot_starter_tomcat_jar_compile -[#000000]-> org_springframework_boot_spring_boot_tomcat_jar_compile
+org_springframework_boot_spring_boot_starter_webmvc_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_tomcat_jar_compile
+org_springframework_spring_core_jar_compile -[#000000]-> commons_logging_commons_logging_jar_compile
+org_springframework_boot_spring_boot_jar_compile -[#000000]-> org_springframework_spring_core_jar_compile
+org_springframework_boot_spring_boot_jar_compile -[#000000]-> org_springframework_spring_context_jar_compile
+org_springframework_boot_spring_boot_http_converter_jar_compile -[#000000]-> org_springframework_boot_spring_boot_jar_compile
+org_springframework_spring_web_jar_compile -[#000000]-> org_springframework_spring_beans_jar_compile
+io_micrometer_micrometer_observation_jar_compile -[#000000]-> io_micrometer_micrometer_commons_jar_compile
+org_springframework_spring_web_jar_compile -[#000000]-> io_micrometer_micrometer_observation_jar_compile
+org_springframework_boot_spring_boot_http_converter_jar_compile -[#000000]-> org_springframework_spring_web_jar_compile
+org_springframework_boot_spring_boot_starter_webmvc_jar_compile -[#000000]-> org_springframework_boot_spring_boot_http_converter_jar_compile
+org_springframework_boot_spring_boot_webmvc_jar_compile -[#000000]-> org_springframework_boot_spring_boot_servlet_jar_compile
+org_springframework_spring_webmvc_jar_compile -[#000000]-> org_springframework_spring_aop_jar_compile
+org_springframework_spring_webmvc_jar_compile -[#000000]-> org_springframework_spring_expression_jar_compile
+org_springframework_boot_spring_boot_webmvc_jar_compile -[#000000]-> org_springframework_spring_webmvc_jar_compile
+org_springframework_boot_spring_boot_starter_webmvc_jar_compile -[#000000]-> org_springframework_boot_spring_boot_webmvc_jar_compile
+uz_salvadore_hamkorbank_archi_modeling_adapter_rest_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_webmvc_jar_compile
 org_springframework_boot_spring_boot_validation_jar_compile -[#000000]-> org_apache_tomcat_embed_tomcat_embed_el_jar_compile
 org_hibernate_validator_hibernate_validator_jar_compile -[#000000]-> jakarta_validation_jakarta_validation_api_jar_compile
 org_hibernate_validator_hibernate_validator_jar_compile -[#000000]-> org_jboss_logging_jboss_logging_jar_compile
@@ -345,7 +344,7 @@ uz_salvadore_hamkorbank_archi_interchange_application_jar_compile -[#000000]-> o
 uz_salvadore_hamkorbank_archi_interchange_application_jar_compile -[#000000]-> org_slf4j_slf4j_api_jar_compile
 uz_salvadore_hamkorbank_archi_interchange_application_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_application_jar_compile
-uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_web_jar_compile
+uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_webmvc_jar_compile
 uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_validation_jar_compile
 uz_salvadore_hamkorbank_archi_interchange_adapter_rest_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_interchange_adapter_persistence_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_interchange_application_jar_compile
@@ -357,7 +356,7 @@ uz_salvadore_hamkorbank_archi_advisor_application_jar_compile -[#000000]-> uz_sa
 uz_salvadore_hamkorbank_archi_advisor_application_jar_compile -[#000000]-> org_slf4j_slf4j_api_jar_compile
 uz_salvadore_hamkorbank_archi_advisor_application_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_advisor_adapter_rest_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_advisor_application_jar_compile
-uz_salvadore_hamkorbank_archi_advisor_adapter_rest_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_web_jar_compile
+uz_salvadore_hamkorbank_archi_advisor_adapter_rest_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_webmvc_jar_compile
 uz_salvadore_hamkorbank_archi_advisor_adapter_rest_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_validation_jar_compile
 uz_salvadore_hamkorbank_archi_advisor_adapter_rest_jar_compile -[#000000]-> org_junit_jupiter_junit_jupiter_jar_test
 uz_salvadore_hamkorbank_archi_advisor_adapter_persistence_jar_compile -[#000000]-> uz_salvadore_hamkorbank_archi_advisor_application_jar_compile
@@ -452,8 +451,8 @@ org_springframework_security_spring_security_oauth2_jose_jar_compile -[#000000]-
 org_springframework_security_spring_security_oauth2_jose_jar_compile -[#000000]-> com_nimbusds_nimbus_jose_jwt_jar_compile
 org_springframework_boot_spring_boot_security_oauth2_resource_server_jar_compile -[#000000]-> org_springframework_security_spring_security_oauth2_jose_jar_compile
 org_springframework_boot_spring_boot_security_oauth2_resource_server_jar_compile -[#000000]-> org_springframework_security_spring_security_oauth2_resource_server_jar_compile
-org_springframework_boot_spring_boot_starter_oauth2_resource_server_jar_compile -[#000000]-> org_springframework_boot_spring_boot_security_oauth2_resource_server_jar_compile
-uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_oauth2_resource_server_jar_compile
+org_springframework_boot_spring_boot_starter_security_oauth2_resource_server_jar_compile -[#000000]-> org_springframework_boot_spring_boot_security_oauth2_resource_server_jar_compile
+uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_security_oauth2_resource_server_jar_compile
 org_springframework_boot_spring_boot_transaction_jar_compile -[#000000]-> org_springframework_boot_spring_boot_persistence_jar_compile
 org_springframework_boot_spring_boot_transaction_jar_compile -[#000000]-> org_springframework_spring_tx_jar_compile
 org_springframework_boot_spring_boot_flyway_jar_compile -[#000000]-> org_springframework_boot_spring_boot_jdbc_jar_compile
@@ -489,7 +488,6 @@ org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_spri
 org_springframework_boot_spring_boot_starter_test_jar_test -[#000000]-> org_xmlunit_xmlunit_core_jar_test
 uz_salvadore_hamkorbank_archi_bootstrap_jar_compile -[#000000]-> org_springframework_boot_spring_boot_starter_test_jar_test
 org_springframework_boot_spring_boot_starter_webmvc_test_jar_test -[#000000]-> org_springframework_boot_spring_boot_starter_jackson_test_jar_test
-org_springframework_boot_spring_boot_starter_webmvc_test_jar_test -[#000000]-> org_springframework_boot_spring_boot_starter_webmvc_jar_test
 org_springframework_boot_spring_boot_webmvc_test_jar_test -[#000000]-> org_springframework_boot_spring_boot_web_server_jar_compile
 org_springframework_boot_spring_boot_starter_webmvc_test_jar_test -[#000000]-> org_springframework_boot_spring_boot_webmvc_test_jar_test
 org_springframework_boot_spring_boot_resttestclient_jar_test -[#000000]-> org_springframework_spring_web_jar_compile
