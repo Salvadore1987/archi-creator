@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.AccessPolicy;
 import uz.salvadore.hamkorbank.archi.modeling.application.access.Operation;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.DomainEventPublisher;
@@ -221,7 +222,7 @@ public final class ModelingKernel {
     }
 
     /** Заданный клиентом {@code archiId}, свободный в модели и — если {@code view} задано — на представлении. */
-    private ArchiId requireFree(ArchitectureModel model, View view, String value) {
+    private ArchiId requireFree(ArchitectureModel model, @Nullable View view, String value) {
         ArchiId candidate;
         try {
             candidate = ArchiId.of(value);
@@ -244,7 +245,7 @@ public final class ModelingKernel {
      * @param execute выполнить и вернуть ссылку на результат
      * @param reload  результат по ссылке
      */
-    <R> R idempotent(String scope, EditorIdentity actor, String key, String fingerprint,
+    <R> R idempotent(String scope, EditorIdentity actor, @Nullable String key, String fingerprint,
                      Supplier<String> execute, Function<String, R> reload) {
         if (key == null) {
             return reload.apply(execute.get());

@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.application.dto.result;
 
 import java.util.List;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Представление целиком: заголовок, узлы и рёбра в порядке документа.
@@ -10,8 +11,9 @@ import java.util.UUID;
  * @param editable  ложно у представления, которое редактор не правит
  */
 public record ViewResponse(UUID id, UUID modelId, UUID folderId, String archiId, String archiType, String name,
-                           String documentation, String viewpoint, List<PropertyResponse> properties,
-                           boolean editable, List<ViewNodeResponse> nodes, List<ViewEdgeResponse> edges) {
+                           @Nullable String documentation, @Nullable String viewpoint,
+                           List<PropertyResponse> properties, boolean editable, List<ViewNodeResponse> nodes,
+                           List<ViewEdgeResponse> edges) {
 
     public ViewResponse {
         properties = List.copyOf(properties);

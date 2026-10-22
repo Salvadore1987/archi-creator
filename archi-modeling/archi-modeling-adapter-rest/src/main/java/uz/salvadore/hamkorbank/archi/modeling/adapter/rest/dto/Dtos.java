@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * DTO modeling по контракту OpenAPI. Остаток XML ({@code raw_xml}) наружу
@@ -24,29 +25,31 @@ public final class Dtos {
     }
 
     /** Заголовок модели: имя, описание, статус жизненного цикла, версия Archi, автор и время. */
-    public record ModelSummary(UUID id, UUID workspaceId, String archiId, String name, String documentation,
+    public record ModelSummary(UUID id, UUID workspaceId, String archiId, String name, @Nullable String documentation,
                                String status, String archiVersion, String createdBy, Instant createdAt,
                                Instant updatedAt) {
     }
 
     /** Свойство объекта: ключ и значение. */
-    public record PropertyDto(@NotNull String key, String value) {
+    public record PropertyDto(@NotNull String key, @Nullable String value) {
     }
 
     /** Папка дерева модели; {@code folderType} — только у корневой, {@code parentId} — только у вложенной. */
-    public record FolderDto(UUID id, UUID parentId, String archiId, String name, String folderType, long sortOrder) {
+    public record FolderDto(UUID id, @Nullable UUID parentId, String archiId, String name, @Nullable String folderType,
+                            long sortOrder) {
     }
 
     /** Элемент модели; {@code supported} ложно у типа, который редактор не правит. */
     public record ElementDto(UUID id, UUID folderId, String archiId, String archiType, String layer, String name,
-                             String documentation, List<PropertyDto> properties, boolean supported, long sortOrder) {
+                             @Nullable String documentation, List<PropertyDto> properties, boolean supported,
+                             long sortOrder) {
     }
 
     /** Связь модели; концы — элементы или другие связи, {@code edgeId} — ребро, созданное вместе со связью. */
     public record RelationshipDto(UUID id, UUID folderId, String archiId, String archiType, UUID sourceId,
-                                  UUID targetId, String name, String documentation, String accessType,
-                                  Boolean directed, List<PropertyDto> properties, boolean supported, long sortOrder,
-                                  UUID edgeId) {
+                                  UUID targetId, @Nullable String name, @Nullable String documentation,
+                                  @Nullable String accessType, @Nullable Boolean directed, List<PropertyDto> properties,
+                                  boolean supported, long sortOrder, @Nullable UUID edgeId) {
     }
 
     /** Представление в дереве модели, без содержимого. */
@@ -64,16 +67,17 @@ public final class Dtos {
     }
 
     /** Собственный стиль узла или ребра; незаданное поле берётся из оформления по умолчанию. */
-    public record StyleDto(String fillColor, String font, String fontColor, String lineColor, Integer textAlignment) {
+    public record StyleDto(@Nullable String fillColor, @Nullable String font, @Nullable String fontColor,
+                           @Nullable String lineColor, @Nullable Integer textAlignment) {
     }
 
     /**
      * @param label   собственная подпись узла — у группы, объектов скетча и холста
      * @param content текст заметки с переводами строк
      */
-    public record ViewNodeDto(UUID id, UUID parentId, String archiId, String archiType, String kind, UUID elementId,
-                              int x, int y, int width, int height, StyleDto style, String label, String content,
-                              long sortOrder) {
+    public record ViewNodeDto(UUID id, @Nullable UUID parentId, String archiId, String archiType, String kind,
+                              @Nullable UUID elementId, int x, int y, int width, int height, @Nullable StyleDto style,
+                              @Nullable String label, @Nullable String content, long sortOrder) {
     }
 
     /** Точка перегиба ребра: смещения от начала и от конца. */
@@ -81,19 +85,19 @@ public final class Dtos {
     }
 
     /** Ребро представления; концы — узлы или другие рёбра. */
-    public record ViewEdgeDto(UUID id, String archiId, String archiType, UUID relationshipId, UUID sourceId,
-                              UUID targetId, List<BendpointDto> bendpoints, StyleDto style, long sortOrder) {
+    public record ViewEdgeDto(UUID id, String archiId, String archiType, @Nullable UUID relationshipId, UUID sourceId,
+                              UUID targetId, List<BendpointDto> bendpoints, @Nullable StyleDto style, long sortOrder) {
     }
 
     /** Payload представления: узлы, рёбра, геометрия (OpenView). */
     public record ViewPayload(UUID id, UUID modelId, UUID folderId, String archiId, String archiType, String name,
-                              String documentation, String viewpoint, List<PropertyDto> properties, boolean editable,
-                              List<ViewNodeDto> nodes, List<ViewEdgeDto> edges) {
+                              @Nullable String documentation, @Nullable String viewpoint, List<PropertyDto> properties,
+                              boolean editable, List<ViewNodeDto> nodes, List<ViewEdgeDto> edges) {
     }
 
     /** Версия модели в истории; {@code snapshotAvailable} ложно, если снимок очищен. */
-    public record VersionInfo(long versionNo, String author, String comment, String label, Instant createdAt,
-                              boolean snapshotAvailable, String gitSha) {
+    public record VersionInfo(long versionNo, String author, @Nullable String comment, @Nullable String label,
+                              Instant createdAt, boolean snapshotAvailable, @Nullable String gitSha) {
     }
 
     /** Итог сохранения: версия и признак, что она новая. */
@@ -106,7 +110,7 @@ public final class Dtos {
 
     /** Находка проверки модели с текстом и подсказкой на языке запроса. */
     public record Finding(String severity, String code, String message, String targetKind, String targetId,
-                          String suggestion) {
+                          @Nullable String suggestion) {
     }
 
     /** Запись списка доступа: тип субъекта, субъект и уровень доступа. */
@@ -114,7 +118,8 @@ public final class Dtos {
     }
 
     /** Тип каталога метамодели для палитры; {@code supported} — редактируется ли в текущей фазе. */
-    public record ElementTypeDto(String archiType, String kind, String layer, String phase, boolean supported) {
+    public record ElementTypeDto(String archiType, String kind, String layer, @Nullable String phase,
+                                 boolean supported) {
     }
 
     /** @param nesting эту связь подразумевает вложение цели в источник */
@@ -124,42 +129,46 @@ public final class Dtos {
     // ── Запросы ─────────────────────────────────────────────────────
 
     /** Создание модели; без {@code workspaceId} — в пространстве по умолчанию. */
-    public record CreateModelRequest(String name, UUID workspaceId) {
+    public record CreateModelRequest(String name, @Nullable UUID workspaceId) {
     }
 
     /** Правка имени и описания модели; отсутствующее поле не меняется. */
-    public record ModelPatch(String name, String documentation) {
+    public record ModelPatch(@Nullable String name, @Nullable String documentation) {
     }
 
     /** Комментарий сохранения или отката. */
-    public record CommentRequest(String comment) {
+    public record CommentRequest(@Nullable String comment) {
     }
 
     /** Метка версии; {@code null} снимает метку. */
-    public record LabelRequest(String label) {
+    public record LabelRequest(@Nullable String label) {
     }
 
     /** {@code id} и {@code archiId} задаёт клиент, который ссылается на объект до ответа; без них — сервер. */
-    public record CreateElementRequest(String archiType, String name, UUID folderId, UUID id, String archiId) {
+    public record CreateElementRequest(String archiType, String name, @Nullable UUID folderId, @Nullable UUID id,
+                                       @Nullable String archiId) {
     }
 
     /** {@code properties}: {@code null} — не менять, пустой список — снять все. */
-    public record ElementPatch(String name, String documentation, List<@NotNull @Valid PropertyDto> properties) {
+    public record ElementPatch(@Nullable String name, @Nullable String documentation,
+                               @Nullable List<@NotNull @Valid PropertyDto> properties) {
     }
 
     /** Ребро, которое рисуется вместе с новой связью; {@code edgeId} и {@code edgeArchiId} может задать клиент. */
-    public record EdgePlacementRequest(@NotNull UUID viewId, @NotNull UUID sourceNodeId,
-                                       @NotNull UUID targetNodeId, UUID edgeId, String edgeArchiId) {
+    public record EdgePlacementRequest(@NotNull UUID viewId, @NotNull UUID sourceNodeId, @NotNull UUID targetNodeId,
+                                       @Nullable UUID edgeId, @Nullable String edgeArchiId) {
     }
 
     /** Создание связи и, если передан {@code view}, её ребра на представлении. */
     public record CreateRelationshipRequest(String archiType, @NotNull UUID sourceId, @NotNull UUID targetId,
-                                            String name, @Valid EdgePlacementRequest view, UUID id, String archiId,
-                                            UUID folderId, String accessType, Boolean directed) {
+                                            @Nullable String name, @Valid @Nullable EdgePlacementRequest view,
+                                            @Nullable UUID id, @Nullable String archiId, @Nullable UUID folderId,
+                                            @Nullable String accessType, @Nullable Boolean directed) {
     }
 
     /** Создание папки в родительской папке. */
-    public record CreateFolderRequest(@NotNull UUID parentId, String name, UUID id, String archiId) {
+    public record CreateFolderRequest(@NotNull UUID parentId, String name, @Nullable UUID id,
+                                      @Nullable String archiId) {
     }
 
     /** Новое имя объекта дерева. */
@@ -175,7 +184,7 @@ public final class Dtos {
     }
 
     /** Создание представления; без {@code folderId} — в корне представлений. */
-    public record CreateViewRequest(String name, UUID folderId, UUID id, String archiId) {
+    public record CreateViewRequest(String name, @Nullable UUID folderId, @Nullable UUID id, @Nullable String archiId) {
     }
 
     /**
@@ -183,25 +192,28 @@ public final class Dtos {
      *
      * @param kind {@code DIAGRAM_OBJECT}, {@code GROUP} или {@code NOTE}; нет — узел элемента
      */
-    public record PlaceNodeRequest(String kind, UUID elementId, String label, String content, int x, int y,
-                                   Integer width, Integer height, UUID parentId, UUID id, String archiId) {
+    public record PlaceNodeRequest(@Nullable String kind, @Nullable UUID elementId, @Nullable String label,
+                                   @Nullable String content, int x, int y, @Nullable Integer width,
+                                   @Nullable Integer height, @Nullable UUID parentId, @Nullable UUID id,
+                                   @Nullable String archiId) {
     }
 
     /** Отсутствующее поле не меняется; стиль заменяется целиком. */
-    public record EditNodeRequest(String label, String content, @Valid StyleDto style) {
+    public record EditNodeRequest(@Nullable String label, @Nullable String content, @Valid @Nullable StyleDto style) {
     }
 
     /** Новый собственный стиль ребра; заменяется целиком. */
-    public record EditEdgeRequest(@Valid StyleDto style) {
+    public record EditEdgeRequest(@Valid @Nullable StyleDto style) {
     }
 
     /** @param parentId нет — корень представления; координаты — относительно нового родителя */
-    public record MoveNodeRequest(UUID parentId, int x, int y) {
+    public record MoveNodeRequest(@Nullable UUID parentId, int x, int y) {
     }
 
     /** Ребро уже существующей связи: концы — узлы или рёбра того же представления. */
-    public record PlaceEdgeRequest(UUID id, String archiId, @NotNull UUID relationshipId, @NotNull UUID sourceId,
-                                   @NotNull UUID targetId, List<@NotNull BendpointDto> bendpoints) {
+    public record PlaceEdgeRequest(@Nullable UUID id, @Nullable String archiId, @NotNull UUID relationshipId,
+                                   @NotNull UUID sourceId, @NotNull UUID targetId,
+                                   @Nullable List<@NotNull BendpointDto> bendpoints) {
     }
 
     /** Новые границы узла относительно родителя. */
@@ -209,21 +221,22 @@ public final class Dtos {
     }
 
     /** Новые точки перегиба ребра. */
-    public record EdgeBendpoints(@NotNull UUID id, List<@NotNull BendpointDto> bendpoints) {
+    public record EdgeBendpoints(@NotNull UUID id, @Nullable List<@NotNull BendpointDto> bendpoints) {
     }
 
     /** Геометрия после перемещений: узлы и точки перегиба одной транзакцией. */
-    public record LayoutPatch(List<@NotNull @Valid NodeBounds> nodes, List<@NotNull @Valid EdgeBendpoints> edges) {
+    public record LayoutPatch(@Nullable List<@NotNull @Valid NodeBounds> nodes,
+                              @Nullable List<@NotNull @Valid EdgeBendpoints> edges) {
     }
 
     /** Граф представления как он в браузере — с несохранёнными узлами. */
-    public record AutoLayoutRequest(String strategy, @NotNull List<@NotNull @Valid LayoutNode> nodes,
-                                    List<@NotNull @Valid LayoutEdge> edges) {
+    public record AutoLayoutRequest(@Nullable String strategy, @NotNull List<@NotNull @Valid LayoutNode> nodes,
+                                    @Nullable List<@NotNull @Valid LayoutEdge> edges) {
     }
 
     /** @param conceptType тип элемента узла; нет — группа, заметка или иное */
-    public record LayoutNode(@NotNull UUID id, UUID parentId, String conceptType, int x, int y, int width,
-                             int height) {
+    public record LayoutNode(@NotNull UUID id, @Nullable UUID parentId, @Nullable String conceptType, int x, int y,
+                             int width, int height) {
     }
 
     /** Ребро графа авторазметки между двумя узлами. */

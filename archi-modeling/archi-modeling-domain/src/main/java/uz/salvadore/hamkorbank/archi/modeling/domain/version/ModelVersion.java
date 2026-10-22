@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
@@ -32,16 +33,16 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
     private final ModelId modelId;
     private final long versionNo;
     private final String author;
-    private final String comment;
-    private final String label;
+    private final @Nullable String comment;
+    private final @Nullable String label;
     private final Instant createdAt;
-    private final byte[] snapshot;
+    private final byte @Nullable [] snapshot;
     private final String contentHash;
-    private final String gitSha;
+    private final @Nullable String gitSha;
 
-    private ModelVersion(VersionId id, ModelId modelId, long versionNo, String author, String comment,
-                         String label, Instant createdAt, byte[] snapshot, String contentHash,
-                         String gitSha) {
+    private ModelVersion(VersionId id, ModelId modelId, long versionNo, String author, @Nullable String comment,
+                         @Nullable String label, Instant createdAt, byte @Nullable [] snapshot, String contentHash,
+                         @Nullable String gitSha) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(author, "author");
@@ -79,8 +80,8 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
      * {@code null} в комментарии, метке, снимке и коммите — значения нет.
      */
     public static ModelVersion restore(VersionId id, ModelId modelId, long versionNo, String author,
-                                       String comment, String label, Instant createdAt,
-                                       byte[] snapshot, String contentHash, String gitSha) {
+                                       @Nullable String comment, @Nullable String label, Instant createdAt,
+                                       byte @Nullable [] snapshot, String contentHash, @Nullable String gitSha) {
         return new ModelVersion(id, modelId, versionNo, author, comment, label, createdAt, snapshot, contentHash,
                                 gitSha);
     }
@@ -93,8 +94,8 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
      * @param comment       комментарий; {@code null} и пустой — без комментария
      * @param modelSize     сколько в снимке элементов и связей — для события
      */
-    public static Committed commit(ModelVersion last, VersionId id, ModelId modelId,
-                                   WorkspaceId workspaceId, String author, String comment, Instant now,
+    public static Committed commit(@Nullable ModelVersion last, VersionId id, ModelId modelId,
+                                   WorkspaceId workspaceId, String author, @Nullable String comment, Instant now,
                                    byte[] snapshot, String contentHash, ModelSize modelSize) {
         if (last != null && !last.modelId.equals(modelId)) {
             throw new InvalidValueException(ModelingMessages.VERSION_OTHER_MODEL);
@@ -109,7 +110,7 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
     }
 
     /** Метка релиза: снимок помеченной версии не удаляется. {@code null} и пустая метка снимают пометку. */
-    public ModelVersion labelled(String newLabel) {
+    public ModelVersion labelled(@Nullable String newLabel) {
         String stripped = newLabel == null ? null : newLabel.strip();
         String normalized = stripped == null || stripped.isEmpty() ? null : stripped;
         if (normalized != null) {
@@ -151,7 +152,7 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
     }
 
     /** Сжатый снимок — копией: массив версии не меняется снаружи; {@code null} — очищен по ретеншену. */
-    public byte[] snapshot() {
+    public byte @Nullable [] snapshot() {
         return copy(snapshot);
     }
 
@@ -166,10 +167,10 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
             throw new ModelingDomainException(ModelingCodes.SNAPSHOT_PURGED, Failure.GONE,
                     Message.of(ModelingMessages.SNAPSHOT_PURGED, versionNo));
         }
-        return copy(snapshot);
+        return Arrays.copyOf(snapshot, snapshot.length);
     }
 
-    private static byte[] copy(byte[] bytes) {
+    private static byte @Nullable [] copy(byte @Nullable [] bytes) {
         return bytes == null ? null : Arrays.copyOf(bytes, bytes.length);
     }
 
@@ -208,12 +209,12 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
     }
 
     /** Комментарий к версии; {@code null} — не задан. */
-    public String comment() {
+    public @Nullable String comment() {
         return comment;
     }
 
     /** Метка версии; {@code null} — не поставлена. */
-    public String label() {
+    public @Nullable String label() {
         return label;
     }
 
@@ -228,7 +229,7 @@ public final class ModelVersion extends AggregateRoot<VersionId> {
     }
 
     /** Коммит Git, которым опубликована версия; {@code null} — ещё не опубликована. */
-    public String gitSha() {
+    public @Nullable String gitSha() {
         return gitSha;
     }
 }

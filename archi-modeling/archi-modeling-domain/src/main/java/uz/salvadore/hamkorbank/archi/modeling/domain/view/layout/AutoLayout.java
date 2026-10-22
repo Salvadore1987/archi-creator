@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -39,11 +40,6 @@ public final class AutoLayout {
     private static final int SWEEPS = 4;
     /** Самый узкий предел ряда у разреженной раскладки — чтобы десяток узлов не встал столбиком. */
     private static final int MIN_ROW_WIDTH = 960;
-
-    /** Слои в порядке чтения сверху вниз; мотивация и стратегия делят верхнюю полосу. */
-    private static final Map<Layer, Integer> BAND_OF_LAYER = new EnumMap<>(Map.of(
-            Layer.MOTIVATION, 0, Layer.STRATEGY, 0, Layer.BUSINESS, 1, Layer.APPLICATION, 2,
-            Layer.TECHNOLOGY, 3, Layer.PHYSICAL, 4, Layer.IMPLEMENTATION, 5, Layer.OTHER, 6));
 
     private final LayoutGraph graph;
     private final LayoutStrategy strategy;
@@ -89,9 +85,9 @@ public final class AutoLayout {
             if (source.isEmpty() || target.isEmpty() || source.equals(target)) {
                 continue;
             }
-            outgoing.get(source.get()).add(target.get());
-            neighbours.get(source.get()).add(target.get());
-            neighbours.get(target.get()).add(source.get());
+            outgoing.computeIfAbsent(source.get(), k -> new ArrayList<>()).add(target.get());
+            neighbours.computeIfAbsent(source.get(), k -> new ArrayList<>()).add(target.get());
+            neighbours.computeIfAbsent(target.get(), k -> new ArrayList<>()).add(source.get());
         }
     }
 
@@ -110,7 +106,7 @@ public final class AutoLayout {
         ViewNodeId current = nodeId;
         Set<ViewNodeId> visited = new HashSet<>();
         while (visited.add(current)) {
-            ViewNodeId parent = nodes.get(current).parentId();
+            ViewNodeId parent = node(current).parentId();
             if (parent == null || !nodes.containsKey(parent)) {
                 return current;
             }
@@ -130,7 +126,7 @@ public final class AutoLayout {
 
     private Map<ViewNodeId, Integer> layerBands() {
         Map<ViewNodeId, Integer> bandOf = new HashMap<>();
-        roots.forEach(id -> bandOf.put(id, BAND_OF_LAYER.get(layerOf(id))));
+        roots.forEach(id -> bandOf.put(id, bandOfLayer(layerOf(id))));
         return bandOf;
     }
 
@@ -139,7 +135,7 @@ public final class AutoLayout {
      * всего среди вложенных, при равенстве верхний.
      */
     private Layer layerOf(ViewNodeId rootId) {
-        LayoutGraph.Node root = nodes.get(rootId);
+        LayoutGraph.Node root = node(rootId);
         if (root.conceptType() != null) {
             return registry.layerOf(root.conceptType());
         }
@@ -151,7 +147,7 @@ public final class AutoLayout {
         }
         return counts.entrySet().stream()
                 .max(Comparator.<Map.Entry<Layer, Integer>>comparingInt(Map.Entry::getValue)
-                        .thenComparing(e -> -BAND_OF_LAYER.get(e.getKey())))
+                        .thenComparing(e -> -bandOfLayer(e.getKey())))
                 .map(Map.Entry::getKey).orElse(Layer.OTHER);
     }
 
@@ -172,8 +168,8 @@ public final class AutoLayout {
         roots.forEach(id -> rank.put(id, 0));
         for (int i = finished.size() - 1; i >= 0; i--) {
             ViewNodeId source = finished.get(i);
-            for (ViewNodeId target : acyclic.get(source)) {
-                rank.merge(target, rank.get(source) + 1, Math::max);
+            for (ViewNodeId target : acyclic.getOrDefault(source, List.of())) {
+                rank.merge(target, rank.getOrDefault(source, 0) + 1, Math::max);
             }
         }
         return rank;
@@ -185,9 +181,9 @@ public final class AutoLayout {
             return;
         }
         onPath.add(node);
-        for (ViewNodeId target : outgoing.get(node)) {
+        for (ViewNodeId target : outgoing.getOrDefault(node, List.of())) {
             if (!onPath.contains(target)) {
-                acyclic.get(node).add(target);
+                acyclic.computeIfAbsent(node, k -> new ArrayList<>()).add(target);
                 depthFirst(target, done, onPath, acyclic, finished);
             }
         }
@@ -236,10 +232,11 @@ public final class AutoLayout {
         for (ViewNodeId id : band) {
             double sum = 0;
             int count = 0;
-            for (ViewNodeId other : neighbours.get(id)) {
-                int otherBand = bandIndex.get(other);
-                if (fromAbove ? otherBand < b : otherBand > b) {
-                    sum += position.get(other);
+            for (ViewNodeId other : neighbours.getOrDefault(id, List.of())) {
+                Integer otherBand = bandIndex.get(other);
+                Double otherPosition = position.get(other);
+                if (otherBand != null && otherPosition != null && (fromAbove ? otherBand < b : otherBand > b)) {
+                    sum += otherPosition;
                     count++;
                 }
             }
@@ -281,7 +278,7 @@ public final class AutoLayout {
                 int x = ORIGIN + (spacing.centered() ? (overall - rowWidth(row, spacing)) / 2 : 0);
                 int rowHeight = 0;
                 for (ViewNodeId id : row) {
-                    LayoutGraph.Node node = nodes.get(id);
+                    LayoutGraph.Node node = node(id);
                     placed.put(id, new Bounds(x, y, node.bounds().width(), node.bounds().height()));
                     x += width(id) + spacing.column();
                     rowHeight = Math.max(rowHeight, height(id));
@@ -320,13 +317,31 @@ public final class AutoLayout {
         return row.stream().mapToInt(this::width).sum() + spacing.column() * (row.size() - 1);
     }
 
+    /** Узел графа; идентификатор всегда взят из самого графа, поэтому узел есть. */
+    private LayoutGraph.Node node(ViewNodeId id) {
+        return Objects.requireNonNull(nodes.get(id));
+    }
+
+    /** Полоса слоя в порядке чтения сверху вниз; мотивация и стратегия делят верхнюю. */
+    private static int bandOfLayer(Layer layer) {
+        return switch (layer) {
+            case MOTIVATION, STRATEGY -> 0;
+            case BUSINESS -> 1;
+            case APPLICATION -> 2;
+            case TECHNOLOGY -> 3;
+            case PHYSICAL -> 4;
+            case IMPLEMENTATION -> 5;
+            case OTHER -> 6;
+        };
+    }
+
     private int width(ViewNodeId id) {
-        int width = nodes.get(id).bounds().width();
+        int width = node(id).bounds().width();
         return width > 0 ? width : DEFAULT_WIDTH;
     }
 
     private int height(ViewNodeId id) {
-        int height = nodes.get(id).bounds().height();
+        int height = node(id).bounds().height();
         return height > 0 ? height : DEFAULT_HEIGHT;
     }
 

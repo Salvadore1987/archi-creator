@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /** Строка связи: тип, концы (элемент или другая связь), атрибуты Access и Association, остаток XML. */
 @Entity
@@ -34,28 +35,28 @@ public class RelationshipEntity {
     public String archiType;
 
     @Column(name = "source_element_id")
-    public UUID sourceElementId;
+    public @Nullable UUID sourceElementId;
 
     @Column(name = "source_relationship_id")
-    public UUID sourceRelationshipId;
+    public @Nullable UUID sourceRelationshipId;
 
     @Column(name = "target_element_id")
-    public UUID targetElementId;
+    public @Nullable UUID targetElementId;
 
     @Column(name = "target_relationship_id")
-    public UUID targetRelationshipId;
+    public @Nullable UUID targetRelationshipId;
 
     @Column(name = "name")
-    public String name;
+    public @Nullable String name;
 
     @Column(name = "documentation")
-    public String documentation;
+    public @Nullable String documentation;
 
     @Column(name = "access_type")
-    public String accessType;
+    public @Nullable String accessType;
 
     @Column(name = "directed")
-    public Boolean directed;
+    public @Nullable Boolean directed;
 
     @Column(name = "sort_order", nullable = false)
     public long sortOrder;
@@ -64,7 +65,7 @@ public class RelationshipEntity {
     public boolean supported;
 
     @Column(name = "raw_xml")
-    public String rawXml;
+    public @Nullable String rawXml;
 
     @ElementCollection
     @CollectionTable(name = "relationship_property", joinColumns = @JoinColumn(name = "owner_id"))

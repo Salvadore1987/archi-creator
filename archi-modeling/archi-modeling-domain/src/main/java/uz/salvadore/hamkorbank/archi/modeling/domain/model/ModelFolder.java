@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
@@ -15,8 +16,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.SortOrder;
  * @param folderType тип корневой папки; {@code null} — у пользовательской
  * @param rawXml     остаток XML; {@code null} — нет
  */
-public record ModelFolder(FolderId id, FolderId parentId, ArchiId archiId, String name,
-                          FolderType folderType, SortOrder sortOrder, RawXml rawXml) {
+public record ModelFolder(FolderId id, @Nullable FolderId parentId, ArchiId archiId, String name,
+                          @Nullable FolderType folderType, SortOrder sortOrder, @Nullable RawXml rawXml) {
 
     public ModelFolder {
         Objects.requireNonNull(id, "id");

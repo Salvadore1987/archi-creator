@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.validation;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
 
 /**
@@ -12,7 +13,7 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
  * @param suggestion подсказка; {@code null} — подсказки нет
  */
 public record ValidationFinding(Severity severity, String code, Message message, String targetKind, String targetId,
-                                Message suggestion) {
+                                @Nullable Message suggestion) {
 
     public ValidationFinding {
         Objects.requireNonNull(severity, "severity");

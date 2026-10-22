@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.application.mapper;
 
 import java.util.Comparator;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.BendpointValue;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.StyleValue;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.result.LayoutProposalResponse;
@@ -71,12 +72,12 @@ public final class ViewDataMapper {
     }
 
     /** Стиль из команды; {@code null} — собственного стиля нет. */
-    public static StyleOverride style(StyleValue s) {
+    public static StyleOverride style(@Nullable StyleValue s) {
         return s == null ? StyleOverride.NONE
                 : new StyleOverride(s.fillColor(), s.font(), s.fontColor(), s.lineColor(), s.textAlignment());
     }
 
-    private static StyleValue style(StyleOverride s) {
+    private static @Nullable StyleValue style(StyleOverride s) {
         return s.empty() ? null
                 : new StyleValue(s.fillColor(), s.font(), s.fontColor(), s.lineColor(), s.textAlignment());
     }

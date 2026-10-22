@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.model;
 
 import java.util.List;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
@@ -22,8 +23,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.Layer;
  *                  хранится и выгружается, но не правится
  */
 public record Element(ElementId id, FolderId folderId, ArchiId archiId, ArchiType archiType, String name,
-                      String documentation, List<PropertyEntry> properties, SortOrder sortOrder,
-                      boolean supported, RawXml rawXml) {
+                      @Nullable String documentation, List<PropertyEntry> properties, SortOrder sortOrder,
+                      boolean supported, @Nullable RawXml rawXml) {
 
     public Element {
         Objects.requireNonNull(id, "id");
@@ -47,7 +48,7 @@ public record Element(ElementId id, FolderId folderId, ArchiId archiId, ArchiTyp
      * Тот же элемент с новыми именем, документацией и свойствами; место в дереве не меняется.
      * {@code null} в документации — документации нет.
      */
-    public Element edited(String newName, String newDocumentation, List<PropertyEntry> newProperties) {
+    public Element edited(String newName, @Nullable String newDocumentation, List<PropertyEntry> newProperties) {
         return new Element(id, folderId, archiId, archiType, newName, newDocumentation, newProperties, sortOrder,
                 supported, rawXml);
     }

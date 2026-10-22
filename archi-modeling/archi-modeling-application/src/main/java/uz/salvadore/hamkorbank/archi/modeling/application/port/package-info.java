@@ -3,4 +3,7 @@
  * снимки версий. Реализации — в адаптерах и в {@code archi-bootstrap}; снимок
  * модели пишет и читает interchange (формат файла — его язык).
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.modeling.application.port;
+
+import org.jspecify.annotations.NullMarked;

@@ -12,6 +12,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
@@ -55,11 +56,11 @@ public final class View extends AggregateRoot<ViewId> {
     private final ArchiId archiId;
     private final DiagramType archiType;
     private String name;
-    private String documentation;
-    private String viewpoint;
+    private @Nullable String documentation;
+    private @Nullable String viewpoint;
     private List<PropertyEntry> properties;
     private SortOrder sortOrder;
-    private final RawXml rawXml;
+    private final @Nullable RawXml rawXml;
     private final long version;
 
     private final TrackedMap<ViewNodeId, ViewNode> nodes = new TrackedMap<>();
@@ -148,7 +149,7 @@ public final class View extends AggregateRoot<ViewId> {
      * существующий узел. {@code null} в родителе — корень представления.
      */
     public Created<ViewNode> placeElement(ArchitectureModel model, ElementId elementId, Bounds bounds,
-                                          ViewNodeId parentId, ViewNodeId newId, ArchiId newArchiId) {
+                                          @Nullable ViewNodeId parentId, ViewNodeId newId, ArchiId newArchiId) {
         return placeElement(model, elementId, bounds, parentId, () -> newId, () -> newArchiId);
     }
 
@@ -157,7 +158,7 @@ public final class View extends AggregateRoot<ViewId> {
      * у уже размещённого элемента их не запрашивают — заданные клиентом не проверяются.
      */
     public Created<ViewNode> placeElement(ArchitectureModel model, ElementId elementId, Bounds bounds,
-                                          ViewNodeId parentId, Supplier<ViewNodeId> newId,
+                                          @Nullable ViewNodeId parentId, Supplier<ViewNodeId> newId,
                                           Supplier<ArchiId> newArchiId) {
         requireEditable();
         requireElementOf(model, elementId);
@@ -181,8 +182,8 @@ public final class View extends AggregateRoot<ViewId> {
      * Группа или заметка — узел без элемента модели. Подпись бывает у группы, текст —
      * у заметки. {@code null} — подписи, текста, родителя нет.
      */
-    public ViewNode placeAnnotation(ViewNodeKind kind, String label, String content,
-                                    Bounds bounds, ViewNodeId parentId, ViewNodeId newId,
+    public ViewNode placeAnnotation(ViewNodeKind kind, @Nullable String label, @Nullable String content,
+                                    Bounds bounds, @Nullable ViewNodeId parentId, ViewNodeId newId,
                                     ArchiId newArchiId) {
         XmlText.require(label, Message.of(ModelingMessages.FIELD_NODE_LABEL));
         XmlText.require(content, Message.of(ModelingMessages.FIELD_NODE_CONTENT));
@@ -208,7 +209,8 @@ public final class View extends AggregateRoot<ViewId> {
      * Подпись группы, текст заметки, собственный стиль узла. {@code null} — не меняется;
      * пустая строка снимает текст; стиль заменяется целиком.
      */
-    public ViewNode editNode(ViewNodeId nodeId, String label, String content, StyleOverride style) {
+    public ViewNode editNode(ViewNodeId nodeId, @Nullable String label, @Nullable String content,
+                             @Nullable StyleOverride style) {
         XmlText.require(label, Message.of(ModelingMessages.FIELD_NODE_LABEL));
         XmlText.require(content, Message.of(ModelingMessages.FIELD_NODE_CONTENT));
         if (style != null) {
@@ -227,7 +229,7 @@ public final class View extends AggregateRoot<ViewId> {
     }
 
     /** Подпись бывает у группы, текст — у заметки; чужое поле — отказ, а не молчаливый пропуск. */
-    private static void requireTextFits(ViewNode node, String label, String content) {
+    private static void requireTextFits(ViewNode node, @Nullable String label, @Nullable String content) {
         if (label != null && node.kind() != ViewNodeKind.GROUP) {
             throw notApplicable(node, "label");
         }
@@ -264,7 +266,7 @@ public final class View extends AggregateRoot<ViewId> {
      * родителя; дети едут вместе с узлом, их координаты не меняются. В другом родителе
      * узел встаёт в конец содержимого, соседи не перенумеровываются. {@code null} — корень.
      */
-    public ViewNode moveToParent(ViewNodeId nodeId, ViewNodeId parentId, int x, int y) {
+    public ViewNode moveToParent(ViewNodeId nodeId, @Nullable ViewNodeId parentId, int x, int y) {
         requireEditable();
         ViewNode node = requireNode(nodeId);
         if (parentId != null) {
@@ -426,7 +428,7 @@ public final class View extends AggregateRoot<ViewId> {
      * Правка собственных полей: имени, документации, точки зрения и свойств;
      * {@code null} и пустые строки — значения нет.
      */
-    public void edit(String newName, String newDocumentation, String newViewpoint,
+    public void edit(String newName, @Nullable String newDocumentation, @Nullable String newViewpoint,
                      List<PropertyEntry> newProperties) {
         XmlText.require(newName, Message.of(ModelingMessages.FIELD_NAME));
         XmlText.require(newDocumentation, Message.of(ModelingMessages.FIELD_DOCUMENTATION));
@@ -544,12 +546,12 @@ public final class View extends AggregateRoot<ViewId> {
     }
 
     /** Родитель узла; узла нет или он в корне — {@code null}. */
-    private ViewNodeId parentOf(ViewNodeId nodeId) {
+    private @Nullable ViewNodeId parentOf(ViewNodeId nodeId) {
         return nodes.get(nodeId).map(ViewNode::parentId).orElse(null);
     }
 
     /** Конец содержимого для нового узла: верхнего уровня ({@code null}) или внутри узла-родителя. */
-    private SortOrder nextNodeOrderIn(ViewNodeId parent) {
+    private SortOrder nextNodeOrderIn(@Nullable ViewNodeId parent) {
         return parent != null ? nextOrderIn(parent) : SortOrder.afterLast(childNodeOrders(null));
     }
 
@@ -566,7 +568,7 @@ public final class View extends AggregateRoot<ViewId> {
         return SortOrder.afterLast(taken);
     }
 
-    private List<SortOrder> childNodeOrders(ViewNodeId parent) {
+    private List<SortOrder> childNodeOrders(@Nullable ViewNodeId parent) {
         return nodes.values().stream().filter(n -> Objects.equals(n.parentId(), parent)).map(ViewNode::sortOrder)
                 .toList();
     }

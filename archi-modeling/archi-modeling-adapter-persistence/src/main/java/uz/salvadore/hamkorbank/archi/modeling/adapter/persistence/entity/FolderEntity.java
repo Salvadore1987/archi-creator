@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /** Строка папки дерева модели: родитель, тип корневой папки, порядок среди соседей и остаток XML. */
 @Entity
@@ -19,7 +20,7 @@ public class FolderEntity {
     public UUID modelId;
 
     @Column(name = "parent_id")
-    public UUID parentId;
+    public @Nullable UUID parentId;
 
     @Column(name = "archi_id", nullable = false, updatable = false)
     public String archiId;
@@ -28,11 +29,11 @@ public class FolderEntity {
     public String name;
 
     @Column(name = "folder_type")
-    public String folderType;
+    public @Nullable String folderType;
 
     @Column(name = "sort_order", nullable = false)
     public long sortOrder;
 
     @Column(name = "raw_xml")
-    public String rawXml;
+    public @Nullable String rawXml;
 }
