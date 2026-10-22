@@ -255,16 +255,19 @@ jobs:
           archi-creator:${{ github.sha }}
 
       # Проверяется не «собрался», а «поднимается»: образ с базой должен
-      # дойти до UP. Это тот же критерий, что у ручного запуска состава, только без
-      # Keycloak: вход сервера проверяют KeycloakIT и SessionIT, а сценарии
-      # Playwright идут на подменённом API и Keycloak не касаются.
-      - name: Образ поднимается и отвечает UP
+      # дойти до UP на профиле prod — том, которым его запускает состав: обязательная
+      # переменная или ошибка в application-prod.yaml всплывают здесь, а не при
+      # развёртывании. Keycloak не поднимается: ключи подписи берутся по адресу
+      # лениво, при первом токене, а вход сервера проверяют KeycloakIT и SessionIT.
+      - name: Образ поднимается на профиле prod и отвечает UP
         run: |
           docker run -d --name archi-smoke --network host \
-            -e SPRING_PROFILES_ACTIVE=dev \
+            -e SPRING_PROFILES_ACTIVE=prod \
             -e ARCHI_DB_URL=jdbc:postgresql://localhost:5432/archi \
             -e ARCHI_DB_USER=archi \
             -e ARCHI_DB_PASSWORD=smoke \
+            -e ARCHI_OIDC_ISSUER_URI=http://localhost:8081/realms/archi \
+            -e SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://localhost:8081/realms/archi/protocol/openid-connect/certs \
             archi-creator:${{ github.sha }}
           for i in $(seq 1 45); do
             if curl -fs http://localhost:9090/actuator/health | grep -q '"status":"UP"'; then
