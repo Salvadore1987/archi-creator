@@ -19,7 +19,7 @@
 |---|---|---|---|---|
 | 1 | Выходные порты в `application.port`, контракт рядом с интерфейсом — решением ADR | 15-02 | `check-links.py`, `check-traceability.py` | ✅ |
 | 2 | Домен — только JDK и генератор UUID; в пакетах портов — интерфейсы и типы сигнатуры; JPA-сущности — в адаптерах хранения | 15-01, 15-02, 15-03 | `HexagonalArchitectureTest` | ✅ |
-| 3 | Адаптеры modeling — только порт, DTO и `ModelRowRules`; устаревшее исключение и `allowEmptyShould` убраны | 15-04 | `ApplicationLayerTest` | ⬜ |
+| 3 | Адаптеры modeling — только порт, DTO и `ModelRowRules`; устаревшее исключение и `allowEmptyShould` убраны | 15-04 | `ApplicationLayerTest` | ✅ |
 | 4 | Литералы типов объектов представления — во всех модулях | 15-10 | `DocumentKindRuleTest` | ⬜ |
 | 5 | Скобки, отступ, пробелы, LF, пробел в конце строки | 15-05 | Checkstyle | ⬜ |
 | 6 | Ресурсы — `try-with-resources`, объекты — `equals` | 15-07 | PMD `CloseResource`, `CompareObjectsWithEquals` | ⬜ |
