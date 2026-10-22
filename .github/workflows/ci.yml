@@ -23,6 +23,9 @@ concurrency:
 env:
   JAVA_VERSION: '25'
 
+# Действия — по SHA коммита, версия — в комментарии: тег переставляется без следа
+# в этом репозитории, и тот же коммит собирался бы другим кодом.
+
 jobs:
 
   # Гейт целостности спеки и комментариев. Идёт отдельной работой и не ждёт
@@ -32,9 +35,9 @@ jobs:
     name: Целостность спеки
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.12'
 
@@ -77,12 +80,12 @@ jobs:
     name: Сообщения коммитов
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # Нужна история: проверяется диапазон, а не один коммит.
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.12'
 
@@ -109,10 +112,10 @@ jobs:
     name: Сборка и тесты
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
@@ -121,7 +124,7 @@ jobs:
       # Node ставит frontend-maven-plugin сам (версия в pom.xml родителя),
       # поэтому setup-node здесь нет: две установки разошлись бы в версиях.
       - name: Кэш npm
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.npm
           key: npm-${{ hashFiles('archi-bootstrap/src/main/frontend/package-lock.json') }}
@@ -157,7 +160,7 @@ jobs:
         run: tools/check-coverage.py
 
       - name: Собранный jar
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: archi-creator-jar
           path: archi-bootstrap/target/archi-creator-*.jar
@@ -179,7 +182,7 @@ jobs:
       run:
         working-directory: archi-bootstrap/src/main/frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # Версия Node — та, что ставит сборка: читается из pom.xml родителя,
       # а не дублируется здесь, иначе две версии разошлись бы.
@@ -188,7 +191,7 @@ jobs:
         working-directory: .
         run: echo "version=$(sed -n 's:.*<node.version>v\(.*\)</node.version>.*:\1:p' pom.xml)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ steps.node.outputs.version }}
           cache: npm
@@ -203,7 +206,7 @@ jobs:
 
       - name: Отчёт при отказе
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-results
           path: archi-bootstrap/src/main/frontend/test-results
@@ -230,10 +233,10 @@ jobs:
           --health-retries 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Собранный jar
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: archi-creator-jar
           path: archi-bootstrap/target
