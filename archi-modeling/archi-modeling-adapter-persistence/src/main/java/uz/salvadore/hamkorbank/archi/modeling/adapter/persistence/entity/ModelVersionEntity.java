@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 import org.hibernate.annotations.DynamicUpdate;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Строка версии модели: номер, автор, комментарий, метка, сжатый снимок с отпечатком и коммит Git.
@@ -32,20 +33,20 @@ public class ModelVersionEntity {
     public String author;
 
     @Column(name = "comment", updatable = false)
-    public String comment;
+    public @Nullable String comment;
 
     @Column(name = "label")
-    public String label;
+    public @Nullable String label;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     public Instant createdAt;
 
     @Column(name = "snapshot")
-    public byte[] snapshot;
+    public byte @Nullable [] snapshot;
 
     @Column(name = "content_hash", nullable = false, updatable = false)
     public String contentHash;
 
     @Column(name = "git_sha")
-    public String gitSha;
+    public @Nullable String gitSha;
 }

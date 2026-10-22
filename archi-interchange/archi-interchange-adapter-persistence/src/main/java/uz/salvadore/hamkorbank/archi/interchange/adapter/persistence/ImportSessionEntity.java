@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /** Строка сессии импорта: источник, ключ идемпотентности, режим, состояние и итог. */
 @Entity
@@ -20,7 +21,7 @@ public class ImportSessionEntity {
     public UUID workspaceId;
 
     @Column(name = "target_model_id")
-    public UUID targetModelId;
+    public @Nullable UUID targetModelId;
 
     @Column(name = "source_name", nullable = false)
     public String sourceName;
@@ -47,11 +48,11 @@ public class ImportSessionEntity {
     public Instant startedAt;
 
     @Column(name = "finished_at")
-    public Instant finishedAt;
+    public @Nullable Instant finishedAt;
 
     @Column(name = "model_id")
-    public UUID modelId;
+    public @Nullable UUID modelId;
 
     @Column(name = "version_no")
-    public Long versionNo;
+    public @Nullable Long versionNo;
 }

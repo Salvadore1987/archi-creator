@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.residue;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.XmlText;
@@ -11,7 +12,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.XmlText;
  *
  * @param value значение атрибута; {@code null} — метка типизированного атрибута
  */
-public record ResidueAttribute(String name, String value) {
+public record ResidueAttribute(String name, @Nullable String value) {
 
     public ResidueAttribute {
         Objects.requireNonNull(name, "name");

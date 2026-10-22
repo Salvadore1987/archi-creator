@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * DTO interchange по контракту OpenAPI. Отсутствующее значение — {@code null},
@@ -17,11 +18,13 @@ public final class Dtos {
     }
 
     /** Находка импорта: строка XML и {@code archi_id}, если они известны. */
-    public record FindingDto(String severity, String code, String message, String archiId, Integer xmlLine) {
+    public record FindingDto(String severity, String code, String message, @Nullable String archiId,
+                             @Nullable Integer xmlLine) {
     }
 
     /** Итог импорта: сессия, модель и отчёт — у принятого и у отклонённого. */
-    public record ImportResult(UUID sessionId, String status, UUID modelId, Long versionNo, boolean replayed,
+    public record ImportResult(UUID sessionId, String status, @Nullable UUID modelId, @Nullable Long versionNo,
+                               boolean replayed,
                                List<FindingDto> findings) {
     }
 
@@ -34,21 +37,23 @@ public final class Dtos {
     }
 
     /** Настройка привязки: ссылка на секрет, а не токен. */
-    public record GitBindingSettingsDto(String repoUrl, String branch, String tokenRef,
-                                        List<@NotNull GitAuthorDto> authors) {
+    public record GitBindingSettingsDto(@Nullable String repoUrl, @Nullable String branch, @Nullable String tokenRef,
+                                        @Nullable List<@NotNull GitAuthorDto> authors) {
     }
 
     /** Привязка пространства к репозиторию: состояние, последний известный коммит ветки и время проверки. */
-    public record GitBindingDto(String repoUrl, String branch, String tokenRef, String status, String lastCommitSha,
-                                Instant lastCheckedAt, List<GitAuthorDto> authors) {
+    public record GitBindingDto(String repoUrl, String branch, String tokenRef, String status,
+                                @Nullable String lastCommitSha, @Nullable Instant lastCheckedAt,
+                                List<GitAuthorDto> authors) {
     }
 
     /** Ссылка, по которой строится отчёт: ветка, тег или коммит. */
-    public record GitPullPreviewRequestDto(String ref) {
+    public record GitPullPreviewRequestDto(@Nullable String ref) {
     }
 
     /** Подтверждение применения: коммит и отпечаток содержимого — из отчёта. */
-    public record GitPullRequestDto(String ref, String commitSha, String baseHash, String comment) {
+    public record GitPullRequestDto(@Nullable String ref, @Nullable String commitSha, @Nullable String baseHash,
+                                    @Nullable String comment) {
     }
 
     /** Сколько объектов одного вида добавлено, удалено и изменено. */
@@ -56,12 +61,13 @@ public final class Dtos {
     }
 
     /** Объект отчёта: вид, что с ним, тип ArchiMate, имя и изменённые поля. */
-    public record GitChangeDto(String kind, String change, String archiId, String type, String name,
+    public record GitChangeDto(String kind, String change, String archiId, @Nullable String type, String name,
                                List<String> fields) {
     }
 
     /** Отчёт об изменениях до применения. */
-    public record GitPullPreviewDto(UUID modelId, String ref, String refKind, String commitSha, Long baseVersionNo,
+    public record GitPullPreviewDto(UUID modelId, String ref, String refKind, String commitSha,
+                                    @Nullable Long baseVersionNo,
                                     String baseHash, String targetHash, boolean unchanged, boolean applicable,
                                     List<GitChangeCountDto> summary, List<GitChangeDto> changes,
                                     List<FindingDto> findings) {
@@ -73,21 +79,24 @@ public final class Dtos {
     }
 
     /** Ссылка на предложение и выборы по уже показанным конфликтам: адрес — OURS или THEIRS. */
-    public record GitMergePreviewRequestDto(String ref, Map<String, String> resolutions) {
+    public record GitMergePreviewRequestDto(@Nullable String ref, @Nullable Map<String, String> resolutions) {
     }
 
     /** Подтверждение слияния: оба коммита и отпечаток — из отчёта, выбор по каждому конфликту. */
-    public record GitMergeRequestDto(String ref, String commitSha, String mergeBaseSha, String baseHash,
-                                     Map<String, String> resolutions, String comment) {
+    public record GitMergeRequestDto(@Nullable String ref, @Nullable String commitSha, @Nullable String mergeBaseSha,
+                                     @Nullable String baseHash, @Nullable Map<String, String> resolutions,
+                                     @Nullable String comment) {
     }
 
     /** Конфликт: поле или удаление против правки, значения трёх состояний и выбор. */
-    public record GitMergeConflictDto(String id, String kind, String archiId, String type, String name, String field,
-                                      String base, String ours, String theirs, String resolution) {
+    public record GitMergeConflictDto(String id, String kind, String archiId, @Nullable String type, String name,
+                                      String field, @Nullable String base, @Nullable String ours,
+                                      @Nullable String theirs, @Nullable String resolution) {
     }
 
     /** Удаление как следствие разрешения: что, почему, на каком представлении. */
-    public record GitMergeCascadeDto(String kind, String archiId, String name, String reason, String viewArchiId) {
+    public record GitMergeCascadeDto(String kind, String archiId, String name, String reason,
+                                     @Nullable String viewArchiId) {
     }
 
     /** Отметка объекта для холста. */
@@ -95,8 +104,8 @@ public final class Dtos {
     }
 
     /** Узел, которого в текущем содержимом нет: абсолютная геометрия. */
-    public record GitMergeAddedNodeDto(String archiId, String elementArchiId, String type, String name, int x, int y,
-                                       int width, int height) {
+    public record GitMergeAddedNodeDto(String archiId, @Nullable String elementArchiId, @Nullable String type,
+                                       String name, int x, int y, int width, int height) {
     }
 
     /** Узлы, которые слияние добавит в представление, — для контуров на холсте. */
@@ -105,7 +114,8 @@ public final class Dtos {
 
     /** Отчёт слияния до применения. */
     public record GitMergePreviewDto(UUID modelId, String ref, String refKind, String commitSha, String mergeBaseSha,
-                                     Long baseVersionNo, String baseHash, String targetHash, boolean unchanged,
+                                     @Nullable Long baseVersionNo, String baseHash, String targetHash,
+                                     boolean unchanged,
                                      boolean applicable, List<GitMergeConflictDto> conflicts,
                                      List<GitMergeCascadeDto> cascade, List<GitChangeCountDto> summary,
                                      List<GitChangeDto> changes, List<GitMergeMarkDto> marks,
@@ -118,7 +128,7 @@ public final class Dtos {
     }
 
     /** Состояние модели в Git: опубликовано всё, ждёт или встало на расхождении. */
-    public record ModelGitStatusDto(UUID modelId, String state, int pending, Long versionNo, String gitSha,
-                                    Long divergedVersionNo) {
+    public record ModelGitStatusDto(UUID modelId, String state, int pending, @Nullable Long versionNo,
+                                    @Nullable String gitSha, @Nullable Long divergedVersionNo) {
     }
 }

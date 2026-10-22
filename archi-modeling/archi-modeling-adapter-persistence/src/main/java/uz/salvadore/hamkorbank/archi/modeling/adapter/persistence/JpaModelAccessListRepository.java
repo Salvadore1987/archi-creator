@@ -28,7 +28,7 @@ public class JpaModelAccessListRepository implements ModelAccessListRepository {
 
     @Override
     public ModelAccessList find(ModelId modelId) {
-        return findAll(List.of(modelId)).get(modelId);
+        return findAll(List.of(modelId)).getOrDefault(modelId, ModelAccessList.open(modelId));
     }
 
     @Override

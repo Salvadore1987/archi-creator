@@ -164,7 +164,7 @@ final class OefViews {
             pass.properties(out, 4, view.values("property"));
             roots.forEach(n -> node(out, n, 4));
             for (DocumentNode connection : exported) {
-                connection(out, connection, bendpoints.get(connection.archiId().value()));
+                connection(out, connection, bendpoints.getOrDefault(connection.archiId().value(), List.of()));
             }
             out.append("      </view>\n");
         }
@@ -218,7 +218,7 @@ final class OefViews {
             return switch (node.viewObject()) {
                 case ELEMENT -> {
                     boolean exported = node.attribute("archimateElement").filter(pass.concepts()::contains)
-                            .filter(e -> pass.byId().get(e).kind() != DocumentNode.Kind.RELATIONSHIP)
+                            .map(pass.byId()::get).filter(e -> e.kind() != DocumentNode.Kind.RELATIONSHIP)
                             .isPresent();
                     if (!exported) {
                         pass.loss(id, "node", "element", Message.of(InterchangeMessages.OEF_LOSS_NODE_CONCEPT));

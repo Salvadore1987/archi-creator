@@ -8,6 +8,7 @@ import jakarta.persistence.Table;
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /** Запись ключа идемпотентности: отпечаток команды и ссылка на созданный ею объект. */
 @Entity
@@ -38,12 +39,12 @@ public class IdempotencyEntity {
 
     /** Составной ключ записи: область команды, автор и ключ клиента. */
     public static class Key implements Serializable {
-        public String scope;
-        public String actor;
-        public String key;
+        public @Nullable String scope;
+        public @Nullable String actor;
+        public @Nullable String key;
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(@Nullable Object o) {
             return o instanceof Key k && Objects.equals(k.scope, scope) && Objects.equals(k.actor, actor)
                     && Objects.equals(k.key, key);
         }

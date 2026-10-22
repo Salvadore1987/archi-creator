@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.modeling.domain.view;
 
 import java.util.List;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.ArchiId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.PropertyEntry;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.RawXml;
@@ -18,8 +19,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.Names;
  * @param rawXml        остаток XML; {@code null} — нет
  */
 public record ViewHeader(ViewId id, ModelId modelId, FolderId folderId, ArchiId archiId, DiagramType archiType,
-                         String name, String documentation, String viewpoint,
-                         List<PropertyEntry> properties, SortOrder sortOrder, RawXml rawXml,
+                         String name, @Nullable String documentation, @Nullable String viewpoint,
+                         List<PropertyEntry> properties, SortOrder sortOrder, @Nullable RawXml rawXml,
                          long version) {
 
     public ViewHeader {

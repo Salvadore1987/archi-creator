@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.interchange.application.dto.result;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Итог импорта — и у принятого файла, и у отклонённого: отказ без объяснения превращает строгий
@@ -15,8 +16,9 @@ import java.util.UUID;
  * @param versionNo     первая версия созданной модели; {@code null} — импорт ничего не применил
  * @param replayed      повтор по ключу идемпотентности: отдан итог первой попытки
  */
-public record ImportArchimateFileResponse(UUID sessionId, String status, Outcome outcome, String refusalCode,
-                                          String refusalText, UUID modelId, Long versionNo, boolean replayed,
+public record ImportArchimateFileResponse(UUID sessionId, String status, Outcome outcome,
+                                          @Nullable String refusalCode, @Nullable String refusalText,
+                                          @Nullable UUID modelId, @Nullable Long versionNo, boolean replayed,
                                           List<ImportFindingResponse> findings) {
 
     public ImportArchimateFileResponse {

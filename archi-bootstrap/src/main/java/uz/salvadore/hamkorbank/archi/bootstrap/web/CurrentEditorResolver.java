@@ -5,6 +5,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.Authentication;
@@ -39,8 +40,8 @@ public final class CurrentEditorResolver implements HandlerMethodArgumentResolve
     }
 
     @Override
-    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer container,
-                                  NativeWebRequest request, WebDataBinderFactory binders) {
+    public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer container,
+                                  NativeWebRequest request, @Nullable WebDataBinderFactory binders) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new InsufficientAuthenticationException(BootstrapMessages.NOT_AUTHENTICATED);

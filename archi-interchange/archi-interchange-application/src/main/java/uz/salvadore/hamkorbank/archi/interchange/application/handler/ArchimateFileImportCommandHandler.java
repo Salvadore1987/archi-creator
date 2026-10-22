@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeOperation;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.command.ImportArchimateFileCommand;
@@ -121,7 +122,7 @@ public final class ArchimateFileImportCommandHandler {
      *
      * @param rows {@code null} — сессия отклонена, записывать нечего
      */
-    private record Prepared(ImportSession session, ModelRows rows) {
+    private record Prepared(ImportSession session, @Nullable ModelRows rows) {
     }
 
     /**

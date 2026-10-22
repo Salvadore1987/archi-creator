@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
@@ -104,7 +105,7 @@ public final class DocumentDecomposer {
         // ── Папки и их содержимое ───────────────────────────────────
 
         /** Папка и её содержимое; {@code parent} — {@code null} у корневой. */
-        private void folder(DocumentNode node, UUID parent, long order) {
+        private void folder(DocumentNode node, @Nullable UUID parent, long order) {
             UUID id = key(node);
             Optional<String> type = parent != null ? Optional.empty()
                     : node.attribute("type").filter(ModelRowRules::folderType);
@@ -173,7 +174,7 @@ public final class DocumentDecomposer {
         private UUID concept(DocumentNode node, String attribute) {
             String target = node.attribute(attribute)
                     .orElseThrow(() -> unexpected(node, Message.of(InterchangeMessages.WHERE_WITHOUT, attribute)));
-            if (!byArchiId.containsKey(target)) {
+            if (!keys.containsKey(target)) {
                 throw new InvalidValueException(InterchangeMessages.RELATIONSHIP_OUTSIDE, node.archiId(), target);
             }
             return keys.get(target);
@@ -238,7 +239,7 @@ public final class DocumentDecomposer {
         }
 
         /** Узел представления и его дети; {@code parent} — {@code null} у узла в корне представления. */
-        private void viewNode(DocumentNode node, UUID parent, long order, ViewParts view) {
+        private void viewNode(DocumentNode node, @Nullable UUID parent, long order, ViewParts view) {
             UUID id = key(node);
             UUID element = node.attribute("archimateElement")
                     .filter(ref -> byArchiId.containsKey(ref) && isElement(byArchiId.get(ref)))
@@ -324,7 +325,7 @@ public final class DocumentDecomposer {
         private UUID endpoint(DocumentNode edge, String attribute) {
             String ref = edge.attribute(attribute)
                     .orElseThrow(() -> unexpected(edge, Message.of(InterchangeMessages.WHERE_WITHOUT, attribute)));
-            if (!byArchiId.containsKey(ref)) {
+            if (!keys.containsKey(ref)) {
                 throw new InvalidValueException(InterchangeMessages.EDGE_OUTSIDE, edge.archiId(), ref);
             }
             return keys.get(ref);
@@ -332,8 +333,9 @@ public final class DocumentDecomposer {
 
         // ── Мелочи ──────────────────────────────────────────────────
 
+        /** Ключ узла: ключи выданы всем узлам документа при создании прохода. */
         private UUID key(DocumentNode node) {
-            return keys.get(node.archiId().value());
+            return Objects.requireNonNull(keys.get(node.archiId().value()), "key");
         }
 
         private boolean isElement(DocumentNode node) {
@@ -348,7 +350,7 @@ public final class DocumentDecomposer {
     }
 
     /** Документация ({@code null} — нет) и свойства узла. */
-    private record Described(String documentation, List<ModelRows.Property> properties) {
+    private record Described(@Nullable String documentation, List<ModelRows.Property> properties) {
     }
 
     /**
@@ -401,11 +403,11 @@ public final class DocumentDecomposer {
      */
     private static final class StyleParse {
 
-        private final String fillColor;
-        private final String font;
-        private final String fontColor;
-        private final String lineColor;
-        private final Integer textAlignment;
+        private final @Nullable String fillColor;
+        private final @Nullable String font;
+        private final @Nullable String fontColor;
+        private final @Nullable String lineColor;
+        private final @Nullable Integer textAlignment;
 
         StyleParse(DocumentNode node) {
             fillColor = node.attribute("fillColor").filter(ModelRowRules::color).orElse(null);
@@ -469,11 +471,13 @@ public final class DocumentDecomposer {
             }
             numbers.put(attribute.name(), number.get());
         }
-        if (!ModelRowRules.size(numbers.get("width")) || !ModelRowRules.size(numbers.get("height"))) {
+        int width = numbers.getOrDefault("width", -1);
+        int height = numbers.getOrDefault("height", -1);
+        if (!ModelRowRules.size(width) || !ModelRowRules.size(height)) {
             return Optional.empty();
         }
-        return Optional.of(new ModelRows.Box(numbers.get("x"), numbers.get("y"), numbers.get("width"),
-                numbers.get("height")));
+        return Optional.of(new ModelRows.Box(numbers.getOrDefault("x", 0), numbers.getOrDefault("y", 0), width,
+                height));
     }
 
     static Optional<BendpointValue> parseBendpoint(DocumentValue value) {

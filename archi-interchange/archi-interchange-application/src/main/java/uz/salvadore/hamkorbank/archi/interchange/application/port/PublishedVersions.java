@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.interchange.application.port;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
@@ -27,7 +28,7 @@ public interface PublishedVersions {
      * @param author  субъект Keycloak, сохранивший версию
      * @param comment комментарий к версии; {@code null} — не задан
      */
-    record Version(WorkspaceId workspace, String modelName, long versionNo, String author, String comment,
+    record Version(WorkspaceId workspace, String modelName, long versionNo, String author, @Nullable String comment,
                    Instant createdAt, String contentHash, byte[] xml) {
 
         public Version {

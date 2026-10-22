@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.handler;
 
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.application.mapper.ModelRowsMapper;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.ModelContent;
 import uz.salvadore.hamkorbank.archi.modeling.application.port.SnapshotArchive;
@@ -66,7 +67,7 @@ public final class VersionContents {
      * вызывающего. Общая часть отката к версии и импорта состояния извне. Снимок не раскладывается —
      * {@code SnapshotUnreadableException}: откат отдаёт его как есть, импорт извне переводит в свой отказ.
      */
-    public Replacement replace(ArchitectureModel model, byte[] xml, EditorIdentity actor, String comment) {
+    public Replacement replace(ArchitectureModel model, byte[] xml, EditorIdentity actor, @Nullable String comment) {
         ModelHeader current = model.header();
         ModelContent restored = ModelRowsMapper.content(snapshotReader.read(xml),
                 new ModelRowsMapper.Identity(current.id(), current.workspaceId(), current.createdBy(),

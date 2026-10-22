@@ -5,4 +5,7 @@
  * <p>Бины собираются явно, конструкторами, а не сканированием: в application-слое
  * Spring нет, и аннотировать там нечего.
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.bootstrap.wiring;
+
+import org.jspecify.annotations.NullMarked;

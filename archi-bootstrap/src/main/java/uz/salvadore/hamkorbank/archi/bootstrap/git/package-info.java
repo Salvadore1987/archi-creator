@@ -3,4 +3,7 @@
  * modeling, outbox зафиксированных версий и его фоновый обработчик — реализации
  * портов публикации interchange.
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.bootstrap.git;
+
+import org.jspecify.annotations.NullMarked;

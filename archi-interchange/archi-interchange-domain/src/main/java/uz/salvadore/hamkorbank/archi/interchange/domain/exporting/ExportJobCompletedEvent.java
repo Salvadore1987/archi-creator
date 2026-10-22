@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
 
 import java.time.Instant;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ExportJobId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
@@ -14,7 +15,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
  * @param viewId представление — у выгрузки картинки; {@code null} — у выгрузки модели
  */
 public record ExportJobCompletedEvent(ExportJobId exportJobId, WorkspaceId workspaceId, ModelId modelId,
-                              ViewId viewId, ExportFormat format, long sourceVersionNo,
+                              @Nullable ViewId viewId, ExportFormat format, long sourceVersionNo,
                               ContentHash artifactHash, long artifactSize, int lossEntryCount, Instant occurredAt)
         implements ExportJobEvent {
 

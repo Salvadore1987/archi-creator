@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.exporting;
 
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
@@ -12,14 +13,14 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  * стандартного CSV; {@code folderArchiId} — поддерево папки, {@code archi_id} которой
  * стабилен между версиями, в отличие от внутреннего ключа; {@code null} — вся модель.
  */
-public record CatalogCsvOptions(char separator, String folderArchiId) {
+public record CatalogCsvOptions(char separator, @Nullable String folderArchiId) {
 
     /**
      * Параметры из запроса: разделитель одним символом или словом {@code tab}, по умолчанию {@code ;};
      * пустая или не заданная ({@code null}) папка — вся модель. Недопустимый разделитель — отказ:
      * значения проверяются здесь, при разборе запроса, а не в конструкторе.
      */
-    public static CatalogCsvOptions of(String separator, String folderArchiId) {
+    public static CatalogCsvOptions of(@Nullable String separator, @Nullable String folderArchiId) {
         String value = separator == null ? ";" : separator;
         if (value.length() != 1 && !value.equals("tab")) {
             throw new InterchangeException(InterchangeCodes.INVALID_REQUEST, Failure.UNPROCESSABLE,

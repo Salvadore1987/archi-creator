@@ -8,4 +8,7 @@
  * <p>Сессия держит допустимые переходы, идемпотентность приёма и отношение
  * к строгости и повреждениям.
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.interchange.domain.importing;
+
+import org.jspecify.annotations.NullMarked;

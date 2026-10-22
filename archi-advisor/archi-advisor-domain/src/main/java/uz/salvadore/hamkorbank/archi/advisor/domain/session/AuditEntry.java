@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.advisor.domain.session;
 
 import java.time.Instant;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AuditEntryId;
@@ -13,7 +14,7 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.identity.AuditEntryId;
  * @param rejectionReason причина отказа; {@code null} — сессия не отклонена
  */
 public record AuditEntry(AuditEntryId id, String actor, AdvisorFunction function, TokenUsage usage,
-                         SessionStatus outcome, RejectionReason rejectionReason, Instant createdAt) {
+                         SessionStatus outcome, @Nullable RejectionReason rejectionReason, Instant createdAt) {
 
     public AuditEntry {
         Objects.requireNonNull(id, "id");

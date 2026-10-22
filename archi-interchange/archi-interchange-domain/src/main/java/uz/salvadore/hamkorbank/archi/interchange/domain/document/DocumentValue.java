@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.document;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.XmlText;
@@ -17,7 +18,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.XmlText;
  *
  * @param text текст элемента; {@code null} — элемент без текста ({@code <bounds …/>})
  */
-public record DocumentValue(String tag, DocumentOrder order, Attributes attributes, String text)
+public record DocumentValue(String tag, DocumentOrder order, Attributes attributes, @Nullable String text)
         implements DocumentContent {
 
     /** Теги, которые читатель понимает как значения. Остальное без {@code id} — {@link RawXmlFragment}. */

@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.advisor;
 
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.advisor.application.port.WorkspaceDirectory;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorDomainException;
 import uz.salvadore.hamkorbank.archi.advisor.domain.common.AdvisorMessages;
@@ -19,7 +20,7 @@ public final class ModelingWorkspaceDirectory implements WorkspaceDirectory {
     }
 
     @Override
-    public WorkspaceId resolve(WorkspaceId requested) {
+    public WorkspaceId resolve(@Nullable WorkspaceId requested) {
         try {
             return WorkspaceId.of(workspaces.resolveWorkspace(
                     new ResolveWorkspaceQuery(requested == null ? null : requested.value())).workspaceId());

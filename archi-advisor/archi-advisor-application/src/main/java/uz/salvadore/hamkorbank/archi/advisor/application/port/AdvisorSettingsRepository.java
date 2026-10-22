@@ -1,5 +1,6 @@
 package uz.salvadore.hamkorbank.archi.advisor.application.port;
 
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.WorkspaceId;
 
 /** Выключатель и месячный лимит помощника — настройки рабочего пространства, столбцы advisor. */
@@ -14,6 +15,6 @@ public interface AdvisorSettingsRepository {
     /**
      * @param monthlyTokenLimit {@code null} — лимит не задан, действует значение по умолчанию
      */
-    record StoredSettings(boolean enabled, Long monthlyTokenLimit) {
+    record StoredSettings(boolean enabled, @Nullable Long monthlyTokenLimit) {
     }
 }

@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /** Строка заголовка модели: имя, статус жизненного цикла, автор, версия строки и остаток XML корня. */
 @Entity
@@ -33,7 +34,7 @@ public class ModelEntity {
     public String name;
 
     @Column(name = "documentation")
-    public String documentation;
+    public @Nullable String documentation;
 
     @Column(name = "archi_version", nullable = false)
     public String archiVersion;
@@ -42,7 +43,7 @@ public class ModelEntity {
     public String status;
 
     @Column(name = "raw_xml")
-    public String rawXml;
+    public @Nullable String rawXml;
 
     @Column(name = "created_by", nullable = false, updatable = false)
     public String createdBy;

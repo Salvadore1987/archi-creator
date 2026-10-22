@@ -4,6 +4,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -69,8 +70,8 @@ public final class ModelingContextReader implements ModelContextReader {
         List<ContextRelation> relations = tree.relationships().stream()
                 .sorted(Comparator.comparingLong(RelationshipResponse::sortOrder)
                         .thenComparing(RelationshipResponse::archiId))
-                .map(r -> new ContextRelation(r.archiId(), r.archiType(), archiIds.get(r.sourceId()),
-                        archiIds.get(r.targetId())))
+                .map(r -> new ContextRelation(r.archiId(), r.archiType(), end(archiIds, r.sourceId()),
+                        end(archiIds, r.targetId())))
                 .toList();
         Map<UUID, List<UUID>> placed = tree.placements().stream()
                 .collect(Collectors.toMap(PlacementResponse::viewId, PlacementResponse::elementIds));
@@ -80,6 +81,11 @@ public final class ModelingContextReader implements ModelContextReader {
                 .toList();
         return new ReadModel(WorkspaceId.of(tree.model().workspaceId()),
                 !ModelStatus.ACTIVE.name().equals(tree.model().status()), new ModelGraph(elements, relations, views));
+    }
+
+    /** Конец связи — элемент или связь той же модели: оба уже в карте идентификаторов. */
+    private static String end(Map<UUID, String> archiIds, UUID id) {
+        return Objects.requireNonNull(archiIds.get(id), "relationship end");
     }
 
     static EditorIdentity editor(Requester requester) {

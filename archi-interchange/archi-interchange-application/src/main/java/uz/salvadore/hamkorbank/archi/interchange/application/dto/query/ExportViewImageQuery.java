@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.interchange.application.dto.query;
 
 import java.util.Objects;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Картинка представления — как её запросил клиент. Что допустимо и что подставить вместо
@@ -13,8 +14,8 @@ import java.util.UUID;
  * @param background {@code paper} или {@code transparent}
  * @param versionNo  номер версии; {@code null} — последняя
  */
-public record ExportViewImageQuery(UUID viewId, String format, Integer scale, Boolean outline, String background,
-                                   Long versionNo) {
+public record ExportViewImageQuery(UUID viewId, @Nullable String format, @Nullable Integer scale,
+                                   @Nullable Boolean outline, @Nullable String background, @Nullable Long versionNo) {
 
     public ExportViewImageQuery {
         Objects.requireNonNull(viewId, "viewId");

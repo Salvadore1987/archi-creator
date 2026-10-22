@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.mapper;
 
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.GitAppliedResponse;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.GitBindingResponse;
 import uz.salvadore.hamkorbank.archi.interchange.application.dto.result.GitChangeCountResponse;
@@ -112,11 +113,11 @@ public final class GitDataMapper {
                         n.name(), n.x(), n.y(), n.width(), n.height())).toList());
     }
 
-    private static String id(ArchiId id) {
+    private static @Nullable String id(@Nullable ArchiId id) {
         return id == null ? null : id.value();
     }
 
-    private static String sha(GitSha sha) {
+    private static @Nullable String sha(@Nullable GitSha sha) {
         return sha == null ? null : sha.value();
     }
 }

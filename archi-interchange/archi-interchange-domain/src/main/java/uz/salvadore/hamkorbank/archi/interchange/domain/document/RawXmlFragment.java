@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.document;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.XmlText;
@@ -15,7 +16,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.common.XmlText;
  * @param parentArchiId узел, внутри которого фрагмент лежит; {@code null} — прямо в корне модели
  * @param order         позиция среди соседей
  */
-public record RawXmlFragment(String xml, ArchiId parentArchiId, DocumentOrder order)
+public record RawXmlFragment(String xml, @Nullable ArchiId parentArchiId, DocumentOrder order)
         implements DocumentContent {
 
     public RawXmlFragment {

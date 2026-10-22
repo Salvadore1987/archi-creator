@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.dto.command;
 
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.application.dto.StyleValue;
 
 /**
@@ -8,5 +9,5 @@ import uz.salvadore.hamkorbank.archi.modeling.application.dto.StyleValue;
  *
  * @param style новый стиль; {@code null} — собственного стиля нет
  */
-public record EditViewEdgeCommand(UUID edgeId, StyleValue style) {
+public record EditViewEdgeCommand(UUID edgeId, @Nullable StyleValue style) {
 }

@@ -8,4 +8,7 @@
  * а типизированная иерархия этого не позволяет. Метамодели здесь нет —
  * она в {@code archi-modeling-domain}, и кодек от неё не зависит.
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.interchange.domain.document;
+
+import org.jspecify.annotations.NullMarked;

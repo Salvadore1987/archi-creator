@@ -7,4 +7,7 @@
  * от каталога не зависит — {@link uz.salvadore.hamkorbank.archi.modeling.domain.metamodel.ArchiType}
  * принимает и тип, которого каталог не знает.
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.modeling.domain.metamodel;
+
+import org.jspecify.annotations.NullMarked;

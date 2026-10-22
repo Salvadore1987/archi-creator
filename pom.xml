@@ -60,6 +60,10 @@
         <fontbox.version>3.0.8</fontbox.version>
         <jgit.version>7.8.0.202609011348-r</jgit.version>
         <java-uuid-generator.version>5.2.0</java-uuid-generator.version>
+        <error-prone.version>2.51.0</error-prone.version>
+        <nullaway.version>0.14.2</nullaway.version>
+        <!-- NullAway проверяет весь код проекта. -->
+        <nullaway.annotated>uz.salvadore.hamkorbank.archi</nullaway.annotated>
         <depgraph-maven-plugin.version>4.0.5</depgraph-maven-plugin.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
         <checkstyle.version>14.3.0</checkstyle.version>
@@ -303,6 +307,15 @@
     </dependencyManagement>
 
     <dependencies>
+        <!--
+            Аннотации null-безопасности во всех модулях, домен включительно: только аннотации,
+            без кода и без своих зависимостей. Пакет размечен @NullMarked — всё не-null,
+            отсутствие значения помечается @Nullable; проверяет NullAway при компиляции.
+        -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+        </dependency>
         <!-- Тестовый стек доступен всем модулям; Spring сюда не попадает. -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -323,7 +336,40 @@
                              и @RequestParam. Родитель spring-boot-starter-parent включал бы это
                              сам, но проект его не наследует. -->
                         <parameters>true</parameters>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>com.google.errorprone</groupId>
+                                <artifactId>error_prone_core</artifactId>
+                                <version>${error-prone.version}</version>
+                            </path>
+                            <path>
+                                <groupId>com.uber.nullaway</groupId>
+                                <artifactId>nullaway</artifactId>
+                                <version>${nullaway.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
                     </configuration>
+                    <executions>
+                        <!--
+                            NullAway — только в основном коде, нарушение роняет компиляцию.
+                            Остальные проверки Error Prone выключены: их держат PMD и SpotBugs.
+                            Тесты не проверяются — они делят пакеты с основным кодом, а null
+                            в тесте — способ проверить отказ.
+                        -->
+                        <execution>
+                            <id>default-compile</id>
+                            <configuration>
+                                <compilerArgs>
+                                    <arg>-XDcompilePolicy=simple</arg>
+                                    <arg>--should-stop=ifError=FLOW</arg>
+                                    <!-- Все срабатывания разом, а не первые сто. -->
+                                    <arg>-Xmaxerrs</arg>
+                                    <arg>100000</arg>
+                                    <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=${nullaway.annotated} -XepExcludedPaths:.*/target/generated-sources/.*</arg>
+                                </compilerArgs>
+                            </configuration>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

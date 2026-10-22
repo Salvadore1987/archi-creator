@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.TextCatalog;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.StaxArchiDocumentReader;
@@ -103,7 +104,7 @@ public final class CatalogCsvWriter {
         }
 
         /** Обход папки; {@code filter} — {@code null}, когда выгружается вся модель. */
-        private void walkFolder(DocumentNode folder, String path, boolean inside, String filter) {
+        private void walkFolder(DocumentNode folder, String path, boolean inside, @Nullable String filter) {
             boolean selected = inside || filter == null || filter.equals(folder.archiId().value());
             folderPath.put(folder.archiId().value(), path);
             for (DocumentNode child : folder.children()) {

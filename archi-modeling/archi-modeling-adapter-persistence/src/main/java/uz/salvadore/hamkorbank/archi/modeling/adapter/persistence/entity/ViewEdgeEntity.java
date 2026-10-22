@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.UUID;
 import org.hibernate.annotations.ColumnTransformer;
+import org.jspecify.annotations.Nullable;
 
 /** Ребро представления: связь, которую оно рисует, концы (узел или другое ребро), точки перегиба и стиль. */
 @Entity
@@ -29,19 +30,19 @@ public class ViewEdgeEntity {
     public String archiType;
 
     @Column(name = "relationship_id")
-    public UUID relationshipId;
+    public @Nullable UUID relationshipId;
 
     @Column(name = "source_node_id")
-    public UUID sourceNodeId;
+    public @Nullable UUID sourceNodeId;
 
     @Column(name = "source_edge_id")
-    public UUID sourceEdgeId;
+    public @Nullable UUID sourceEdgeId;
 
     @Column(name = "target_node_id")
-    public UUID targetNodeId;
+    public @Nullable UUID targetNodeId;
 
     @Column(name = "target_edge_id")
-    public UUID targetEdgeId;
+    public @Nullable UUID targetEdgeId;
 
     /** {@code [[startX,startY,endX,endY], …]}; разбирает {@code Bendpoints}. */
     @Column(name = "bendpoints", nullable = false, columnDefinition = "jsonb")
@@ -49,23 +50,23 @@ public class ViewEdgeEntity {
     public String bendpoints;
 
     @Column(name = "fill_color")
-    public String fillColor;
+    public @Nullable String fillColor;
 
     @Column(name = "font")
-    public String font;
+    public @Nullable String font;
 
     @Column(name = "font_color")
-    public String fontColor;
+    public @Nullable String fontColor;
 
     @Column(name = "line_color")
-    public String lineColor;
+    public @Nullable String lineColor;
 
     @Column(name = "text_alignment")
-    public Integer textAlignment;
+    public @Nullable Integer textAlignment;
 
     @Column(name = "sort_order", nullable = false)
     public long sortOrder;
 
     @Column(name = "raw_xml")
-    public String rawXml;
+    public @Nullable String rawXml;
 }

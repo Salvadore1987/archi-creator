@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitRef;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.GitSha;
 import uz.salvadore.hamkorbank.archi.interchange.domain.git.ResolvedRef;
@@ -65,14 +66,14 @@ public interface GitRepositoryPort {
      * строился коммит, — {@link Rejected}; принуждения нет. {@code parent} — {@code null}, когда
      * ветки ещё нет.
      */
-    PushResult push(Remote remote, GitSha parent, CommitRequest request);
+    PushResult push(Remote remote, @Nullable GitSha parent, CommitRequest request);
 
     /**
      * Адрес, ветка и учётные данные — токен живёт только на время вызова.
      *
      * @param token токен доступа; {@code null} — без учётных данных
      */
-    record Remote(WorkspaceId workspace, String url, String branch, String token) {
+    record Remote(WorkspaceId workspace, String url, String branch, @Nullable String token) {
 
         public Remote {
             Objects.requireNonNull(workspace, "workspace");
@@ -103,7 +104,7 @@ public interface GitRepositoryPort {
      *               {@code null} — слияния не было
      */
     record CommitRequest(String directory, SortedMap<String, byte[]> files, SortedMap<String, byte[]> rootFiles,
-                         String message, Person author, Person committer, GitSha merged) {
+                         String message, Person author, Person committer, @Nullable GitSha merged) {
 
         public CommitRequest {
             files = copy(files);
@@ -141,8 +142,16 @@ public interface GitRepositoryPort {
     /** Репозиторий не ответил, отказал в доступе или в записи. */
     final class Unreachable extends RuntimeException {
 
-        public Unreachable(String reason, Throwable cause) {
+        private final String reason;
+
+        public Unreachable(String reason, @Nullable Throwable cause) {
             super(reason, cause);
+            this.reason = reason;
+        }
+
+        /** Почему репозиторий недоступен — тот же текст, что у исключения. */
+        public String reason() {
+            return reason;
         }
     }
 }

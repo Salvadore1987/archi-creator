@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Отчёт слияния по ссылке с выборами по уже показанным конфликтам, ничего не меняет.
@@ -12,7 +13,7 @@ import java.util.UUID;
  * @param ref         ветка, тег или коммит предложения; {@code null} — не задана
  * @param resolutions выбор по адресу конфликта: {@code OURS} или {@code THEIRS}
  */
-public record PreviewGitMergeQuery(UUID modelId, String ref, Map<String, String> resolutions) {
+public record PreviewGitMergeQuery(UUID modelId, @Nullable String ref, Map<String, String> resolutions) {
 
     public PreviewGitMergeQuery {
         Objects.requireNonNull(modelId, "modelId");

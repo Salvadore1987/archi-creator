@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.advisor.adapter.persistence;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.json.JsonMapper;
 import uz.salvadore.hamkorbank.archi.advisor.domain.identity.FindingId;
 import uz.salvadore.hamkorbank.archi.advisor.domain.session.AdvisorAnswer;
@@ -25,7 +26,7 @@ final class ResultCodec {
     private ResultCodec() {
     }
 
-    static String encode(List<Finding> findings, ModelPlan plan, AdvisorAnswer answer) {
+    static @Nullable String encode(List<Finding> findings, @Nullable ModelPlan plan, @Nullable AdvisorAnswer answer) {
         if (findings.isEmpty() && plan == null && answer == null) {
             return null;
         }
@@ -43,7 +44,7 @@ final class ResultCodec {
                         a.references().stream().map(StoredRef::of).toList())).orElse(null)));
     }
 
-    static Decoded decode(String json) {
+    static Decoded decode(@Nullable String json) {
         if (json == null) {
             return new Decoded(List.of(), null, null);
         }
@@ -65,20 +66,20 @@ final class ResultCodec {
     }
 
     /** Прочитанный результат; {@code plan} и {@code answer} — {@code null}, если их не было. */
-    record Decoded(List<Finding> findings, ModelPlan plan, AdvisorAnswer answer) {
+    record Decoded(List<Finding> findings, @Nullable ModelPlan plan, @Nullable AdvisorAnswer answer) {
     }
 
-    record Stored(List<StoredFinding> findings, StoredPlan plan, StoredAnswer answer) {
+    record Stored(@Nullable List<StoredFinding> findings, @Nullable StoredPlan plan, @Nullable StoredAnswer answer) {
     }
 
     record StoredFinding(UUID id, String severity, String code, String message, String targetKind,
-                         String targetArchiId, String targetName, String suggestion) {
+                         String targetArchiId, String targetName, @Nullable String suggestion) {
     }
 
-    record StoredPlan(List<StoredElement> elements, List<StoredRelation> relationships, String notes) {
+    record StoredPlan(List<StoredElement> elements, List<StoredRelation> relationships, @Nullable String notes) {
     }
 
-    record StoredElement(String archiType, String name, StoredRef existingRef) {
+    record StoredElement(String archiType, String name, @Nullable StoredRef existingRef) {
     }
 
     record StoredRelation(String archiType, String sourceName, String targetName, boolean permitted) {

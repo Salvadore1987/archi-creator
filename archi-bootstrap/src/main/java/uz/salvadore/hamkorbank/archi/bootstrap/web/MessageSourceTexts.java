@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.bootstrap.web;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContext;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -59,6 +60,6 @@ public class MessageSourceTexts implements uz.salvadore.hamkorbank.archi.modelin
                     resolve(nested.key(), nested.args(), locale);
             default -> String.valueOf(arg);
         }).toArray();
-        return messages.getMessage(key, resolved, key, locale);
+        return Objects.requireNonNullElse(messages.getMessage(key, resolved, key, locale), key);
     }
 }

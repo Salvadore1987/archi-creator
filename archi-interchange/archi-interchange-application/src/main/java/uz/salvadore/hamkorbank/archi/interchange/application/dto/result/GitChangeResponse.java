@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.dto.result;
 
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Объект отчёта об изменениях.
@@ -9,7 +10,7 @@ import java.util.List;
  * @param type   тип ArchiMate без префикса; у папок и модели {@code null}
  * @param fields изменённые поля
  */
-public record GitChangeResponse(String kind, String change, String archiId, String type, String name,
+public record GitChangeResponse(String kind, String change, String archiId, @Nullable String type, String name,
                                 List<String> fields) {
 
     public GitChangeResponse {

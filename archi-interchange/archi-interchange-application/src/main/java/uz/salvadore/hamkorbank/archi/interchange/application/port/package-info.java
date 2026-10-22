@@ -4,4 +4,7 @@
  * транзакция, и две разные абстракции одной транзакции
  * разошлись бы.
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.interchange.application.port;
+
+import org.jspecify.annotations.NullMarked;

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.ExportLoss;
 import uz.salvadore.hamkorbank.archi.interchange.application.exporting.RasterGate;
@@ -91,7 +92,8 @@ final class ViewImages {
      * Неизвестный формат — {@code IXC_UNKNOWN_FORMAT}; плотность и фон вне списка —
      * {@code IXC_INVALID_EXPORT_OPTION}.
      */
-    static Settings settings(String formatName, Integer scale, Boolean outline, String background) {
+    static Settings settings(@Nullable String formatName, @Nullable Integer scale, @Nullable Boolean outline,
+                             @Nullable String background) {
         String name = Objects.requireNonNullElse(formatName, FORMAT_SVG);
         ExportFormat format = Optional.ofNullable(FORMATS.get(name))
                 .orElseThrow(() -> new InterchangeException(InterchangeCodes.UNKNOWN_FORMAT, Failure.UNPROCESSABLE,

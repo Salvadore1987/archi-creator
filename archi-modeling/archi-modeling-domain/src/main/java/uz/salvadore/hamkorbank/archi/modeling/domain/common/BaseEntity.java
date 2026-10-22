@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.common;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Сущность: тождество — идентификатор, а не значения полей. Две сущности равны,
@@ -23,7 +24,7 @@ public abstract class BaseEntity<T> {
     }
 
     @Override
-    public boolean equals(Object other) {
+    public boolean equals(@Nullable Object other) {
         return other != null && other.getClass() == getClass() && id.equals(((BaseEntity<?>) other).id);
     }
 

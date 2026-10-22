@@ -7,6 +7,7 @@ import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.BaseId;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Message;
@@ -47,7 +48,7 @@ public final class IdempotentCommand {
      * @param existing запись по ключу; {@code null} — ключ ещё не исполнялся
      * @throws ModelingDomainException ключ уже использован с другим отпечатком тела
      */
-    public static Decision decide(IdempotencyRecord existing, String fingerprint) {
+    public static Decision decide(@Nullable IdempotencyRecord existing, String fingerprint) {
         if (existing == null) {
             return new Execute();
         }
@@ -70,7 +71,7 @@ public final class IdempotentCommand {
      *
      * @throws IllegalArgumentException поле — составное значение; это ошибка вызывающего кода
      */
-    public static String fingerprint(Object... fields) {
+    public static String fingerprint(@Nullable Object... fields) {
         StringBuilder canonical = new StringBuilder();
         for (Object field : fields) {
             Object present = field instanceof Optional<?> o ? o.orElse(null) : field;

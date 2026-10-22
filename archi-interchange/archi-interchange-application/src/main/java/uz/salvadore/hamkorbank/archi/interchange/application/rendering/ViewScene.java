@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Notation.Size;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Bendpoint;
 import uz.salvadore.hamkorbank.archi.interchange.application.rendering.Routing.Rect;
@@ -42,8 +43,8 @@ final class ViewScene {
      *
      * @param rejected имена атрибутов цвета, значения которых правило не приняло
      */
-    record Style(String fillColor, String font, String fontColor, String lineColor, Integer textAlignment,
-                 List<String> rejected) {
+    record Style(@Nullable String fillColor, @Nullable String font, @Nullable String fontColor,
+                 @Nullable String lineColor, @Nullable Integer textAlignment, List<String> rejected) {
 
         Style {
             rejected = List.copyOf(rejected);
@@ -58,7 +59,7 @@ final class ViewScene {
                     nonBlank(node, "textAlignment").flatMap(ViewScene::integer).orElse(null), rejected);
         }
 
-        private static String color(DocumentNode node, String name, List<String> rejected) {
+        private static @Nullable String color(DocumentNode node, String name, List<String> rejected) {
             String value = nonBlank(node, name).orElse(null);
             if (value == null || ModelRowRules.color(value)) {
                 return value;
@@ -81,8 +82,8 @@ final class ViewScene {
      * @param accessType вид доступа связи; {@code null} — атрибута нет
      * @param label      имя связи; {@code null} — пустое или нет
      */
-    record Edge(String archiId, String archiType, AccessType accessType, boolean directed,
-                String label, String sourceId, String targetId, List<Bendpoint> bendpoints, Style style,
+    record Edge(String archiId, String archiType, @Nullable AccessType accessType, boolean directed,
+                @Nullable String label, String sourceId, String targetId, List<Bendpoint> bendpoints, Style style,
                 int position, int index) {
     }
 

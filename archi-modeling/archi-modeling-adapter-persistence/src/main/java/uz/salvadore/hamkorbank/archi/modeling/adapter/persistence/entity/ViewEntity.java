@@ -12,6 +12,7 @@ import jakarta.persistence.Version;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /** Строка представления: место в дереве папок, точка зрения и остаток XML. */
 @Entity
@@ -38,16 +39,16 @@ public class ViewEntity {
     public String name;
 
     @Column(name = "documentation")
-    public String documentation;
+    public @Nullable String documentation;
 
     @Column(name = "viewpoint")
-    public String viewpoint;
+    public @Nullable String viewpoint;
 
     @Column(name = "sort_order", nullable = false)
     public long sortOrder;
 
     @Column(name = "raw_xml")
-    public String rawXml;
+    public @Nullable String rawXml;
 
     @Version
     @Column(name = "version")

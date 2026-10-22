@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.EditorIdentity;
 import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
@@ -63,7 +64,7 @@ public final class ModelLock extends AggregateRoot<ModelId> {
      * Захват. Чужая действующая блокировка — {@code 409} с её владельцем; своя —
      * продление; просроченная — захват с событием о её истечении. {@code null} — блокировки нет.
      */
-    public static Acquisition acquire(ModelId modelId, ModelLock current, EditorIdentity by, Instant now,
+    public static Acquisition acquire(ModelId modelId, @Nullable ModelLock current, EditorIdentity by, Instant now,
                                       Duration ttl) {
         ModelLockReleasedEvent expired = null;
         if (current != null) {
@@ -103,7 +104,7 @@ public final class ModelLock extends AggregateRoot<ModelId> {
      * Запись требует действующей блокировки автора команды. Иначе — {@code 409}:
      * клиент показывает владельца и предлагает read-only. {@code null} — блокировки нет.
      */
-    public static void requireWriteAccess(ModelId modelId, ModelLock lock, String subject, Instant now) {
+    public static void requireWriteAccess(ModelId modelId, @Nullable ModelLock lock, String subject, Instant now) {
         if (lock == null) {
             throw new ModelingDomainException(INVARIANT, Failure.CONFLICT,
                     Message.of(ModelingMessages.LOCK_NOT_HELD, modelId));
@@ -129,7 +130,7 @@ public final class ModelLock extends AggregateRoot<ModelId> {
      *
      * @param expiredPrevious событие об истечении прежней; {@code null} — просроченной не было
      */
-    public record Acquisition(ModelLock lock, ModelLockReleasedEvent expiredPrevious) {
+    public record Acquisition(ModelLock lock, @Nullable ModelLockReleasedEvent expiredPrevious) {
     }
 
     /** Заблокированная модель. */

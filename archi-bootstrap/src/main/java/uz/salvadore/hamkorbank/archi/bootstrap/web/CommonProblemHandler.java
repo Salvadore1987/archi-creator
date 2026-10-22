@@ -5,7 +5,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
@@ -128,7 +130,8 @@ public class CommonProblemHandler {
      * истёкший срок потока — не переписывается: тело уже уходит.
      */
     @ExceptionHandler(Exception.class)
-    ResponseEntity<ProblemDetail> unexpected(Exception e, HttpServletRequest request, HttpServletResponse response) {
+    @Nullable ResponseEntity<ProblemDetail> unexpected(Exception e, HttpServletRequest request,
+                                                      HttpServletResponse response) {
         if (response.isCommitted()) {
             LOG.info("failure after response started: {} {}", request.getMethod(), request.getRequestURI(), e);
             return null;
@@ -206,6 +209,6 @@ public class CommonProblemHandler {
     }
 
     private String text(String key, Object... args) {
-        return messages.getMessage(key, args, key, LocaleContextHolder.getLocale());
+        return Objects.requireNonNullElse(messages.getMessage(key, args, key, LocaleContextHolder.getLocale()), key);
     }
 }

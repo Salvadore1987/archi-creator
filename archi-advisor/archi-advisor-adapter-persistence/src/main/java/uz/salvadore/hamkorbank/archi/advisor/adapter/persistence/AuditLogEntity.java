@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /** Запись аудита обращения — неизменяема после вставки. */
 @Entity
@@ -20,10 +21,10 @@ public class AuditLogEntity {
     public UUID workspaceId;
 
     @Column(name = "model_id", updatable = false)
-    public UUID modelId;
+    public @Nullable UUID modelId;
 
     @Column(name = "session_id", updatable = false)
-    public UUID sessionId;
+    public @Nullable UUID sessionId;
 
     @Column(name = "user_subject", nullable = false, updatable = false)
     public String userSubject;
@@ -35,7 +36,7 @@ public class AuditLogEntity {
     public String outcome;
 
     @Column(name = "rejection_reason", updatable = false)
-    public String rejectionReason;
+    public @Nullable String rejectionReason;
 
     @Column(name = "prompt_tokens", nullable = false, updatable = false)
     public int promptTokens;

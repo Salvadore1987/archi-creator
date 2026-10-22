@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.util.Locale;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
@@ -88,7 +89,7 @@ public class InterchangeProblemHandler {
         };
     }
 
-    static ProblemDetail problem(HttpStatus status, String code, String detail, Map<String, Object> details,
+    static ProblemDetail problem(HttpStatus status, String code, @Nullable String detail, Map<String, Object> details,
                                  HttpServletRequest request, TextCatalog text) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setType(URI.create(TYPE_BASE + code.toLowerCase(Locale.ROOT).replace('_', '-')));

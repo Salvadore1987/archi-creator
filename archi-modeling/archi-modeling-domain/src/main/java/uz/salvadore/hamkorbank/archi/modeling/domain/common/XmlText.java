@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.domain.common;
 
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Текст, который модель может записать в файл Archi: только символы XML 1.0 — табуляция,
@@ -17,7 +18,7 @@ public final class XmlText {
     }
 
     /** Состоит ли строка только из символов XML 1.0; {@code null} — допустимо. */
-    public static boolean valid(String value) {
+    public static boolean valid(@Nullable String value) {
         if (value == null) {
             return true;
         }
@@ -36,7 +37,7 @@ public final class XmlText {
     }
 
     /** Строка без символов вне XML 1.0; {@code what} называет поле в отказе. */
-    public static String require(String value, Message what) {
+    public static @Nullable String require(@Nullable String value, Message what) {
         if (!valid(value)) {
             throw ModelingDomainException.invalid(Message.of(ModelingMessages.TEXT_NOT_XML, what));
         }
@@ -44,7 +45,7 @@ public final class XmlText {
     }
 
     /** Свойства — ключи и значения без символов вне XML 1.0; {@code null} — допустимо. */
-    public static List<PropertyEntry> require(List<PropertyEntry> properties) {
+    public static @Nullable List<PropertyEntry> require(@Nullable List<PropertyEntry> properties) {
         if (properties != null) {
             for (PropertyEntry property : properties) {
                 require(property.key(), Message.of(ModelingMessages.FIELD_PROPERTY_KEY));

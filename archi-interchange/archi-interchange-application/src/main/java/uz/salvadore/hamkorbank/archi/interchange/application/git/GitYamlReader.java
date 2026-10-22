@@ -65,6 +65,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.IntFunction;
+import org.jspecify.annotations.Nullable;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -225,7 +226,7 @@ public final class GitYamlReader {
          * Записи корня или папки без идентификатора: позиция и одно из четырёх значений.
          * {@code parentId} — папка, {@code null} — корень модели.
          */
-        private void items(Fields owner, String container, String parentId) {
+        private void items(Fields owner, String container, @Nullable String parentId) {
             Map<Kind, Integer> ordinals = new EnumMap<>(Kind.class);
             for (Map<String, Object> raw : owner.maps(K_ITEMS)) {
                 Fields item = new Fields(owner.file, raw);
@@ -260,7 +261,7 @@ public final class GitYamlReader {
                         }
                     };
                 }
-                if (kind == null) {
+                if (kind == null || build == null) {
                     throw new InvalidValueException(InterchangeMessages.GIT_FIELD_MISSING, owner.file, K_ITEMS);
                 }
                 item.done();
@@ -641,7 +642,7 @@ public final class GitYamlReader {
             if (order.size() != all.size() || !all.keySet().containsAll(order)) {
                 throw invalid(K_ATTRIBUTE_ORDER);
             }
-            return new Attributes(order.stream().map(n -> new Attribute(n, all.get(n))).toList());
+            return new Attributes(order.stream().map(n -> new Attribute(n, all.getOrDefault(n, ""))).toList());
         }
 
         void done() {

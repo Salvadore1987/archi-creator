@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.residue;
 
 import java.util.List;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.XmlText;
@@ -33,7 +34,7 @@ public sealed interface ResidueItem permits ResidueItem.Slot, ResidueItem.Value,
      *
      * @param text текст элемента; {@code null} — элемент без текста
      */
-    record Value(long order, String tag, List<ResidueAttribute> attributes, String text)
+    record Value(long order, String tag, List<ResidueAttribute> attributes, @Nullable String text)
             implements ResidueItem {
 
         public Value {

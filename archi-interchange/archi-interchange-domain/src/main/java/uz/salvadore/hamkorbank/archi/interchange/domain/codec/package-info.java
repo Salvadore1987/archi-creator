@@ -10,4 +10,7 @@
  * <p>Главный инвариант — lossless round-trip: документ переживает запись и чтение
  * без изменений.
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.interchange.domain.codec;
+
+import org.jspecify.annotations.NullMarked;

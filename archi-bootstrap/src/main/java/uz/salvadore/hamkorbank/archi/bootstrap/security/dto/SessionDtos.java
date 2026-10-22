@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.bootstrap.security.dto;
 
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 /** Ответы о сессии браузера: кто вошёл и куда идти за токеном. */
 public final class SessionDtos {
@@ -13,7 +14,7 @@ public final class SessionDtos {
     }
 
     /** Без поля {@code oidc} — входа нет, запросы идут без токена. */
-    public record UiConfig(OidcConfig oidc) {
+    public record UiConfig(@Nullable OidcConfig oidc) {
     }
 
     /** Куда вести браузер на вход: адрес провайдера OIDC и идентификатор клиента SPA. */

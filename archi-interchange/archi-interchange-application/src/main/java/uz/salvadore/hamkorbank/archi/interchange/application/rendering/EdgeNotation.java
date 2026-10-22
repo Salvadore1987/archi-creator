@@ -1,12 +1,13 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.rendering;
 
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.modeling.domain.model.AccessType;
 
 /**
  * Оформление связи — семантика нотации, а не стиль: пунктир и наконечники по типу,
  * как на канве. {@code null} — пунктира или наконечника нет.
  */
-record EdgeNotation(String dash, Marker start, Marker end) {
+record EdgeNotation(@Nullable String dash, @Nullable Marker start, @Nullable Marker end) {
 
     private static final EdgeNotation PLAIN = new EdgeNotation(null, null, null);
 
@@ -44,7 +45,7 @@ record EdgeNotation(String dash, Marker start, Marker end) {
     }
 
     /** Оформление по типу связи; {@code accessType} — {@code null}, когда атрибута нет. */
-    static EdgeNotation of(String archiType, AccessType accessType, boolean directed) {
+    static EdgeNotation of(String archiType, @Nullable AccessType accessType, boolean directed) {
         return switch (archiType) {
             case "archimate:CompositionRelationship" -> start(Marker.DIAMOND_FILLED);
             case "archimate:AggregationRelationship" -> start(Marker.DIAMOND_OPEN);
@@ -71,7 +72,7 @@ record EdgeNotation(String dash, Marker start, Marker end) {
         return both(null, marker, null);
     }
 
-    private static EdgeNotation both(String dash, Marker start, Marker end) {
+    private static EdgeNotation both(@Nullable String dash, @Nullable Marker start, @Nullable Marker end) {
         return new EdgeNotation(dash, start, end);
     }
 }

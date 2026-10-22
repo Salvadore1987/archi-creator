@@ -1,5 +1,7 @@
 package uz.salvadore.hamkorbank.archi.modeling.application.dto.result;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Находка проверки модели с текстом на языке запроса.
  *
@@ -7,5 +9,5 @@ package uz.salvadore.hamkorbank.archi.modeling.application.dto.result;
  * @param suggestion подсказка; {@code null} — нет
  */
 public record ValidationFindingResponse(String severity, String code, String message, String targetKind,
-                                        String targetId, String suggestion) {
+                                        String targetId, @Nullable String suggestion) {
 }
