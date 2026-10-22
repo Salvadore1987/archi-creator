@@ -108,7 +108,7 @@ management:
       exposure:
         # Список закрытый: всё остальное наружу
         # не выставляется даже в dev.
-        include: health,info,metrics,prometheus
+        include: health,info,metrics,prometheus,sbom
   endpoint:
     health:
       probes:

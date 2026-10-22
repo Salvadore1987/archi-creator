@@ -288,6 +288,28 @@
                     </execution>
                 </executions>
             </plugin>
+            <!--
+                Состав зависимостей приложения (SBOM, CycloneDX) — в jar, откуда его отдаёт
+                /actuator/sbom: по нему видно, задевает ли запущенный образ новая уязвимость.
+            -->
+            <plugin>
+                <groupId>org.cyclonedx</groupId>
+                <artifactId>cyclonedx-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>sbom</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>makeBom</goal>
+                        </goals>
+                        <configuration>
+                            <outputFormat>json</outputFormat>
+                            <outputName>application.cdx</outputName>
+                            <outputDirectory>${project.build.outputDirectory}/META-INF/sbom</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
