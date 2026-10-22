@@ -30,6 +30,10 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <spring-boot.version>4.1.1</spring-boot.version>
+        <!-- Поверх BOM Spring Boot, см. dependencyManagement. -->
+        <jackson.version>3.1.8</jackson.version>
+        <jackson-2.version>2.21.8</jackson-2.version>
+        <tomcat.version>11.0.27</tomcat.version>
 
         <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.6.0</maven-surefire-plugin.version>
@@ -67,6 +71,42 @@
 
     <dependencyManagement>
         <dependencies>
+            <!--
+                Версии с исправлениями уязвимостей поверх BOM Spring Boot: в нём Tomcat
+                и Jackson с CVE уровня HIGH и CRITICAL, а выпуска Boot новее нет. Импорт,
+                объявленный раньше, сильнее импорта BOM, явная версия — сильнее обоих.
+                Выйдет Boot с этими версиями или новее — блок удаляется; держит шаг
+                Trivy в CI.
+            -->
+            <dependency>
+                <groupId>tools.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson-2.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-core</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-el</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-websocket</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
             <!--
                 Импорт BOM фиксирует версии, но не добавляет ничего на classpath:
                 доменные модули остаются чистыми, версии Spring, Flyway, драйвера

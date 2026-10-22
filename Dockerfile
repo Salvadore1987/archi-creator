@@ -9,7 +9,10 @@
 FROM eclipse-temurin:25-jre
 
 # Приложение не пишет в файловую систему и root'ом быть не обязано.
-RUN groupadd --system archi && useradd --system --gid archi --home /app archi
+# pebble — менеджер служб Canonical из базового образа, вне пакетов dpkg: приложению
+# он не нужен, а его Go-библиотеки отстают от исправлений уязвимостей.
+RUN groupadd --system archi && useradd --system --gid archi --home /app archi \
+    && rm -rf /usr/bin/pebble /var/lib/pebble
 
 WORKDIR /app
 COPY --chown=archi:archi archi-bootstrap/target/archi-creator-*.jar /app/archi-creator.jar
