@@ -19,7 +19,7 @@ public final class ActiveSessions {
         synchronized (this) {
             previous = active.put(subject, stream);
         }
-        if (previous != null && previous != stream) {
+        if (previous != null && previous != stream) { // NOPMD - тот же объект потока, а не равный ему
             previous.cancel();
         }
     }

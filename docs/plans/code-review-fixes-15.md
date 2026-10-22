@@ -22,7 +22,7 @@
 | 3 | Адаптеры modeling — только порт, DTO и `ModelRowRules`; устаревшее исключение и `allowEmptyShould` убраны | 15-04 | `ApplicationLayerTest` | ✅ |
 | 4 | Литералы типов объектов представления — во всех модулях | 15-10 | `DocumentKindRuleTest` | ✅ |
 | 5 | Скобки, отступ, пробелы, LF, пробел в конце строки | 15-05 | Checkstyle | ✅ |
-| 6 | Ресурсы — `try-with-resources`, объекты — `equals` | 15-07 | PMD `CloseResource`, `CompareObjectsWithEquals` | ⬜ |
+| 6 | Ресурсы — `try-with-resources`, объекты — `equals` | 15-07 | PMD `CloseResource`, `CompareObjectsWithEquals` | ✅ |
 | 7 | Обработчик контроллера — один метод входного порта | 15-08 | `RestLayerConventionsTest` | ⬜ |
 | 8 | Имя класса не повторяет класс JDK | 15-09 | `CodingRulesTest` | ⬜ |
 | 9 | Датчик бюджета — после коммита | 15-11 | `AdvisorAdminHandlersTest` | ⬜ |

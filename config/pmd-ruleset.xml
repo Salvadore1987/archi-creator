@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <!--
-    Правила PMD, которые держит сборка: сложность метода, пустой и общий catch, var, вывод в консоль.
+    Правила PMD, которые держит сборка: сложность метода, пустой и общий catch, var, вывод в консоль,
+    закрытие ресурсов и сравнение объектов.
     Основной код и тесты всех модулей.
 -->
 <ruleset name="archi-creator"
@@ -36,4 +37,8 @@
 
     <rule ref="category/java/bestpractices.xml/SystemPrintln"/>
     <rule ref="category/java/bestpractices.xml/AvoidPrintStackTrace"/>
+    <!-- Ресурс закрывается try-with-resources: ручное закрытие пропускают отказ и ранний выход. -->
+    <rule ref="category/java/errorprone.xml/CloseResource"/>
+    <!-- Объекты сравниваются equals; сравнение ссылок — намеренное, с NOPMD и причиной. -->
+    <rule ref="category/java/errorprone.xml/CompareObjectsWithEquals"/>
 </ruleset>
