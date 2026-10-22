@@ -40,3 +40,4 @@
 | 12. Bootstrap: проводка, конфигурация, безопасность | [`12-bootstrap-security.md`](12-bootstrap-security.md) | 12 |
 | 13. Bootstrap: интеграции и мосты | [`13-bootstrap-integracii.md`](13-bootstrap-integracii.md) | 7 |
 | 14. Логирование и наблюдаемость | [`14-logirovanie-nablyudaemost.md`](14-logirovanie-nablyudaemost.md) | 12 |
+| 15. Архитектурные проверки в сборке | [`15-arkhitekturnye-proverki.md`](15-arkhitekturnye-proverki.md) | 11 |
