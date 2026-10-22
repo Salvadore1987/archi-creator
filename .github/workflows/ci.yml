@@ -243,6 +243,17 @@ jobs:
       - name: docker build
         run: docker build -t archi-creator:${{ github.sha }} .
 
+      # Уязвимости и секреты образа: пакеты ОС базового образа и библиотеки внутри jar.
+      # Отказ — на HIGH и CRITICAL, у которых есть исправленная версия: без неё
+      # конвейер стоял бы, и сделать было бы нечего. Образ сканера — по дайджесту.
+      - name: Уязвимости и секреты образа (Trivy)
+        run: >-
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
+          aquasec/trivy:0.69.3@sha256:bcc376de8d77cfe086a917230e818dc9f8528e3c852f7b1aff648949b6258d1c
+          image --no-progress --scanners vuln,secret
+          --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+          archi-creator:${{ github.sha }}
+
       # Проверяется не «собрался», а «поднимается»: образ с базой должен
       # дойти до UP. Это тот же критерий, что у ручного запуска состава, только без
       # Keycloak: вход сервера проверяют KeycloakIT и SessionIT, а сценарии
