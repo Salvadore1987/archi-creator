@@ -1,6 +1,6 @@
 ---
-version: 1.8
-last_modified: 2026-10-21
+version: 1.9
+last_modified: 2026-10-22
 ---
 
 # ───────────────────────────────────────────────────────────────────
@@ -445,3 +445,18 @@ decisions:
       sections: ['§4.13.2', '§6.11']
     note: |
       Роль проверяет ядро контекста по перечню операций, совпадающему с таблицей authorization спецификации; в application-слоях Spring нет. Цепочка безопасности отвечает только на «вошёл ли». Найдено на этапе 12 ревью кода (D-21).
+
+  - id: ADR-0032
+    title: Идентификатор модели в тегах метрик
+    status: accepted
+    date: 2026-10-22
+    kind: architecture
+    adr_file: 0032-model-id-metric-tags.md
+    affects: [modeling, interchange, advisor]
+    requirements: []
+    implemented: 2026-10-22
+    deviates_from:
+      standard: java-spring-code-guidelines-v2@97bce16
+      sections: ['§4.5.3']
+    note: |
+      Тег model_id — только у метрик, объявленных спецификацией «по модели»: моделей десятки, ряд на модель отвечает, какая растёт и где ждут блокировку. Найдено на этапе 14 ревью кода (D-22).
