@@ -32,6 +32,12 @@ public abstract class IntegrationTest {
     protected static final EditorIdentity VIEWER = EditorIdentity.of("viewer-it", Role.VIEWER);
     protected static final EditorIdentity ADMIN = new EditorIdentity("admin-it", Set.of(Role.ADMIN), Set.of());
 
+    @Autowired
+    protected JdbcTemplate jdbc;
+
+    @Autowired
+    protected WorkspaceApplicationService workspaces;
+
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", Containers.POSTGRES::getJdbcUrl);
@@ -43,12 +49,6 @@ public abstract class IntegrationTest {
         registry.add("archi.ui.oidc.authority", () -> "http://localhost:1/realms/archi");
         registry.add("archi.git.allow-local-repositories", () -> "true");
     }
-
-    @Autowired
-    protected JdbcTemplate jdbc;
-
-    @Autowired
-    protected WorkspaceApplicationService workspaces;
 
     protected WorkspaceId workspace() {
         return WorkspaceId.of(workspaces.listWorkspaces().getFirst().id());

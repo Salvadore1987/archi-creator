@@ -106,7 +106,7 @@ public final class ModelRowsMapper {
                 content.views().stream().map(ModelRowsMapper::view).toList());
     }
 
-    // ── Строки → агрегаты ───────────────────────────────────────────
+    // ── Строки ↔ агрегаты: перегрузки двух направлений рядом ─────────
 
     private static ModelHeader header(ModelRows.Header row, Identity identity) {
         String version = row.archiVersion() != null && ModelHeader.validArchiVersion(row.archiVersion())
@@ -116,11 +116,23 @@ public final class ModelRowsMapper {
                 identity.createdBy(), identity.createdAt(), identity.updatedAt(), identity.version());
     }
 
+    private static ModelRows.Header header(ModelHeader header) {
+        return new ModelRows.Header(header.archiId().value(), header.name(), header.documentation(),
+                header.archiVersion(), propertyRows(header.properties()), rawXml(header.rawXml()));
+    }
+
     private static ModelFolder folder(ModelRows.Folder row) {
         return new ModelFolder(FolderId.of(row.id()), row.parentId() == null ? null : FolderId.of(row.parentId()),
                 ArchiId.of(row.archiId()), row.name(),
                 row.type() == null ? null : FolderType.fromFileValue(row.type()).orElse(null),
                 SortOrder.of(row.sortOrder()), rawXml(row.rawXml()));
+    }
+
+    private static ModelRows.Folder folder(ModelFolder folder) {
+        return new ModelRows.Folder(folder.id().value(), folder.parentId() == null ? null : folder.parentId().value(),
+                folder.archiId().value(), folder.name(),
+                folder.folderType() == null ? null : folder.folderType().fileValue(), folder.sortOrder().value(),
+                rawXml(folder.rawXml()));
     }
 
     private static Element element(ModelRows.Element row) {
@@ -133,6 +145,12 @@ public final class ModelRowsMapper {
                 supported, rawXml(row.rawXml()));
     }
 
+    private static ModelRows.Element element(Element element) {
+        return new ModelRows.Element(element.id().value(), element.folderId().value(), element.archiId().value(),
+                element.archiType().value(), element.name(), element.documentation(),
+                propertyRows(element.properties()), element.sortOrder().value(), rawXml(element.rawXml()));
+    }
+
     private static Relationship relationship(ModelRows.Relationship row, Set<UUID> relationshipIds) {
         ArchiType type = ArchiType.of(row.archiType());
         AccessType accessType = row.accessType() == null ? null : AccessType.fromFileValue(row.accessType())
@@ -142,6 +160,15 @@ public final class ModelRowsMapper {
                 row.documentation(), accessType, row.directed(), entries(row.properties()),
                 SortOrder.of(row.sortOrder()), RelationshipType.fromArchiType(type).isPresent(),
                 rawXml(row.rawXml()));
+    }
+
+    private static ModelRows.Relationship relationship(Relationship relationship) {
+        return new ModelRows.Relationship(relationship.id().value(), relationship.folderId().value(),
+                relationship.archiId().value(), relationship.archiType().value(), relationship.source().value(),
+                relationship.target().value(), relationship.name(), relationship.documentation(),
+                relationship.accessType() == null ? null : String.valueOf(relationship.accessType().fileValue()),
+                relationship.directed(), propertyRows(relationship.properties()), relationship.sortOrder().value(),
+                rawXml(relationship.rawXml()));
     }
 
     private static ConceptRef concept(UUID id, Set<UUID> relationshipIds) {
@@ -164,6 +191,15 @@ public final class ModelRowsMapper {
                 row.label(), row.content(), SortOrder.of(row.sortOrder()), rawXml(row.rawXml()));
     }
 
+    private static ModelRows.Node node(ViewNode node) {
+        Bounds bounds = node.bounds();
+        return new ModelRows.Node(node.id().value(), node.parentId() == null ? null : node.parentId().value(),
+                node.archiId().value(), node.archiType().value(),
+                node.elementId() == null ? null : node.elementId().value(),
+                new ModelRows.Box(bounds.x(), bounds.y(), bounds.width(), bounds.height()), style(node.style()),
+                node.label(), node.content(), node.sortOrder().value(), rawXml(node.rawXml()));
+    }
+
     private static ViewEdge edge(ModelRows.Edge row, Set<UUID> edgeIds) {
         return new ViewEdge(ViewEdgeId.of(row.id()), ArchiId.of(row.archiId()), DiagramType.of(row.archiType()),
                 row.relationshipId() == null ? null : RelationshipId.of(row.relationshipId()),
@@ -171,6 +207,15 @@ public final class ModelRowsMapper {
                 row.bendpoints().stream().map(b -> new Bendpoint(b.startX(), b.startY(), b.endX(), b.endY()))
                         .toList(),
                 style(row.style()), SortOrder.of(row.sortOrder()), rawXml(row.rawXml()));
+    }
+
+    private static ModelRows.Edge edge(ViewEdge edge) {
+        return new ModelRows.Edge(edge.id().value(), edge.archiId().value(), edge.archiType().value(),
+                edge.relationshipId() == null ? null : edge.relationshipId().value(), edge.source().value(),
+                edge.target().value(),
+                edge.bendpoints().stream().map(b -> new BendpointValue(b.startX(), b.startY(), b.endX(), b.endY()))
+                        .toList(),
+                style(edge.style()), edge.sortOrder().value(), rawXml(edge.rawXml()));
     }
 
     private static ViewEndpoint endpoint(UUID id, Set<UUID> edgeIds) {
@@ -183,6 +228,11 @@ public final class ModelRowsMapper {
                         style.textAlignment());
     }
 
+    private static StyleValue style(StyleOverride style) {
+        return new StyleValue(style.fillColor(), style.font(), style.fontColor(), style.lineColor(),
+                style.textAlignment());
+    }
+
     private static List<PropertyEntry> entries(List<ModelRows.Property> rows) {
         return rows.stream().map(p -> new PropertyEntry(p.key(), p.value(), SortOrder.of(p.sortOrder()))).toList();
     }
@@ -191,33 +241,8 @@ public final class ModelRowsMapper {
         return value == null ? null : new RawXml(value);
     }
 
-    // ── Агрегаты → строки ───────────────────────────────────────────
-
-    private static ModelRows.Header header(ModelHeader header) {
-        return new ModelRows.Header(header.archiId().value(), header.name(), header.documentation(),
-                header.archiVersion(), propertyRows(header.properties()), rawXml(header.rawXml()));
-    }
-
-    private static ModelRows.Folder folder(ModelFolder folder) {
-        return new ModelRows.Folder(folder.id().value(), folder.parentId() == null ? null : folder.parentId().value(),
-                folder.archiId().value(), folder.name(),
-                folder.folderType() == null ? null : folder.folderType().fileValue(), folder.sortOrder().value(),
-                rawXml(folder.rawXml()));
-    }
-
-    private static ModelRows.Element element(Element element) {
-        return new ModelRows.Element(element.id().value(), element.folderId().value(), element.archiId().value(),
-                element.archiType().value(), element.name(), element.documentation(),
-                propertyRows(element.properties()), element.sortOrder().value(), rawXml(element.rawXml()));
-    }
-
-    private static ModelRows.Relationship relationship(Relationship relationship) {
-        return new ModelRows.Relationship(relationship.id().value(), relationship.folderId().value(),
-                relationship.archiId().value(), relationship.archiType().value(), relationship.source().value(),
-                relationship.target().value(), relationship.name(), relationship.documentation(),
-                relationship.accessType() == null ? null : String.valueOf(relationship.accessType().fileValue()),
-                relationship.directed(), propertyRows(relationship.properties()), relationship.sortOrder().value(),
-                rawXml(relationship.rawXml()));
+    private static String rawXml(RawXml raw) {
+        return raw == null ? null : raw.value();
     }
 
     private static ModelRows.View view(View view) {
@@ -229,35 +254,8 @@ public final class ModelRowsMapper {
                 view.edges().values().stream().map(ModelRowsMapper::edge).toList());
     }
 
-    private static ModelRows.Node node(ViewNode node) {
-        Bounds bounds = node.bounds();
-        return new ModelRows.Node(node.id().value(), node.parentId() == null ? null : node.parentId().value(),
-                node.archiId().value(), node.archiType().value(),
-                node.elementId() == null ? null : node.elementId().value(),
-                new ModelRows.Box(bounds.x(), bounds.y(), bounds.width(), bounds.height()), style(node.style()),
-                node.label(), node.content(), node.sortOrder().value(), rawXml(node.rawXml()));
-    }
-
-    private static ModelRows.Edge edge(ViewEdge edge) {
-        return new ModelRows.Edge(edge.id().value(), edge.archiId().value(), edge.archiType().value(),
-                edge.relationshipId() == null ? null : edge.relationshipId().value(), edge.source().value(),
-                edge.target().value(),
-                edge.bendpoints().stream().map(b -> new BendpointValue(b.startX(), b.startY(), b.endX(), b.endY()))
-                        .toList(),
-                style(edge.style()), edge.sortOrder().value(), rawXml(edge.rawXml()));
-    }
-
-    private static StyleValue style(StyleOverride style) {
-        return new StyleValue(style.fillColor(), style.font(), style.fontColor(), style.lineColor(),
-                style.textAlignment());
-    }
-
     private static List<ModelRows.Property> propertyRows(List<PropertyEntry> properties) {
         return properties.stream().map(p -> new ModelRows.Property(p.key(), p.value(), p.sortOrder().value()))
                 .toList();
-    }
-
-    private static String rawXml(RawXml raw) {
-        return raw == null ? null : raw.value();
     }
 }

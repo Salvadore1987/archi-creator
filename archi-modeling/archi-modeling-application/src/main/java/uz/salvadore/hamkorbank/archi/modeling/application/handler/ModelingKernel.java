@@ -188,10 +188,6 @@ public final class ModelingKernel {
         events.publish(model.pullEvents());
     }
 
-    private ArchiId newArchiId(ArchitectureModel model) {
-        return archiIds.nextUnique(model::archiIdTaken);
-    }
-
     /** Ключ нового объекта: заданный клиентом — если свободен, иначе следующий UUIDv7. */
     UUID newId(RequestedIds requested) {
         UUID id = requested.id();
@@ -218,6 +214,10 @@ public final class ModelingKernel {
         return requested.archiId() != null
                 ? requireFree(model, view, requested.archiId())
                 : archiIds.nextUnique(id -> model.archiIdTaken(id) || view.archiIdTaken(id));
+    }
+
+    private ArchiId newArchiId(ArchitectureModel model) {
+        return archiIds.nextUnique(model::archiIdTaken);
     }
 
     /** Заданный клиентом {@code archiId}, свободный в модели и — если {@code view} задано — на представлении. */

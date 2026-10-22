@@ -36,6 +36,9 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.Failure;
  */
 final class ViewImages {
 
+    /** Предел стороны PNG: 4 000 логических единиц при плотности 4. */
+    static final int MAX_PNG_SIDE = 16_000;
+
     private static final String FORMAT_SVG = "svg";
     private static final String FORMAT_PNG = "png";
     /** Фон цвета бумаги, как на холсте. */
@@ -45,8 +48,6 @@ final class ViewImages {
             FORMAT_PNG, ExportFormat.PNG);
     private static final Set<Integer> SCALES = Set.of(1, 2, 4);
     private static final List<Integer> SCALES_DESCENDING = List.of(4, 2, 1);
-    /** Предел стороны PNG: 4 000 логических единиц при плотности 4. */
-    static final int MAX_PNG_SIDE = 16_000;
     private static final long MEGAPIXEL = 1_000_000;
 
     private final InterchangeKernel kernel;

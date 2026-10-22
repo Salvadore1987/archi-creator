@@ -39,26 +39,26 @@ class AdvisorSessionClaimIT extends AdvisorApiTest {
         TransactionTemplate tx = new TransactionTemplate(transactions);
         CountDownLatch claimed = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
-        ExecutorService pool = Executors.newFixedThreadPool(2);
-        try {
-            Future<Boolean> first = pool.submit(() -> tx.execute(status -> {
-                boolean won = sessions.claim(session(workspace, "00000000-0000-7000-8000-0000000000c1"));
-                claimed.countDown();
-                await(release);
-                return won;
-            }));
-            assertThat(claimed.await(10, TimeUnit.SECONDS)).isTrue();
-            Future<Boolean> second = pool.submit(() -> tx.execute(
-                    status -> sessions.claim(session(workspace, "00000000-0000-7000-8000-0000000000c2"))));
-            Thread.sleep(300);
-            assertThat(second.isDone()).as("второе занятие ждёт коммита первого").isFalse();
-            release.countDown();
+        try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
+            try {
+                Future<Boolean> first = pool.submit(() -> tx.execute(status -> {
+                    boolean won = sessions.claim(session(workspace, "00000000-0000-7000-8000-0000000000c1"));
+                    claimed.countDown();
+                    await(release);
+                    return won;
+                }));
+                assertThat(claimed.await(10, TimeUnit.SECONDS)).isTrue();
+                Future<Boolean> second = pool.submit(() -> tx.execute(
+                        status -> sessions.claim(session(workspace, "00000000-0000-7000-8000-0000000000c2"))));
+                Thread.sleep(300);
+                assertThat(second.isDone()).as("второе занятие ждёт коммита первого").isFalse();
+                release.countDown();
 
-            assertThat(first.get(10, TimeUnit.SECONDS)).isTrue();
-            assertThat(second.get(10, TimeUnit.SECONDS)).isFalse();
-        } finally {
-            release.countDown();
-            pool.shutdownNow();
+                assertThat(first.get(10, TimeUnit.SECONDS)).isTrue();
+                assertThat(second.get(10, TimeUnit.SECONDS)).isFalse();
+            } finally {
+                release.countDown();
+            }
         }
         assertThat(jdbc.queryForObject("select count(*) from advisor_session", Long.class)).isEqualTo(1L);
     }

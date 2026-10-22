@@ -66,6 +66,11 @@ class GitImportTest {
     private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
     private static final EditorIdentity ARCHITECT = EditorIdentity.of("architect-git", Role.ARCHITECT);
 
+    private static final String NODE = "<element xsi:type=\"archimate:Node\" name=\"Сервер\" id=\"id-node\"/>";
+    /** Доступ узла к компоненту приложения — матрица ArchiMate его не допускает. */
+    private static final String FORBIDDEN = "<element xsi:type=\"archimate:AccessRelationship\" id=\"id-bad\" "
+            + "source=\"id-node\" target=\"id-app\"/>";
+
     private final WorkspaceId workspace = new WorkspaceId(IDS.generate());
     private final ModelId model = new ModelId(IDS.generate());
     private final MemoryStates modelStates = new MemoryStates(workspace);
@@ -352,11 +357,6 @@ class GitImportTest {
     }
 
     // ── данные ─────────────────────────────────────────────────────────────
-
-    private static final String NODE = "<element xsi:type=\"archimate:Node\" name=\"Сервер\" id=\"id-node\"/>";
-    /** Доступ узла к компоненту приложения — матрица ArchiMate его не допускает. */
-    private static final String FORBIDDEN = "<element xsi:type=\"archimate:AccessRelationship\" id=\"id-bad\" "
-            + "source=\"id-node\" target=\"id-app\"/>";
 
     private static ModelDocument model(String appName, String more) {
         String xml = """

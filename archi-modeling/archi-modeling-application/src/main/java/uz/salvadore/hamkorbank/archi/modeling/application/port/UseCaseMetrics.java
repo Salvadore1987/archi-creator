@@ -12,6 +12,13 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.model.ModelId;
  */
 public interface UseCaseMetrics {
 
+    UseCaseMetrics NONE = new UseCaseMetrics() {
+        @Override
+        public <T> T observe(String useCase, Supplier<T> work) {
+            return work.get();
+        }
+    };
+
     /** Выполняет сценарий, учитывая запрос, исход, длительность и код ошибки. */
     <T> T observe(String useCase, Supplier<T> work);
 
@@ -30,11 +37,4 @@ public interface UseCaseMetrics {
     /** {@code modeling_validation_findings_total}: находки последнего отчёта по уровню. */
     default void validationFindings(ModelId modelId, Map<String, Long> bySeverity) {
     }
-
-    UseCaseMetrics NONE = new UseCaseMetrics() {
-        @Override
-        public <T> T observe(String useCase, Supplier<T> work) {
-            return work.get();
-        }
-    };
 }

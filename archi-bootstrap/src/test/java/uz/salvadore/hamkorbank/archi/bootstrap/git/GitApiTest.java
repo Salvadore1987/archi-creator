@@ -103,7 +103,7 @@ abstract class GitApiTest extends ApiTest {
     protected SortedMap<String, byte[]> tree(RevCommit commit) throws Exception {
         SortedMap<String, byte[]> files = new TreeMap<>();
         try (Git git = Git.open(remote.toFile()); RevWalk walk = new RevWalk(git.getRepository());
-             TreeWalk tree = new TreeWalk(git.getRepository())) {
+                TreeWalk tree = new TreeWalk(git.getRepository())) {
             tree.addTree(walk.parseCommit(commit).getTree());
             tree.setRecursive(true);
             while (tree.next()) {

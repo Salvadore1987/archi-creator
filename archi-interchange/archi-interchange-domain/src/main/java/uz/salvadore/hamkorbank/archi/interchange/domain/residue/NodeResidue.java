@@ -51,6 +51,14 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
         return attributes.stream().filter(a -> a.name().equals(name)).findFirst();
     }
 
+    private static String attribute(XMLStreamReader xml, String name) {
+        String value = xml.getAttributeValue(null, name);
+        if (value == null) {
+            throw new InvalidValueException(InterchangeMessages.RESIDUE_ATTRIBUTE_MISSING, xml.getLocalName(), name);
+        }
+        return value;
+    }
+
     /** Места данного тега по порядку. */
     public List<ResidueItem.Slot> slots(String tag) {
         return items.stream().filter(i -> i instanceof ResidueItem.Slot s && s.tag().equals(tag))
@@ -213,14 +221,6 @@ public record NodeResidue(List<ResidueAttribute> attributes, List<ResidueItem> i
 
     private static long order(XMLStreamReader xml) {
         return Long.parseLong(attribute(xml, "o"));
-    }
-
-    private static String attribute(XMLStreamReader xml, String name) {
-        String value = xml.getAttributeValue(null, name);
-        if (value == null) {
-            throw new InvalidValueException(InterchangeMessages.RESIDUE_ATTRIBUTE_MISSING, xml.getLocalName(), name);
-        }
-        return value;
     }
 
     private static void require(XMLStreamReader xml, String name) {

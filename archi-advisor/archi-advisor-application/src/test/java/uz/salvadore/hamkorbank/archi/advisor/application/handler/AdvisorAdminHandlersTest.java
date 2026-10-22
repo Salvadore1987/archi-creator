@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,16 @@ class AdvisorAdminHandlersTest {
         AdvisorStatusResponse status = fixture.admin().getAdvisorStatus(Fixture.ALICE, new GetAdvisorStatusQuery(null));
         assertEquals("OK", status.budgetStatus());
         assertEquals(110, fixture.budgets.values().iterator().next().consumedTokens());
+    }
+
+    @Test
+    @DisplayName("Датчик бюджета обновляется после коммита: откат не оставит в нём значения, которого нет в базе")
+    void budgetGaugeFollowsCommit() {
+        Fixture fixture = new Fixture();
+
+        fixture.admin().configureAdvisor(ADMIN, new ConfigureAdvisorCommand(null, true, 10_000L));
+
+        assertEquals(List.of(false), fixture.budgetGaugeInTransaction);
     }
 
     @Test

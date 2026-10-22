@@ -199,6 +199,28 @@ class RestLayerConventionsTest {
         rule.check(classes);
     }
 
+    @Test
+    @DisplayName("обработчик контроллера вызывает не больше одного метода входного порта")
+    void handlersCallOneUseCase() {
+        ArchRule rule = methods().that().areDeclaredInClassesThat(CONTROLLER)
+                .should(new ArchCondition<>("вызывать не больше одного метода входного порта") {
+                    @Override
+                    public void check(JavaMethod method, ConditionEvents events) {
+                        List<String> useCases = method.getMethodCallsFromSelf().stream()
+                                .filter(call -> call.getTargetOwner().getPackageName().contains(".application.port.in"))
+                                .map(call -> call.getTarget().getFullName()).distinct().toList();
+                        if (useCases.size() > 1) {
+                            events.add(SimpleConditionEvent.violated(method,
+                                    method.getFullName() + " вызывает " + useCases));
+                        }
+                    }
+                })
+                .because("второй вызов связывает сценарии в контроллере: решение, что звать после первого, "
+                        + "не видит другой вход в тот же сценарий");
+
+        rule.check(classes);
+    }
+
     private static ArchCondition<JavaClass> beDeclaredInside(DescribedPredicate<JavaClass> outer) {
         return new ArchCondition<>("быть объявленным внутри: " + outer.getDescription()) {
             @Override

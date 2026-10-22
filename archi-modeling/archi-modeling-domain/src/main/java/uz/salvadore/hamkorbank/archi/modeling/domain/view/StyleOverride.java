@@ -12,12 +12,12 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
 public record StyleOverride(String fillColor, String font, String fontColor,
                             String lineColor, Integer textAlignment) {
 
-    private static final Pattern COLOR = Pattern.compile("^#[0-9a-fA-F]{6}$");
-    private static final Set<Integer> TEXT_ALIGNMENTS = Set.of(1, 2, 4);
-
     /** Отсутствие собственного стиля: всё берётся из токенов слоя. */
     public static final StyleOverride NONE =
             new StyleOverride(null, null, null, null, null);
+
+    private static final Pattern COLOR = Pattern.compile("^#[0-9a-fA-F]{6}$");
+    private static final Set<Integer> TEXT_ALIGNMENTS = Set.of(1, 2, 4);
 
     public StyleOverride {
         requireColorIfSet(fillColor, "fillColor");

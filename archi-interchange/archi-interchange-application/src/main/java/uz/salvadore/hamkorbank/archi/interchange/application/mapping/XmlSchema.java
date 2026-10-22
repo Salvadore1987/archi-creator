@@ -11,9 +11,6 @@ import java.util.Set;
  */
 final class XmlSchema {
 
-    private XmlSchema() {
-    }
-
     static final String XSI_TYPE = "xsi:type";
     static final String TARGET_CONNECTIONS = "targetConnections";
 
@@ -66,4 +63,7 @@ final class XmlSchema {
     static final List<String[]> NEW_MODEL_NAMESPACES = List.of(
             new String[] {"xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance"},
             new String[] {"xmlns:archimate", "http://www.archimatetool.com/archimate"});
+
+    private XmlSchema() {
+    }
 }

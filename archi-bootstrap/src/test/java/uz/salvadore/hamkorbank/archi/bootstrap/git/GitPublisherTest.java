@@ -486,7 +486,7 @@ class GitPublisherTest {
     private SortedMap<String, byte[]> tree(RevCommit commit) throws Exception {
         SortedMap<String, byte[]> files = new TreeMap<>();
         try (Git git = Git.open(remote.toFile()); RevWalk walk = new RevWalk(git.getRepository());
-             TreeWalk tree = new TreeWalk(git.getRepository())) {
+                TreeWalk tree = new TreeWalk(git.getRepository())) {
             tree.addTree(walk.parseCommit(commit).getTree());
             tree.setRecursive(true);
             while (tree.next()) {
@@ -561,11 +561,6 @@ class GitPublisherTest {
             rows.put(row.id, row);
         }
 
-        private List<Row> open() {
-            return rows.values().stream().filter(r -> r.status.equals("PENDING") || r.status.equals("DIVERGED"))
-                    .sorted(Comparator.comparingLong(r -> r.versionNo)).toList();
-        }
-
         @Override
         public List<Entry> heads() {
             Map<ModelId, Entry> heads = new HashMap<>();
@@ -581,6 +576,11 @@ class GitPublisherTest {
         @Override
         public int open(ModelId model) {
             return (int) open().stream().filter(r -> r.model.equals(model)).count();
+        }
+
+        private List<Row> open() {
+            return rows.values().stream().filter(r -> r.status.equals("PENDING") || r.status.equals("DIVERGED"))
+                    .sorted(Comparator.comparingLong(r -> r.versionNo)).toList();
         }
 
         @Override

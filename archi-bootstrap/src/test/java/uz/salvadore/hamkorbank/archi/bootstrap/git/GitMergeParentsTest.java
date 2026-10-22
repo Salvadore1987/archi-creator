@@ -121,7 +121,7 @@ class GitMergeParentsTest {
 
     private RevCommit parse(GitSha sha) throws Exception {
         try (Repository repo = new FileRepositoryBuilder().setGitDir(bare.toFile()).setBare().build();
-             RevWalk walk = new RevWalk(repo)) {
+                RevWalk walk = new RevWalk(repo)) {
             return walk.parseCommit(ObjectId.fromString(sha.value()));
         }
     }

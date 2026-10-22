@@ -15,8 +15,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 
 class ArchiWriterTest {
 
-    private final ArchiXmlWriter writer = new ArchiXmlWriter();
-
     private static final String STYLED = """
             <folder name="Views" id="id-f8" type="diagrams">
               <element xsi:type="archimate:ArchimateDiagramModel" name="V" id="id-v1" viewpoint="application_cooperation">
@@ -27,6 +25,8 @@ class ArchiWriterTest {
               </element>
             </folder>
             """;
+
+    private final ArchiXmlWriter writer = new ArchiXmlWriter();
 
     @Test
     @DisplayName("INV-IXC-004: запись одного документа дважды даёт побайтово одно и то же")

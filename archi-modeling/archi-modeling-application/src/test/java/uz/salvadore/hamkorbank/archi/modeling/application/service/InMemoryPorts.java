@@ -135,10 +135,10 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.workspace.WorkspaceId;
  */
 final class InMemoryPorts {
 
+    static final Instant NOW = Instant.parse("2026-10-08T10:00:00Z");
+
     /** Идентификаторы тестовых объектов — версии 7, из той же библиотеки, что у приложения. */
     private static final NoArgGenerator IDS = Generators.timeBasedEpochGenerator();
-
-    static final Instant NOW = Instant.parse("2026-10-08T10:00:00Z");
 
     final MutableClock clock = new MutableClock(NOW);
     final Map<ModelId, ArchitectureModel> models = new LinkedHashMap<>();
@@ -149,9 +149,6 @@ final class InMemoryPorts {
     final Map<String, IdempotencyRecord> keys = new HashMap<>();
     final List<DomainEvent> published = new ArrayList<>();
     final Workspace workspace = Workspace.restore(WorkspaceId.of(IDS.generate()), "Банк", NOW);
-
-    /** Глубина вложенных транзакций: больше нуля — работа идёт внутри транзакции. */
-    private int transactionDepth;
 
     final UnitOfWork unitOfWork = new UnitOfWork() {
         @Override
@@ -164,20 +161,6 @@ final class InMemoryPorts {
             return inTransaction(work);
         }
     };
-
-    private <T> T inTransaction(Supplier<T> work) {
-        transactionDepth++;
-        try {
-            return work.get();
-        } finally {
-            transactionDepth--;
-        }
-    }
-
-    /** Идёт ли сейчас транзакция — чтобы проверить, что внешний вызов сделан вне её. */
-    boolean inTransaction() {
-        return transactionDepth > 0;
-    }
 
     final ModelRepository modelRepository = new ModelRepository() {
         @Override
@@ -408,14 +391,6 @@ final class InMemoryPorts {
             versionRepository, aclRepository, idempotencyRepository, unitOfWork, events, UseCaseMetrics.NONE,
             Message::toString, clock, Duration.ofMinutes(30));
     final VersionCommitter committer = new VersionCommitter(kernel, snapshotWriter);
-    private final VersionContents withoutArchive = new VersionContents(kernel, committer, snapshotWriter,
-            xml -> {
-                throw new UnsupportedOperationException();
-            }, SnapshotArchive.NONE);
-    final VersionApplicationService versionService = new VersionApplicationServiceImpl(
-            new VersionSaveCommandHandler(kernel, committer), new VersionListQueryHandler(kernel),
-            new VersionLabelCommandHandler(kernel, withoutArchive),
-            new VersionRestoreCommandHandler(kernel, withoutArchive));
     final WorkspaceResolveQueryHandler resolveWorkspace = new WorkspaceResolveQueryHandler(workspaceRepository,
             unitOfWork);
     final ModelApplicationService lifecycle = new ModelApplicationServiceImpl(
@@ -428,14 +403,26 @@ final class InMemoryPorts {
             new ModelValidateQueryHandler(kernel));
     final LockApplicationService lockService = new LockApplicationServiceImpl(new LockAcquireCommandHandler(kernel),
             new LockReleaseCommandHandler(kernel), new LockGetQueryHandler(kernel));
+    final MetamodelApplicationService metamodel = new MetamodelApplicationServiceImpl(
+            new ElementTypeListQueryHandler(), new RelationTypeSuggestQueryHandler());
+    final AccessListApplicationService accessLists = new AccessListApplicationServiceImpl(
+            new AccessListGetQueryHandler(kernel), new AccessListReplaceCommandHandler(kernel));
+    private final VersionContents withoutArchive = new VersionContents(kernel, committer, snapshotWriter,
+            xml -> {
+                throw new UnsupportedOperationException();
+            }, SnapshotArchive.NONE);
     private final ModelContents contents = new ModelContents(kernel);
+    private final ViewLookup viewLookup = new ViewLookup(kernel);
+    final VersionApplicationService versionService = new VersionApplicationServiceImpl(
+            new VersionSaveCommandHandler(kernel, committer), new VersionListQueryHandler(kernel),
+            new VersionLabelCommandHandler(kernel, withoutArchive),
+            new VersionRestoreCommandHandler(kernel, withoutArchive));
     final ElementApplicationService elements = new ElementApplicationServiceImpl(
             new ElementCreateCommandHandler(kernel), new ElementEditCommandHandler(kernel, contents),
             new ElementDeleteCommandHandler(kernel, contents));
     final RelationshipApplicationService relationships = new RelationshipApplicationServiceImpl(
             new RelationshipCreateCommandHandler(kernel), new RelationshipEditCommandHandler(kernel, contents),
             new RelationshipDeleteCommandHandler(kernel, contents));
-    private final ViewLookup viewLookup = new ViewLookup(kernel);
     final ViewApplicationService viewService = new ViewApplicationServiceImpl(new ViewCreateCommandHandler(kernel),
             new ViewNodePlaceCommandHandler(kernel, viewLookup), new ViewEdgePlaceCommandHandler(kernel, viewLookup),
             new ViewNodeMoveCommandHandler(kernel, viewLookup), new ViewNodeEditCommandHandler(kernel, viewLookup),
@@ -446,10 +433,23 @@ final class InMemoryPorts {
     final TreeApplicationService tree = new TreeApplicationServiceImpl(new FolderCreateCommandHandler(kernel),
             new TreeItemRenameCommandHandler(kernel), new TreeItemsMoveCommandHandler(kernel),
             new TreeItemsDeleteCommandHandler(kernel, contents));
-    final MetamodelApplicationService metamodel = new MetamodelApplicationServiceImpl(
-            new ElementTypeListQueryHandler(), new RelationTypeSuggestQueryHandler());
-    final AccessListApplicationService accessLists = new AccessListApplicationServiceImpl(
-            new AccessListGetQueryHandler(kernel), new AccessListReplaceCommandHandler(kernel));
+
+    /** Глубина вложенных транзакций: больше нуля — работа идёт внутри транзакции. */
+    private int transactionDepth;
+
+    private <T> T inTransaction(Supplier<T> work) {
+        transactionDepth++;
+        try {
+            return work.get();
+        } finally {
+            transactionDepth--;
+        }
+    }
+
+    /** Идёт ли сейчас транзакция — чтобы проверить, что внешний вызов сделан вне её. */
+    boolean inTransaction() {
+        return transactionDepth > 0;
+    }
 
     /** Содержимое версий с заданными чтением снимка и архивом — для сценариев отката и выгрузки. */
     VersionContents versionContents(SnapshotReader reader, SnapshotArchive archive) {

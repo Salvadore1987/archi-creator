@@ -11,8 +11,8 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.version.ModelVersion;
  */
 public interface SnapshotArchive {
 
+    SnapshotArchive NONE = (model, version) -> Optional.empty();
+
     /** Несжатый {@code .archimate}; вернуть неоткуда — пусто. */
     Optional<byte[]> restore(ModelHeader model, ModelVersion version);
-
-    SnapshotArchive NONE = (model, version) -> Optional.empty();
 }

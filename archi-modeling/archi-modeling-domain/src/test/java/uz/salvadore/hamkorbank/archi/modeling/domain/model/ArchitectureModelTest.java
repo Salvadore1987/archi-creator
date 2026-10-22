@@ -191,7 +191,7 @@ class ArchitectureModelTest {
         assertThrows(ModelingDomainException.class, () -> model.updateElement(element.id(), "АБС", null,
                 List.of(new PropertyEntry("ключ", "\uFFFE", SortOrder.ofPosition(0))), NOW));
         assertThrows(ModelingDomainException.class, () -> model.createFolder(application, "\u0007",
-                     FolderId.next(UUIDS), 
+                     FolderId.next(UUIDS),
                 Models.archiId(), NOW));
 
         Element kept = model.updateElement(element.id(), "АБС\tтаб", "строка\nстрока", List.of(), NOW);

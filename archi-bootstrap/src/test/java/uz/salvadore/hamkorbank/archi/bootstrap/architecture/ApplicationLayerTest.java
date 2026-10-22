@@ -41,11 +41,10 @@ class ApplicationLayerTest {
     private static final Set<String> ACTORS = Set.of(ROOT + ".modeling.domain.common.EditorIdentity",
             ROOT + ".advisor.domain.common.Requester");
     /**
-     * Сценарии interchange, ещё не переведённые на входные порты: адаптеры пока зовут их напрямую.
-     * Остаток уходит из списка по мере перевода.
+     * Что из application modeling можно соседнему application-слою кроме порта и DTO: правила формата
+     * строк модели — одно правило и для сборки агрегатов, и для раскладки документа.
      */
-    private static final Set<String> NOT_YET_MIGRATED = Set.of(
-            INTERCHANGE + ".mapping.ArchimateSnapshots");
+    private static final Set<String> MODELING_SUPPORT = Set.of(MODELING + ".mapper.ModelRowRules");
     /**
      * Что адаптеру interchange можно кроме входного порта, его DTO и выходных портов: отказы контекста
      * (их переводит обработчик ошибок) и визуальный язык канвы — данные, которые {@code bootstrap}
@@ -98,7 +97,6 @@ class ApplicationLayerTest {
                                         method.getFullName() + " exposes " + type.getName())));
                     }
                 })
-                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -109,13 +107,13 @@ class ApplicationLayerTest {
         String application = context.application();
         classes().that().resideInAPackage(application + ".dto.command..").and().areTopLevelClasses()
                 .should().haveSimpleNameEndingWith("Command").andShould().beRecords()
-                .allowEmptyShould(true).check(classes);
+                .check(classes);
         classes().that().resideInAPackage(application + ".dto.query..").and().areTopLevelClasses()
                 .should().haveSimpleNameEndingWith("Query").andShould().beRecords()
-                .allowEmptyShould(true).check(classes);
+                .check(classes);
         classes().that().resideInAPackage(application + ".dto.result..").and().areTopLevelClasses()
                 .should().haveSimpleNameEndingWith("Response").andShould().beRecords()
-                .allowEmptyShould(true).check(classes);
+                .check(classes);
         classes().that().resideInAPackage(application + ".dto..")
                 .should(new ArchCondition<>("have no domain-typed fields") {
                     @Override
@@ -126,7 +124,7 @@ class ApplicationLayerTest {
                                         field.getFullName() + " has a domain type")));
                     }
                 })
-                .allowEmptyShould(true).check(classes);
+                .check(classes);
     }
 
     @ParameterizedTest(name = "{0}")
@@ -136,16 +134,18 @@ class ApplicationLayerTest {
         classes().that().haveSimpleNameEndingWith("CommandHandler").or().haveSimpleNameEndingWith("QueryHandler")
                 .and().resideInAPackage(context.application() + "..")
                 .should().resideInAPackage(context.application() + ".handler..")
-                .allowEmptyShould(true).check(classes);
+                .check(classes);
     }
 
     @Test
-    @DisplayName("Адаптеры зовут сценарии modeling через входной порт, а не сервисы и handler'ы")
+    @DisplayName("Адаптеры берут из application modeling только входной порт, его DTO и выходные порты")
     void adaptersUseInputPorts() {
         noClasses().that().resideOutsideOfPackages(MODELING + "..", ROOT + ".bootstrap.wiring..")
-                .should().dependOnClassesThat(describe("modeling service or handler behind port.in",
-                        target -> target.getPackageName().equals(MODELING + ".service")
-                                || target.getPackageName().startsWith(MODELING + ".handler")))
+                .should().dependOnClassesThat(describe("modeling application class behind port.in",
+                        target -> target.getPackageName().startsWith(MODELING)
+                                && !target.getPackageName().startsWith(MODELING + ".port")
+                                && !target.getPackageName().startsWith(MODELING + ".dto")
+                                && !MODELING_SUPPORT.contains(target.getName().split("\\$")[0])))
                 .check(classes);
     }
 
@@ -177,8 +177,7 @@ class ApplicationLayerTest {
         }
         String topLevel = target.getName().split("\\$")[0];
         return !packageName.startsWith(INTERCHANGE + ".port.in") && !packageName.startsWith(INTERCHANGE + ".dto")
-                && !packageName.equals(INTERCHANGE + ".port") && !INTERCHANGE_ADAPTER_SUPPORT.contains(topLevel)
-                && !NOT_YET_MIGRATED.contains(topLevel);
+                && !packageName.equals(INTERCHANGE + ".port") && !INTERCHANGE_ADAPTER_SUPPORT.contains(topLevel);
     }
 
     /** Тип и все типы в его параметрах, включая вложенные и границы подстановок. */

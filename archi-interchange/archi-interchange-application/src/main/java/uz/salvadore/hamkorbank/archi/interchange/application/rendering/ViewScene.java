@@ -119,10 +119,6 @@ final class ViewScene {
         return Optional.ofNullable(nodes.get(archiId));
     }
 
-    Optional<Edge> edge(String archiId) {
-        return Optional.ofNullable(edges.get(archiId));
-    }
-
     private void node(DocumentNode child, double parentX, double parentY, int depth, int position) {
         String xsiType = child.archiType().orElse("");
         Optional<DocumentNode> element = child.attribute("archimateElement").map(concepts::get)
@@ -161,6 +157,10 @@ final class ViewScene {
                 }
             }
         }
+    }
+
+    Optional<Edge> edge(String archiId) {
+        return Optional.ofNullable(edges.get(archiId));
     }
 
     private void edge(DocumentNode connection, int position) {

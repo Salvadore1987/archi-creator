@@ -20,8 +20,7 @@ class TokenBudgetIT extends AdvisorApiTest {
         UUID model = lockedModel(architect(), "Параллельный расход");
         anthropic.reply(FakeAnthropic.Reply.text("Ответ.").usage(100, 11));
         int sessions = 8;
-        ExecutorService pool = Executors.newFixedThreadPool(sessions);
-        try {
+        try (ExecutorService pool = Executors.newFixedThreadPool(sessions)) {
             List<Callable<Integer>> calls = new ArrayList<>();
             for (int i = 0; i < sessions; i++) {
                 String subject = "parallel-" + i;
@@ -32,8 +31,6 @@ class TokenBudgetIT extends AdvisorApiTest {
             for (Future<Integer> status : pool.invokeAll(calls)) {
                 assertThat(status.get()).isEqualTo(200);
             }
-        } finally {
-            pool.shutdownNow();
         }
 
         assertThat(jdbc.queryForObject("select consumed_tokens from token_budget", Long.class))

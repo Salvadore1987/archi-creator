@@ -85,6 +85,16 @@ class CodingRulesTest {
     private static final Set<String> FETCHING = Set.of(JPA + "ManyToOne", JPA + "OneToOne", JPA + "OneToMany",
             JPA + "ManyToMany", JPA + "ElementCollection", JPA + "Basic");
 
+    /**
+     * Выборка «всё» без предела — только там, где список отдаётся целиком по контракту API
+     * и ждёт пагинации; искать одну запись среди всех нельзя.
+     */
+    private static final Set<String> UNBOUNDED_LIST_CALLERS = Set.of(
+            ROOT + ".modeling.application.handler.WorkspaceListQueryHandler.handle()");
+    /** Пакеты JDK, имя класса из которых в основном коде не повторяется. */
+    private static final List<String> JDK_PACKAGES = List.of("java.lang", "java.util", "java.io", "java.time",
+            "java.nio.file");
+
     private static JavaClasses classes;
 
     @BeforeAll
@@ -508,13 +518,6 @@ class CodingRulesTest {
                 .check(classes);
     }
 
-    /**
-     * Выборка «всё» без предела — только там, где список отдаётся целиком по контракту API
-     * и ждёт пагинации; искать одну запись среди всех нельзя.
-     */
-    private static final Set<String> UNBOUNDED_LIST_CALLERS = Set.of(
-            ROOT + ".modeling.application.handler.WorkspaceListQueryHandler.handle()");
-
     @Test
     @DisplayName("findAll() порта без предела — только в списках, которые ждут пагинации")
     void noUnboundedFindAll() {
@@ -539,6 +542,35 @@ class CodingRulesTest {
                 }
             }
         };
+    }
+
+    @Test
+    @DisplayName("Класс основного кода не повторяет имя класса JDK")
+    void namesDoNotShadowJdk() {
+        classes().that().areTopLevelClasses().should(notShadowJdk())
+                .because("одноимённый класс JDK подставляется импортом или по умолчанию из java.lang, "
+                        + "и в чужом файле не видно, который из двух имелся в виду")
+                .check(classes);
+    }
+
+    private static ArchCondition<JavaClass> notShadowJdk() {
+        return new ArchCondition<>("not repeat a JDK class name") {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                JDK_PACKAGES.stream().filter(jdk -> exists(jdk + "." + item.getSimpleName())).findFirst()
+                        .ifPresent(jdk -> events.add(SimpleConditionEvent.violated(item,
+                                item.getName() + " repeats " + jdk + "." + item.getSimpleName())));
+            }
+        };
+    }
+
+    private static boolean exists(String className) {
+        try {
+            Class.forName(className, false, ClassLoader.getPlatformClassLoader());
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 
     private static ArchCondition<JavaMethod> haveNoWildcardParameters() {

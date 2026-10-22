@@ -152,6 +152,23 @@ public final class JGitRepository implements GitRepositoryPort {
         }
     }
 
+    private static CommitBuilder commit(ObjectId tree, GitSha parent, GitSha second, CommitRequest request) {
+        CommitBuilder commit = new CommitBuilder();
+        commit.setTreeId(tree);
+        List<ObjectId> parents = new ArrayList<>();
+        if (parent != null) {
+            parents.add(id(parent));
+        }
+        if (second != null) {
+            parents.add(id(second));
+        }
+        commit.setParentIds(parents);
+        commit.setAuthor(person(request.author()));
+        commit.setCommitter(person(request.committer()));
+        commit.setMessage(request.message());
+        return commit;
+    }
+
     /** Коммит-кандидат; не коммит или объекта нет — пусто: полный идентификатор разрешается и без объекта. */
     private static Optional<RevCommit> parsedCommit(RevWalk walk, ObjectId candidate) throws IOException {
         try {
@@ -185,7 +202,7 @@ public final class JGitRepository implements GitRepositoryPort {
     public Optional<byte[]> file(Remote remote, GitSha commit, String path) {
         synchronized (lock(remote)) {
             try (Repository repo = open(remote); RevWalk walk = new RevWalk(repo);
-                 TreeWalk tree = TreeWalk.forPath(repo, path, walk.parseCommit(id(commit)).getTree())) {
+                    TreeWalk tree = TreeWalk.forPath(repo, path, walk.parseCommit(id(commit)).getTree())) {
                 if (tree == null || tree.getFileMode(0).getObjectType() != Constants.OBJ_BLOB) {
                     return Optional.empty();
                 }
@@ -200,7 +217,7 @@ public final class JGitRepository implements GitRepositoryPort {
     public List<String> directories(Remote remote, GitSha commit, String parent) {
         synchronized (lock(remote)) {
             try (Repository repo = open(remote); RevWalk walk = new RevWalk(repo);
-                 TreeWalk found = TreeWalk.forPath(repo, parent, walk.parseCommit(id(commit)).getTree())) {
+                    TreeWalk found = TreeWalk.forPath(repo, parent, walk.parseCommit(id(commit)).getTree())) {
                 if (found == null || found.getFileMode(0) != FileMode.TREE) {
                     return List.of();
                 }
@@ -322,7 +339,7 @@ public final class JGitRepository implements GitRepositoryPort {
     public PushResult push(Remote remote, GitSha parent, CommitRequest request) {
         synchronized (lock(remote)) {
             try (Repository repo = open(remote); ObjectInserter inserter = repo.newObjectInserter();
-                 RevWalk walk = new RevWalk(repo)) {
+                    RevWalk walk = new RevWalk(repo)) {
                 RevTree parentTree = parent == null ? null : walk.parseCommit(id(parent)).getTree();
                 ObjectId tree = tree(repo, inserter, parentTree, request);
                 GitSha second = secondParent(repo, remote, walk, parent, request.merged());
@@ -412,23 +429,6 @@ public final class JGitRepository implements GitRepositoryPort {
             return null;
         }
         return merged;
-    }
-
-    private static CommitBuilder commit(ObjectId tree, GitSha parent, GitSha second, CommitRequest request) {
-        CommitBuilder commit = new CommitBuilder();
-        commit.setTreeId(tree);
-        List<ObjectId> parents = new ArrayList<>();
-        if (parent != null) {
-            parents.add(id(parent));
-        }
-        if (second != null) {
-            parents.add(id(second));
-        }
-        commit.setParentIds(parents);
-        commit.setAuthor(person(request.author()));
-        commit.setCommitter(person(request.committer()));
-        commit.setMessage(request.message());
-        return commit;
     }
 
     private static PersonIdent person(Person person) {
