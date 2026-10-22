@@ -59,6 +59,68 @@ final class EntityMapper {
                 toProperties(e.properties), raw(e.rawXml), e.createdBy, e.createdAt, e.updatedAt, e.version);
     }
 
+    // ── Папки, элементы, связи ──────────────────────────────────────
+
+    static ModelFolder toFolder(FolderEntity e) {
+        return new ModelFolder(FolderId.of(e.id), e.parentId == null ? null : FolderId.of(e.parentId),
+                ArchiId.of(e.archiId), e.name, e.folderType == null ? null : FolderType.valueOf(e.folderType),
+                SortOrder.of(e.sortOrder), raw(e.rawXml));
+    }
+
+    static Element toElement(ElementEntity e) {
+        return new Element(ElementId.of(e.id), FolderId.of(e.folderId), ArchiId.of(e.archiId),
+                ArchiType.of(e.archiType), e.name, e.documentation, toProperties(e.properties),
+                SortOrder.of(e.sortOrder), e.supported, raw(e.rawXml));
+    }
+
+    static Relationship toRelationship(RelationshipEntity e) {
+        return new Relationship(RelationshipId.of(e.id), FolderId.of(e.folderId), ArchiId.of(e.archiId),
+                ArchiType.of(e.archiType), concept(e.sourceElementId, e.sourceRelationshipId),
+                concept(e.targetElementId, e.targetRelationshipId), e.name,
+                e.documentation, e.accessType == null ? null : AccessType.valueOf(e.accessType),
+                e.directed, toProperties(e.properties), SortOrder.of(e.sortOrder), e.supported,
+                raw(e.rawXml));
+    }
+
+    private static ConceptRef concept(UUID element, UUID relationship) {
+        return element != null ? ElementId.of(element) : RelationshipId.of(relationship);
+    }
+
+    // ── Представления ───────────────────────────────────────────────
+
+    static ViewHeader toViewHeader(ViewEntity e) {
+        return new ViewHeader(ViewId.of(e.id), ModelId.of(e.modelId), FolderId.of(e.folderId), ArchiId.of(e.archiId),
+                DiagramType.of(e.archiType), e.name, e.documentation,
+                e.viewpoint, toProperties(e.properties), SortOrder.of(e.sortOrder),
+                raw(e.rawXml), e.version);
+    }
+
+    static ViewRef toViewRef(ViewEntity e) {
+        return new ViewRef(ViewId.of(e.id), FolderId.of(e.folderId), ArchiId.of(e.archiId),
+                DiagramType.of(e.archiType), e.name, SortOrder.of(e.sortOrder));
+    }
+
+    static ViewNode toNode(ViewNodeEntity e) {
+        return new ViewNode(ViewNodeId.of(e.id), e.parentId == null ? null : ViewNodeId.of(e.parentId),
+                ArchiId.of(e.archiId), DiagramType.of(e.archiType),
+                e.elementId == null ? null : ElementId.of(e.elementId),
+                new Bounds(e.x, e.y, e.width, e.height),
+                style(e.fillColor, e.font, e.fontColor, e.lineColor, e.textAlignment),
+                e.label, e.content, SortOrder.of(e.sortOrder),
+                raw(e.rawXml));
+    }
+
+    static ViewEdge toEdge(ViewEdgeEntity e) {
+        return new ViewEdge(ViewEdgeId.of(e.id), ArchiId.of(e.archiId), DiagramType.of(e.archiType),
+                e.relationshipId == null ? null : RelationshipId.of(e.relationshipId),
+                endpoint(e.sourceNodeId, e.sourceEdgeId),
+                endpoint(e.targetNodeId, e.targetEdgeId), Bendpoints.parse(e.bendpoints),
+                style(e.fillColor, e.font, e.fontColor, e.lineColor, e.textAlignment), SortOrder.of(e.sortOrder),
+                raw(e.rawXml));
+    }
+
+    // ── Запись в сущности ───────────────────────────────────────────
+
     static void apply(ModelHeader h, ModelEntity e) {
         e.id = h.id().value();
         e.workspaceId = h.workspaceId().value();
@@ -74,14 +136,6 @@ final class EntityMapper {
         replaceProperties(e.properties, h.properties());
     }
 
-    // ── Папки, элементы, связи ──────────────────────────────────────
-
-    static ModelFolder toFolder(FolderEntity e) {
-        return new ModelFolder(FolderId.of(e.id), e.parentId == null ? null : FolderId.of(e.parentId),
-                ArchiId.of(e.archiId), e.name, e.folderType == null ? null : FolderType.valueOf(e.folderType),
-                SortOrder.of(e.sortOrder), raw(e.rawXml));
-    }
-
     static void apply(ModelFolder f, UUID modelId, FolderEntity e) {
         e.id = f.id().value();
         e.modelId = modelId;
@@ -91,12 +145,6 @@ final class EntityMapper {
         e.folderType = f.folderType() == null ? null : f.folderType().name();
         e.sortOrder = f.sortOrder().value();
         e.rawXml = f.rawXml() == null ? null : f.rawXml().value();
-    }
-
-    static Element toElement(ElementEntity e) {
-        return new Element(ElementId.of(e.id), FolderId.of(e.folderId), ArchiId.of(e.archiId),
-                ArchiType.of(e.archiType), e.name, e.documentation, toProperties(e.properties),
-                SortOrder.of(e.sortOrder), e.supported, raw(e.rawXml));
     }
 
     static void apply(Element d, UUID modelId, ElementEntity e) {
@@ -112,15 +160,6 @@ final class EntityMapper {
         e.supported = d.supported();
         e.rawXml = d.rawXml() == null ? null : d.rawXml().value();
         replaceProperties(e.properties, d.properties());
-    }
-
-    static Relationship toRelationship(RelationshipEntity e) {
-        return new Relationship(RelationshipId.of(e.id), FolderId.of(e.folderId), ArchiId.of(e.archiId),
-                ArchiType.of(e.archiType), concept(e.sourceElementId, e.sourceRelationshipId),
-                concept(e.targetElementId, e.targetRelationshipId), e.name,
-                e.documentation, e.accessType == null ? null : AccessType.valueOf(e.accessType),
-                e.directed, toProperties(e.properties), SortOrder.of(e.sortOrder), e.supported,
-                raw(e.rawXml));
     }
 
     static void apply(Relationship d, UUID modelId, RelationshipEntity e) {
@@ -143,24 +182,6 @@ final class EntityMapper {
         replaceProperties(e.properties, d.properties());
     }
 
-    private static ConceptRef concept(UUID element, UUID relationship) {
-        return element != null ? ElementId.of(element) : RelationshipId.of(relationship);
-    }
-
-    // ── Представления ───────────────────────────────────────────────
-
-    static ViewHeader toViewHeader(ViewEntity e) {
-        return new ViewHeader(ViewId.of(e.id), ModelId.of(e.modelId), FolderId.of(e.folderId), ArchiId.of(e.archiId),
-                DiagramType.of(e.archiType), e.name, e.documentation,
-                e.viewpoint, toProperties(e.properties), SortOrder.of(e.sortOrder),
-                raw(e.rawXml), e.version);
-    }
-
-    static ViewRef toViewRef(ViewEntity e) {
-        return new ViewRef(ViewId.of(e.id), FolderId.of(e.folderId), ArchiId.of(e.archiId),
-                DiagramType.of(e.archiType), e.name, SortOrder.of(e.sortOrder));
-    }
-
     static void apply(ViewHeader h, ViewEntity e) {
         e.id = h.id().value();
         e.modelId = h.modelId().value();
@@ -173,16 +194,6 @@ final class EntityMapper {
         e.sortOrder = h.sortOrder().value();
         e.rawXml = h.rawXml() == null ? null : h.rawXml().value();
         replaceProperties(e.properties, h.properties());
-    }
-
-    static ViewNode toNode(ViewNodeEntity e) {
-        return new ViewNode(ViewNodeId.of(e.id), e.parentId == null ? null : ViewNodeId.of(e.parentId),
-                ArchiId.of(e.archiId), DiagramType.of(e.archiType),
-                e.elementId == null ? null : ElementId.of(e.elementId),
-                new Bounds(e.x, e.y, e.width, e.height),
-                style(e.fillColor, e.font, e.fontColor, e.lineColor, e.textAlignment),
-                e.label, e.content, SortOrder.of(e.sortOrder),
-                raw(e.rawXml));
     }
 
     static void apply(ViewNode n, UUID modelId, UUID viewId, ViewNodeEntity e) {
@@ -207,15 +218,6 @@ final class EntityMapper {
         e.content = n.content();
         e.sortOrder = n.sortOrder().value();
         e.rawXml = n.rawXml() == null ? null : n.rawXml().value();
-    }
-
-    static ViewEdge toEdge(ViewEdgeEntity e) {
-        return new ViewEdge(ViewEdgeId.of(e.id), ArchiId.of(e.archiId), DiagramType.of(e.archiType),
-                e.relationshipId == null ? null : RelationshipId.of(e.relationshipId),
-                endpoint(e.sourceNodeId, e.sourceEdgeId),
-                endpoint(e.targetNodeId, e.targetEdgeId), Bendpoints.parse(e.bendpoints),
-                style(e.fillColor, e.font, e.fontColor, e.lineColor, e.textAlignment), SortOrder.of(e.sortOrder),
-                raw(e.rawXml));
     }
 
     static void apply(ViewEdge d, UUID modelId, UUID viewId, ViewEdgeEntity e) {

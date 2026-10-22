@@ -355,8 +355,9 @@ final class Fixture {
     /** Поток, который проигрывает сценарий теста. */
     static final class FakeStream implements LlmStream {
 
-        private final Consumer<LlmListener> script;
         volatile boolean cancelled;
+
+        private final Consumer<LlmListener> script;
 
         FakeStream(Consumer<LlmListener> script) {
             this.script = script;

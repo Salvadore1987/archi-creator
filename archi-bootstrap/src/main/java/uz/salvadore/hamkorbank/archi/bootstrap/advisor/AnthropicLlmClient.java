@@ -54,12 +54,12 @@ import uz.salvadore.hamkorbank.archi.advisor.domain.session.TokenUsage;
  */
 public final class AnthropicLlmClient implements LlmPort {
 
+    /** Имя предохранителя — метка {@code name} его метрик. */
+    public static final String BREAKER = "anthropic_api";
+
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final TypeReference<Map<String, Object>> MAP = new TypeReference<>() {
     };
-
-    /** Имя предохранителя — метка {@code name} его метрик. */
-    public static final String BREAKER = "anthropic_api";
 
     private final AiSettings settings;
     private final AnthropicClient client;

@@ -61,11 +61,11 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingDomainExcept
  */
 final class GitAttempts {
 
-    private final GitBindingRepository bindings;
-    private final GitRepositoryPort repository;
     private static final Pattern BASE_HASH = Pattern.compile("^[0-9a-f]{64}$");
     private static final int SHORT_SHA = 7;
 
+    private final GitBindingRepository bindings;
+    private final GitRepositoryPort repository;
     private final GitRemotes remotes;
     private final TextCatalog texts;
     private final ImportSessionRepository sessions;

@@ -9,6 +9,13 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.importing.ImportFinding;
 /** Метрики interchange: длительность сценариев, исходы импорта, непрозрачные объекты. */
 public interface InterchangeMetrics {
 
+    InterchangeMetrics NONE = new InterchangeMetrics() {
+        @Override
+        public <T> T observe(String useCase, Supplier<T> work) {
+            return work.get();
+        }
+    };
+
     /** Выполняет сценарий и замеряет его длительность. */
     <T> T observe(String useCase, Supplier<T> work);
 
@@ -33,11 +40,4 @@ public interface InterchangeMetrics {
      */
     default void gitPush(String outcome, Duration duration) {
     }
-
-    InterchangeMetrics NONE = new InterchangeMetrics() {
-        @Override
-        public <T> T observe(String useCase, Supplier<T> work) {
-            return work.get();
-        }
-    };
 }

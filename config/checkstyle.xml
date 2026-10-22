@@ -67,6 +67,9 @@
         <module name="NoWhitespaceBefore"/>
         <module name="MethodParamPad"/>
         <module name="ParenPad"/>
+        <!-- Константы, поля, конструкторы, методы; внутри группы — от public к private; перегрузки рядом. -->
+        <module name="DeclarationOrder"/>
+        <module name="OverloadMethodsDeclarationOrder"/>
 
         <module name="AvoidStarImport"/>
         <module name="UnusedImports"/>

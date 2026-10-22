@@ -152,6 +152,23 @@ public final class JGitRepository implements GitRepositoryPort {
         }
     }
 
+    private static CommitBuilder commit(ObjectId tree, GitSha parent, GitSha second, CommitRequest request) {
+        CommitBuilder commit = new CommitBuilder();
+        commit.setTreeId(tree);
+        List<ObjectId> parents = new ArrayList<>();
+        if (parent != null) {
+            parents.add(id(parent));
+        }
+        if (second != null) {
+            parents.add(id(second));
+        }
+        commit.setParentIds(parents);
+        commit.setAuthor(person(request.author()));
+        commit.setCommitter(person(request.committer()));
+        commit.setMessage(request.message());
+        return commit;
+    }
+
     /** Коммит-кандидат; не коммит или объекта нет — пусто: полный идентификатор разрешается и без объекта. */
     private static Optional<RevCommit> parsedCommit(RevWalk walk, ObjectId candidate) throws IOException {
         try {
@@ -412,23 +429,6 @@ public final class JGitRepository implements GitRepositoryPort {
             return null;
         }
         return merged;
-    }
-
-    private static CommitBuilder commit(ObjectId tree, GitSha parent, GitSha second, CommitRequest request) {
-        CommitBuilder commit = new CommitBuilder();
-        commit.setTreeId(tree);
-        List<ObjectId> parents = new ArrayList<>();
-        if (parent != null) {
-            parents.add(id(parent));
-        }
-        if (second != null) {
-            parents.add(id(second));
-        }
-        commit.setParentIds(parents);
-        commit.setAuthor(person(request.author()));
-        commit.setCommitter(person(request.committer()));
-        commit.setMessage(request.message());
-        return commit;
     }
 
     private static PersonIdent person(Person person) {

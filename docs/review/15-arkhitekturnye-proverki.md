@@ -45,7 +45,7 @@
 входные порты и DTO сценариев (`ApplicationLayerTest`), транзакцию через `UnitOfWork` (`TransactionBoundaryTest`),
 события из домена (`DomainEventOriginTest`), таблицы ролей и контракты OpenAPI против кода (`OperationTablesTest`,
 `OpenApiContractTest`), метаданные настроек (`ConfigurationMetadataTest`), UUID и журнал (`UuidRulesTest`,
-`LoggingRulesTest`), правила кодирования (`CodingRulesTest`, 22 правила до этапа).
+`LoggingRulesTest`), правила кодирования (`CodingRulesTest`, 21 правило до этапа).
 
 ## Находки этапов 1–14 без проверки в сборке
 

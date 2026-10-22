@@ -24,16 +24,16 @@ public final class CorruptDocumentException extends InterchangeDomainException {
         return defects;
     }
 
-    /** Первый дефект с местом и число остальных — сообщение с ключом, а не текст. */
-    public Message summary() {
-        return reason();
-    }
-
     private static List<DocumentDefect> requireDefects(List<DocumentDefect> defects) {
         if (defects.isEmpty()) {
             throw new IllegalArgumentException(Message.of(InterchangeMessages.CORRUPT_WITHOUT_DEFECTS).toString());
         }
         return defects;
+    }
+
+    /** Первый дефект с местом и число остальных — сообщение с ключом, а не текст. */
+    public Message summary() {
+        return reason();
     }
 
     private static Message summary(List<DocumentDefect> defects) {

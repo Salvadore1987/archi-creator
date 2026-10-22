@@ -16,9 +16,6 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.document.ModelDocument;
 /** Нотация, шрифт и модель для тестов писателя — малые и предсказуемые. */
 final class RenderingFixtures {
 
-    private RenderingFixtures() {
-    }
-
     /** Каждый символ шириной в половину кегля, разрядка — к каждому символу. */
     static final Typesetter MONO = new Typesetter() {
         @Override
@@ -51,39 +48,6 @@ final class RenderingFixtures {
     };
 
     static final TextCatalog TEXTS = message -> message.key() + message.args();
-
-    private static final Box NAME = new Box(8, 5, -22, -10);
-
-    static final Notation NOTATION = new Notation(new Size(120, 55),
-            Map.of("archimate:Group", new Size(400, 140), "archimate:Note", new Size(185, 80)),
-            Map.of("archimate:ApplicationComponent", new ShapeEntry("rect",
-                            new CornerIcon("i-component", -21, 6, 14), NAME, "node_radius", "application", null),
-                    "archimate:Node", new ShapeEntry("rect", null, NAME, "node_radius", "technology", null),
-                    "archimate:Group", new ShapeEntry("tab", null, new Box(10, 3, -20, 18), "node_radius", "group",
-                            null),
-                    "archimate:Note", new ShapeEntry("dog-ear", null, new Box(9, 7, -18, -14), "node_radius",
-                            "note", null)),
-            new ShapeEntry("stub", null, NAME, "node_radius", null, "5 3"),
-            Map.of("application", new LayerPaint("#E3F2FD", "#4A90C2"),
-                    "technology", new LayerPaint("#E6F7EC", "#3E9B62"),
-                    "motivation", new LayerPaint("#EDE7F6", "#7E57C2"),
-                    "other", new LayerPaint("#F2F2F2", "#9E9E9E")),
-            Map.ofEntries(Map.entry("node_radius", "8px"), Map.entry("edge_color", "#667085"),
-                    Map.entry("edge_width", "1.5px"), Map.entry("edge_corner_radius", "6px"),
-                    Map.entry("edge_label_color", "#667085"), Map.entry("paper", "#FAF9F5"),
-                    Map.entry("paper_text", "#1A1D22"), Map.entry("grid_step", "20px"),
-                    Map.entry("group_fill", "rgba(255,255,255,.35)"), Map.entry("group_border", "#9E9E9E"),
-                    Map.entry("note_fill", "#FFFDF2"), Map.entry("note_border", "#E0D9BE"),
-                    Map.entry("opaque_border", "#9E9E9E"), Map.entry("node_subtitle_color", "#667085"),
-                    Map.entry("node_font", "13px/1.3 \"Inter\", system-ui, sans-serif"),
-                    Map.entry("node_font_weight", "500"),
-                    Map.entry("node_subtitle", "11px/1.2 \"Inter\", system-ui, sans-serif"),
-                    Map.entry("edge_label_font", "10px/1.2 \"Inter\", system-ui, sans-serif"),
-                    Map.entry("group_tab_font_weight", "600"), Map.entry("group_tab_letter_spacing", "0.04em"),
-                    Map.entry("note_font_weight", "400")),
-            Map.of("i-component", "<rect x=\"1\" y=\"1\" width=\"14\" height=\"14\" "
-                    + "fill=\"var(--icon-cutout, white)\" stroke=\"currentColor\"/>"),
-            "Inter");
 
     /**
      * Компонент и узел в группе, цель фазы 2, заметка; композиция с точкой перегиба,
@@ -137,6 +101,42 @@ final class RenderingFixtures {
               </folder>
             </archimate:model>
             """;
+
+    private static final Box NAME = new Box(8, 5, -22, -10);
+
+    static final Notation NOTATION = new Notation(new Size(120, 55),
+            Map.of("archimate:Group", new Size(400, 140), "archimate:Note", new Size(185, 80)),
+            Map.of("archimate:ApplicationComponent", new ShapeEntry("rect",
+                            new CornerIcon("i-component", -21, 6, 14), NAME, "node_radius", "application", null),
+                    "archimate:Node", new ShapeEntry("rect", null, NAME, "node_radius", "technology", null),
+                    "archimate:Group", new ShapeEntry("tab", null, new Box(10, 3, -20, 18), "node_radius", "group",
+                            null),
+                    "archimate:Note", new ShapeEntry("dog-ear", null, new Box(9, 7, -18, -14), "node_radius",
+                            "note", null)),
+            new ShapeEntry("stub", null, NAME, "node_radius", null, "5 3"),
+            Map.of("application", new LayerPaint("#E3F2FD", "#4A90C2"),
+                    "technology", new LayerPaint("#E6F7EC", "#3E9B62"),
+                    "motivation", new LayerPaint("#EDE7F6", "#7E57C2"),
+                    "other", new LayerPaint("#F2F2F2", "#9E9E9E")),
+            Map.ofEntries(Map.entry("node_radius", "8px"), Map.entry("edge_color", "#667085"),
+                    Map.entry("edge_width", "1.5px"), Map.entry("edge_corner_radius", "6px"),
+                    Map.entry("edge_label_color", "#667085"), Map.entry("paper", "#FAF9F5"),
+                    Map.entry("paper_text", "#1A1D22"), Map.entry("grid_step", "20px"),
+                    Map.entry("group_fill", "rgba(255,255,255,.35)"), Map.entry("group_border", "#9E9E9E"),
+                    Map.entry("note_fill", "#FFFDF2"), Map.entry("note_border", "#E0D9BE"),
+                    Map.entry("opaque_border", "#9E9E9E"), Map.entry("node_subtitle_color", "#667085"),
+                    Map.entry("node_font", "13px/1.3 \"Inter\", system-ui, sans-serif"),
+                    Map.entry("node_font_weight", "500"),
+                    Map.entry("node_subtitle", "11px/1.2 \"Inter\", system-ui, sans-serif"),
+                    Map.entry("edge_label_font", "10px/1.2 \"Inter\", system-ui, sans-serif"),
+                    Map.entry("group_tab_font_weight", "600"), Map.entry("group_tab_letter_spacing", "0.04em"),
+                    Map.entry("note_font_weight", "400")),
+            Map.of("i-component", "<rect x=\"1\" y=\"1\" width=\"14\" height=\"14\" "
+                    + "fill=\"var(--icon-cutout, white)\" stroke=\"currentColor\"/>"),
+            "Inter");
+
+    private RenderingFixtures() {
+    }
 
     static ModelDocument document(String xml) {
         return new StaxArchiDocumentReader().read(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));

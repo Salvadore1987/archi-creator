@@ -202,15 +202,19 @@ final class ImportFakes {
     /** Вход modeling: нужен только приём импортированной модели. */
     static final class Models implements ModelExchangeApplicationService {
 
-        private final Transactions transactions;
         final List<String> importedIn = new ArrayList<>();
+
+        /** Отказ, которым ответит запись модели; {@code null} — запись проходит. */
+        RuntimeException refusal;
+
+        /** Отказ, которым ответит проверка строк; {@code null} — строки принимаются. */
+        RuntimeException verifyRefusal;
+
+        private final Transactions transactions;
 
         Models(Transactions transactions) {
             this.transactions = transactions;
         }
-
-        /** Отказ, которым ответит запись модели; {@code null} — запись проходит. */
-        RuntimeException refusal;
 
         @Override
         public ImportModelResponse importModel(EditorIdentity actor, ImportModelCommand command) {
@@ -220,9 +224,6 @@ final class ImportFakes {
             }
             return new ImportModelResponse(IDS.generate(), 1, 0);
         }
-
-        /** Отказ, которым ответит проверка строк; {@code null} — строки принимаются. */
-        RuntimeException verifyRefusal;
 
         @Override
         public void verifyModelRows(VerifyModelRowsQuery query) {

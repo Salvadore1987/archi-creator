@@ -131,6 +131,12 @@ public final class DtoMapper {
                 style(e.style()), e.sortOrder());
     }
 
+    /** Ребро новой связи; без {@code view} связь рисуется без ребра. */
+    public static CreateRelationshipCommand.Edge edge(EdgePlacementRequest view) {
+        return view == null ? null : new CreateRelationshipCommand.Edge(view.viewId(), view.sourceNodeId(),
+                view.targetNodeId(), view.edgeId(), view.edgeArchiId());
+    }
+
     /** Версия модели без снимка; есть ли снимок — отдельным флагом. */
     public static VersionInfo version(VersionResponse v) {
         return new VersionInfo(v.versionNo(), v.author(), v.comment(), v.label(), v.createdAt(),
@@ -150,6 +156,12 @@ public final class DtoMapper {
     private static StyleDto style(StyleValue s) {
         return s == null ? null
                 : new StyleDto(s.fillColor(), s.font(), s.fontColor(), s.lineColor(), s.textAlignment());
+    }
+
+    /** Собственный стиль правки; {@code null} — снять. */
+    public static StyleValue style(StyleDto dto) {
+        return dto == null ? null
+                : new StyleValue(dto.fillColor(), dto.font(), dto.fontColor(), dto.lineColor(), dto.textAlignment());
     }
 
     static RelationTypeDto relationType(RelationTypeResponse r) {
@@ -192,12 +204,6 @@ public final class DtoMapper {
         return new SaveResult(version(result.version()), result.created());
     }
 
-    /** Ребро новой связи; без {@code view} связь рисуется без ребра. */
-    public static CreateRelationshipCommand.Edge edge(EdgePlacementRequest view) {
-        return view == null ? null : new CreateRelationshipCommand.Edge(view.viewId(), view.sourceNodeId(),
-                view.targetNodeId(), view.edgeId(), view.edgeArchiId());
-    }
-
     /**
      * Свойства правки; {@code null} — не менять. Значение без {@code value} — пустая строка:
      * так свойство без значения читает и файл.
@@ -205,12 +211,6 @@ public final class DtoMapper {
     public static List<PropertyValue> properties(List<PropertyDto> properties) {
         return properties == null ? null : properties.stream()
                 .map(p -> new PropertyValue(p.key(), p.value() == null ? "" : p.value())).toList();
-    }
-
-    /** Собственный стиль правки; {@code null} — снять. */
-    public static StyleValue style(StyleDto dto) {
-        return dto == null ? null
-                : new StyleValue(dto.fillColor(), dto.font(), dto.fontColor(), dto.lineColor(), dto.textAlignment());
     }
 
     /** Точки перегиба; не переданы — ребро прямое. */

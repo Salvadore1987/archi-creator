@@ -118,6 +118,11 @@ final class GitFakes {
 
     static final class MemoryStates implements ModelStates, Store<MemoryStates.State> {
 
+        State state;
+        boolean failAfterReplace;
+        RuntimeException failure;
+        final Map<Long, String> comments = new HashMap<>();
+
         private final WorkspaceId workspace;
 
         MemoryStates(WorkspaceId workspace) {
@@ -137,11 +142,6 @@ final class GitFakes {
                 return Arrays.hashCode(xml);
             }
         }
-
-        State state;
-        boolean failAfterReplace;
-        RuntimeException failure;
-        final Map<Long, String> comments = new HashMap<>();
 
         List<Long> versionNos() {
             List<Long> numbers = new ArrayList<>();
@@ -378,13 +378,14 @@ final class GitFakes {
      */
     static final class MemoryRepository implements GitRepositoryPort {
 
+        final Map<String, GitSha> tags = new HashMap<>();
+        /** Что случается сразу после чтения головы ветки — например, администратор перепривязывает пространство. */
+        Runnable afterFetch = () -> { };
+
         private final ModelId model;
         private final Map<GitSha, SortedMap<String, byte[]>> trees = new HashMap<>();
         private final Map<GitSha, List<GitSha>> parents = new HashMap<>();
         private final Map<String, GitSha> branches = new HashMap<>();
-        final Map<String, GitSha> tags = new HashMap<>();
-        /** Что случается сразу после чтения головы ветки — например, администратор перепривязывает пространство. */
-        Runnable afterFetch = () -> { };
         private int counter;
 
         MemoryRepository(ModelId model) {

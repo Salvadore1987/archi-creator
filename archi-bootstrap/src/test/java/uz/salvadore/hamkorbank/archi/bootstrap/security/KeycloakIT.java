@@ -54,6 +54,9 @@ class KeycloakIT {
         KEYCLOAK.start();
     }
 
+    @Autowired
+    MockMvc mvc;
+
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", Containers.POSTGRES::getJdbcUrl);
@@ -61,9 +64,6 @@ class KeycloakIT {
         registry.add("spring.datasource.password", Containers.POSTGRES::getPassword);
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", KeycloakIT::issuer);
     }
-
-    @Autowired
-    MockMvc mvc;
 
     @Test
     @DisplayName("FR-28: токен Keycloak — VIEWER читает и получает 403 на запись, ARCHITECT создаёт, без токена 401")

@@ -76,13 +76,13 @@ public final class ViewDataMapper {
                 : new StyleOverride(s.fillColor(), s.font(), s.fontColor(), s.lineColor(), s.textAlignment());
     }
 
-    /** Точки перегиба из команды. */
-    public static List<Bendpoint> bendpoints(List<BendpointValue> points) {
-        return points.stream().map(b -> new Bendpoint(b.startX(), b.startY(), b.endX(), b.endY())).toList();
-    }
-
     private static StyleValue style(StyleOverride s) {
         return s.empty() ? null
                 : new StyleValue(s.fillColor(), s.font(), s.fontColor(), s.lineColor(), s.textAlignment());
+    }
+
+    /** Точки перегиба из команды. */
+    public static List<Bendpoint> bendpoints(List<BendpointValue> points) {
+        return points.stream().map(b -> new Bendpoint(b.startX(), b.startY(), b.endX(), b.endY())).toList();
     }
 }

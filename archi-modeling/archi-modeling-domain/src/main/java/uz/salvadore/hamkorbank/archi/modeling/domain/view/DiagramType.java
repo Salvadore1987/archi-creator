@@ -16,8 +16,6 @@ import uz.salvadore.hamkorbank.archi.modeling.domain.common.ModelingMessages;
  */
 public record DiagramType(String value) {
 
-    private static final Pattern FORMAT = Pattern.compile("^[A-Za-z][A-Za-z0-9]*:[A-Za-z][A-Za-z0-9]*$");
-
     /** Диаграмма ArchiMate — единственный вид представления, который редактируется. */
     public static final DiagramType DIAGRAM_MODEL = new DiagramType("archimate:ArchimateDiagramModel");
     /** Узел над элементом модели. */
@@ -31,7 +29,7 @@ public record DiagramType(String value) {
 
     public DiagramType {
         Objects.requireNonNull(value, "diagramType");
-        if (!FORMAT.matcher(value).matches()) {
+        if (!Format.PATTERN.matcher(value).matches()) {
             throw new InvalidValueException(ModelingMessages.DIAGRAM_TYPE_FORMAT, value);
         }
     }
@@ -43,11 +41,20 @@ public record DiagramType(String value) {
 
     /** Подходит ли строка как тип: проверка без исключения. */
     public static boolean valid(String value) {
-        return value != null && FORMAT.matcher(value).matches();
+        return value != null && Format.PATTERN.matcher(value).matches();
     }
 
     @Override
     public String toString() {
         return value;
+    }
+
+    /** Шаблон типа; держатель инициализируется при первой проверке — и до констант выше. */
+    private static final class Format {
+
+        static final Pattern PATTERN = Pattern.compile("^[A-Za-z][A-Za-z0-9]*:[A-Za-z][A-Za-z0-9]*$");
+
+        private Format() {
+        }
     }
 }

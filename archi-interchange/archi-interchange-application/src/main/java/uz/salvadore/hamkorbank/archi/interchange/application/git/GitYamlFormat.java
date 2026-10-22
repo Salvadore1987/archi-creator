@@ -70,6 +70,11 @@ final class GitYamlFormat {
     static final String TAG_BENDPOINT = "bendpoint";
     static final String TAG_CONTENT = "content";
 
+    static final List<Kind> CONTENT_ORDER = List.of(Kind.values());
+
+    private GitYamlFormat() {
+    }
+
     /**
      * Ключ записи контейнера без идентификатора: вид и порядковый номер среди записей этого вида,
      * например {@code documentation#1}. Идентификатор Archi {@code #} не содержит, поэтому ключи не пересекаются.
@@ -119,11 +124,6 @@ final class GitYamlFormat {
         boolean single() {
             return this == PURPOSE || this == DOCUMENTATION || this == BOUNDS || this == TEXT;
         }
-    }
-
-    static final List<Kind> CONTENT_ORDER = List.of(Kind.values());
-
-    private GitYamlFormat() {
     }
 
     static boolean namespace(String attribute) {
