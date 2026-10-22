@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
@@ -77,8 +78,8 @@ public final class GitMerge {
      * Не переданное поле — {@code null}; без комментария версия получает комментарий по умолчанию.
      * Выбор без значения сохраняется как есть: отказывает в нём сценарий, а не конструктор.
      */
-    public record MergeRequest(String ref, String commitSha, String mergeBaseSha, String baseHash,
-                               Map<String, String> resolutions, String comment) {
+    public record MergeRequest(@Nullable String ref, @Nullable String commitSha, @Nullable String mergeBaseSha,
+                               @Nullable String baseHash, Map<String, String> resolutions, @Nullable String comment) {
 
         public MergeRequest {
             resolutions = resolutions == null ? Map.of()
@@ -96,7 +97,7 @@ public final class GitMerge {
      * @param element элемент модели узла; {@code null} — узел без элемента
      * @param type    тип без префикса {@code archimate:}; {@code null} — неизвестен
      */
-    public record AddedNode(ArchiId archiId, ArchiId element, String type, String name,
+    public record AddedNode(ArchiId archiId, @Nullable ArchiId element, @Nullable String type, String name,
                             int x, int y, int width, int height) {
     }
 
@@ -116,7 +117,7 @@ public final class GitMerge {
      * @param targetHash отпечаток результата с выборами отчёта
      * @param applicable конфликты разрешены, разбор и строгий режим пройдут
      */
-    public record Preview(ModelId model, ResolvedRef ref, GitSha mergeBase, Long baseVersionNo,
+    public record Preview(ModelId model, ResolvedRef ref, GitSha mergeBase, @Nullable Long baseVersionNo,
                           String baseHash, String targetHash, List<EntityMerge.Conflict> conflicts,
                           List<EntityMerge.Cascade> cascade, ModelChanges changes, List<Mark> marks,
                           List<ViewAdditions> views, List<ImportFinding> findings, boolean applicable) {
@@ -146,7 +147,7 @@ public final class GitMerge {
 
     /** Прочитанные состояния: ссылка, предок, деревья «их» и базы, голова ветки ({@code null} — не читалась). */
     private record Sides(ResolvedRef ref, GitSha mergeBase, GitAttempts.Tree theirs, GitAttempts.Tree base,
-                         GitSha head, boolean absorbsHead) {
+                         @Nullable GitSha head, boolean absorbsHead) {
 
         Optional<GitAttempts.Tree> corrupt() {
             return theirs.defect() != null ? Optional.of(theirs)
@@ -194,7 +195,7 @@ public final class GitMerge {
      * Отчёт слияния по ссылке ({@code null} — не задана, отказ) с выборами по конфликтам.
      * В базе ничего не меняется.
      */
-    public Preview preview(EditorIdentity actor, ModelId model, String ref,
+    public Preview preview(EditorIdentity actor, ModelId model, @Nullable String ref,
                            Map<String, String> resolutions) {
         GitRef requested = GitAttempts.parse(() -> GitRef.of(GitAttempts.required(ref, "ref")));
         Map<String, Side> choices = choices(resolutions);

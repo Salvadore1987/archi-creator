@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /** Строка находки сессии импорта: уровень, код, текст и место в файле. */
 @Entity
@@ -31,8 +32,8 @@ public class ImportFindingEntity {
     public String message;
 
     @Column(name = "archi_id")
-    public String archiId;
+    public @Nullable String archiId;
 
     @Column(name = "xml_line")
-    public Integer xmlLine;
+    public @Nullable Integer xmlLine;
 }

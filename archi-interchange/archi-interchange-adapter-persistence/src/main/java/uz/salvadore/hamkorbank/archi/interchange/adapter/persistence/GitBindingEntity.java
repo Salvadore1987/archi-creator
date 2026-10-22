@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.hibernate.annotations.DynamicUpdate;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Строка привязки рабочего пространства к Git-репозиторию: адрес, ветка, ссылка на секрет и авторы.
@@ -42,10 +43,10 @@ public class GitBindingEntity {
     public String status;
 
     @Column(name = "last_commit_sha")
-    public String lastCommitSha;
+    public @Nullable String lastCommitSha;
 
     @Column(name = "last_checked_at")
-    public Instant lastCheckedAt;
+    public @Nullable Instant lastCheckedAt;
 
     @ElementCollection
     @CollectionTable(name = "git_author", joinColumns = @JoinColumn(name = "workspace_id"))

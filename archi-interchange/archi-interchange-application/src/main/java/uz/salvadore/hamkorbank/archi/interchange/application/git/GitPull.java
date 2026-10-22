@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitOutbox;
@@ -66,7 +67,8 @@ public final class GitPull {
      * Что подтверждает архитектор: ссылка и коммит из отчёта, отпечаток содержимого, комментарий.
      * Не переданное поле — {@code null}; без комментария версия получает комментарий по умолчанию.
      */
-    public record PullRequest(String ref, String commitSha, String baseHash, String comment) {
+    public record PullRequest(@Nullable String ref, @Nullable String commitSha, @Nullable String baseHash,
+                              @Nullable String comment) {
     }
 
     /**
@@ -76,7 +78,7 @@ public final class GitPull {
      * @param baseHash      отпечаток текущего содержимого — его применение и подтверждает
      * @param applicable    применение пройдёт разбор и строгий режим пространства
      */
-    public record Preview(ModelId model, ResolvedRef ref, Long baseVersionNo, String baseHash,
+    public record Preview(ModelId model, ResolvedRef ref, @Nullable Long baseVersionNo, String baseHash,
                           String targetHash, ModelChanges changes, List<ImportFinding> findings, boolean applicable) {
 
         public Preview {
@@ -103,8 +105,8 @@ public final class GitPull {
      *
      * @param corrupt каталог не собрался или снимок не разобрался; отказ строгого режима — не повреждение
      */
-    private record Candidate(ResolvedRef ref, ImportSession session, ModelDocument document, byte[] xml,
-                             boolean corrupt) {
+    private record Candidate(ResolvedRef ref, ImportSession session, @Nullable ModelDocument document,
+                             byte @Nullable [] xml, boolean corrupt) {
     }
 
     private final GitBindingRepository bindings;
@@ -138,7 +140,7 @@ public final class GitPull {
     }
 
     /** Отчёт об изменениях по ссылке ({@code null} — не задана, отказ). В базе ничего не меняется. */
-    public Preview preview(EditorIdentity actor, ModelId model, String ref) {
+    public Preview preview(EditorIdentity actor, ModelId model, @Nullable String ref) {
         GitRef requested = GitAttempts.parse(() -> GitRef.of(GitAttempts.required(ref, "ref")));
         ModelStates.Current current = states.current(actor, model);
         GitBinding binding = attempts.binding(current.workspace());
@@ -208,7 +210,7 @@ public final class GitPull {
     }
 
     /** Голова ветки привязки в момент применения ({@code null} — ветки нет) и прочитанный коммит. */
-    private record Fetched(GitSha head, Candidate candidate) {
+    private record Fetched(@Nullable GitSha head, Candidate candidate) {
     }
 
     private record Applied(ModelStates.Replaced replaced, List<DomainEvent> events) {

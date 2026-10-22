@@ -8,7 +8,9 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -76,8 +78,9 @@ public class InterchangeController {
      */
     @PostMapping(value = "/models/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> importFile(EditorIdentity actor, @RequestPart("file") MultipartFile file,
-                                        @RequestParam(required = false) UUID workspaceId,
-                                        @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                        @RequestParam(required = false) @Nullable UUID workspaceId,
+                                        @RequestHeader(value = "Idempotency-Key", required = false)
+                                        @Nullable String key,
                                         HttpServletRequest request) {
         ImportArchimateFileResponse result = imports.importArchimateFile(actor,
                 new ImportArchimateFileCommand(workspaceId, file.getOriginalFilename(), bytes(file), key));
@@ -98,10 +101,10 @@ public class InterchangeController {
      */
     @GetMapping("/models/{id}/export")
     public ResponseEntity<byte[]> export(EditorIdentity actor, @PathVariable UUID id,
-                                         @RequestParam(required = false) String fmt,
-                                         @RequestParam(required = false) Long version,
-                                         @RequestParam(required = false) String folder,
-                                         @RequestParam(required = false) String sep) {
+                                         @RequestParam(required = false) @Nullable String fmt,
+                                         @RequestParam(required = false) @Nullable Long version,
+                                         @RequestParam(required = false) @Nullable String folder,
+                                         @RequestParam(required = false) @Nullable String sep) {
         return file(exports.exportModel(actor, new ExportModelQuery(id, fmt, version, sep, folder)));
     }
 
@@ -113,11 +116,11 @@ public class InterchangeController {
      */
     @GetMapping("/views/{id}/export")
     public ResponseEntity<byte[]> exportView(EditorIdentity actor, @PathVariable UUID id,
-                                             @RequestParam(required = false) String fmt,
-                                             @RequestParam(required = false) Integer scale,
-                                             @RequestParam(required = false) Boolean outline,
-                                             @RequestParam(required = false) String background,
-                                             @RequestParam(required = false) Long version) {
+                                             @RequestParam(required = false) @Nullable String fmt,
+                                             @RequestParam(required = false) @Nullable Integer scale,
+                                             @RequestParam(required = false) @Nullable Boolean outline,
+                                             @RequestParam(required = false) @Nullable String background,
+                                             @RequestParam(required = false) @Nullable Long version) {
         return file(images.exportViewImage(actor,
                 new ExportViewImageQuery(id, fmt, scale, outline, background, version)));
     }
@@ -125,11 +128,11 @@ public class InterchangeController {
     /** Все представления модели одним архивом из одной версии. */
     @GetMapping("/models/{id}/views/export")
     public ResponseEntity<byte[]> exportAllViews(EditorIdentity actor, @PathVariable UUID id,
-                                                 @RequestParam(required = false) String fmt,
-                                                 @RequestParam(required = false) Integer scale,
-                                                 @RequestParam(required = false) Boolean outline,
-                                                 @RequestParam(required = false) String background,
-                                                 @RequestParam(required = false) Long version) {
+                                                 @RequestParam(required = false) @Nullable String fmt,
+                                                 @RequestParam(required = false) @Nullable Integer scale,
+                                                 @RequestParam(required = false) @Nullable Boolean outline,
+                                                 @RequestParam(required = false) @Nullable String background,
+                                                 @RequestParam(required = false) @Nullable Long version) {
         return file(images.exportAllViewImages(actor,
                 new ExportAllViewImagesQuery(id, fmt, scale, outline, background, version)));
     }
@@ -163,7 +166,8 @@ public class InterchangeController {
 
     private ResponseEntity<ProblemDetail> rejected(HttpStatus status, ImportArchimateFileResponse result,
                                                    ImportResult body, HttpServletRequest request) {
-        ProblemDetail problem = InterchangeProblemHandler.problem(status, result.refusalCode(), result.refusalText(),
+        String code = Objects.requireNonNull(result.refusalCode(), "refusalCode");
+        ProblemDetail problem = InterchangeProblemHandler.problem(status, code, result.refusalText(),
                 Map.of("sessionId", body.sessionId(), "findings", body.findings()), request, text);
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_PROBLEM_JSON).body(problem);
     }

@@ -24,6 +24,7 @@ import javax.xml.stream.Location;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
@@ -89,7 +90,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
     private enum Kind { MODEL, FOLDER, CONCEPT, DIAGRAM, DIAGRAM_NODE, CONNECTION }
 
     /** Родитель разбираемого узла: его вид и идентификатор ({@code null} — корень модели). */
-    private record Place(Kind kind, String id) {
+    private record Place(Kind kind, @Nullable String id) {
     }
 
     @Override
@@ -191,7 +192,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
         }
 
         /** Содержимое текущего элемента до его закрывающего тега. */
-        private List<DocumentContent> content(ArchiId parent) throws XMLStreamException {
+        private List<DocumentContent> content(@Nullable ArchiId parent) throws XMLStreamException {
             List<DocumentContent> content = new ArrayList<>();
             while (true) {
                 switch (xml.next()) {
@@ -219,7 +220,8 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             }
         }
 
-        private DocumentContent item(ArchiId parent, DocumentOrder order) throws XMLStreamException {
+        private @Nullable DocumentContent item(@Nullable ArchiId parent, DocumentOrder order)
+                throws XMLStreamException {
             String prefix = xml.getPrefix();
             boolean unprefixed = prefix == null || prefix.isEmpty();
             String tag = xml.getLocalName();
@@ -232,7 +234,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             return new RawXmlFragment(raw(), parent, order);
         }
 
-        private DocumentNode node(String tag, DocumentOrder order) throws XMLStreamException {
+        private @Nullable DocumentNode node(String tag, DocumentOrder order) throws XMLStreamException {
             if (depth == MAX_DEPTH) {
                 throw broken(DocumentDefect.at(InterchangeCodes.NESTING_TOO_DEEP,
                         Message.of(InterchangeMessages.NESTING_TOO_DEEP, MAX_DEPTH), null, line()));
@@ -245,7 +247,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             }
         }
 
-        private DocumentNode parsedNode(String tag, DocumentOrder order) throws XMLStreamException {
+        private @Nullable DocumentNode parsedNode(String tag, DocumentOrder order) throws XMLStreamException {
             int line = line();
             Attributes attributes = attributes();
             Optional<String> id = attributes.get("id");
@@ -274,7 +276,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
 
         /** Узел лежит там, где его кладёт Archi; у корневой папки есть тип. */
         private void placed(String tag, String id, Attributes attributes, int line) {
-            if (!PLACEMENT.get(place.kind()).contains(tag)) {
+            if (!PLACEMENT.getOrDefault(place.kind(), Set.of()).contains(tag)) {
                 defect(InterchangeCodes.MISPLACED_NODE,
                         Message.of(InterchangeMessages.UNEXPECTED_NODE, tag, id, where(place)), id, line);
             }
@@ -357,7 +359,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             attributes.get(attribute).ifPresent(target -> references.add(new Reference(id, attribute, target, line)));
         }
 
-        private DocumentContent value(String tag, ArchiId parent, DocumentOrder order)
+        private DocumentContent value(String tag, @Nullable ArchiId parent, DocumentOrder order)
                 throws XMLStreamException {
             Attributes attributes = attributes();
             StringBuilder text = null;
@@ -529,7 +531,7 @@ public final class StaxArchiDocumentReader implements ArchiDocumentReader {
             });
         }
 
-        private void defect(String code, Message message, String archiId, int line) {
+        private void defect(String code, Message message, @Nullable String archiId, int line) {
             defects.add(DocumentDefect.at(code, message, archiId, line));
         }
     }

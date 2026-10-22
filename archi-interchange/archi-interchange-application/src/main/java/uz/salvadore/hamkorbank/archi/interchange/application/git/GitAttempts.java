@@ -13,6 +13,7 @@ import java.util.SortedMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
 import uz.salvadore.hamkorbank.archi.interchange.application.importing.MethodologyCheck;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.GitBindingRepository;
@@ -100,7 +101,8 @@ final class GitAttempts {
      * Каталог модели в коммите: файлы и документ, если собрался, иначе дефект сборки.
      * Из документа и дефекта задано ровно одно, другое — {@code null}.
      */
-    record Tree(SortedMap<String, byte[]> files, ModelDocument document, InvalidValueException defect) {
+    record Tree(SortedMap<String, byte[]> files, @Nullable ModelDocument document,
+                @Nullable InvalidValueException defect) {
     }
 
     /** Рабочая привязка пространства; нет — {@code 409}. */
@@ -177,13 +179,13 @@ final class GitAttempts {
     }
 
     /** Комментарий версии: заданный, а без него — по умолчанию со ссылкой и коротким коммитом. */
-    String comment(String given, String defaultKey, GitRef ref, GitSha sha) {
+    String comment(@Nullable String given, String defaultKey, GitRef ref, GitSha sha) {
         return given != null && !given.isBlank() ? given
                 : texts.text(Message.of(defaultKey, ref.value(), sha.value().substring(0, SHORT_SHA)));
     }
 
     /** Отпечаток содержимого из отчёта: обязателен и в виде SHA-256. */
-    static String baseHash(String value) {
+    static String baseHash(@Nullable String value) {
         String baseHash = required(value, "baseHash");
         if (!BASE_HASH.matcher(baseHash).matches()) {
             throw invalid(Message.of(InterchangeMessages.GIT_BASE_HASH_INVALID, baseHash));
@@ -282,7 +284,7 @@ final class GitAttempts {
     }
 
     /** Обязательное поле запроса: {@code null} или пустое — отказ. */
-    static String required(String value, String field) {
+    static String required(@Nullable String value, String field) {
         if (value == null || value.isBlank()) {
             throw invalid(Message.of(InterchangeMessages.GIT_PULL_FIELD_MISSING, field));
         }

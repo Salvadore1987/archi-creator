@@ -14,6 +14,7 @@ import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
+import org.jspecify.annotations.Nullable;
 import org.w3c.dom.ls.LSInput;
 import org.w3c.dom.ls.LSResourceResolver;
 import org.xml.sax.ErrorHandler;
@@ -81,7 +82,7 @@ public final class OefSchema {
         } catch (SAXParseException e) {
             errors.record(e);
         } catch (SAXException e) {
-            return Optional.of(e.getMessage());
+            return Optional.of(Objects.requireNonNullElseGet(e.getMessage(), e::toString));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -90,7 +91,7 @@ public final class OefSchema {
 
     private static final class FirstError implements ErrorHandler {
 
-        private String first;
+        private @Nullable String first;
 
         void record(SAXParseException e) {
             if (first == null) {
@@ -122,8 +123,8 @@ public final class OefSchema {
     private static final class LocalResolver implements LSResourceResolver {
 
         @Override
-        public LSInput resolveResource(String type, String namespaceURI, String publicId, String systemId,
-                                       String baseURI) {
+        public LSInput resolveResource(String type, @Nullable String namespaceURI, @Nullable String publicId,
+                                       @Nullable String systemId, @Nullable String baseURI) {
             String file = systemId == null ? "" : systemId.substring(systemId.lastIndexOf('/') + 1);
             if (!FILES.contains(file)) {
                 throw new IllegalStateException(systemId);
@@ -137,10 +138,10 @@ public final class OefSchema {
      * Источник схемы — только адрес ресурса: без потока и текста разборщик открывает
      * {@code systemId} сам и сам его закрывает.
      */
-    private record Input(String systemId, String publicId, String baseURI) implements LSInput {
+    private record Input(String systemId, @Nullable String publicId, @Nullable String baseURI) implements LSInput {
 
         @Override
-        public InputStream getByteStream() {
+        public @Nullable InputStream getByteStream() {
             return null;
         }
 
@@ -150,27 +151,27 @@ public final class OefSchema {
         }
 
         @Override
-        public String getPublicId() {
+        public @Nullable String getPublicId() {
             return publicId;
         }
 
         @Override
-        public String getBaseURI() {
+        public @Nullable String getBaseURI() {
             return baseURI;
         }
 
         @Override
-        public Reader getCharacterStream() {
+        public @Nullable Reader getCharacterStream() {
             return null;
         }
 
         @Override
-        public String getStringData() {
+        public @Nullable String getStringData() {
             return null;
         }
 
         @Override
-        public String getEncoding() {
+        public @Nullable String getEncoding() {
             return null;
         }
 

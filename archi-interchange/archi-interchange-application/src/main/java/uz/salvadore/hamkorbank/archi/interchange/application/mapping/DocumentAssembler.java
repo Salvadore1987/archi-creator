@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attribute;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attributes;
@@ -276,7 +277,7 @@ public final class DocumentAssembler {
         // ── Значения ────────────────────────────────────────────────
 
         /** Геометрия узла; {@code null} — без метки в остатке и вся по умолчанию: Archi её не пишет. */
-        private DocumentValue bounds(ModelRows.Box bounds, NodeResidue residue) {
+        private @Nullable DocumentValue bounds(ModelRows.Box bounds, NodeResidue residue) {
             Map<String, Integer> values = Map.of("x", bounds.x(), "y", bounds.y(), "width", bounds.width(),
                     "height", bounds.height());
             ResidueItem.Slot slot = residue.slots("bounds").stream().findFirst().orElse(null);
@@ -288,7 +289,7 @@ public final class DocumentAssembler {
         }
 
         /** Точка перегиба; {@code slot} — её метка в остатке, {@code null} — метки нет. */
-        private static DocumentValue bendpoint(BendpointValue point, ResidueItem.Slot slot) {
+        private static DocumentValue bendpoint(BendpointValue point, ResidueItem.@Nullable Slot slot) {
             Map<String, Integer> values = Map.of("startX", point.startX(), "startY", point.startY(),
                     "endX", point.endX(), "endY", point.endY());
             Map<String, Integer> defaults = Map.of("startX", 0, "startY", 0, "endX", 0, "endY", 0);
@@ -301,7 +302,7 @@ public final class DocumentAssembler {
          * прочие — только отличные от умолчания, которого Archi не пишет. Метки нет — {@code slot} {@code null}.
          */
         private static List<Attribute> numbers(Map<String, Integer> values, List<String> canonical,
-                                               Map<String, Integer> defaults, ResidueItem.Slot slot) {
+                                               Map<String, Integer> defaults, ResidueItem.@Nullable Slot slot) {
             List<Attribute> attributes = new ArrayList<>();
             Set<String> placed = new LinkedHashSet<>();
             if (slot != null) {
@@ -311,7 +312,7 @@ public final class DocumentAssembler {
                 });
             }
             for (String name : canonical) {
-                if (!placed.contains(name) && !values.get(name).equals(defaults.get(name))) {
+                if (!placed.contains(name) && !present(values, name).equals(defaults.get(name))) {
                     attributes.add(new Attribute(name, String.valueOf(values.get(name))));
                 }
             }
@@ -330,7 +331,7 @@ public final class DocumentAssembler {
          * Пустая документация — элемент без текста: так её отдаёт читатель, и так она уходит.
          * Текста нет вовсе ({@code null}) — нет и значения.
          */
-        private static DocumentValue textOrNull(String tag, String text) {
+        private static @Nullable DocumentValue textOrNull(String tag, @Nullable String text) {
             if (text == null) {
                 return null;
             }
@@ -355,7 +356,7 @@ public final class DocumentAssembler {
             List<Attribute> attributes = new ArrayList<>();
             for (String name : canonical) {
                 String value = typed.get(name);
-                if (written(name, value, skipWhenEmpty)) {
+                if (value != null && written(name, value, skipWhenEmpty)) {
                     attributes.add(new Attribute(name, value));
                 }
             }
@@ -389,8 +390,13 @@ public final class DocumentAssembler {
     }
 
     /** Типизированное значение без метки пишется, если оно есть и не пустое там, где пустое не пишется. */
-    private static boolean written(String name, String value, Set<String> skipWhenEmpty) {
+    private static boolean written(String name, @Nullable String value, Set<String> skipWhenEmpty) {
         return value != null && (!value.isEmpty() || !skipWhenEmpty.contains(name));
+    }
+
+    /** Значение атрибута, имя которого взято из схемы этого же значения: оно есть всегда. */
+    private static <V> V present(Map<String, V> values, String name) {
+        return Objects.requireNonNull(values.get(name), name);
     }
 
     private static List<Attribute> newModelAttributes(Map<String, String> typed) {
@@ -436,7 +442,7 @@ public final class DocumentAssembler {
         }
 
         /** Одиночное значение (документация, геометрия): на место метки или в начало; {@code null} — нет значения. */
-        void single(String tag, DocumentValue value, long fallback) {
+        void single(String tag, @Nullable DocumentValue value, long fallback) {
             if (value != null) {
                 typed(residue.slots(tag).stream().findFirst().map(ResidueItem.Slot::order).orElse(fallback), value);
             }
@@ -462,7 +468,7 @@ public final class DocumentAssembler {
         }
 
         /** Содержимое узла {@code parent}; {@code null} — корня модели. */
-        List<DocumentContent> build(ArchiId parent) {
+        List<DocumentContent> build(@Nullable ArchiId parent) {
             entries.sort(Comparator.comparingLong(Entry::order).thenComparingInt(Entry::sequence));
             List<DocumentContent> content = new ArrayList<>();
             for (int i = 0; i < entries.size(); i++) {
@@ -472,19 +478,19 @@ public final class DocumentAssembler {
         }
 
         /** Свойство на месте метки {@code slot}; {@code null} — метки нет. */
-        private static DocumentValue property(ModelRows.Property property, ResidueItem.Slot slot) {
+        private static DocumentValue property(ModelRows.Property property, ResidueItem.@Nullable Slot slot) {
             Map<String, String> values = Map.of("key", property.key(), "value", property.value());
             List<Attribute> attributes = new ArrayList<>();
             Set<String> placed = new LinkedHashSet<>();
             if (slot != null) {
                 slot.attributes().forEach(a -> {
-                    attributes.add(new Attribute(a.name(), values.get(a.name())));
+                    attributes.add(new Attribute(a.name(), present(values, a.name())));
                     placed.add(a.name());
                 });
             }
             for (String name : XmlSchema.PROPERTY) {
-                if (!placed.contains(name) && (slot == null || !values.get(name).isEmpty())) {
-                    attributes.add(new Attribute(name, values.get(name)));
+                if (!placed.contains(name) && (slot == null || !present(values, name).isEmpty())) {
+                    attributes.add(new Attribute(name, present(values, name)));
                 }
             }
             return new DocumentValue("property", DocumentOrder.of(0), new Attributes(attributes), null);
@@ -518,7 +524,7 @@ public final class DocumentAssembler {
     }
 
     /** Остаток узла; {@code null} — остатка нет. */
-    private static NodeResidue residue(String raw) {
+    private static NodeResidue residue(@Nullable String raw) {
         return raw == null ? NodeResidue.EMPTY : NodeResidue.decode(raw);
     }
 

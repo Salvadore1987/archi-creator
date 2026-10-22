@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.importing;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
@@ -13,7 +14,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
  * @param targetModelId {@code null} — импорт новой модели
  * @param strictMode    {@code strict_import} рабочего пространства на момент подачи
  */
-public record ImportRequest(WorkspaceId workspaceId, ModelId targetModelId, String sourceName,
+public record ImportRequest(WorkspaceId workspaceId, @Nullable ModelId targetModelId, String sourceName,
                             ContentHash sourceHash, long sourceSize, String idempotencyKey,
                             boolean strictMode, String startedBy) {
 
@@ -42,7 +43,7 @@ public record ImportRequest(WorkspaceId workspaceId, ModelId targetModelId, Stri
     }
 
     /** Имя источника: переданное клиентом, а пустое или отсутствующее ({@code null}) — имя по умолчанию. */
-    public static String sourceNameOrDefault(String fileName) {
+    public static String sourceNameOrDefault(@Nullable String fileName) {
         return fileName == null || fileName.isBlank() ? DEFAULT_SOURCE_NAME : fileName;
     }
 
@@ -50,7 +51,7 @@ public record ImportRequest(WorkspaceId workspaceId, ModelId targetModelId, Stri
      * Запрос импорта; без модели ({@code null}) — новая. Отпечаток и размер считаются по самому
      * содержимому, а не принимаются на веру.
      */
-    public static ImportRequest of(WorkspaceId workspaceId, ModelId targetModelId, String sourceName,
+    public static ImportRequest of(WorkspaceId workspaceId, @Nullable ModelId targetModelId, String sourceName,
                                    byte[] content, String idempotencyKey, boolean strictMode, String startedBy) {
         return new ImportRequest(workspaceId, targetModelId, sourceName, ContentHash.of(content), content.length,
                 idempotencyKey, strictMode, startedBy);

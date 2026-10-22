@@ -3,4 +3,7 @@
  * те же токены, тот же спрайт иконок и тот же маршрут связей. Шрифт и растр —
  * за портами {@code Typesetter} и {@code Rasterizer}.
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.interchange.application.rendering;
+
+import org.jspecify.annotations.NullMarked;

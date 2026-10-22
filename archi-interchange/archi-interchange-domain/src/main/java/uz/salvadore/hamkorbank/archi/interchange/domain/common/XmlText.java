@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.common;
 
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Текст, который можно записать в файл Archi: только символы XML 1.0 — табуляция,
@@ -18,7 +19,7 @@ public final class XmlText {
     }
 
     /** Имя атрибута или элемента XML, с префиксом пространства имён или без: {@code xsi:type}, {@code name}. */
-    public static boolean isName(String value) {
+    public static boolean isName(@Nullable String value) {
         return value != null && QUALIFIED_NAME.matcher(value).matches();
     }
 
@@ -26,12 +27,12 @@ public final class XmlText {
      * Разметка одного элемента: начинается открывающим тегом и кончается закрывающим.
      * Комментарий, инструкция обработки, секция CDATA и текст элементом не являются.
      */
-    public static boolean isElement(String xml) {
+    public static boolean isElement(@Nullable String xml) {
         return xml != null && ELEMENT_START.matcher(xml).lookingAt() && xml.endsWith(">");
     }
 
     /** Состоит ли строка только из символов XML 1.0; {@code null} — допустимо. */
-    public static boolean valid(String value) {
+    public static boolean valid(@Nullable String value) {
         if (value == null) {
             return true;
         }
@@ -50,7 +51,7 @@ public final class XmlText {
     }
 
     /** Строка без символов вне XML 1.0; {@code where} называет атрибут или элемент в отказе. */
-    public static String require(String value, String where) {
+    public static @Nullable String require(@Nullable String value, String where) {
         if (!valid(value)) {
             throw new InvalidValueException(InterchangeMessages.TEXT_NOT_XML, where);
         }

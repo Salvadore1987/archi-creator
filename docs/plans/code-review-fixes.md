@@ -27,7 +27,7 @@ NullAway и вычёркивает модули из списка. Послед�
 |---|---|---|---|
 | 1 | Error Prone + NullAway (ошибка компиляции, только размеченный код) и `jspecify` в родителе; тест: каждый пакет основного кода размечен `@NullMarked` — со списком ещё не размеченных модулей | `NullMarkedPackagesTest`, компилятор | ✅ |
 | 2 | modeling: `@NullMarked` во всех пакетах четырёх модулей, `@Nullable` у необязательного, срабатывания NullAway | компилятор | ⬜ |
-| 3 | interchange: то же | компилятор | ⬜ |
+| 3 | interchange: то же | компилятор | ✅ |
 | 4 | advisor: то же | компилятор | ⬜ |
 | 5 | `archi-bootstrap`: то же; список исключений теста пуст и удалён | компилятор, тест | ⬜ |
 | 6 | Решение ADR, `CLAUDE.md` (зависимости домена, таблица «стиль держит сборка»), D-14 в реестре, граф зависимостей | `check-links.py`, `check-traceability.py` | ⬜ |
@@ -43,6 +43,34 @@ NullAway и вычёркивает модули из списка. Послед�
   `.mvn/jvm.config`.
 - **Задача 1, объём.** Пробный прогон без исключений: 302 срабатывания в трёх доменных модулях, и это нижняя
   граница — javac обрывает вывод на 100 ошибках модуля, до application и адаптеров сборка не дошла.
+- **Задача 3.** Срабатываний при первом прогоне: domain — 66 (из них 34 в `EntityMerge`, 13 в читателе `.archimate`),
+  application — 122 (с учётом тех, что вызвала разметка domain), adapter-rest — 24, adapter-persistence — 9.
+  Пакетов 28: в 22 `package-info.java` добавлена разметка, 6 созданы (`adapter.rest.dto`, `application.dto.command`,
+  `…dto.query`, `…dto.result`, `application.git`, `domain.common`). Почти всё — пропущенный `@Nullable`
+  у необязательного по Javadoc: компоненты record'ов, поля агрегатов («ещё не построен»), параметры «не задано»,
+  поля запросов и ответов REST, столбцы `NULL` в сущностях JPA. Сверх срабатываний размечено то, что Javadoc называет
+  `null`, а NullAway не видит, пока `null` приходит извне (из bootstrap, Jackson, Spring): параметры
+  `@RequestParam(required = false)`, поля входных DTO, `Notation.ShapeEntry`, `ModelStates.Current`,
+  `PublishedVersions.Version`, `GitRef.of`.
+- **Задача 3, переписанное без изменения поведения.** Где значение есть по построению, а NullAway этого не видит:
+  `EntityMerge` — корень стороны хранится полем `State.root`, дети папки — картой с объектами (сравнение «было» —
+  по ней же), обход цикла папок — локальной переменной; выборка по ключу, взятому из той же карты, — `known(…)`
+  с `Objects.requireNonNull` (там, где было бы разыменование `null`, остаётся NPE). `SvgWriter` — начертание и его
+  символы в одной карте `Glyphs` вместо двух параллельных по одному ключу (порядок `TreeMap` тот же, байты SVG те же).
+  `DocumentDecomposer` — `containsKey` по той же карте ключей, что и `get`; `DocumentAssembler` — `present(…)`
+  для атрибутов из схемы значения. `GitYamlReader` — `kind` и `build` проверяются вместе. Причина недоступности
+  репозитория — `Unreachable.reason()`, а не `getMessage()`. Входные `resolutions` слияния: «не передано» → пустая
+  карта в мапере REST, как уже было с `authors`.
+- **Задача 3, настоящий дефект.** `OefSchema.violation`: `Optional.of(e.getMessage())` у `SAXException` без текста
+  падал NPE вместо отчёта о нарушении схемы; теперь текст — `getMessage()`, а без него — `toString()`.
+- **Задача 3, архитектурные тесты.** Разметка доменных пакетов уронила `HexagonalArchitectureTest`: `package-info`
+  домена зависит от `org.jspecify.annotations` — пакет добавлен в разрешённые домену, как и решено в задаче 1.
+  `ApplicationLayerTest` требовал от каждого класса верхнего уровня в `dto.command|query|result` быть record'ом
+  с суффиксом — `package-info` из правил исключён. Те же падения ждут modeling и advisor.
+- **Задача 3, связь с modeling.** interchange зовёт modeling-application, ещё не размеченный: `ModelRows`, `StyleValue`,
+  `BendpointValue` (`DocumentAssembler`, `DocumentDecomposer`, `ViewScene`), `GetVersionSnapshotQuery` с
+  необязательной версией (обработчики выгрузки), `ImportModelCommand`, `ModelRowRules`, `VersionSnapshotResponse`.
+  После разметки modeling срабатывания в interchange возможны именно там.
 
 ## Отменённые варианты
 

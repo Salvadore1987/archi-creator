@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Визуальный язык, общий с канвой: силуэты фигур, токены стиля и символы иконок.
@@ -114,8 +115,8 @@ public record Notation(Size defaultSize, Map<String, Size> defaultSizeByType, Ma
      * токен радиуса, ключ слоя ({@code null} — слой элемента) и пунктир обводки.
      * Иконки, области подписи и пунктира нет — {@code null}.
      */
-    public record ShapeEntry(String outline, CornerIcon icon, Box labelBox, String radiusToken, String layer,
-                             String dash) {
+    public record ShapeEntry(String outline, @Nullable CornerIcon icon, @Nullable Box labelBox, String radiusToken,
+                             @Nullable String layer, @Nullable String dash) {
 
         public ShapeEntry {
             Objects.requireNonNull(outline, "outline");

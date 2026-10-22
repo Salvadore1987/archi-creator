@@ -4,4 +4,7 @@
  *
  * <p>Формат принадлежит interchange; modeling хранит строку остатка и не разбирает её.
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.interchange.domain.residue;
+
+import org.jspecify.annotations.NullMarked;

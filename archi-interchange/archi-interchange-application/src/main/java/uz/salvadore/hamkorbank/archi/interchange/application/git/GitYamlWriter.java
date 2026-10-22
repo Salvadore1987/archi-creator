@@ -64,6 +64,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.application.git.GitYamlFormat.Kind;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attribute;
@@ -140,7 +141,7 @@ public final class GitYamlWriter {
          *
          * @param folder запись папки в {@code folders.yaml}; {@code null} — корень модели
          */
-        void container(String containerId, Map<String, Object> folder, List<DocumentContent> content) {
+        void container(String containerId, @Nullable Map<String, Object> folder, List<DocumentContent> content) {
             String folderId = folder == null ? null : (String) folder.get(K_ID);
             List<String> keys = new ArrayList<>(content.size());
             Map<Kind, Integer> ordinals = new EnumMap<>(Kind.class);
@@ -180,7 +181,7 @@ public final class GitYamlWriter {
         }
 
         /** Запись папки; {@code parent} — {@code null} у папки в корне модели. */
-        private Map<String, Object> folderEntry(DocumentNode folder, String parent, String position) {
+        private Map<String, Object> folderEntry(DocumentNode folder, @Nullable String parent, String position) {
             Map<String, Object> entry = new LinkedHashMap<>();
             Map<String, Object> attributes = new LinkedHashMap<>();
             attributes(attributes, folder.attributes(), false);
@@ -223,7 +224,7 @@ public final class GitYamlWriter {
         }
 
         /** Файл объекта; {@code folderId} — {@code null} у объекта в корне модели. */
-        private void object(DocumentNode node, String folderId, String position) {
+        private void object(DocumentNode node, @Nullable String folderId, String position) {
             Map<String, Object> placement = new LinkedHashMap<>();
             if (folderId != null) {
                 placement.put(K_FOLDER, folderId);
@@ -304,7 +305,7 @@ public final class GitYamlWriter {
     }
 
     /** Значение под ключом, если оно есть; {@code null} — атрибута нет. */
-    private static void putPresent(Map<String, Object> out, String key, String value) {
+    private static void putPresent(Map<String, Object> out, String key, @Nullable String value) {
         if (value != null) {
             out.put(key, value);
         }

@@ -4,4 +4,7 @@
  * <p>Отчёт о потерях — часть результата, а не побочный эффект;
  * выгружается зафиксированная версия, а не текущее состояние.
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.interchange.domain.exporting;
+
+import org.jspecify.annotations.NullMarked;

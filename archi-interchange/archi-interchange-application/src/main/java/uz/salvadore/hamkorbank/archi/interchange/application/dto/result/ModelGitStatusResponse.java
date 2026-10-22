@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.dto.result;
 
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Состояние модели в Git.
@@ -11,6 +12,6 @@ import java.util.UUID;
  * @param gitSha            её коммит; {@code null} — публикаций не было
  * @param divergedVersionNo версия, вставшая на расхождении; {@code null} — расхождения нет
  */
-public record ModelGitStatusResponse(UUID modelId, String state, int pending, Long versionNo, String gitSha,
-                                     Long divergedVersionNo) {
+public record ModelGitStatusResponse(UUID modelId, String state, int pending, @Nullable Long versionNo,
+                                     @Nullable String gitSha, @Nullable Long divergedVersionNo) {
 }

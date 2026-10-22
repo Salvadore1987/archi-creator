@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.domain.git;
 
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attribute;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentContent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.DocumentNode;
@@ -18,7 +19,7 @@ final class ContentShapes {
     }
 
     /** Форма одного элемента содержимого. */
-    record Shape(String tag, List<Attribute> attributes, String text, List<Shape> content) {
+    record Shape(String tag, List<Attribute> attributes, @Nullable String text, List<Shape> content) {
     }
 
     /** Формы содержимого в его порядке. */

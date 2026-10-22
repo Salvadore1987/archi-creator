@@ -7,4 +7,7 @@
  * <p>Фреймворка здесь нет: ни Spring, ни JPA. Граница держится сборкой —
  * в pom.xml модуля таких зависимостей нет, а enforcer не даёт их вернуть.
  */
+@NullMarked
 package uz.salvadore.hamkorbank.archi.interchange.domain;
+
+import org.jspecify.annotations.NullMarked;

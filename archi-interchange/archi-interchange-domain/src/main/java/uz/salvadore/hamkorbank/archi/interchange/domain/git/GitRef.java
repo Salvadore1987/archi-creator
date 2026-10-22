@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.interchange.domain.git;
 
 import java.util.Objects;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeMessages;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InvalidValueException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.Message;
@@ -25,7 +26,7 @@ public record GitRef(String value) {
     }
 
     /** Ссылка из строки без пробелов по краям; {@code null} — отказ значения. */
-    public static GitRef of(String value) {
+    public static GitRef of(@Nullable String value) {
         if (value == null) {
             throw new InvalidValueException(InterchangeMessages.GIT_REF_INVALID,
                                             Message.of(InterchangeMessages.VALUE_MISSING));

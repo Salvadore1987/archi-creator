@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.adapter.rest;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import uz.salvadore.hamkorbank.archi.interchange.adapter.rest.dto.Dtos.GitAuthorDto;
@@ -63,12 +64,12 @@ final class GitDtoMapper {
     }
 
     static PreviewGitMergeQuery mergePreviewRequest(UUID modelId, GitMergePreviewRequestDto dto) {
-        return new PreviewGitMergeQuery(modelId, dto.ref(), dto.resolutions());
+        return new PreviewGitMergeQuery(modelId, dto.ref(), Optional.ofNullable(dto.resolutions()).orElse(Map.of()));
     }
 
     static MergeModelBranchCommand mergeRequest(UUID modelId, GitMergeRequestDto dto) {
         return new MergeModelBranchCommand(modelId, dto.ref(), dto.commitSha(), dto.mergeBaseSha(), dto.baseHash(),
-                dto.resolutions(), dto.comment());
+                Optional.ofNullable(dto.resolutions()).orElse(Map.of()), dto.comment());
     }
 
     static GitMergePreviewDto mergePreview(GitMergePreviewResponse preview) {

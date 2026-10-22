@@ -108,6 +108,10 @@ public final class SvgWriter {
         return new Drawing(new ViewScene(document, view, notation), options).draw();
     }
 
+    /** Начертание и символы, набранные им. */
+    private record Glyphs(Face face, StringBuilder chars) {
+    }
+
     /** Одна отрисовка: накапливает тело, рамку содержимого, потери и глифы для вшивания. */
     private final class Drawing {
 
@@ -115,8 +119,8 @@ public final class SvgWriter {
         private final Options options;
         private final StringBuilder body = new StringBuilder();
         private final List<ExportLoss> losses = new ArrayList<>();
-        private final Map<String, StringBuilder> glyphs = new TreeMap<>();
-        private final Map<String, Face> faces = new TreeMap<>();
+        /** Начертание по ключу и символы, набранные им, — для вшивания подмножества шрифта. */
+        private final Map<String, Glyphs> glyphs = new TreeMap<>();
         private final Map<String, Rect> shapes = new HashMap<>();
         private final Map<String, Link> links = new HashMap<>();
         private double minX = Double.POSITIVE_INFINITY;
@@ -490,8 +494,7 @@ public final class SvgWriter {
         private void textElement(String line, Face face, double x, double baseline, String color, boolean preserve,
                                  String extra) {
             String key = face.weight() + (face.italic() ? "i" : "n");
-            faces.putIfAbsent(key, face);
-            glyphs.computeIfAbsent(key, k -> new StringBuilder()).append(line);
+            glyphs.computeIfAbsent(key, k -> new Glyphs(face, new StringBuilder())).chars().append(line);
             body.append("<text x=\"").append(Svg.num(x)).append("\" y=\"").append(Svg.num(baseline))
                     .append("\" font-family=\"").append(Svg.escape(notation.family())).append(FALLBACK_STACK)
                     .append("\" font-size=\"").append(Svg.num(face.size())).append("\" font-weight=\"")
@@ -539,9 +542,9 @@ public final class SvgWriter {
                     .append(Svg.num(height)).append("\">\n");
             if (!glyphs.isEmpty()) {
                 svg.append("<defs><style type=\"text/css\"><![CDATA[\n");
-                glyphs.forEach((key, chars) -> {
-                    Face face = faces.get(key);
-                    byte[] font = typesetter.subset(face, chars.toString());
+                glyphs.forEach((key, used) -> {
+                    Face face = used.face();
+                    byte[] font = typesetter.subset(face, used.chars().toString());
                     svg.append("@font-face{font-family:\"").append(notation.family()).append("\";font-weight:")
                             .append(face.weight()).append(";font-style:").append(face.italic() ? "italic" : "normal")
                             .append(";src:url(data:font/ttf;base64,").append(Base64.getEncoder().encodeToString(font))

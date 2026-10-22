@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ArchiId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attribute;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.Attributes;
@@ -72,7 +73,7 @@ public record ModelChanges(List<Change> changes) {
      * @param name      имя после изменения, у удалённого — до
      * @param fields    изменённые поля; у добавленного и удалённого пусто
      */
-    public record Change(Kind kind, Type type, ArchiId archiId, String archiType, String name,
+    public record Change(Kind kind, Type type, ArchiId archiId, @Nullable String archiType, String name,
                          List<String> fields) {
 
         public Change {
@@ -134,7 +135,7 @@ public record ModelChanges(List<Change> changes) {
     }
 
     /** Объект отчёта: узел, его вид и родитель — папка или корень модели ({@code null}). */
-    private record Entry(ArchiId id, Kind kind, DocumentNode node, ArchiId parent) {
+    private record Entry(ArchiId id, Kind kind, DocumentNode node, @Nullable ArchiId parent) {
 
         Change change(Type type, List<String> fields) {
             return new Change(kind, type, id, node.archiType().map(ModelChanges::bareType).orElse(null),
@@ -150,7 +151,7 @@ public record ModelChanges(List<Change> changes) {
         return entries;
     }
 
-    private static void collect(DocumentNode node, ArchiId parent, Map<ArchiId, Entry> into) {
+    private static void collect(DocumentNode node, @Nullable ArchiId parent, Map<ArchiId, Entry> into) {
         Optional<Kind> kind = kind(node);
         if (kind.isEmpty()) {
             return;
@@ -255,7 +256,7 @@ public record ModelChanges(List<Change> changes) {
         }
     }
 
-    private record ValueKey(List<Attribute> attributes, String text) {
+    private record ValueKey(List<Attribute> attributes, @Nullable String text) {
     }
 
     private static Map<String, List<ValueKey>> values(List<DocumentContent> content) {

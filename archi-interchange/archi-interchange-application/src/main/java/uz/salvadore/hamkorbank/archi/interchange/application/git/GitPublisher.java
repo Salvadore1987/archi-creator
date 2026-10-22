@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uz.salvadore.hamkorbank.archi.interchange.application.InterchangeException;
@@ -99,8 +100,8 @@ public final class GitPublisher {
      * @param last              последняя опубликованная версия; {@code null} — публикаций не было
      * @param divergedVersionNo версия, вставшая на расхождении; {@code null} — расхождения нет
      */
-    public record ModelGitStatus(ModelId model, State state, int pending, PublishedVersions.Published last,
-                                 Long divergedVersionNo) {
+    public record ModelGitStatus(ModelId model, State state, int pending, PublishedVersions.@Nullable Published last,
+                                 @Nullable Long divergedVersionNo) {
 
         /** Всё опубликовано, версии ждут очереди или публикация встала на расхождении с веткой. */
         public enum State { SYNCED, PENDING, DIVERGED }
@@ -317,7 +318,7 @@ public final class GitPublisher {
             unitOfWork.write(() -> {
                 bindings.find(entry.workspace()).filter(GitBinding::writable)
                         .ifPresent(b -> bindings.save(b.unreachable(at)));
-                outbox.retryLater(entry.id(), e.getMessage(), at.plus(backoff(entry.attempts())));
+                outbox.retryLater(entry.id(), e.reason(), at.plus(backoff(entry.attempts())));
                 return null;
             });
             return Outcome.RETRY;
@@ -341,7 +342,7 @@ public final class GitPublisher {
 
     /** Что известно о попытке до коммита: запись, привязка, версия, адрес, голова ветки, каталог, слитый коммит. */
     private record Push(GitOutbox.Entry entry, GitBinding binding, PublishedVersions.Version version, Remote remote,
-                        GitSha head, String directory, GitSha merged) {
+                        @Nullable GitSha head, String directory, @Nullable GitSha merged) {
     }
 
     /**
@@ -419,7 +420,7 @@ public final class GitPublisher {
      * опубликованной версией модели, — так бывает после импорта головы ветки, — или в коммит,
      * слитый в модель по сущностям ({@code merged}; {@code null} — слияний не было). Переписывать поверх неё нечего.
      */
-    private boolean accepted(Remote remote, ModelId model, GitSha change, GitSha merged) {
+    private boolean accepted(Remote remote, ModelId model, GitSha change, @Nullable GitSha merged) {
         return merged != null && repository.contains(remote, change, merged)
                 || unitOfWork.read(() -> versions.lastPublished(model))
                 .filter(published -> repository.contains(remote, change, published.sha())).isPresent();
@@ -452,7 +453,7 @@ public final class GitPublisher {
     }
 
     /** Запись встала на расхождении; {@code head} — голова ветки, {@code null} — ветки нет. */
-    private Outcome diverged(GitOutbox.Entry entry, GitBinding binding, GitSha head) {
+    private Outcome diverged(GitOutbox.Entry entry, GitBinding binding, @Nullable GitSha head) {
         Instant at = clock.instant();
         unitOfWork.write(() -> {
             outbox.diverged(entry.id(), head == null ? "" : head.value(), at);
@@ -470,7 +471,7 @@ public final class GitPublisher {
      * Каталог модели: найденный в ветке по короткому идентификатору — прежний, иначе по имени.
      * {@code head} — {@code null}, когда ветки ещё нет.
      */
-    private String directory(Remote remote, GitSha head, ModelId model, String modelName) {
+    private String directory(Remote remote, @Nullable GitSha head, ModelId model, String modelName) {
         return Optional.ofNullable(head).flatMap(h -> GitRemotes.modelDirectory(repository, remote, h, model))
                 .orElseGet(() -> MODELS_DIR + "/" + FileSlug.slug(modelName) + "." + GitRemotes.shortId(model));
     }
@@ -491,7 +492,7 @@ public final class GitPublisher {
     }
 
     /** Правило слияния ставится, не затирая чужих строк файла; файла нет — {@code existing} {@code null}. */
-    private byte[] gitattributes(byte[] existing) {
+    private byte[] gitattributes(byte @Nullable [] existing) {
         if (existing == null) {
             return gitattributes;
         }

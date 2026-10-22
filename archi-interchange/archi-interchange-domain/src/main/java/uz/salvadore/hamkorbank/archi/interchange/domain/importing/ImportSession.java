@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.ArchiDocumentReader;
 import uz.salvadore.hamkorbank.archi.interchange.domain.codec.CorruptDocumentException;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.AggregateRoot;
@@ -36,7 +37,7 @@ import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 public final class ImportSession extends AggregateRoot<ImportSessionId> {
 
     private final WorkspaceId workspaceId;
-    private final ModelId targetModelId;
+    private final @Nullable ModelId targetModelId;
     private final String sourceName;
     private final ContentHash sourceHash;
     private final long sourceSize;
@@ -46,10 +47,10 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
     private final Instant startedAt;
 
     private ImportStatus status = ImportStatus.RECEIVED;
-    private ModelDocument document;
+    private @Nullable ModelDocument document;
     private final List<ImportFinding> findings = new ArrayList<>();
-    private Instant finishedAt;
-    private ModelId appliedModelId;
+    private @Nullable Instant finishedAt;
+    private @Nullable ModelId appliedModelId;
     private long appliedVersionNo;
     private final List<DomainEvent> events = new ArrayList<>();
 
@@ -74,7 +75,7 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
      */
     public static ImportSession restore(ImportSessionId id, ImportRequest request, Instant startedAt,
                                         ImportStatus status, List<ImportFinding> findings,
-                                        Instant finishedAt, ModelId appliedModelId,
+                                        @Nullable Instant finishedAt, @Nullable ModelId appliedModelId,
                                         long appliedVersionNo) {
         ImportSession session = new ImportSession(id, request, startedAt);
         session.status = Objects.requireNonNull(status, "status");
@@ -182,7 +183,7 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
     }
 
     /** Модель, содержимое которой заменяет импорт; у импорта новой модели {@code null}. */
-    public ModelId targetModelId() {
+    public @Nullable ModelId targetModelId() {
         return targetModelId;
     }
 
@@ -217,7 +218,7 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
     }
 
     /** Документ есть в {@code PARSED}, {@code VALIDATED} и {@code APPLIED}; иначе {@code null}. */
-    public ModelDocument document() {
+    public @Nullable ModelDocument document() {
         return document;
     }
 
@@ -237,7 +238,7 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
     }
 
     /** Модель, созданная применением; {@code null} — сессия не применена. */
-    public ModelId appliedModelId() {
+    public @Nullable ModelId appliedModelId() {
         return appliedModelId;
     }
 
@@ -247,7 +248,7 @@ public final class ImportSession extends AggregateRoot<ImportSessionId> {
     }
 
     /** Момент завершения; {@code null} — сессия ещё идёт. */
-    public Instant finishedAt() {
+    public @Nullable Instant finishedAt() {
         return finishedAt;
     }
 }

@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeDomainException;
@@ -34,12 +35,12 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
     private final String branch;
     private final SecretRef tokenRef;
     private final GitBindingStatus status;
-    private final GitSha lastCommitSha;
-    private final Instant lastCheckedAt;
+    private final @Nullable GitSha lastCommitSha;
+    private final @Nullable Instant lastCheckedAt;
     private final List<GitAuthor> authors;
 
-    private GitBinding(WorkspaceId workspaceId, String repoUrl, String branch, SecretRef tokenRef,
-                       GitBindingStatus status, GitSha lastCommitSha, Instant lastCheckedAt,
+    private GitBinding(WorkspaceId workspaceId, @Nullable String repoUrl, @Nullable String branch, SecretRef tokenRef,
+                       GitBindingStatus status, @Nullable GitSha lastCommitSha, @Nullable Instant lastCheckedAt,
                        List<GitAuthor> authors) {
         Objects.requireNonNull(workspaceId, "workspaceId");
         Objects.requireNonNull(tokenRef, "tokenRef");
@@ -74,8 +75,8 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
      * {@code null} в последнем коммите и моменте проверки — их ещё не было.
      */
     public static GitBinding restore(WorkspaceId workspaceId, String repoUrl, String branch, SecretRef tokenRef,
-                                     GitBindingStatus status, GitSha lastCommitSha,
-                                     Instant lastCheckedAt, List<GitAuthor> authors) {
+                                     GitBindingStatus status, @Nullable GitSha lastCommitSha,
+                                     @Nullable Instant lastCheckedAt, List<GitAuthor> authors) {
         return new GitBinding(workspaceId, repoUrl, branch, tokenRef, status, lastCommitSha, lastCheckedAt, authors);
     }
 
@@ -84,7 +85,7 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
      * или пустая) — {@code main}. Учётные данные в адресе — отказ без повтора адреса: токен задаётся
      * ссылкой, а адрес хранится, отдаётся клиенту и попадает в тексты отказов сети.
      */
-    public static GitBinding configure(WorkspaceId workspaceId, String repoUrl, String branch,
+    public static GitBinding configure(WorkspaceId workspaceId, @Nullable String repoUrl, @Nullable String branch,
                                        SecretRef tokenRef, List<GitAuthor> authors) {
         if (repoUrl != null && carriesCredentials(repoUrl)) {
             throw new InvalidValueException(InterchangeMessages.GIT_URL_CREDENTIALS);
@@ -211,12 +212,12 @@ public final class GitBinding extends AggregateRoot<WorkspaceId> {
      * Последний коммит, сделанный сервером в ветке: от него отсчитывается, что в ветке появилось не от нас.
      * {@code null} — сервер ещё не коммитил.
      */
-    public GitSha lastCommitSha() {
+    public @Nullable GitSha lastCommitSha() {
         return lastCommitSha;
     }
 
     /** Момент последней проверки репозитория; {@code null} — ещё не проверялся. */
-    public Instant lastCheckedAt() {
+    public @Nullable Instant lastCheckedAt() {
         return lastCheckedAt;
     }
 

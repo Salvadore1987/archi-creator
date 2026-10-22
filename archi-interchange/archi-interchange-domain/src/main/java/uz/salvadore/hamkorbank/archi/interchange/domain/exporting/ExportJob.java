@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.AggregateRoot;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.DomainEvent;
 import uz.salvadore.hamkorbank.archi.interchange.domain.common.InterchangeCodes;
@@ -30,7 +31,7 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
 
     private final WorkspaceId workspaceId;
     private final ModelId modelId;
-    private final ViewId viewId;
+    private final @Nullable ViewId viewId;
     private final ExportFormat format;
     private final ExportOptions options;
     private final long sourceVersionNo;
@@ -38,12 +39,12 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
     private final Instant requestedAt;
 
     private ExportStatus status = ExportStatus.REQUESTED;
-    private Artifact artifact;
-    private LossReport lossReport;
-    private String failureReason;
+    private @Nullable Artifact artifact;
+    private @Nullable LossReport lossReport;
+    private @Nullable String failureReason;
     private final List<DomainEvent> events = new ArrayList<>();
 
-    private ExportJob(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, ViewId viewId,
+    private ExportJob(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, @Nullable ViewId viewId,
                       ExportFormat format, ExportOptions options, long sourceVersionNo, String requestedBy,
                       Instant requestedAt) {
         super(id);
@@ -61,7 +62,7 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
     }
 
     /** Версия фиксируется здесь, при запросе, а не при рендере; {@code viewId} — {@code null} у выгрузки модели. */
-    public static ExportJob request(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, ViewId viewId,
+    public static ExportJob request(ExportJobId id, WorkspaceId workspaceId, ModelId modelId, @Nullable ViewId viewId,
                                     ExportFormat format, ExportOptions options, long sourceVersionNo,
                                     String requestedBy, Instant requestedAt) {
         return new ExportJob(id, workspaceId, modelId, viewId, format, options, sourceVersionNo, requestedBy,
@@ -75,7 +76,7 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
      * @throws ExportRuleViolationException артефакт другой версии, нет отчёта
      *         или непустой отчёт у формата без потерь
      */
-    public void render(long renderedFromVersionNo, Artifact artifact, LossReport lossReport) {
+    public void render(long renderedFromVersionNo, Artifact artifact, @Nullable LossReport lossReport) {
         require(ExportStatus.REQUESTED, Message.of(InterchangeMessages.COMMAND_RENDER_EXPORT));
         Objects.requireNonNull(artifact, "artifact");
         if (renderedFromVersionNo != sourceVersionNo) {
@@ -99,9 +100,11 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
     /** {@code RENDERED → DELIVERED}: выгрузка отдана, событие о ней — в {@link #pullEvents()}. */
     public void deliver(Instant now) {
         require(ExportStatus.RENDERED, Message.of(InterchangeMessages.COMMAND_DELIVER_EXPORT));
+        Artifact rendered = Objects.requireNonNull(artifact, "artifact");
+        LossReport losses = Objects.requireNonNull(lossReport, "lossReport");
         status = ExportStatus.DELIVERED;
         events.add(new ExportJobCompletedEvent(id(), workspaceId, modelId, viewId, format, sourceVersionNo,
-                artifact.hash(), artifact.size(), lossReport.entries().size(), now));
+                rendered.hash(), rendered.size(), losses.entries().size(), now));
     }
 
     /** События, накопленные с последнего вызова; публикует их слой приложения после коммита. */
@@ -140,7 +143,7 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
     }
 
     /** Представление — у выгрузки картинки; у выгрузки модели {@code null}. */
-    public ViewId viewId() {
+    public @Nullable ViewId viewId() {
         return viewId;
     }
 
@@ -165,17 +168,17 @@ public final class ExportJob extends AggregateRoot<ExportJobId> {
     }
 
     /** Готовый файл; {@code null} — ещё не построен. */
-    public Artifact artifact() {
+    public @Nullable Artifact artifact() {
         return artifact;
     }
 
     /** Отчёт о потерях; {@code null} — ещё не построен. */
-    public LossReport lossReport() {
+    public @Nullable LossReport lossReport() {
         return lossReport;
     }
 
     /** Причина сбоя; {@code null} — выгрузка не падала. */
-    public String failureReason() {
+    public @Nullable String failureReason() {
         return failureReason;
     }
 

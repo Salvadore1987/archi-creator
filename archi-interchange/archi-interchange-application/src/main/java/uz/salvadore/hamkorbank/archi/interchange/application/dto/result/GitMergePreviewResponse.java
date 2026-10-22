@@ -2,6 +2,7 @@ package uz.salvadore.hamkorbank.archi.interchange.application.dto.result;
 
 import java.util.List;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Отчёт слияния до применения: конфликты с выборами, каскад, изменения и отметки для холста.
@@ -13,7 +14,8 @@ import java.util.UUID;
  * @param applicable    конфликты разрешены, разбор и строгий режим пройдут
  */
 public record GitMergePreviewResponse(UUID modelId, String ref, String refKind, String commitSha,
-                                      String mergeBaseSha, Long baseVersionNo, String baseHash, String targetHash,
+                                      String mergeBaseSha, @Nullable Long baseVersionNo, String baseHash,
+                                      String targetHash,
                                       boolean unchanged, boolean applicable, List<Conflict> conflicts,
                                       List<Cascade> cascade, List<GitChangeCountResponse> summary,
                                       List<GitChangeResponse> changes, List<Mark> marks, List<View> views,
@@ -35,8 +37,9 @@ public record GitMergePreviewResponse(UUID modelId, String ref, String refKind, 
      * @param id         адрес конфликта {@code <archiId>:<поле>}
      * @param resolution {@code OURS}, {@code THEIRS}; {@code null} — выбора нет
      */
-    public record Conflict(String id, String kind, String archiId, String type, String name, String field,
-                           String base, String ours, String theirs, String resolution) {
+    public record Conflict(String id, String kind, String archiId, @Nullable String type, String name, String field,
+                           @Nullable String base, @Nullable String ours, @Nullable String theirs,
+                           @Nullable String resolution) {
     }
 
     /**
@@ -44,7 +47,7 @@ public record GitMergePreviewResponse(UUID modelId, String ref, String refKind, 
      *
      * @param viewArchiId представление узла или ребра; {@code null} — не на представлении
      */
-    public record Cascade(String kind, String archiId, String name, String reason, String viewArchiId) {
+    public record Cascade(String kind, String archiId, String name, String reason, @Nullable String viewArchiId) {
     }
 
     /** Отметка объекта для холста: {@code ADDED}, {@code REMOVED} или {@code CHANGED}. */
@@ -57,8 +60,8 @@ public record GitMergePreviewResponse(UUID modelId, String ref, String refKind, 
      * @param elementArchiId элемент модели узла; {@code null} — узел без элемента
      * @param type           тип без префикса {@code archimate:}; {@code null} — неизвестен
      */
-    public record AddedNode(String archiId, String elementArchiId, String type, String name, int x, int y,
-                            int width, int height) {
+    public record AddedNode(String archiId, @Nullable String elementArchiId, @Nullable String type, String name,
+                            int x, int y, int width, int height) {
     }
 
     /** Узлы, которые слияние добавит в представление. */

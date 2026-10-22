@@ -3,6 +3,7 @@ package uz.salvadore.hamkorbank.archi.interchange.application.dto.command;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Привязка рабочего пространства к репозиторию — как её прислал клиент. Значения проверяет сценарий.
@@ -11,7 +12,8 @@ import java.util.UUID;
  * @param tokenRef ссылка на секрет с токеном, а не сам токен; {@code null} — не задана
  * @param authors  соответствие субъекта Keycloak автору коммита
  */
-public record ConfigureGitBindingCommand(UUID workspaceId, String repoUrl, String branch, String tokenRef,
+public record ConfigureGitBindingCommand(UUID workspaceId, @Nullable String repoUrl, @Nullable String branch,
+                                         @Nullable String tokenRef,
                                          List<Author> authors) {
 
     public ConfigureGitBindingCommand {

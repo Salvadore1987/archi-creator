@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.port;
 
 import java.util.Arrays;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.document.ContentHash;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
@@ -23,7 +24,7 @@ public interface ModelStates {
      * @param versionNo последняя версия; у модели без версий {@code null}
      * @param xml       текущее содержимое тем же снимком, который соберёт сохранение
      */
-    record Current(WorkspaceId workspace, String modelName, Long versionNo, byte[] xml) {
+    record Current(WorkspaceId workspace, String modelName, @Nullable Long versionNo, byte[] xml) {
 
         public Current {
             xml = Arrays.copyOf(xml, xml.length);

@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.ModelId;
 import uz.salvadore.hamkorbank.archi.interchange.domain.identity.WorkspaceId;
 
@@ -63,6 +64,6 @@ public interface GitOutbox {
      * @param nextAttemptAt время следующей попытки; {@code null} — не назначено
      */
     record Entry(UUID id, WorkspaceId workspace, ModelId model, long versionNo, Status status, int attempts,
-                 Instant nextAttemptAt) {
+                 @Nullable Instant nextAttemptAt) {
     }
 }

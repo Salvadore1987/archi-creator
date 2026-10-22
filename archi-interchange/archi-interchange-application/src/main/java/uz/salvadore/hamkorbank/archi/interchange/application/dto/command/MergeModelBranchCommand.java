@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Применение слияния из отчёта: ссылка, оба коммита, отпечаток содержимого, выборы и комментарий.
@@ -12,8 +13,9 @@ import java.util.UUID;
  *
  * @param resolutions выбор по адресу конфликта: {@code OURS} или {@code THEIRS}
  */
-public record MergeModelBranchCommand(UUID modelId, String ref, String commitSha, String mergeBaseSha,
-                                      String baseHash, Map<String, String> resolutions, String comment) {
+public record MergeModelBranchCommand(UUID modelId, @Nullable String ref, @Nullable String commitSha,
+                                      @Nullable String mergeBaseSha, @Nullable String baseHash,
+                                      Map<String, String> resolutions, @Nullable String comment) {
 
     public MergeModelBranchCommand {
         Objects.requireNonNull(modelId, "modelId");

@@ -1,6 +1,7 @@
 package uz.salvadore.hamkorbank.archi.interchange.application.exporting;
 
 import java.time.Clock;
+import org.jspecify.annotations.Nullable;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeEvents;
 import uz.salvadore.hamkorbank.archi.interchange.application.port.InterchangeMetrics;
 import uz.salvadore.hamkorbank.archi.interchange.domain.exporting.Artifact;
@@ -41,8 +42,8 @@ public final class ExportDelivery {
      *
      * @param viewId {@code null} — выгрузка модели или пакет всех представлений
      */
-    public void deliver(EditorIdentity actor, VersionSnapshotResponse snapshot, ViewId viewId, ExportFormat format,
-                 ExportOptions options, Artifact artifact, LossReport report) {
+    public void deliver(EditorIdentity actor, VersionSnapshotResponse snapshot, @Nullable ViewId viewId,
+                        ExportFormat format, ExportOptions options, Artifact artifact, LossReport report) {
         ExportJob job = ExportJob.request(ExportJobId.next(uuids), new WorkspaceId(snapshot.model().workspaceId()),
                 new ModelId(snapshot.model().id()), viewId, format, options, snapshot.versionNo(),
                 actor.subject(), clock.instant());
