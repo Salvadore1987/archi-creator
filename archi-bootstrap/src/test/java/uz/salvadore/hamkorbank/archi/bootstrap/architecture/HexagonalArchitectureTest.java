@@ -19,6 +19,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.stereotype.Repository;
 
 /**
  * Направление зависимостей гексагональной раскладки, которое не держат модули Maven.
@@ -73,12 +74,43 @@ class HexagonalArchitectureTest {
     }
 
     @Test
-    @DisplayName("JPA-сущности — только в адаптерах хранения")
+    @DisplayName("JPA-сущности — только в пакете entity адаптера хранения")
     void jpaEntitiesStayInPersistenceAdapters() {
         classes().that().areAnnotatedWith(Entity.class).or().areAnnotatedWith(Embeddable.class)
                 .or().areAnnotatedWith(MappedSuperclass.class)
-                .should().resideInAPackage(ROOT + ".*.adapter.persistence..")
-                .because("строка таблицы — деталь хранения; вне адаптера её увидел бы REST или сценарий")
+                .should().resideInAPackage(ROOT + ".*.adapter.persistence.entity..")
+                .because("строка таблицы — деталь хранения; вне адаптера её увидел бы REST или сценарий, "
+                        + "а рядом с репозиториями сущность теряется среди реализаций портов")
+                .check(classes);
+    }
+
+    @Test
+    @DisplayName("В пакете entity адаптера хранения — только JPA-сущности")
+    void entityPackageHoldsEntitiesOnly() {
+        classes().that().resideInAPackage(ROOT + ".*.adapter.persistence.entity..")
+                .and().areTopLevelClasses().and().doNotHaveSimpleName("package-info")
+                .should().beAnnotatedWith(Entity.class).orShould().beAnnotatedWith(Embeddable.class)
+                .orShould().beAnnotatedWith(MappedSuperclass.class)
+                .because("реализации портов и их помощники лежат в пакете repository")
+                .check(classes);
+    }
+
+    @Test
+    @DisplayName("Классы адаптера хранения разложены по пакетам entity и repository")
+    void persistenceAdapterSplitsEntitiesAndRepositories() {
+        classes().that().resideInAPackage(ROOT + ".*.adapter.persistence..")
+                .should().resideInAnyPackage(ROOT + ".*.adapter.persistence.entity..",
+                        ROOT + ".*.adapter.persistence.repository..")
+                .because("сущность — строка таблицы, репозиторий — реализация порта; общий пакет их смешивает")
+                .check(classes);
+    }
+
+    @Test
+    @DisplayName("Бины хранения @Repository — в пакете repository адаптера хранения")
+    void repositoriesResideInRepositoryPackage() {
+        classes().that().areAnnotatedWith(Repository.class)
+                .should().resideInAPackage(ROOT + ".*.adapter.persistence.repository..")
+                .because("реализация порта хранения живёт в адаптере, рядом с другими репозиториями")
                 .check(classes);
     }
 

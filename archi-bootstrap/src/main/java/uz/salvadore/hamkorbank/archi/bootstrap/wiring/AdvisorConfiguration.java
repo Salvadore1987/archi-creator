@@ -8,7 +8,7 @@ import java.util.function.Supplier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import uz.salvadore.hamkorbank.archi.advisor.adapter.persistence.JpaAuditLog;
+import uz.salvadore.hamkorbank.archi.advisor.adapter.persistence.repository.JpaAuditLog;
 import uz.salvadore.hamkorbank.archi.advisor.application.handler.ActiveSessions;
 import uz.salvadore.hamkorbank.archi.advisor.application.handler.AdvisorBudgets;
 import uz.salvadore.hamkorbank.archi.advisor.application.handler.AdvisorKernel;
